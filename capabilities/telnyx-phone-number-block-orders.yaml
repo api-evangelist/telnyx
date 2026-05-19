@@ -1,0 +1,157 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — Phone Number Block Orders
+  description: 'Telnyx API — Phone Number Block Orders. 3 operations. Lead operation: List number block orders. Self-contained
+    Naftiko capability covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - Phone Number Block Orders
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-phone-number-block-orders
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — Phone Number Block Orders business capability. Self-contained, no shared references.
+    resources:
+    - name: number_block_orders
+      path: /number_block_orders
+      operations:
+      - name: listnumberblockorders
+        method: GET
+        description: List number block orders
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: filter
+          in: query
+          type: object
+          description: 'Consolidated filter parameter (deepObject style). Originally: filter[status], filter[created_at],
+            filter[phone_numbers.starting_number]'
+      - name: createnumberblockorder
+        method: POST
+        description: Create a number block order
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    - name: number_block_orders-number_block_order_id
+      path: /number_block_orders/{number_block_order_id}
+      operations:
+      - name: retrievenumberblockorder
+        method: GET
+        description: Retrieve a number block order
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: number_block_order_id
+          in: path
+          type: string
+          description: The number block order ID.
+          required: true
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-phone-number-block-orders-rest
+    port: 8080
+    description: REST adapter for Telnyx API — Phone Number Block Orders. One Spectral-compliant resource per consumed operation,
+      prefixed with /v1.
+    resources:
+    - path: /v1/number-block-orders
+      name: number-block-orders
+      description: REST surface for number_block_orders.
+      operations:
+      - method: GET
+        name: listnumberblockorders
+        description: List number block orders
+        call: telnyx-phone-number-block-orders.listnumberblockorders
+        with:
+          filter: rest.filter
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: POST
+        name: createnumberblockorder
+        description: Create a number block order
+        call: telnyx-phone-number-block-orders.createnumberblockorder
+        with:
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/number-block-orders/{number-block-order-id}
+      name: number-block-orders-number-block-order-id
+      description: REST surface for number_block_orders-number_block_order_id.
+      operations:
+      - method: GET
+        name: retrievenumberblockorder
+        description: Retrieve a number block order
+        call: telnyx-phone-number-block-orders.retrievenumberblockorder
+        with:
+          number_block_order_id: rest.number_block_order_id
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-phone-number-block-orders-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — Phone Number Block Orders. One tool per consumed operation, routed inline through
+      this capability's consumes block.
+    tools:
+    - name: list-number-block-orders
+      description: List number block orders
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-phone-number-block-orders.listnumberblockorders
+      with:
+        filter: tools.filter
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: create-number-block-order
+      description: Create a number block order
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: false
+      call: telnyx-phone-number-block-orders.createnumberblockorder
+      with:
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: retrieve-number-block-order
+      description: Retrieve a number block order
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-phone-number-block-orders.retrievenumberblockorder
+      with:
+        number_block_order_id: tools.number_block_order_id
+      outputParameters:
+      - type: object
+        mapping: $.

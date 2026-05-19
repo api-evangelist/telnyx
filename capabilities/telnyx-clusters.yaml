@@ -1,0 +1,248 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — Clusters
+  description: 'Telnyx API — Clusters. 5 operations. Lead operation: List all clusters. Self-contained Naftiko capability
+    covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - Clusters
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-clusters
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — Clusters business capability. Self-contained, no shared references.
+    resources:
+    - name: ai-clusters
+      path: /ai/clusters
+      operations:
+      - name: listallrequestedclusterspublictextclustersget
+        method: GET
+        description: List all clusters
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: page
+          in: query
+          type: object
+          description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
+      - name: computenewclusterpublictextclusterspost
+        method: POST
+        description: Compute new clusters
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    - name: ai-clusters-task_id
+      path: /ai/clusters/{task_id}
+      operations:
+      - name: deleteclusterbytaskidpublictextclusterstaskiddelete
+        method: DELETE
+        description: Delete a cluster
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: task_id
+          in: path
+          type: string
+          required: true
+      - name: fetchclusterbytaskidpublictextclusterstaskidget
+        method: GET
+        description: Fetch a cluster
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: task_id
+          in: path
+          type: string
+          required: true
+        - name: top_n_nodes
+          in: query
+          type: integer
+          description: The number of nodes in the cluster to return in the response. Nodes will be sorted by their centrality
+            within the cluster.
+        - name: show_subclusters
+          in: query
+          type: boolean
+          description: Whether or not to include subclusters and their nodes in the response.
+    - name: ai-clusters-task_id-graph
+      path: /ai/clusters/{task_id}/graph
+      operations:
+      - name: fetchclusterimagebytaskidpublictextclusterstaskidimageget
+        method: GET
+        description: Fetch a cluster visualization
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: task_id
+          in: path
+          type: string
+          required: true
+        - name: cluster_id
+          in: query
+          type: integer
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-clusters-rest
+    port: 8080
+    description: REST adapter for Telnyx API — Clusters. One Spectral-compliant resource per consumed operation, prefixed
+      with /v1.
+    resources:
+    - path: /v1/ai/clusters
+      name: ai-clusters
+      description: REST surface for ai-clusters.
+      operations:
+      - method: GET
+        name: listallrequestedclusterspublictextclustersget
+        description: List all clusters
+        call: telnyx-clusters.listallrequestedclusterspublictextclustersget
+        with:
+          page: rest.page
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: POST
+        name: computenewclusterpublictextclusterspost
+        description: Compute new clusters
+        call: telnyx-clusters.computenewclusterpublictextclusterspost
+        with:
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/ai/clusters/{task-id}
+      name: ai-clusters-task-id
+      description: REST surface for ai-clusters-task_id.
+      operations:
+      - method: DELETE
+        name: deleteclusterbytaskidpublictextclusterstaskiddelete
+        description: Delete a cluster
+        call: telnyx-clusters.deleteclusterbytaskidpublictextclusterstaskiddelete
+        with:
+          task_id: rest.task_id
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: GET
+        name: fetchclusterbytaskidpublictextclusterstaskidget
+        description: Fetch a cluster
+        call: telnyx-clusters.fetchclusterbytaskidpublictextclusterstaskidget
+        with:
+          task_id: rest.task_id
+          top_n_nodes: rest.top_n_nodes
+          show_subclusters: rest.show_subclusters
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/ai/clusters/{task-id}/graph
+      name: ai-clusters-task-id-graph
+      description: REST surface for ai-clusters-task_id-graph.
+      operations:
+      - method: GET
+        name: fetchclusterimagebytaskidpublictextclusterstaskidimageget
+        description: Fetch a cluster visualization
+        call: telnyx-clusters.fetchclusterimagebytaskidpublictextclusterstaskidimageget
+        with:
+          task_id: rest.task_id
+          cluster_id: rest.cluster_id
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-clusters-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — Clusters. One tool per consumed operation, routed inline through this capability's
+      consumes block.
+    tools:
+    - name: list-all-clusters
+      description: List all clusters
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-clusters.listallrequestedclusterspublictextclustersget
+      with:
+        page: tools.page
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: compute-new-clusters
+      description: Compute new clusters
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: false
+      call: telnyx-clusters.computenewclusterpublictextclusterspost
+      with:
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: delete-cluster
+      description: Delete a cluster
+      hints:
+        readOnly: false
+        destructive: true
+        idempotent: true
+      call: telnyx-clusters.deleteclusterbytaskidpublictextclusterstaskiddelete
+      with:
+        task_id: tools.task_id
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: fetch-cluster
+      description: Fetch a cluster
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-clusters.fetchclusterbytaskidpublictextclusterstaskidget
+      with:
+        task_id: tools.task_id
+        top_n_nodes: tools.top_n_nodes
+        show_subclusters: tools.show_subclusters
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: fetch-cluster-visualization
+      description: Fetch a cluster visualization
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-clusters.fetchclusterimagebytaskidpublictextclusterstaskidimageget
+      with:
+        task_id: tools.task_id
+        cluster_id: tools.cluster_id
+      outputParameters:
+      - type: object
+        mapping: $.

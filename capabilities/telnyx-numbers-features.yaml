@@ -1,0 +1,80 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — numbers features
+  description: 'Telnyx API — numbers features. 1 operations. Lead operation: Retrieve the features for a list of numbers.
+    Self-contained Naftiko capability covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - numbers features
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-numbers-features
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — numbers features business capability. Self-contained, no shared references.
+    resources:
+    - name: numbers_features
+      path: /numbers_features
+      operations:
+      - name: postnumbersfeatures
+        method: POST
+        description: Retrieve the features for a list of numbers
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-numbers-features-rest
+    port: 8080
+    description: REST adapter for Telnyx API — numbers features. One Spectral-compliant resource per consumed operation, prefixed
+      with /v1.
+    resources:
+    - path: /v1/numbers-features
+      name: numbers-features
+      description: REST surface for numbers_features.
+      operations:
+      - method: POST
+        name: postnumbersfeatures
+        description: Retrieve the features for a list of numbers
+        call: telnyx-numbers-features.postnumbersfeatures
+        with:
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-numbers-features-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — numbers features. One tool per consumed operation, routed inline through this
+      capability's consumes block.
+    tools:
+    - name: retrieve-features-list-numbers
+      description: Retrieve the features for a list of numbers
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: false
+      call: telnyx-numbers-features.postnumbersfeatures
+      with:
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.

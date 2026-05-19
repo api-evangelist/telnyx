@@ -1,0 +1,102 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — OAuth Discovery
+  description: 'Telnyx API — OAuth Discovery. 2 operations. Lead operation: Authorization server metadata. Self-contained
+    Naftiko capability covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - OAuth Discovery
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-oauth-discovery
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — OAuth Discovery business capability. Self-contained, no shared references.
+    resources:
+    - name: .well-known-oauth-authorization-server
+      path: /.well-known/oauth-authorization-server
+      operations:
+      - name: getoauthauthorizationservermetadata
+        method: GET
+        description: Authorization server metadata
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+    - name: .well-known-oauth-protected-resource
+      path: /.well-known/oauth-protected-resource
+      operations:
+      - name: getoauthprotectedresourcemetadata
+        method: GET
+        description: Protected resource metadata
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-oauth-discovery-rest
+    port: 8080
+    description: REST adapter for Telnyx API — OAuth Discovery. One Spectral-compliant resource per consumed operation, prefixed
+      with /v1.
+    resources:
+    - path: /v1/well-known/oauth-authorization-server
+      name: well-known-oauth-authorization-server
+      description: REST surface for .well-known-oauth-authorization-server.
+      operations:
+      - method: GET
+        name: getoauthauthorizationservermetadata
+        description: Authorization server metadata
+        call: telnyx-oauth-discovery.getoauthauthorizationservermetadata
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/well-known/oauth-protected-resource
+      name: well-known-oauth-protected-resource
+      description: REST surface for .well-known-oauth-protected-resource.
+      operations:
+      - method: GET
+        name: getoauthprotectedresourcemetadata
+        description: Protected resource metadata
+        call: telnyx-oauth-discovery.getoauthprotectedresourcemetadata
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-oauth-discovery-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — OAuth Discovery. One tool per consumed operation, routed inline through this
+      capability's consumes block.
+    tools:
+    - name: authorization-server-metadata
+      description: Authorization server metadata
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-oauth-discovery.getoauthauthorizationservermetadata
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: protected-resource-metadata
+      description: Protected resource metadata
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-oauth-discovery.getoauthprotectedresourcemetadata
+      outputParameters:
+      - type: object
+        mapping: $.

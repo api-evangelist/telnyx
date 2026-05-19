@@ -1,0 +1,192 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — Room Recordings
+  description: 'Telnyx API — Room Recordings. 4 operations. Lead operation: Delete several room recordings in a bulk.. Self-contained
+    Naftiko capability covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - Room Recordings
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-room-recordings
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — Room Recordings business capability. Self-contained, no shared references.
+    resources:
+    - name: room_recordings
+      path: /room_recordings
+      operations:
+      - name: deleteroomrecordings
+        method: DELETE
+        description: Delete several room recordings in a bulk.
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: filter
+          in: query
+          type: object
+          description: 'Consolidated filter parameter (deepObject style). Originally: filter[date_ended_at][eq], filter[date_ended_at][gte],
+            filter[date_ended_at][lte], filter[date_sta'
+      - name: listroomrecordings
+        method: GET
+        description: View a list of room recordings.
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: filter
+          in: query
+          type: object
+          description: 'Consolidated filter parameter (deepObject style). Originally: filter[date_ended_at][eq], filter[date_ended_at][gte],
+            filter[date_ended_at][lte], filter[date_sta'
+    - name: room_recordings-room_recording_id
+      path: /room_recordings/{room_recording_id}
+      operations:
+      - name: deleteroomrecording
+        method: DELETE
+        description: Delete a room recording.
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: room_recording_id
+          in: path
+          type: string
+          description: The unique identifier of a room recording.
+          required: true
+      - name: viewroomrecording
+        method: GET
+        description: View a room recording.
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: room_recording_id
+          in: path
+          type: string
+          description: The unique identifier of a room recording.
+          required: true
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-room-recordings-rest
+    port: 8080
+    description: REST adapter for Telnyx API — Room Recordings. One Spectral-compliant resource per consumed operation, prefixed
+      with /v1.
+    resources:
+    - path: /v1/room-recordings
+      name: room-recordings
+      description: REST surface for room_recordings.
+      operations:
+      - method: DELETE
+        name: deleteroomrecordings
+        description: Delete several room recordings in a bulk.
+        call: telnyx-room-recordings.deleteroomrecordings
+        with:
+          filter: rest.filter
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: GET
+        name: listroomrecordings
+        description: View a list of room recordings.
+        call: telnyx-room-recordings.listroomrecordings
+        with:
+          filter: rest.filter
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/room-recordings/{room-recording-id}
+      name: room-recordings-room-recording-id
+      description: REST surface for room_recordings-room_recording_id.
+      operations:
+      - method: DELETE
+        name: deleteroomrecording
+        description: Delete a room recording.
+        call: telnyx-room-recordings.deleteroomrecording
+        with:
+          room_recording_id: rest.room_recording_id
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: GET
+        name: viewroomrecording
+        description: View a room recording.
+        call: telnyx-room-recordings.viewroomrecording
+        with:
+          room_recording_id: rest.room_recording_id
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-room-recordings-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — Room Recordings. One tool per consumed operation, routed inline through this
+      capability's consumes block.
+    tools:
+    - name: delete-several-room-recordings-bulk
+      description: Delete several room recordings in a bulk.
+      hints:
+        readOnly: false
+        destructive: true
+        idempotent: true
+      call: telnyx-room-recordings.deleteroomrecordings
+      with:
+        filter: tools.filter
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: view-list-room-recordings
+      description: View a list of room recordings.
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-room-recordings.listroomrecordings
+      with:
+        filter: tools.filter
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: delete-room-recording
+      description: Delete a room recording.
+      hints:
+        readOnly: false
+        destructive: true
+        idempotent: true
+      call: telnyx-room-recordings.deleteroomrecording
+      with:
+        room_recording_id: tools.room_recording_id
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: view-room-recording
+      description: View a room recording.
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-room-recordings.viewroomrecording
+      with:
+        room_recording_id: tools.room_recording_id
+      outputParameters:
+      - type: object
+        mapping: $.

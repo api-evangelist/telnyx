@@ -1,0 +1,79 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — User Tags
+  description: 'Telnyx API — User Tags. 1 operations. Lead operation: List User Tags. Self-contained Naftiko capability covering
+    one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - User Tags
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-user-tags
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — User Tags business capability. Self-contained, no shared references.
+    resources:
+    - name: user_tags
+      path: /user_tags
+      operations:
+      - name: getusertags
+        method: GET
+        description: List User Tags
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: filter
+          in: query
+          type: object
+          description: 'Consolidated filter parameter (deepObject style). Originally: filter[starts_with]'
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-user-tags-rest
+    port: 8080
+    description: REST adapter for Telnyx API — User Tags. One Spectral-compliant resource per consumed operation, prefixed
+      with /v1.
+    resources:
+    - path: /v1/user-tags
+      name: user-tags
+      description: REST surface for user_tags.
+      operations:
+      - method: GET
+        name: getusertags
+        description: List User Tags
+        call: telnyx-user-tags.getusertags
+        with:
+          filter: rest.filter
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-user-tags-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — User Tags. One tool per consumed operation, routed inline through this capability's
+      consumes block.
+    tools:
+    - name: list-user-tags
+      description: List User Tags
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-user-tags.getusertags
+      with:
+        filter: tools.filter
+      outputParameters:
+      - type: object
+        mapping: $.

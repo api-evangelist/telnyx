@@ -1,0 +1,146 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — Short Codes
+  description: 'Telnyx API — Short Codes. 3 operations. Lead operation: List short codes. Self-contained Naftiko capability
+    covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - Short Codes
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-short-codes
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — Short Codes business capability. Self-contained, no shared references.
+    resources:
+    - name: short_codes
+      path: /short_codes
+      operations:
+      - name: listshortcodes
+        method: GET
+        description: List short codes
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: filter
+          in: query
+          type: object
+          description: 'Consolidated filter parameter (deepObject style). Originally: filter[messaging_profile_id]'
+    - name: short_codes-id
+      path: /short_codes/{id}
+      operations:
+      - name: retrieveshortcode
+        method: GET
+        description: Retrieve a short code
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+      - name: updateshortcode
+        method: PATCH
+        description: Update short code
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-short-codes-rest
+    port: 8080
+    description: REST adapter for Telnyx API — Short Codes. One Spectral-compliant resource per consumed operation, prefixed
+      with /v1.
+    resources:
+    - path: /v1/short-codes
+      name: short-codes
+      description: REST surface for short_codes.
+      operations:
+      - method: GET
+        name: listshortcodes
+        description: List short codes
+        call: telnyx-short-codes.listshortcodes
+        with:
+          filter: rest.filter
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/short-codes/{id}
+      name: short-codes-id
+      description: REST surface for short_codes-id.
+      operations:
+      - method: GET
+        name: retrieveshortcode
+        description: Retrieve a short code
+        call: telnyx-short-codes.retrieveshortcode
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: PATCH
+        name: updateshortcode
+        description: Update short code
+        call: telnyx-short-codes.updateshortcode
+        with:
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-short-codes-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — Short Codes. One tool per consumed operation, routed inline through this capability's
+      consumes block.
+    tools:
+    - name: list-short-codes
+      description: List short codes
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-short-codes.listshortcodes
+      with:
+        filter: tools.filter
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: retrieve-short-code
+      description: Retrieve a short code
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-short-codes.retrieveshortcode
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: update-short-code
+      description: Update short code
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: true
+      call: telnyx-short-codes.updateshortcode
+      with:
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.

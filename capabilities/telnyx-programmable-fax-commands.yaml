@@ -1,0 +1,282 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — Programmable Fax Commands
+  description: 'Telnyx API — Programmable Fax Commands. 6 operations. Lead operation: View a list of faxes. Self-contained
+    Naftiko capability covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - Programmable Fax Commands
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-programmable-fax-commands
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — Programmable Fax Commands business capability. Self-contained, no shared references.
+    resources:
+    - name: faxes
+      path: /faxes
+      operations:
+      - name: listfaxes
+        method: GET
+        description: View a list of faxes
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: filter
+          in: query
+          type: object
+          description: 'Consolidated filter parameter (deepObject style). Originally: filter[created_at][gte], filter[created_at][gt],
+            filter[created_at][lte], filter[created_at][lt], '
+        - name: page
+          in: query
+          type: object
+          description: 'Consolidated pagination parameter (deepObject style). Originally: page[size], page[number]'
+      - name: sendfax
+        method: POST
+        description: Send a fax
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    - name: faxes-id
+      path: /faxes/{id}
+      operations:
+      - name: deletefax
+        method: DELETE
+        description: Delete a fax
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: id
+          in: path
+          type: string
+          description: The unique identifier of a fax.
+          required: true
+      - name: viewfax
+        method: GET
+        description: View a fax
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: id
+          in: path
+          type: string
+          description: The unique identifier of a fax.
+          required: true
+    - name: faxes-id-actions-cancel
+      path: /faxes/{id}/actions/cancel
+      operations:
+      - name: cancelfax
+        method: POST
+        description: Cancel a fax
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: id
+          in: path
+          type: string
+          description: The unique identifier of a fax.
+          required: true
+    - name: faxes-id-actions-refresh
+      path: /faxes/{id}/actions/refresh
+      operations:
+      - name: refreshfax
+        method: POST
+        description: Refresh a fax
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: id
+          in: path
+          type: string
+          description: The unique identifier of a fax.
+          required: true
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-programmable-fax-commands-rest
+    port: 8080
+    description: REST adapter for Telnyx API — Programmable Fax Commands. One Spectral-compliant resource per consumed operation,
+      prefixed with /v1.
+    resources:
+    - path: /v1/faxes
+      name: faxes
+      description: REST surface for faxes.
+      operations:
+      - method: GET
+        name: listfaxes
+        description: View a list of faxes
+        call: telnyx-programmable-fax-commands.listfaxes
+        with:
+          filter: rest.filter
+          page: rest.page
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: POST
+        name: sendfax
+        description: Send a fax
+        call: telnyx-programmable-fax-commands.sendfax
+        with:
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/faxes/{id}
+      name: faxes-id
+      description: REST surface for faxes-id.
+      operations:
+      - method: DELETE
+        name: deletefax
+        description: Delete a fax
+        call: telnyx-programmable-fax-commands.deletefax
+        with:
+          id: rest.id
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: GET
+        name: viewfax
+        description: View a fax
+        call: telnyx-programmable-fax-commands.viewfax
+        with:
+          id: rest.id
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/faxes/{id}/actions/cancel
+      name: faxes-id-actions-cancel
+      description: REST surface for faxes-id-actions-cancel.
+      operations:
+      - method: POST
+        name: cancelfax
+        description: Cancel a fax
+        call: telnyx-programmable-fax-commands.cancelfax
+        with:
+          id: rest.id
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/faxes/{id}/actions/refresh
+      name: faxes-id-actions-refresh
+      description: REST surface for faxes-id-actions-refresh.
+      operations:
+      - method: POST
+        name: refreshfax
+        description: Refresh a fax
+        call: telnyx-programmable-fax-commands.refreshfax
+        with:
+          id: rest.id
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-programmable-fax-commands-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — Programmable Fax Commands. One tool per consumed operation, routed inline through
+      this capability's consumes block.
+    tools:
+    - name: view-list-faxes
+      description: View a list of faxes
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-programmable-fax-commands.listfaxes
+      with:
+        filter: tools.filter
+        page: tools.page
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: send-fax
+      description: Send a fax
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: false
+      call: telnyx-programmable-fax-commands.sendfax
+      with:
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: delete-fax
+      description: Delete a fax
+      hints:
+        readOnly: false
+        destructive: true
+        idempotent: true
+      call: telnyx-programmable-fax-commands.deletefax
+      with:
+        id: tools.id
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: view-fax
+      description: View a fax
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-programmable-fax-commands.viewfax
+      with:
+        id: tools.id
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: cancel-fax
+      description: Cancel a fax
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: false
+      call: telnyx-programmable-fax-commands.cancelfax
+      with:
+        id: tools.id
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: refresh-fax
+      description: Refresh a fax
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: false
+      call: telnyx-programmable-fax-commands.refreshfax
+      with:
+        id: tools.id
+      outputParameters:
+      - type: object
+        mapping: $.

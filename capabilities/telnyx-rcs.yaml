@@ -1,0 +1,390 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — RCS
+  description: 'Telnyx API — RCS. 8 operations. Lead operation: Send an RCS message. Self-contained Naftiko capability covering
+    one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - RCS
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-rcs
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — RCS business capability. Self-contained, no shared references.
+    resources:
+    - name: messages-rcs
+      path: /messages/rcs
+      operations:
+      - name: sendrcsmessage
+        method: POST
+        description: Send an RCS message
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    - name: messages-rcs-deeplinks-agent_id
+      path: /messages/rcs/deeplinks/{agent_id}
+      operations:
+      - name: generatercsdeeplink
+        method: GET
+        description: Generate RCS deeplink
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: agent_id
+          in: path
+          type: string
+          description: RCS agent ID
+          required: true
+        - name: phone_number
+          in: query
+          type: string
+          description: Phone number in E164 format (URL encoded)
+        - name: body
+          in: query
+          type: string
+          description: Pre-filled message body (URL encoded)
+    - name: messaging-rcs-agents
+      path: /messaging/rcs/agents
+      operations:
+      - name: listrcsagents
+        method: GET
+        description: List all RCS agents
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+    - name: messaging-rcs-agents-id
+      path: /messaging/rcs/agents/{id}
+      operations:
+      - name: getrcsagentbyid
+        method: GET
+        description: Retrieve an RCS agent
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: id
+          in: path
+          type: string
+          description: RCS agent ID
+          required: true
+      - name: updatercsagentbyid
+        method: PATCH
+        description: Modify an RCS agent
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: id
+          in: path
+          type: string
+          description: RCS agent ID
+          required: true
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: false
+    - name: messaging-rcs-bulk_capabilities
+      path: /messaging/rcs/bulk_capabilities
+      operations:
+      - name: listrcscapabilitiesofaphonenumbersbatch
+        method: POST
+        description: Check RCS capabilities (batch)
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: false
+    - name: messaging-rcs-capabilities-agent_id-phone_number
+      path: /messaging/rcs/capabilities/{agent_id}/{phone_number}
+      operations:
+      - name: listrcscapabilitiesofaphonenumber
+        method: GET
+        description: Check RCS capabilities
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: agent_id
+          in: path
+          type: string
+          description: RCS agent ID
+          required: true
+        - name: phone_number
+          in: path
+          type: string
+          description: Phone number in E164 format
+          required: true
+    - name: messaging-rcs-test_number_invite-id-phone_number
+      path: /messaging/rcs/test_number_invite/{id}/{phone_number}
+      operations:
+      - name: inviteatestnumbertorcs
+        method: PUT
+        description: Add RCS test number
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: id
+          in: path
+          type: string
+          description: RCS agent ID
+          required: true
+        - name: phone_number
+          in: path
+          type: string
+          description: Phone number in E164 format to invite for testing
+          required: true
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-rcs-rest
+    port: 8080
+    description: REST adapter for Telnyx API — RCS. One Spectral-compliant resource per consumed operation, prefixed with
+      /v1.
+    resources:
+    - path: /v1/messages/rcs
+      name: messages-rcs
+      description: REST surface for messages-rcs.
+      operations:
+      - method: POST
+        name: sendrcsmessage
+        description: Send an RCS message
+        call: telnyx-rcs.sendrcsmessage
+        with:
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/messages/rcs/deeplinks/{agent-id}
+      name: messages-rcs-deeplinks-agent-id
+      description: REST surface for messages-rcs-deeplinks-agent_id.
+      operations:
+      - method: GET
+        name: generatercsdeeplink
+        description: Generate RCS deeplink
+        call: telnyx-rcs.generatercsdeeplink
+        with:
+          agent_id: rest.agent_id
+          phone_number: rest.phone_number
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/messaging/rcs/agents
+      name: messaging-rcs-agents
+      description: REST surface for messaging-rcs-agents.
+      operations:
+      - method: GET
+        name: listrcsagents
+        description: List all RCS agents
+        call: telnyx-rcs.listrcsagents
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/messaging/rcs/agents/{id}
+      name: messaging-rcs-agents-id
+      description: REST surface for messaging-rcs-agents-id.
+      operations:
+      - method: GET
+        name: getrcsagentbyid
+        description: Retrieve an RCS agent
+        call: telnyx-rcs.getrcsagentbyid
+        with:
+          id: rest.id
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: PATCH
+        name: updatercsagentbyid
+        description: Modify an RCS agent
+        call: telnyx-rcs.updatercsagentbyid
+        with:
+          id: rest.id
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/messaging/rcs/bulk-capabilities
+      name: messaging-rcs-bulk-capabilities
+      description: REST surface for messaging-rcs-bulk_capabilities.
+      operations:
+      - method: POST
+        name: listrcscapabilitiesofaphonenumbersbatch
+        description: Check RCS capabilities (batch)
+        call: telnyx-rcs.listrcscapabilitiesofaphonenumbersbatch
+        with:
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/messaging/rcs/capabilities/{agent-id}/{phone-number}
+      name: messaging-rcs-capabilities-agent-id-phone-number
+      description: REST surface for messaging-rcs-capabilities-agent_id-phone_number.
+      operations:
+      - method: GET
+        name: listrcscapabilitiesofaphonenumber
+        description: Check RCS capabilities
+        call: telnyx-rcs.listrcscapabilitiesofaphonenumber
+        with:
+          agent_id: rest.agent_id
+          phone_number: rest.phone_number
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/messaging/rcs/test-number-invite/{id}/{phone-number}
+      name: messaging-rcs-test-number-invite-id-phone-number
+      description: REST surface for messaging-rcs-test_number_invite-id-phone_number.
+      operations:
+      - method: PUT
+        name: inviteatestnumbertorcs
+        description: Add RCS test number
+        call: telnyx-rcs.inviteatestnumbertorcs
+        with:
+          id: rest.id
+          phone_number: rest.phone_number
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-rcs-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — RCS. One tool per consumed operation, routed inline through this capability's
+      consumes block.
+    tools:
+    - name: send-rcs-message
+      description: Send an RCS message
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: false
+      call: telnyx-rcs.sendrcsmessage
+      with:
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: generate-rcs-deeplink
+      description: Generate RCS deeplink
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-rcs.generatercsdeeplink
+      with:
+        agent_id: tools.agent_id
+        phone_number: tools.phone_number
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: list-all-rcs-agents
+      description: List all RCS agents
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-rcs.listrcsagents
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: retrieve-rcs-agent
+      description: Retrieve an RCS agent
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-rcs.getrcsagentbyid
+      with:
+        id: tools.id
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: modify-rcs-agent
+      description: Modify an RCS agent
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: true
+      call: telnyx-rcs.updatercsagentbyid
+      with:
+        id: tools.id
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: check-rcs-capabilities-batch
+      description: Check RCS capabilities (batch)
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: false
+      call: telnyx-rcs.listrcscapabilitiesofaphonenumbersbatch
+      with:
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: check-rcs-capabilities
+      description: Check RCS capabilities
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-rcs.listrcscapabilitiesofaphonenumber
+      with:
+        agent_id: tools.agent_id
+        phone_number: tools.phone_number
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: add-rcs-test-number
+      description: Add RCS test number
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: true
+      call: telnyx-rcs.inviteatestnumbertorcs
+      with:
+        id: tools.id
+        phone_number: tools.phone_number
+      outputParameters:
+      - type: object
+        mapping: $.

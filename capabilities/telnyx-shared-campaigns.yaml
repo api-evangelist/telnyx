@@ -1,0 +1,262 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — Shared Campaigns
+  description: 'Telnyx API — Shared Campaigns. 5 operations. Lead operation: List shared partner campaigns. Self-contained
+    Naftiko capability covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - Shared Campaigns
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-shared-campaigns
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — Shared Campaigns business capability. Self-contained, no shared references.
+    resources:
+    - name: 10dlc-partnerCampaign-sharedByMe
+      path: /10dlc/partnerCampaign/sharedByMe
+      operations:
+      - name: getpartnercampaignssharedbyuser
+        method: GET
+        description: List shared partner campaigns
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: page
+          in: query
+          type: integer
+          description: The 1-indexed page number to get. The default value is `1`.
+        - name: recordsPerPage
+          in: query
+          type: integer
+          description: The amount of records per page, limited to between 1 and 500 inclusive. The default value is `10`.
+    - name: 10dlc-partnerCampaign-campaignId-sharing
+      path: /10dlc/partnerCampaign/{campaignId}/sharing
+      operations:
+      - name: getpartnercampaignsharingstatus
+        method: GET
+        description: Get Sharing Status
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: campaignId
+          in: path
+          type: string
+          description: ID of the campaign in question
+          required: true
+    - name: 10dlc-partner_campaigns
+      path: /10dlc/partner_campaigns
+      operations:
+      - name: getsharedcampaigns
+        method: GET
+        description: List Shared Campaigns
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: page
+          in: query
+          type: integer
+          description: The 1-indexed page number to get. The default value is `1`.
+        - name: recordsPerPage
+          in: query
+          type: integer
+          description: The amount of records per page, limited to between 1 and 500 inclusive. The default value is `10`.
+        - name: sort
+          in: query
+          type: string
+          description: Specifies the sort order for results. If not given, results are sorted by createdAt in descending order.
+    - name: 10dlc-partner_campaigns-campaignId
+      path: /10dlc/partner_campaigns/{campaignId}
+      operations:
+      - name: getsharedcampaign
+        method: GET
+        description: Get Single Shared Campaign
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: campaignId
+          in: path
+          type: string
+          required: true
+      - name: updatesharedcampaign
+        method: PATCH
+        description: Update Single Shared Campaign
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: campaignId
+          in: path
+          type: string
+          required: true
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-shared-campaigns-rest
+    port: 8080
+    description: REST adapter for Telnyx API — Shared Campaigns. One Spectral-compliant resource per consumed operation, prefixed
+      with /v1.
+    resources:
+    - path: /v1/10dlc/partnercampaign/sharedbyme
+      name: 10dlc-partnercampaign-sharedbyme
+      description: REST surface for 10dlc-partnerCampaign-sharedByMe.
+      operations:
+      - method: GET
+        name: getpartnercampaignssharedbyuser
+        description: List shared partner campaigns
+        call: telnyx-shared-campaigns.getpartnercampaignssharedbyuser
+        with:
+          page: rest.page
+          recordsPerPage: rest.recordsPerPage
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/10dlc/partnercampaign/{campaignid}/sharing
+      name: 10dlc-partnercampaign-campaignid-sharing
+      description: REST surface for 10dlc-partnerCampaign-campaignId-sharing.
+      operations:
+      - method: GET
+        name: getpartnercampaignsharingstatus
+        description: Get Sharing Status
+        call: telnyx-shared-campaigns.getpartnercampaignsharingstatus
+        with:
+          campaignId: rest.campaignId
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/10dlc/partner-campaigns
+      name: 10dlc-partner-campaigns
+      description: REST surface for 10dlc-partner_campaigns.
+      operations:
+      - method: GET
+        name: getsharedcampaigns
+        description: List Shared Campaigns
+        call: telnyx-shared-campaigns.getsharedcampaigns
+        with:
+          page: rest.page
+          recordsPerPage: rest.recordsPerPage
+          sort: rest.sort
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/10dlc/partner-campaigns/{campaignid}
+      name: 10dlc-partner-campaigns-campaignid
+      description: REST surface for 10dlc-partner_campaigns-campaignId.
+      operations:
+      - method: GET
+        name: getsharedcampaign
+        description: Get Single Shared Campaign
+        call: telnyx-shared-campaigns.getsharedcampaign
+        with:
+          campaignId: rest.campaignId
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: PATCH
+        name: updatesharedcampaign
+        description: Update Single Shared Campaign
+        call: telnyx-shared-campaigns.updatesharedcampaign
+        with:
+          campaignId: rest.campaignId
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-shared-campaigns-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — Shared Campaigns. One tool per consumed operation, routed inline through this
+      capability's consumes block.
+    tools:
+    - name: list-shared-partner-campaigns
+      description: List shared partner campaigns
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-shared-campaigns.getpartnercampaignssharedbyuser
+      with:
+        page: tools.page
+        recordsPerPage: tools.recordsPerPage
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: get-sharing-status
+      description: Get Sharing Status
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-shared-campaigns.getpartnercampaignsharingstatus
+      with:
+        campaignId: tools.campaignId
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: list-shared-campaigns
+      description: List Shared Campaigns
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-shared-campaigns.getsharedcampaigns
+      with:
+        page: tools.page
+        recordsPerPage: tools.recordsPerPage
+        sort: tools.sort
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: get-single-shared-campaign
+      description: Get Single Shared Campaign
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-shared-campaigns.getsharedcampaign
+      with:
+        campaignId: tools.campaignId
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: update-single-shared-campaign
+      description: Update Single Shared Campaign
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: true
+      call: telnyx-shared-campaigns.updatesharedcampaign
+      with:
+        campaignId: tools.campaignId
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.

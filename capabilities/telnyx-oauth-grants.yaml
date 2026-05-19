@@ -1,0 +1,162 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — OAuth Grants
+  description: 'Telnyx API — OAuth Grants. 3 operations. Lead operation: List OAuth grants. Self-contained Naftiko capability
+    covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - OAuth Grants
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-oauth-grants
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — OAuth Grants business capability. Self-contained, no shared references.
+    resources:
+    - name: oauth_grants
+      path: /oauth_grants
+      operations:
+      - name: listoauthgrants
+        method: GET
+        description: List OAuth grants
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: page[size]
+          in: query
+          type: integer
+          description: Number of results per page
+        - name: page[number]
+          in: query
+          type: integer
+          description: Page number
+    - name: oauth_grants-id
+      path: /oauth_grants/{id}
+      operations:
+      - name: revokeoauthgrant
+        method: DELETE
+        description: Revoke OAuth grant
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: id
+          in: path
+          type: string
+          description: OAuth grant ID
+          required: true
+      - name: getoauthgrant
+        method: GET
+        description: Get OAuth grant
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: id
+          in: path
+          type: string
+          description: OAuth grant ID
+          required: true
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-oauth-grants-rest
+    port: 8080
+    description: REST adapter for Telnyx API — OAuth Grants. One Spectral-compliant resource per consumed operation, prefixed
+      with /v1.
+    resources:
+    - path: /v1/oauth-grants
+      name: oauth-grants
+      description: REST surface for oauth_grants.
+      operations:
+      - method: GET
+        name: listoauthgrants
+        description: List OAuth grants
+        call: telnyx-oauth-grants.listoauthgrants
+        with:
+          page[size]: rest.page[size]
+          page[number]: rest.page[number]
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/oauth-grants/{id}
+      name: oauth-grants-id
+      description: REST surface for oauth_grants-id.
+      operations:
+      - method: DELETE
+        name: revokeoauthgrant
+        description: Revoke OAuth grant
+        call: telnyx-oauth-grants.revokeoauthgrant
+        with:
+          id: rest.id
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: GET
+        name: getoauthgrant
+        description: Get OAuth grant
+        call: telnyx-oauth-grants.getoauthgrant
+        with:
+          id: rest.id
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-oauth-grants-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — OAuth Grants. One tool per consumed operation, routed inline through this capability's
+      consumes block.
+    tools:
+    - name: list-oauth-grants
+      description: List OAuth grants
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-oauth-grants.listoauthgrants
+      with:
+        page[size]: tools.page[size]
+        page[number]: tools.page[number]
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: revoke-oauth-grant
+      description: Revoke OAuth grant
+      hints:
+        readOnly: false
+        destructive: true
+        idempotent: true
+      call: telnyx-oauth-grants.revokeoauthgrant
+      with:
+        id: tools.id
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: get-oauth-grant
+      description: Get OAuth grant
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-oauth-grants.getoauthgrant
+      with:
+        id: tools.id
+      outputParameters:
+      - type: object
+        mapping: $.

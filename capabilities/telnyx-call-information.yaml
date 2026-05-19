@@ -1,0 +1,102 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — Call Information
+  description: 'Telnyx API — Call Information. 2 operations. Lead operation: Retrieve a call status. Self-contained Naftiko
+    capability covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - Call Information
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-call-information
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — Call Information business capability. Self-contained, no shared references.
+    resources:
+    - name: calls-call_control_id
+      path: /calls/{call_control_id}
+      operations:
+      - name: retrievecallstatus
+        method: GET
+        description: Retrieve a call status
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+    - name: connections-connection_id-active_calls
+      path: /connections/{connection_id}/active_calls
+      operations:
+      - name: listconnectionactivecalls
+        method: GET
+        description: List all active calls for given connection
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-call-information-rest
+    port: 8080
+    description: REST adapter for Telnyx API — Call Information. One Spectral-compliant resource per consumed operation, prefixed
+      with /v1.
+    resources:
+    - path: /v1/calls/{call-control-id}
+      name: calls-call-control-id
+      description: REST surface for calls-call_control_id.
+      operations:
+      - method: GET
+        name: retrievecallstatus
+        description: Retrieve a call status
+        call: telnyx-call-information.retrievecallstatus
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/connections/{connection-id}/active-calls
+      name: connections-connection-id-active-calls
+      description: REST surface for connections-connection_id-active_calls.
+      operations:
+      - method: GET
+        name: listconnectionactivecalls
+        description: List all active calls for given connection
+        call: telnyx-call-information.listconnectionactivecalls
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-call-information-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — Call Information. One tool per consumed operation, routed inline through this
+      capability's consumes block.
+    tools:
+    - name: retrieve-call-status
+      description: Retrieve a call status
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-call-information.retrievecallstatus
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: list-all-active-calls-given
+      description: List all active calls for given connection
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-call-information.listconnectionactivecalls
+      outputParameters:
+      - type: object
+        mapping: $.

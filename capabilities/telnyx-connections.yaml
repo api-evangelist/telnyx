@@ -1,0 +1,112 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — Connections
+  description: 'Telnyx API — Connections. 2 operations. Lead operation: List connections. Self-contained Naftiko capability
+    covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - Connections
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-connections
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — Connections business capability. Self-contained, no shared references.
+    resources:
+    - name: connections
+      path: /connections
+      operations:
+      - name: listconnections
+        method: GET
+        description: List connections
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+    - name: connections-id
+      path: /connections/{id}
+      operations:
+      - name: retrieveconnection
+        method: GET
+        description: Retrieve a connection
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: id
+          in: path
+          type: string
+          description: IP Connection ID
+          required: true
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-connections-rest
+    port: 8080
+    description: REST adapter for Telnyx API — Connections. One Spectral-compliant resource per consumed operation, prefixed
+      with /v1.
+    resources:
+    - path: /v1/connections
+      name: connections
+      description: REST surface for connections.
+      operations:
+      - method: GET
+        name: listconnections
+        description: List connections
+        call: telnyx-connections.listconnections
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/connections/{id}
+      name: connections-id
+      description: REST surface for connections-id.
+      operations:
+      - method: GET
+        name: retrieveconnection
+        description: Retrieve a connection
+        call: telnyx-connections.retrieveconnection
+        with:
+          id: rest.id
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-connections-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — Connections. One tool per consumed operation, routed inline through this capability's
+      consumes block.
+    tools:
+    - name: list-connections
+      description: List connections
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-connections.listconnections
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: retrieve-connection
+      description: Retrieve a connection
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-connections.retrieveconnection
+      with:
+        id: tools.id
+      outputParameters:
+      - type: object
+        mapping: $.

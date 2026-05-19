@@ -1,0 +1,275 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — OAuth Clients
+  description: 'Telnyx API — OAuth Clients. 5 operations. Lead operation: List OAuth clients. Self-contained Naftiko capability
+    covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - OAuth Clients
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-oauth-clients
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — OAuth Clients business capability. Self-contained, no shared references.
+    resources:
+    - name: oauth_clients
+      path: /oauth_clients
+      operations:
+      - name: listoauthclients
+        method: GET
+        description: List OAuth clients
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: page[size]
+          in: query
+          type: integer
+          description: Number of results per page
+        - name: page[number]
+          in: query
+          type: integer
+          description: Page number
+        - name: filter[client_type]
+          in: query
+          type: string
+          description: Filter by client type
+        - name: filter[verified]
+          in: query
+          type: boolean
+          description: Filter by verification status
+        - name: filter[allowed_grant_types][contains]
+          in: query
+          type: string
+          description: Filter by allowed grant type
+        - name: filter[name]
+          in: query
+          type: string
+          description: Filter by exact client name
+        - name: filter[name][contains]
+          in: query
+          type: string
+          description: Filter by client name containing text
+        - name: filter[client_id]
+          in: query
+          type: string
+          description: Filter by client ID
+      - name: createoauthclient
+        method: POST
+        description: Create OAuth client
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    - name: oauth_clients-id
+      path: /oauth_clients/{id}
+      operations:
+      - name: deleteoauthclient
+        method: DELETE
+        description: Delete OAuth client
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: id
+          in: path
+          type: string
+          description: OAuth client ID
+          required: true
+      - name: getoauthclient
+        method: GET
+        description: Get OAuth client
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: id
+          in: path
+          type: string
+          description: OAuth client ID
+          required: true
+      - name: updateoauthclient
+        method: PUT
+        description: Update OAuth client
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: id
+          in: path
+          type: string
+          description: OAuth client ID
+          required: true
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-oauth-clients-rest
+    port: 8080
+    description: REST adapter for Telnyx API — OAuth Clients. One Spectral-compliant resource per consumed operation, prefixed
+      with /v1.
+    resources:
+    - path: /v1/oauth-clients
+      name: oauth-clients
+      description: REST surface for oauth_clients.
+      operations:
+      - method: GET
+        name: listoauthclients
+        description: List OAuth clients
+        call: telnyx-oauth-clients.listoauthclients
+        with:
+          page[size]: rest.page[size]
+          page[number]: rest.page[number]
+          filter[client_type]: rest.filter[client_type]
+          filter[verified]: rest.filter[verified]
+          filter[allowed_grant_types][contains]: rest.filter[allowed_grant_types][contains]
+          filter[name]: rest.filter[name]
+          filter[name][contains]: rest.filter[name][contains]
+          filter[client_id]: rest.filter[client_id]
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: POST
+        name: createoauthclient
+        description: Create OAuth client
+        call: telnyx-oauth-clients.createoauthclient
+        with:
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/oauth-clients/{id}
+      name: oauth-clients-id
+      description: REST surface for oauth_clients-id.
+      operations:
+      - method: DELETE
+        name: deleteoauthclient
+        description: Delete OAuth client
+        call: telnyx-oauth-clients.deleteoauthclient
+        with:
+          id: rest.id
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: GET
+        name: getoauthclient
+        description: Get OAuth client
+        call: telnyx-oauth-clients.getoauthclient
+        with:
+          id: rest.id
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: PUT
+        name: updateoauthclient
+        description: Update OAuth client
+        call: telnyx-oauth-clients.updateoauthclient
+        with:
+          id: rest.id
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-oauth-clients-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — OAuth Clients. One tool per consumed operation, routed inline through this capability's
+      consumes block.
+    tools:
+    - name: list-oauth-clients
+      description: List OAuth clients
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-oauth-clients.listoauthclients
+      with:
+        page[size]: tools.page[size]
+        page[number]: tools.page[number]
+        filter[client_type]: tools.filter[client_type]
+        filter[verified]: tools.filter[verified]
+        filter[allowed_grant_types][contains]: tools.filter[allowed_grant_types][contains]
+        filter[name]: tools.filter[name]
+        filter[name][contains]: tools.filter[name][contains]
+        filter[client_id]: tools.filter[client_id]
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: create-oauth-client
+      description: Create OAuth client
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: false
+      call: telnyx-oauth-clients.createoauthclient
+      with:
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: delete-oauth-client
+      description: Delete OAuth client
+      hints:
+        readOnly: false
+        destructive: true
+        idempotent: true
+      call: telnyx-oauth-clients.deleteoauthclient
+      with:
+        id: tools.id
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: get-oauth-client
+      description: Get OAuth client
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-oauth-clients.getoauthclient
+      with:
+        id: tools.id
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: update-oauth-client
+      description: Update OAuth client
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: true
+      call: telnyx-oauth-clients.updateoauthclient
+      with:
+        id: tools.id
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.

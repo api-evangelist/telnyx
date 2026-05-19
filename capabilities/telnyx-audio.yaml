@@ -1,0 +1,80 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — Audio
+  description: 'Telnyx API — Audio. 1 operations. Lead operation: Transcribe speech to text. Self-contained Naftiko capability
+    covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - Audio
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-audio
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — Audio business capability. Self-contained, no shared references.
+    resources:
+    - name: ai-audio-transcriptions
+      path: /ai/audio/transcriptions
+      operations:
+      - name: audiopublicaudiotranscriptionspost
+        method: POST
+        description: Transcribe speech to text
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-audio-rest
+    port: 8080
+    description: REST adapter for Telnyx API — Audio. One Spectral-compliant resource per consumed operation, prefixed with
+      /v1.
+    resources:
+    - path: /v1/ai/audio/transcriptions
+      name: ai-audio-transcriptions
+      description: REST surface for ai-audio-transcriptions.
+      operations:
+      - method: POST
+        name: audiopublicaudiotranscriptionspost
+        description: Transcribe speech to text
+        call: telnyx-audio.audiopublicaudiotranscriptionspost
+        with:
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-audio-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — Audio. One tool per consumed operation, routed inline through this capability's
+      consumes block.
+    tools:
+    - name: transcribe-speech-text
+      description: Transcribe speech to text
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: false
+      call: telnyx-audio.audiopublicaudiotranscriptionspost
+      with:
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.

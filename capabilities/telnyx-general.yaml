@@ -1,0 +1,236 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API
+  description: 'Telnyx API. 4 operations. Lead operation: Get monthly charges breakdown. Self-contained Naftiko capability
+    covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-general
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API business capability. Self-contained, no shared references.
+    resources:
+    - name: charges_breakdown
+      path: /charges_breakdown
+      operations:
+      - name: getmonthlychargesbreakdown
+        method: GET
+        description: Get monthly charges breakdown
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: start_date
+          in: query
+          type: string
+          description: Start date for the charges breakdown in ISO date format (YYYY-MM-DD)
+          required: true
+        - name: end_date
+          in: query
+          type: string
+          description: End date for the charges breakdown in ISO date format (YYYY-MM-DD). If not provided, defaults to start_date
+            + 1 month. The date is exclusive, data for the end_d
+        - name: format
+          in: query
+          type: string
+          description: Response format
+    - name: charges_summary
+      path: /charges_summary
+      operations:
+      - name: getmonthlychargessummary
+        method: GET
+        description: Get monthly charges summary
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: start_date
+          in: query
+          type: string
+          description: Start date for the charges summary in ISO date format (YYYY-MM-DD)
+          required: true
+        - name: end_date
+          in: query
+          type: string
+          description: End date for the charges summary in ISO date format (YYYY-MM-DD). The date is exclusive, data for the
+            end_date itself is not included in the report. The interva
+          required: true
+    - name: invoices
+      path: /invoices
+      operations:
+      - name: listinvoices
+        method: GET
+        description: List invoices
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: sort
+          in: query
+          type: string
+          description: Specifies the sort order for results.
+        - name: page
+          in: query
+          type: object
+          description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
+    - name: invoices-id
+      path: /invoices/{id}
+      operations:
+      - name: getinvoicebyid
+        method: GET
+        description: Get invoice by ID
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: id
+          in: path
+          type: string
+          description: Invoice UUID
+          required: true
+        - name: action
+          in: query
+          type: string
+          description: Invoice action
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-general-rest
+    port: 8080
+    description: REST adapter for Telnyx API. One Spectral-compliant resource per consumed operation, prefixed with /v1.
+    resources:
+    - path: /v1/charges-breakdown
+      name: charges-breakdown
+      description: REST surface for charges_breakdown.
+      operations:
+      - method: GET
+        name: getmonthlychargesbreakdown
+        description: Get monthly charges breakdown
+        call: telnyx-general.getmonthlychargesbreakdown
+        with:
+          start_date: rest.start_date
+          end_date: rest.end_date
+          format: rest.format
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/charges-summary
+      name: charges-summary
+      description: REST surface for charges_summary.
+      operations:
+      - method: GET
+        name: getmonthlychargessummary
+        description: Get monthly charges summary
+        call: telnyx-general.getmonthlychargessummary
+        with:
+          start_date: rest.start_date
+          end_date: rest.end_date
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/invoices
+      name: invoices
+      description: REST surface for invoices.
+      operations:
+      - method: GET
+        name: listinvoices
+        description: List invoices
+        call: telnyx-general.listinvoices
+        with:
+          sort: rest.sort
+          page: rest.page
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/invoices/{id}
+      name: invoices-id
+      description: REST surface for invoices-id.
+      operations:
+      - method: GET
+        name: getinvoicebyid
+        description: Get invoice by ID
+        call: telnyx-general.getinvoicebyid
+        with:
+          id: rest.id
+          action: rest.action
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-general-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API. One tool per consumed operation, routed inline through this capability's consumes
+      block.
+    tools:
+    - name: get-monthly-charges-breakdown
+      description: Get monthly charges breakdown
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-general.getmonthlychargesbreakdown
+      with:
+        start_date: tools.start_date
+        end_date: tools.end_date
+        format: tools.format
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: get-monthly-charges-summary
+      description: Get monthly charges summary
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-general.getmonthlychargessummary
+      with:
+        start_date: tools.start_date
+        end_date: tools.end_date
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: list-invoices
+      description: List invoices
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-general.listinvoices
+      with:
+        sort: tools.sort
+        page: tools.page
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: get-invoice-id
+      description: Get invoice by ID
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-general.getinvoicebyid
+      with:
+        id: tools.id
+        action: tools.action
+      outputParameters:
+      - type: object
+        mapping: $.

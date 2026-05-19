@@ -1,0 +1,273 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — Voice Clones
+  description: 'Telnyx API — Voice Clones. 6 operations. Lead operation: List voice clones. Self-contained Naftiko capability
+    covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - Voice Clones
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-voice-clones
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — Voice Clones business capability. Self-contained, no shared references.
+    resources:
+    - name: voice_clones
+      path: /voice_clones
+      operations:
+      - name: listvoiceclones
+        method: GET
+        description: List voice clones
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+      - name: createvoiceclone
+        method: POST
+        description: Create a voice clone from a voice design
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    - name: voice_clones-from_upload
+      path: /voice_clones/from_upload
+      operations:
+      - name: createvoiceclonefromupload
+        method: POST
+        description: Create a voice clone from an audio file upload
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    - name: voice_clones-id
+      path: /voice_clones/{id}
+      operations:
+      - name: deletevoiceclone
+        method: DELETE
+        description: Delete a voice clone
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: id
+          in: path
+          type: string
+          description: The voice clone UUID.
+          required: true
+      - name: updatevoiceclone
+        method: PATCH
+        description: Update a voice clone
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: id
+          in: path
+          type: string
+          description: The voice clone UUID.
+          required: true
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    - name: voice_clones-id-sample
+      path: /voice_clones/{id}/sample
+      operations:
+      - name: getvoiceclonesample
+        method: GET
+        description: Download voice clone audio sample
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: id
+          in: path
+          type: string
+          description: The voice clone UUID.
+          required: true
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-voice-clones-rest
+    port: 8080
+    description: REST adapter for Telnyx API — Voice Clones. One Spectral-compliant resource per consumed operation, prefixed
+      with /v1.
+    resources:
+    - path: /v1/voice-clones
+      name: voice-clones
+      description: REST surface for voice_clones.
+      operations:
+      - method: GET
+        name: listvoiceclones
+        description: List voice clones
+        call: telnyx-voice-clones.listvoiceclones
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: POST
+        name: createvoiceclone
+        description: Create a voice clone from a voice design
+        call: telnyx-voice-clones.createvoiceclone
+        with:
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/voice-clones/from-upload
+      name: voice-clones-from-upload
+      description: REST surface for voice_clones-from_upload.
+      operations:
+      - method: POST
+        name: createvoiceclonefromupload
+        description: Create a voice clone from an audio file upload
+        call: telnyx-voice-clones.createvoiceclonefromupload
+        with:
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/voice-clones/{id}
+      name: voice-clones-id
+      description: REST surface for voice_clones-id.
+      operations:
+      - method: DELETE
+        name: deletevoiceclone
+        description: Delete a voice clone
+        call: telnyx-voice-clones.deletevoiceclone
+        with:
+          id: rest.id
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: PATCH
+        name: updatevoiceclone
+        description: Update a voice clone
+        call: telnyx-voice-clones.updatevoiceclone
+        with:
+          id: rest.id
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/voice-clones/{id}/sample
+      name: voice-clones-id-sample
+      description: REST surface for voice_clones-id-sample.
+      operations:
+      - method: GET
+        name: getvoiceclonesample
+        description: Download voice clone audio sample
+        call: telnyx-voice-clones.getvoiceclonesample
+        with:
+          id: rest.id
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-voice-clones-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — Voice Clones. One tool per consumed operation, routed inline through this capability's
+      consumes block.
+    tools:
+    - name: list-voice-clones
+      description: List voice clones
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-voice-clones.listvoiceclones
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: create-voice-clone-voice-design
+      description: Create a voice clone from a voice design
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: false
+      call: telnyx-voice-clones.createvoiceclone
+      with:
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: create-voice-clone-audio-file
+      description: Create a voice clone from an audio file upload
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: false
+      call: telnyx-voice-clones.createvoiceclonefromupload
+      with:
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: delete-voice-clone
+      description: Delete a voice clone
+      hints:
+        readOnly: false
+        destructive: true
+        idempotent: true
+      call: telnyx-voice-clones.deletevoiceclone
+      with:
+        id: tools.id
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: update-voice-clone
+      description: Update a voice clone
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: true
+      call: telnyx-voice-clones.updatevoiceclone
+      with:
+        id: tools.id
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: download-voice-clone-audio-sample
+      description: Download voice clone audio sample
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-voice-clones.getvoiceclonesample
+      with:
+        id: tools.id
+      outputParameters:
+      - type: object
+        mapping: $.

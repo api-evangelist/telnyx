@@ -1,0 +1,140 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — Voicemail
+  description: 'Telnyx API — Voicemail. 3 operations. Lead operation: Get voicemail. Self-contained Naftiko capability covering
+    one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - Voicemail
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-voicemail
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — Voicemail business capability. Self-contained, no shared references.
+    resources:
+    - name: phone_numbers-phone_number_id-voicemail
+      path: /phone_numbers/{phone_number_id}/voicemail
+      operations:
+      - name: getvoicemail
+        method: GET
+        description: Get voicemail
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+      - name: updatevoicemail
+        method: PATCH
+        description: Update voicemail
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+      - name: createvoicemail
+        method: POST
+        description: Create voicemail
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-voicemail-rest
+    port: 8080
+    description: REST adapter for Telnyx API — Voicemail. One Spectral-compliant resource per consumed operation, prefixed
+      with /v1.
+    resources:
+    - path: /v1/phone-numbers/{phone-number-id}/voicemail
+      name: phone-numbers-phone-number-id-voicemail
+      description: REST surface for phone_numbers-phone_number_id-voicemail.
+      operations:
+      - method: GET
+        name: getvoicemail
+        description: Get voicemail
+        call: telnyx-voicemail.getvoicemail
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: PATCH
+        name: updatevoicemail
+        description: Update voicemail
+        call: telnyx-voicemail.updatevoicemail
+        with:
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: POST
+        name: createvoicemail
+        description: Create voicemail
+        call: telnyx-voicemail.createvoicemail
+        with:
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-voicemail-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — Voicemail. One tool per consumed operation, routed inline through this capability's
+      consumes block.
+    tools:
+    - name: get-voicemail
+      description: Get voicemail
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-voicemail.getvoicemail
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: update-voicemail
+      description: Update voicemail
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: true
+      call: telnyx-voicemail.updatevoicemail
+      with:
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: create-voicemail
+      description: Create voicemail
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: false
+      call: telnyx-voicemail.createvoicemail
+      with:
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.

@@ -1,0 +1,238 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — Media Storage API
+  description: 'Telnyx API — Media Storage API. 6 operations. Lead operation: List uploaded media. Self-contained Naftiko
+    capability covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - Media Storage API
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-media-storage-api
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — Media Storage API business capability. Self-contained, no shared references.
+    resources:
+    - name: media
+      path: /media
+      operations:
+      - name: listmediastorage
+        method: GET
+        description: List uploaded media
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: filter
+          in: query
+          type: object
+          description: 'Consolidated filter parameter (deepObject style). Originally: filter[content_type][]'
+      - name: createmediastorage
+        method: POST
+        description: Upload media
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    - name: media-media_name
+      path: /media/{media_name}
+      operations:
+      - name: deletemediastorage
+        method: DELETE
+        description: Deletes stored media
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+      - name: getmediastorage
+        method: GET
+        description: Retrieve stored media
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+      - name: updatemediastorage
+        method: PUT
+        description: Update stored media
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    - name: media-media_name-download
+      path: /media/{media_name}/download
+      operations:
+      - name: downloadmedia
+        method: GET
+        description: Download stored media
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-media-storage-api-rest
+    port: 8080
+    description: REST adapter for Telnyx API — Media Storage API. One Spectral-compliant resource per consumed operation,
+      prefixed with /v1.
+    resources:
+    - path: /v1/media
+      name: media
+      description: REST surface for media.
+      operations:
+      - method: GET
+        name: listmediastorage
+        description: List uploaded media
+        call: telnyx-media-storage-api.listmediastorage
+        with:
+          filter: rest.filter
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: POST
+        name: createmediastorage
+        description: Upload media
+        call: telnyx-media-storage-api.createmediastorage
+        with:
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/media/{media-name}
+      name: media-media-name
+      description: REST surface for media-media_name.
+      operations:
+      - method: DELETE
+        name: deletemediastorage
+        description: Deletes stored media
+        call: telnyx-media-storage-api.deletemediastorage
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: GET
+        name: getmediastorage
+        description: Retrieve stored media
+        call: telnyx-media-storage-api.getmediastorage
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: PUT
+        name: updatemediastorage
+        description: Update stored media
+        call: telnyx-media-storage-api.updatemediastorage
+        with:
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/media/{media-name}/download
+      name: media-media-name-download
+      description: REST surface for media-media_name-download.
+      operations:
+      - method: GET
+        name: downloadmedia
+        description: Download stored media
+        call: telnyx-media-storage-api.downloadmedia
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-media-storage-api-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — Media Storage API. One tool per consumed operation, routed inline through this
+      capability's consumes block.
+    tools:
+    - name: list-uploaded-media
+      description: List uploaded media
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-media-storage-api.listmediastorage
+      with:
+        filter: tools.filter
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: upload-media
+      description: Upload media
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: false
+      call: telnyx-media-storage-api.createmediastorage
+      with:
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: deletes-stored-media
+      description: Deletes stored media
+      hints:
+        readOnly: false
+        destructive: true
+        idempotent: true
+      call: telnyx-media-storage-api.deletemediastorage
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: retrieve-stored-media
+      description: Retrieve stored media
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-media-storage-api.getmediastorage
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: update-stored-media
+      description: Update stored media
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: true
+      call: telnyx-media-storage-api.updatemediastorage
+      with:
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: download-stored-media
+      description: Download stored media
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-media-storage-api.downloadmedia
+      outputParameters:
+      - type: object
+        mapping: $.

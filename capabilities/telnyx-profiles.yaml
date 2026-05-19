@@ -1,0 +1,282 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — Profiles
+  description: 'Telnyx API — Profiles. 7 operations. Lead operation: List messaging profiles. Self-contained Naftiko capability
+    covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - Profiles
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-profiles
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — Profiles business capability. Self-contained, no shared references.
+    resources:
+    - name: messaging_profiles
+      path: /messaging_profiles
+      operations:
+      - name: listmessagingprofiles
+        method: GET
+        description: List messaging profiles
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: filter
+          in: query
+          type: object
+          description: 'Consolidated filter parameter (deepObject style). Originally: filter[name]'
+        - name: filter[name][eq]
+          in: query
+          type: string
+          description: Filter profiles by exact name match.
+        - name: filter[name][contains]
+          in: query
+          type: string
+          description: Filter profiles by name containing the given string.
+      - name: createmessagingprofile
+        method: POST
+        description: Create a messaging profile
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    - name: messaging_profiles-id
+      path: /messaging_profiles/{id}
+      operations:
+      - name: deletemessagingprofile
+        method: DELETE
+        description: Delete a messaging profile
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+      - name: retrievemessagingprofile
+        method: GET
+        description: Retrieve a messaging profile
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+      - name: updatemessagingprofile
+        method: PATCH
+        description: Update a messaging profile
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    - name: messaging_profiles-id-phone_numbers
+      path: /messaging_profiles/{id}/phone_numbers
+      operations:
+      - name: listprofilephonenumbers
+        method: GET
+        description: List phone numbers associated with a messaging profile
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+    - name: messaging_profiles-id-short_codes
+      path: /messaging_profiles/{id}/short_codes
+      operations:
+      - name: listprofileshortcodes
+        method: GET
+        description: List short codes associated with a messaging profile
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-profiles-rest
+    port: 8080
+    description: REST adapter for Telnyx API — Profiles. One Spectral-compliant resource per consumed operation, prefixed
+      with /v1.
+    resources:
+    - path: /v1/messaging-profiles
+      name: messaging-profiles
+      description: REST surface for messaging_profiles.
+      operations:
+      - method: GET
+        name: listmessagingprofiles
+        description: List messaging profiles
+        call: telnyx-profiles.listmessagingprofiles
+        with:
+          filter: rest.filter
+          filter[name][eq]: rest.filter[name][eq]
+          filter[name][contains]: rest.filter[name][contains]
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: POST
+        name: createmessagingprofile
+        description: Create a messaging profile
+        call: telnyx-profiles.createmessagingprofile
+        with:
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/messaging-profiles/{id}
+      name: messaging-profiles-id
+      description: REST surface for messaging_profiles-id.
+      operations:
+      - method: DELETE
+        name: deletemessagingprofile
+        description: Delete a messaging profile
+        call: telnyx-profiles.deletemessagingprofile
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: GET
+        name: retrievemessagingprofile
+        description: Retrieve a messaging profile
+        call: telnyx-profiles.retrievemessagingprofile
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: PATCH
+        name: updatemessagingprofile
+        description: Update a messaging profile
+        call: telnyx-profiles.updatemessagingprofile
+        with:
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/messaging-profiles/{id}/phone-numbers
+      name: messaging-profiles-id-phone-numbers
+      description: REST surface for messaging_profiles-id-phone_numbers.
+      operations:
+      - method: GET
+        name: listprofilephonenumbers
+        description: List phone numbers associated with a messaging profile
+        call: telnyx-profiles.listprofilephonenumbers
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/messaging-profiles/{id}/short-codes
+      name: messaging-profiles-id-short-codes
+      description: REST surface for messaging_profiles-id-short_codes.
+      operations:
+      - method: GET
+        name: listprofileshortcodes
+        description: List short codes associated with a messaging profile
+        call: telnyx-profiles.listprofileshortcodes
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-profiles-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — Profiles. One tool per consumed operation, routed inline through this capability's
+      consumes block.
+    tools:
+    - name: list-messaging-profiles
+      description: List messaging profiles
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-profiles.listmessagingprofiles
+      with:
+        filter: tools.filter
+        filter[name][eq]: tools.filter[name][eq]
+        filter[name][contains]: tools.filter[name][contains]
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: create-messaging-profile
+      description: Create a messaging profile
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: false
+      call: telnyx-profiles.createmessagingprofile
+      with:
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: delete-messaging-profile
+      description: Delete a messaging profile
+      hints:
+        readOnly: false
+        destructive: true
+        idempotent: true
+      call: telnyx-profiles.deletemessagingprofile
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: retrieve-messaging-profile
+      description: Retrieve a messaging profile
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-profiles.retrievemessagingprofile
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: update-messaging-profile
+      description: Update a messaging profile
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: true
+      call: telnyx-profiles.updatemessagingprofile
+      with:
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: list-phone-numbers-associated-messaging
+      description: List phone numbers associated with a messaging profile
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-profiles.listprofilephonenumbers
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: list-short-codes-associated-messaging
+      description: List short codes associated with a messaging profile
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-profiles.listprofileshortcodes
+      outputParameters:
+      - type: object
+        mapping: $.

@@ -1,0 +1,129 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — x402 Payment Transactions
+  description: 'Telnyx API — x402 Payment Transactions. 2 operations. Lead operation: Settle a payment. Self-contained Naftiko
+    capability covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - x402 Payment Transactions
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-x402-payment-transactions
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — x402 Payment Transactions business capability. Self-contained, no shared references.
+    resources:
+    - name: v2-x402-credit_account
+      path: /v2/x402/credit_account
+      operations:
+      - name: settlex402payment
+        method: POST
+        description: Settle a payment
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: PAYMENT-SIGNATURE
+          in: header
+          type: string
+          description: Signed payment authorization for the quote. Alternative to providing `payment_signature` in the request
+            body.
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    - name: v2-x402-credit_account-quote
+      path: /v2/x402/credit_account/quote
+      operations:
+      - name: createx402quote
+        method: POST
+        description: Create a payment quote
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-x402-payment-transactions-rest
+    port: 8080
+    description: REST adapter for Telnyx API — x402 Payment Transactions. One Spectral-compliant resource per consumed operation,
+      prefixed with /v1.
+    resources:
+    - path: /v1/v2/x402/credit-account
+      name: v2-x402-credit-account
+      description: REST surface for v2-x402-credit_account.
+      operations:
+      - method: POST
+        name: settlex402payment
+        description: Settle a payment
+        call: telnyx-x402-payment-transactions.settlex402payment
+        with:
+          PAYMENT-SIGNATURE: rest.PAYMENT-SIGNATURE
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/v2/x402/credit-account/quote
+      name: v2-x402-credit-account-quote
+      description: REST surface for v2-x402-credit_account-quote.
+      operations:
+      - method: POST
+        name: createx402quote
+        description: Create a payment quote
+        call: telnyx-x402-payment-transactions.createx402quote
+        with:
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-x402-payment-transactions-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — x402 Payment Transactions. One tool per consumed operation, routed inline through
+      this capability's consumes block.
+    tools:
+    - name: settle-payment
+      description: Settle a payment
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: false
+      call: telnyx-x402-payment-transactions.settlex402payment
+      with:
+        PAYMENT-SIGNATURE: tools.PAYMENT-SIGNATURE
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: create-payment-quote
+      description: Create a payment quote
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: false
+      call: telnyx-x402-payment-transactions.createx402quote
+      with:
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.

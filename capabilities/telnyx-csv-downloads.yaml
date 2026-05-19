@@ -1,0 +1,153 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — CSV Downloads
+  description: 'Telnyx API — CSV Downloads. 3 operations. Lead operation: List CSV downloads. Self-contained Naftiko capability
+    covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - CSV Downloads
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-csv-downloads
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — CSV Downloads business capability. Self-contained, no shared references.
+    resources:
+    - name: phone_numbers-csv_downloads
+      path: /phone_numbers/csv_downloads
+      operations:
+      - name: listcsvdownloads
+        method: GET
+        description: List CSV downloads
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+      - name: createcsvdownload
+        method: POST
+        description: Create a CSV download
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: csv_format
+          in: query
+          type: string
+          description: Which format to use when generating the CSV file. The default for backwards compatibility is 'V1'
+        - name: filter
+          in: query
+          type: object
+          description: 'Consolidated filter parameter (deepObject style). Originally: filter[has_bundle], filter[tag], filter[connection_id],
+            filter[phone_number], filter[status], filt'
+    - name: phone_numbers-csv_downloads-id
+      path: /phone_numbers/csv_downloads/{id}
+      operations:
+      - name: getcsvdownload
+        method: GET
+        description: Retrieve a CSV download
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: id
+          in: path
+          type: string
+          description: Identifies the CSV download.
+          required: true
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-csv-downloads-rest
+    port: 8080
+    description: REST adapter for Telnyx API — CSV Downloads. One Spectral-compliant resource per consumed operation, prefixed
+      with /v1.
+    resources:
+    - path: /v1/phone-numbers/csv-downloads
+      name: phone-numbers-csv-downloads
+      description: REST surface for phone_numbers-csv_downloads.
+      operations:
+      - method: GET
+        name: listcsvdownloads
+        description: List CSV downloads
+        call: telnyx-csv-downloads.listcsvdownloads
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: POST
+        name: createcsvdownload
+        description: Create a CSV download
+        call: telnyx-csv-downloads.createcsvdownload
+        with:
+          csv_format: rest.csv_format
+          filter: rest.filter
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/phone-numbers/csv-downloads/{id}
+      name: phone-numbers-csv-downloads-id
+      description: REST surface for phone_numbers-csv_downloads-id.
+      operations:
+      - method: GET
+        name: getcsvdownload
+        description: Retrieve a CSV download
+        call: telnyx-csv-downloads.getcsvdownload
+        with:
+          id: rest.id
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-csv-downloads-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — CSV Downloads. One tool per consumed operation, routed inline through this capability's
+      consumes block.
+    tools:
+    - name: list-csv-downloads
+      description: List CSV downloads
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-csv-downloads.listcsvdownloads
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: create-csv-download
+      description: Create a CSV download
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: false
+      call: telnyx-csv-downloads.createcsvdownload
+      with:
+        csv_format: tools.csv_format
+        filter: tools.filter
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: retrieve-csv-download
+      description: Retrieve a CSV download
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-csv-downloads.getcsvdownload
+      with:
+        id: tools.id
+      outputParameters:
+      - type: object
+        mapping: $.

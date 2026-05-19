@@ -1,0 +1,154 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — Chat
+  description: 'Telnyx API — Chat. 3 operations. Lead operation: Create a chat completion. Self-contained Naftiko capability
+    covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - Chat
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-chat
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — Chat business capability. Self-contained, no shared references.
+    resources:
+    - name: ai-chat-completions
+      path: /ai/chat/completions
+      operations:
+      - name: chatpublicchatcompletionspost
+        method: POST
+        description: Create a chat completion
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    - name: ai-models
+      path: /ai/models
+      operations:
+      - name: getmodelspublicmodelsget
+        method: GET
+        description: Get available models
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+    - name: ai-summarize
+      path: /ai/summarize
+      operations:
+      - name: postsummary
+        method: POST
+        description: Summarize file content
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-chat-rest
+    port: 8080
+    description: REST adapter for Telnyx API — Chat. One Spectral-compliant resource per consumed operation, prefixed with
+      /v1.
+    resources:
+    - path: /v1/ai/chat/completions
+      name: ai-chat-completions
+      description: REST surface for ai-chat-completions.
+      operations:
+      - method: POST
+        name: chatpublicchatcompletionspost
+        description: Create a chat completion
+        call: telnyx-chat.chatpublicchatcompletionspost
+        with:
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/ai/models
+      name: ai-models
+      description: REST surface for ai-models.
+      operations:
+      - method: GET
+        name: getmodelspublicmodelsget
+        description: Get available models
+        call: telnyx-chat.getmodelspublicmodelsget
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/ai/summarize
+      name: ai-summarize
+      description: REST surface for ai-summarize.
+      operations:
+      - method: POST
+        name: postsummary
+        description: Summarize file content
+        call: telnyx-chat.postsummary
+        with:
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-chat-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — Chat. One tool per consumed operation, routed inline through this capability's
+      consumes block.
+    tools:
+    - name: create-chat-completion
+      description: Create a chat completion
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: false
+      call: telnyx-chat.chatpublicchatcompletionspost
+      with:
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: get-available-models
+      description: Get available models
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-chat.getmodelspublicmodelsget
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: summarize-file-content
+      description: Summarize file content
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: false
+      call: telnyx-chat.postsummary
+      with:
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.

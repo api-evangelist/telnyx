@@ -1,0 +1,196 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — IP Addresses
+  description: 'Telnyx API — IP Addresses. 4 operations. Lead operation: List all Access IP Addresses. Self-contained Naftiko
+    capability covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - IP Addresses
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-ip-addresses
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — IP Addresses business capability. Self-contained, no shared references.
+    resources:
+    - name: access_ip_address
+      path: /access_ip_address
+      operations:
+      - name: listaccessipaddresses
+        method: GET
+        description: List all Access IP Addresses
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: filter
+          in: query
+          type: object
+          description: 'Consolidated filter parameter (deepObject style). Originally: filter[ip_source], filter[ip_address],
+            filter[created_at]. Supports complex bracket operations for'
+        - name: page
+          in: query
+          type: object
+          description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
+      - name: createaccessipaddress
+        method: POST
+        description: Create new Access IP Address
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    - name: access_ip_address-access_ip_address_id
+      path: /access_ip_address/{access_ip_address_id}
+      operations:
+      - name: deleteaccessipaddress
+        method: DELETE
+        description: Delete access IP address
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: access_ip_address_id
+          in: path
+          type: string
+          required: true
+      - name: getaccessipaddress
+        method: GET
+        description: Retrieve an access IP address
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: access_ip_address_id
+          in: path
+          type: string
+          required: true
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-ip-addresses-rest
+    port: 8080
+    description: REST adapter for Telnyx API — IP Addresses. One Spectral-compliant resource per consumed operation, prefixed
+      with /v1.
+    resources:
+    - path: /v1/access-ip-address
+      name: access-ip-address
+      description: REST surface for access_ip_address.
+      operations:
+      - method: GET
+        name: listaccessipaddresses
+        description: List all Access IP Addresses
+        call: telnyx-ip-addresses.listaccessipaddresses
+        with:
+          filter: rest.filter
+          page: rest.page
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: POST
+        name: createaccessipaddress
+        description: Create new Access IP Address
+        call: telnyx-ip-addresses.createaccessipaddress
+        with:
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/access-ip-address/{access-ip-address-id}
+      name: access-ip-address-access-ip-address-id
+      description: REST surface for access_ip_address-access_ip_address_id.
+      operations:
+      - method: DELETE
+        name: deleteaccessipaddress
+        description: Delete access IP address
+        call: telnyx-ip-addresses.deleteaccessipaddress
+        with:
+          access_ip_address_id: rest.access_ip_address_id
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: GET
+        name: getaccessipaddress
+        description: Retrieve an access IP address
+        call: telnyx-ip-addresses.getaccessipaddress
+        with:
+          access_ip_address_id: rest.access_ip_address_id
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-ip-addresses-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — IP Addresses. One tool per consumed operation, routed inline through this capability's
+      consumes block.
+    tools:
+    - name: list-all-access-ip-addresses
+      description: List all Access IP Addresses
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-ip-addresses.listaccessipaddresses
+      with:
+        filter: tools.filter
+        page: tools.page
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: create-new-access-ip-address
+      description: Create new Access IP Address
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: false
+      call: telnyx-ip-addresses.createaccessipaddress
+      with:
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: delete-access-ip-address
+      description: Delete access IP address
+      hints:
+        readOnly: false
+        destructive: true
+        idempotent: true
+      call: telnyx-ip-addresses.deleteaccessipaddress
+      with:
+        access_ip_address_id: tools.access_ip_address_id
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: retrieve-access-ip-address
+      description: Retrieve an access IP address
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-ip-addresses.getaccessipaddress
+      with:
+        access_ip_address_id: tools.access_ip_address_id
+      outputParameters:
+      - type: object
+        mapping: $.

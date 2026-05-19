@@ -1,0 +1,147 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — UserAddresses
+  description: 'Telnyx API — UserAddresses. 3 operations. Lead operation: List all user addresses. Self-contained Naftiko
+    capability covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - UserAddresses
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-useraddresses
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — UserAddresses business capability. Self-contained, no shared references.
+    resources:
+    - name: user_addresses
+      path: /user_addresses
+      operations:
+      - name: finduseraddress
+        method: GET
+        description: List all user addresses
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+      - name: createuseraddress
+        method: POST
+        description: Creates a user address
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    - name: user_addresses-id
+      path: /user_addresses/{id}
+      operations:
+      - name: getuseraddress
+        method: GET
+        description: Retrieve a user address
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: id
+          in: path
+          type: string
+          description: user address ID
+          required: true
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-useraddresses-rest
+    port: 8080
+    description: REST adapter for Telnyx API — UserAddresses. One Spectral-compliant resource per consumed operation, prefixed
+      with /v1.
+    resources:
+    - path: /v1/user-addresses
+      name: user-addresses
+      description: REST surface for user_addresses.
+      operations:
+      - method: GET
+        name: finduseraddress
+        description: List all user addresses
+        call: telnyx-useraddresses.finduseraddress
+        outputParameters:
+        - type: object
+          mapping: $.
+      - method: POST
+        name: createuseraddress
+        description: Creates a user address
+        call: telnyx-useraddresses.createuseraddress
+        with:
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/user-addresses/{id}
+      name: user-addresses-id
+      description: REST surface for user_addresses-id.
+      operations:
+      - method: GET
+        name: getuseraddress
+        description: Retrieve a user address
+        call: telnyx-useraddresses.getuseraddress
+        with:
+          id: rest.id
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-useraddresses-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — UserAddresses. One tool per consumed operation, routed inline through this capability's
+      consumes block.
+    tools:
+    - name: list-all-user-addresses
+      description: List all user addresses
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-useraddresses.finduseraddress
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: creates-user-address
+      description: Creates a user address
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: false
+      call: telnyx-useraddresses.createuseraddress
+      with:
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: retrieve-user-address
+      description: Retrieve a user address
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-useraddresses.getuseraddress
+      with:
+        id: tools.id
+      outputParameters:
+      - type: object
+        mapping: $.

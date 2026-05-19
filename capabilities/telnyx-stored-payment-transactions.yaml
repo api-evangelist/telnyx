@@ -1,0 +1,80 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — Stored Payment Transactions
+  description: 'Telnyx API — Stored Payment Transactions. 1 operations. Lead operation: Create a stored payment transaction.
+    Self-contained Naftiko capability covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - Stored Payment Transactions
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-stored-payment-transactions
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — Stored Payment Transactions business capability. Self-contained, no shared references.
+    resources:
+    - name: v2-payment-stored_payment_transactions
+      path: /v2/payment/stored_payment_transactions
+      operations:
+      - name: createstoredpaymenttransaction
+        method: POST
+        description: Create a stored payment transaction
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-stored-payment-transactions-rest
+    port: 8080
+    description: REST adapter for Telnyx API — Stored Payment Transactions. One Spectral-compliant resource per consumed operation,
+      prefixed with /v1.
+    resources:
+    - path: /v1/v2/payment/stored-payment-transactions
+      name: v2-payment-stored-payment-transactions
+      description: REST surface for v2-payment-stored_payment_transactions.
+      operations:
+      - method: POST
+        name: createstoredpaymenttransaction
+        description: Create a stored payment transaction
+        call: telnyx-stored-payment-transactions.createstoredpaymenttransaction
+        with:
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-stored-payment-transactions-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — Stored Payment Transactions. One tool per consumed operation, routed inline
+      through this capability's consumes block.
+    tools:
+    - name: create-stored-payment-transaction
+      description: Create a stored payment transaction
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: false
+      call: telnyx-stored-payment-transactions.createstoredpaymenttransaction
+      with:
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.

@@ -1,0 +1,79 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — SETI Observability
+  description: 'Telnyx API — SETI Observability. 1 operations. Lead operation: Retrieve Black Box Test Results. Self-contained
+    Naftiko capability covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - SETI Observability
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-seti-observability
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — SETI Observability business capability. Self-contained, no shared references.
+    resources:
+    - name: seti-black_box_test_results
+      path: /seti/black_box_test_results
+      operations:
+      - name: getblackboxtestresults
+        method: GET
+        description: Retrieve Black Box Test Results
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: filter
+          in: query
+          type: object
+          description: 'Consolidated filter parameter (deepObject style). Originally: filter[product]'
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-seti-observability-rest
+    port: 8080
+    description: REST adapter for Telnyx API — SETI Observability. One Spectral-compliant resource per consumed operation,
+      prefixed with /v1.
+    resources:
+    - path: /v1/seti/black-box-test-results
+      name: seti-black-box-test-results
+      description: REST surface for seti-black_box_test_results.
+      operations:
+      - method: GET
+        name: getblackboxtestresults
+        description: Retrieve Black Box Test Results
+        call: telnyx-seti-observability.getblackboxtestresults
+        with:
+          filter: rest.filter
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-seti-observability-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — SETI Observability. One tool per consumed operation, routed inline through this
+      capability's consumes block.
+    tools:
+    - name: retrieve-black-box-test-results
+      description: Retrieve Black Box Test Results
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-seti-observability.getblackboxtestresults
+      with:
+        filter: tools.filter
+      outputParameters:
+      - type: object
+        mapping: $.

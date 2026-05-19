@@ -1,0 +1,79 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — Enum
+  description: 'Telnyx API — Enum. 1 operations. Lead operation: Get Enum. Self-contained Naftiko capability covering one
+    Telnyx business surface.'
+  tags:
+  - Telnyx
+  - Enum
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-enum
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — Enum business capability. Self-contained, no shared references.
+    resources:
+    - name: 10dlc-enum-endpoint
+      path: /10dlc/enum/{endpoint}
+      operations:
+      - name: getenumendpoint
+        method: GET
+        description: Get Enum
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: endpoint
+          in: path
+          type: string
+          required: true
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-enum-rest
+    port: 8080
+    description: REST adapter for Telnyx API — Enum. One Spectral-compliant resource per consumed operation, prefixed with
+      /v1.
+    resources:
+    - path: /v1/10dlc/enum/{endpoint}
+      name: 10dlc-enum-endpoint
+      description: REST surface for 10dlc-enum-endpoint.
+      operations:
+      - method: GET
+        name: getenumendpoint
+        description: Get Enum
+        call: telnyx-enum.getenumendpoint
+        with:
+          endpoint: rest.endpoint
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-enum-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — Enum. One tool per consumed operation, routed inline through this capability's
+      consumes block.
+    tools:
+    - name: get-enum
+      description: Get Enum
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-enum.getenumendpoint
+      with:
+        endpoint: tools.endpoint
+      outputParameters:
+      - type: object
+        mapping: $.

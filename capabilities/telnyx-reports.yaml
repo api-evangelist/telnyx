@@ -1,0 +1,122 @@
+naftiko: 1.0.0-alpha2
+info:
+  label: Telnyx API — Reports
+  description: 'Telnyx API — Reports. 2 operations. Lead operation: Create a ledger billing group report. Self-contained Naftiko
+    capability covering one Telnyx business surface.'
+  tags:
+  - Telnyx
+  - Reports
+  created: '2026-05-19'
+  modified: '2026-05-19'
+binds:
+- namespace: env
+  keys:
+    TELNYX_API_KEY: TELNYX_API_KEY
+capability:
+  consumes:
+  - type: http
+    namespace: telnyx-reports
+    baseUri: https://api.telnyx.com/v2
+    description: Telnyx API — Reports business capability. Self-contained, no shared references.
+    resources:
+    - name: ledger_billing_group_reports
+      path: /ledger_billing_group_reports
+      operations:
+      - name: createbillinggroupreport
+        method: POST
+        description: Create a ledger billing group report
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: body
+          in: body
+          type: object
+          description: Request body (JSON).
+          required: true
+    - name: ledger_billing_group_reports-id
+      path: /ledger_billing_group_reports/{id}
+      operations:
+      - name: getbillinggroupreport
+        method: GET
+        description: Get a ledger billing group report
+        outputRawFormat: json
+        outputParameters:
+        - name: result
+          type: object
+          value: $.
+        inputParameters:
+        - name: id
+          in: path
+          type: string
+          description: The id of the ledger billing group report
+          required: true
+    authentication:
+      type: bearer
+      token: '{{env.TELNYX_API_KEY}}'
+  exposes:
+  - type: rest
+    namespace: telnyx-reports-rest
+    port: 8080
+    description: REST adapter for Telnyx API — Reports. One Spectral-compliant resource per consumed operation, prefixed with
+      /v1.
+    resources:
+    - path: /v1/ledger-billing-group-reports
+      name: ledger-billing-group-reports
+      description: REST surface for ledger_billing_group_reports.
+      operations:
+      - method: POST
+        name: createbillinggroupreport
+        description: Create a ledger billing group report
+        call: telnyx-reports.createbillinggroupreport
+        with:
+          body: rest.body
+        outputParameters:
+        - type: object
+          mapping: $.
+    - path: /v1/ledger-billing-group-reports/{id}
+      name: ledger-billing-group-reports-id
+      description: REST surface for ledger_billing_group_reports-id.
+      operations:
+      - method: GET
+        name: getbillinggroupreport
+        description: Get a ledger billing group report
+        call: telnyx-reports.getbillinggroupreport
+        with:
+          id: rest.id
+        outputParameters:
+        - type: object
+          mapping: $.
+  - type: mcp
+    namespace: telnyx-reports-mcp
+    port: 9090
+    transport: http
+    description: MCP adapter for Telnyx API — Reports. One tool per consumed operation, routed inline through this capability's
+      consumes block.
+    tools:
+    - name: create-ledger-billing-group-report
+      description: Create a ledger billing group report
+      hints:
+        readOnly: false
+        destructive: false
+        idempotent: false
+      call: telnyx-reports.createbillinggroupreport
+      with:
+        body: tools.body
+      outputParameters:
+      - type: object
+        mapping: $.
+    - name: get-ledger-billing-group-report
+      description: Get a ledger billing group report
+      hints:
+        readOnly: true
+        destructive: false
+        idempotent: true
+      call: telnyx-reports.getbillinggroupreport
+      with:
+        id: tools.id
+      outputParameters:
+      - type: object
+        mapping: $.
