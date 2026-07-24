@@ -1,0 +1,388 @@
+openapi: 3.1.0
+info:
+  contact:
+    email: support@telnyx.com
+  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
+  title: Telnyx Access Tokens Number Reputation Settings API
+  version: 2.0.0
+  x-endpoint-cost: light
+servers:
+- description: Version 2.0.0 of the Telnyx API
+  url: https://api.telnyx.com/v2
+security:
+- bearerAuth: []
+tags:
+- description: Manage Number Reputation enrollment and check frequency settings for an enterprise
+  name: Number Reputation Settings
+paths:
+  /enterprises/{enterprise_id}/reputation:
+    delete:
+      description: 'Disable Number Reputation for an enterprise.
+
+
+        This will:
+
+        - Delete the reputation settings record
+
+        - Log the deletion for audit purposes
+
+        - Stop all future automated reputation checks
+
+
+        **Note:** Can only be performed on `approved` reputation settings.'
+      operationId: DisableReputationSettings
+      parameters:
+      - $ref: '#/components/parameters/EnterpriseId'
+      responses:
+        '204':
+          description: Reputation settings disabled successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      summary: Disable Number Reputation
+      tags:
+      - Number Reputation Settings
+      x-latency-category: responsive
+    get:
+      description: 'Retrieve the current Number Reputation settings for an enterprise.
+
+
+        Returns the enrollment status (`pending`, `approved`, `rejected`, `deleted`), check frequency, and any rejection reasons.
+
+
+        Returns `404` if reputation has not been enabled for this enterprise.'
+      operationId: GetReputationSettings
+      parameters:
+      - $ref: '#/components/parameters/EnterpriseId'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnterpriseReputationPublicWrapped'
+          description: Reputation settings
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/branded-calling_ErrorResponse'
+          description: Reputation settings not found for this enterprise
+      summary: Get reputation settings
+      tags:
+      - Number Reputation Settings
+      x-latency-category: responsive
+    post:
+      description: 'Enable Number Reputation service for an enterprise.
+
+
+        **Requirements:**
+
+        - Signed LOA (Letter of Authorization) document ID
+
+        - Reputation check frequency (defaults to `business_daily`)
+
+        - Number Reputation Terms of Service must be accepted
+
+
+        **Flow:**
+
+        1. Registers the enterprise for reputation monitoring
+
+        2. Creates reputation settings with `pending` status
+
+        3. Awaits admin approval before monitoring begins
+
+
+        **Resubmission After Rejection:**
+
+        If a previously rejected record exists, this endpoint will delete it and create a new `pending` record.
+
+
+        **Available Frequencies:**
+
+        - `business_daily` — Monday–Friday
+
+        - `daily` — Every day
+
+        - `weekly` — Once per week
+
+        - `biweekly` — Once every two weeks
+
+        - `monthly` — Once per month
+
+        - `never` — Manual refresh only'
+      operationId: EnableReputationSettings
+      parameters:
+      - $ref: '#/components/parameters/EnterpriseId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnterpriseReputationCreate'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnterpriseReputationPublicWrapped'
+          description: Reputation settings created (pending admin approval)
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/branded-calling_ErrorResponse'
+          description: Reputation settings already exist for this enterprise
+      summary: Enable Number Reputation
+      tags:
+      - Number Reputation Settings
+      x-latency-category: responsive
+  /enterprises/{enterprise_id}/reputation/frequency:
+    patch:
+      description: 'Update how often reputation data is automatically refreshed.
+
+
+        **Note:** The enterprise must have `approved` reputation settings. Updating frequency on `pending` or `rejected` settings will return an error.
+
+
+        **Available Frequencies:**
+
+        - `business_daily` — Monday–Friday
+
+        - `daily` — Every day including weekends
+
+        - `weekly` — Once per week
+
+        - `biweekly` — Once every two weeks
+
+        - `monthly` — Once per month
+
+        - `never` — Manual refresh only (no automatic checks)'
+      operationId: UpdateReputationFrequency
+      parameters:
+      - $ref: '#/components/parameters/EnterpriseId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnterpriseReputationUpdateFrequency'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnterpriseReputationPublicWrapped'
+          description: Reputation frequency updated
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      summary: Update reputation check frequency
+      tags:
+      - Number Reputation Settings
+      x-latency-category: responsive
+components:
+  schemas:
+    EnterpriseReputationCreate:
+      properties:
+        check_frequency:
+          default: business_daily
+          description: Frequency for automatically refreshing reputation data
+          enum:
+          - business_daily
+          - daily
+          - weekly
+          - biweekly
+          - monthly
+          - never
+          type: string
+        loa_document_id:
+          description: ID of the signed Letter of Authorization (LOA) document uploaded to the document service
+          example: doc_01HXYZ1234ABCDEF
+          maxLength: 255
+          minLength: 1
+          type: string
+      required:
+      - loa_document_id
+      type: object
+    EnterpriseReputationPublicWrapped:
+      properties:
+        data:
+          $ref: '#/components/schemas/EnterpriseReputationPublic'
+      type: object
+    EnterpriseReputationUpdateFrequency:
+      properties:
+        check_frequency:
+          description: New frequency for refreshing reputation data
+          enum:
+          - business_daily
+          - daily
+          - weekly
+          - biweekly
+          - monthly
+          - never
+          type: string
+      required:
+      - check_frequency
+      type: object
+    branded-calling_ErrorResponse:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/TelnyxError'
+          type: array
+      type: object
+    EnterpriseReputationPublic:
+      properties:
+        check_frequency:
+          description: Frequency for refreshing reputation data
+          enum:
+          - business_daily
+          - daily
+          - weekly
+          - biweekly
+          - monthly
+          - never
+          type: string
+        created_at:
+          description: When the reputation settings were created
+          format: date-time
+          type: string
+        enterprise_id:
+          description: ID of the associated enterprise
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+          format: uuid
+          type: string
+        loa_document_id:
+          description: ID of the signed LOA document
+          nullable: true
+          type: string
+        rejection_reasons:
+          description: Reasons for rejection (present when status is rejected)
+          items:
+            type: string
+          nullable: true
+          type: array
+        status:
+          description: Current enrollment status
+          enum:
+          - pending
+          - approved
+          - rejected
+          - deleted
+          type: string
+        updated_at:
+          description: When the reputation settings were last updated
+          format: date-time
+          type: string
+      type: object
+    TelnyxError:
+      properties:
+        code:
+          description: Telnyx error code
+          example: '10015'
+          type: string
+        detail:
+          description: Human-readable error detail
+          example: User has already agreed to Terms of Service version v1.0.0
+          type: string
+        meta:
+          properties:
+            url:
+              description: Link to error documentation
+              format: uri
+              type: string
+          type: object
+        source:
+          description: Reference to the field that caused the error
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the field that caused the error
+              example: /body/organization_type
+              type: string
+          type: object
+        title:
+          description: Short error title
+          example: Bad Request
+          type: string
+      required:
+      - code
+      - title
+      type: object
+  responses:
+    Unauthorized:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/branded-calling_ErrorResponse'
+      description: Unauthorized — missing or invalid API key
+    BadRequest:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/branded-calling_ErrorResponse'
+      description: Bad request — invalid input or validation error
+    NotFound:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/branded-calling_ErrorResponse'
+      description: Resource not found
+  parameters:
+    EnterpriseId:
+      description: Unique identifier of the enterprise (UUID)
+      in: path
+      name: enterprise_id
+      required: true
+      schema:
+        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+        format: uuid
+        type: string
+  securitySchemes:
+    bearerAuth:
+      scheme: bearer
+      type: http
+    branded-calling_bearerAuth:
+      description: API key passed as a Bearer token in the Authorization header
+      scheme: bearer
+      type: http
+    oauthClientAuth:
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+      flows:
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+        clientCredentials:
+          scopes:
+            admin: Administrative access to Telnyx resources
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+      type: oauth2
+    outbound-voice-profiles_bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http
+    pronunciation-dicts_bearerAuth:
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+      scheme: bearer
+      type: http
+    stored-payment-transactions_bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http

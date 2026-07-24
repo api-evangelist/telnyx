@@ -1,0 +1,287 @@
+openapi: 3.1.0
+info:
+  contact:
+    email: support@telnyx.com
+  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
+  title: Telnyx Access Tokens Number Lookup API
+  version: 2.0.0
+  x-endpoint-cost: light
+servers:
+- description: Version 2.0.0 of the Telnyx API
+  url: https://api.telnyx.com/v2
+security:
+- bearerAuth: []
+tags:
+- description: Look up phone number data
+  name: Number Lookup
+paths:
+  /number_lookup/{phone_number}:
+    get:
+      description: Returns information about the provided phone number.
+      operationId: LookupNumber
+      parameters:
+      - $ref: '#/components/parameters/number-lookup_PhoneNumber'
+      - $ref: '#/components/parameters/NumberLookupType'
+      responses:
+        '200':
+          $ref: '#/components/responses/NumberLookupResponse'
+        '422':
+          $ref: '#/components/responses/number-lookup_UnprocessableEntity'
+        default:
+          $ref: '#/components/responses/number-lookup_GenericErrorResponse'
+      summary: Lookup phone number data
+      tags:
+      - Number Lookup
+      x-latency-category: responsive
+components:
+  parameters:
+    NumberLookupType:
+      description: Specifies the type of number lookup to be performed
+      in: query
+      name: type
+      required: false
+      schema:
+        enum:
+        - carrier
+        - caller-name
+        type: string
+    number-lookup_PhoneNumber:
+      description: The phone number to be looked up
+      in: path
+      name: phone_number
+      required: true
+      schema:
+        example: '+18665552368'
+        type: string
+  schemas:
+    number-lookup_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/number-lookup_Error'
+          type: array
+      type: object
+    number-lookup_Error:
+      properties:
+        code:
+          type: string
+        detail:
+          type: string
+        meta:
+          additionalProperties: true
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+          type: object
+        title:
+          type: string
+      required:
+      - code
+      - title
+      type: object
+    Portability:
+      properties:
+        altspid:
+          description: Alternative SPID (Service Provider ID). Often used when a carrier is using a number from another carrier
+          example: 073H
+          type: string
+        altspid_carrier_name:
+          description: Alternative service provider name
+          example: Telnyx/4
+          type: string
+        altspid_carrier_type:
+          description: Alternative service provider type
+          example: '3'
+          type: string
+        city:
+          description: City name extracted from the locality in the Local Exchange Routing Guide (LERG) database
+          example: WAUKEGAN
+          type: string
+        line_type:
+          description: Type of number
+          example: voip
+          type: string
+        lrn:
+          description: Local Routing Number, if assigned to the requested phone number
+          example: '2245701999'
+          type: string
+        ocn:
+          description: Operating Company Name (OCN) as per the Local Exchange Routing Guide (LERG) database
+          example: 073H
+          type: string
+        ported_date:
+          description: ISO-formatted date when the requested phone number has been ported
+          example: '2017-10-20'
+          type: string
+        ported_status:
+          description: Indicates whether or not the requested phone number has been ported
+          enum:
+          - Y
+          - N
+          - ''
+          example: Y
+          type: string
+        spid:
+          description: SPID (Service Provider ID)
+          example: 073H
+          type: string
+        spid_carrier_name:
+          description: Service provider name
+          example: Telnyx/4
+          type: string
+        spid_carrier_type:
+          description: Service provider type
+          example: '3'
+          type: string
+        state:
+          example: Illinois
+          type: string
+      type: object
+    CallerName:
+      properties:
+        caller_name:
+          description: The name of the requested phone number's owner as per the CNAM database
+          example: TELNYX LLC
+          type: string
+        error_code:
+          description: A caller-name lookup specific error code, expressed as a stringified 5-digit integer
+          example: '10001'
+          type: string
+      type: object
+    NumberLookupRecord:
+      properties:
+        caller_name:
+          $ref: '#/components/schemas/CallerName'
+        carrier:
+          $ref: '#/components/schemas/Carrier'
+        country_code:
+          description: Region code that matches the specific country calling code
+          example: US
+          type: string
+        fraud:
+          description: Unused
+          example: null
+          type:
+          - string
+          - 'null'
+        national_format:
+          description: Hyphen-separated national number, preceded by the national destination code (NDC), with a 0 prefix, if an NDC is found
+          example: (0312) 945-7420
+          type: string
+        phone_number:
+          description: E164-formatted phone number
+          example: '+13129457420'
+          type: string
+        portability:
+          $ref: '#/components/schemas/Portability'
+        record_type:
+          description: Identifies the type of record
+          example: number_lookup
+          type: string
+      title: NumberLookup
+      type: object
+    Carrier:
+      properties:
+        error_code:
+          description: Unused
+          example: null
+          type:
+          - string
+          - 'null'
+        mobile_country_code:
+          description: Region code that matches the specific country calling code if the requested phone number type is mobile
+          example: US
+          type: string
+        mobile_network_code:
+          description: National destination code (NDC), with a 0 prefix, if an NDC is found and the requested phone number type is mobile
+          example: 0866
+          type: string
+        name:
+          description: SPID (Service Provider ID) name, if the requested phone number has been ported; otherwise, the name of carrier who owns the phone number block
+          example: Telnyx/4
+          type: string
+        normalized_carrier:
+          description: If known to Telnyx and applicable, the primary network carrier.
+          example: AT&T
+          type: string
+        type:
+          description: A phone number type that identifies the type of service associated with the requested phone number
+          enum:
+          - fixed line
+          - mobile
+          - voip
+          - fixed line or mobile
+          - toll free
+          - premium rate
+          - shared cost
+          - personal number
+          - pager
+          - uan
+          - voicemail
+          - unknown
+          example: voip
+          type: string
+      type: object
+  responses:
+    number-lookup_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/number-lookup_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+    number-lookup_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/number-lookup_Errors'
+      description: Unexpected error
+    NumberLookupResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/NumberLookupRecord'
+            title: Number Lookup Response
+            type: object
+      description: Successful response
+  securitySchemes:
+    bearerAuth:
+      scheme: bearer
+      type: http
+    branded-calling_bearerAuth:
+      description: API key passed as a Bearer token in the Authorization header
+      scheme: bearer
+      type: http
+    oauthClientAuth:
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+      flows:
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+        clientCredentials:
+          scopes:
+            admin: Administrative access to Telnyx resources
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+      type: oauth2
+    outbound-voice-profiles_bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http
+    pronunciation-dicts_bearerAuth:
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+      scheme: bearer
+      type: http
+    stored-payment-transactions_bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http

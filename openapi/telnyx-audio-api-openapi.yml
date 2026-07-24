@@ -1,0 +1,221 @@
+openapi: 3.1.0
+info:
+  contact:
+    email: support@telnyx.com
+  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
+  title: Telnyx Access Tokens Audio API
+  version: 2.0.0
+  x-endpoint-cost: light
+servers:
+- description: Version 2.0.0 of the Telnyx API
+  url: https://api.telnyx.com/v2
+security:
+- bearerAuth: []
+tags:
+- name: Audio
+paths:
+  /ai/audio/transcriptions:
+    post:
+      description: Transcribe speech to text. This endpoint is consistent with the [OpenAI Transcription API](https://platform.openai.com/docs/api-reference/audio/createTranscription) and may be used with the OpenAI JS or Python SDK.
+      operationId: audio_public_audio_transcriptions_post
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AudioTranscriptionRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AudioTranscriptionResponse'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Transcribe speech to text
+      tags:
+      - Audio
+      x-latency-category: responsive
+components:
+  schemas:
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
+    AudioTranscriptionResponseWord:
+      description: Word-level timing detail. Only present when using `deepgram/nova-3` with `model_config` options that enable word timestamps.
+      properties:
+        confidence:
+          description: Confidence score for the word (0.0 to 1.0).
+          type: number
+        end:
+          description: End time of the word in seconds.
+          type: number
+        speaker:
+          description: Speaker index. Only present when diarization is enabled via `model_config`.
+          type: integer
+        start:
+          description: Start time of the word in seconds.
+          type: number
+        word:
+          description: The transcribed word.
+          type: string
+      required:
+      - word
+      - start
+      - end
+      type: object
+    AudioTranscriptionRequest:
+      properties:
+        file:
+          description: 'The audio file object to transcribe, in one of these formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm. File uploads are limited to 100 MB. Cannot be used together with `file_url`. Note: `deepgram/nova-3` only supports mp3 and wav formats.'
+          format: binary
+          type: string
+        file_url:
+          description: 'Link to audio file in one of these formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm. Support for hosted files is limited to 100MB. Cannot be used together with `file`. Note: `deepgram/nova-3` only supports mp3 and wav formats.'
+          example: https://example.com/file.mp3
+          type: string
+        language:
+          description: 'The language of the audio to be transcribed. For `deepgram/nova-3`, only English variants are supported: `en`, `en-US`, `en-GB`, `en-AU`, `en-NZ`, `en-IN`. For `openai/whisper-large-v3-turbo`, supports multiple languages. `distil-whisper/distil-large-v2` does not support language parameter.'
+          example: en-US
+          type: string
+        model:
+          default: distil-whisper/distil-large-v2
+          description: ID of the model to use. `distil-whisper/distil-large-v2` is lower latency but English-only. `openai/whisper-large-v3-turbo` is multi-lingual but slightly higher latency. `deepgram/nova-3` supports English variants (en, en-US, en-GB, en-AU, en-NZ, en-IN) and only accepts mp3/wav files.
+          enum:
+          - distil-whisper/distil-large-v2
+          - openai/whisper-large-v3-turbo
+          - deepgram/nova-3
+          example: distil-whisper/distil-large-v2
+          type: string
+        model_config:
+          additionalProperties: true
+          description: Additional model-specific configuration parameters. Only allowed with `deepgram/nova-3` model. Can include Deepgram-specific options such as `smart_format`, `punctuate`, `diarize`, `utterance`, `numerals`, and `language`. If `language` is provided both as a top-level parameter and in `model_config`, the top-level parameter takes precedence.
+          example:
+            punctuate: true
+            smart_format: true
+          type: object
+        response_format:
+          default: json
+          description: The format of the transcript output. Use `verbose_json` to take advantage of timestamps.
+          enum:
+          - json
+          - verbose_json
+          example: json
+          type: string
+        timestamp_granularities[]:
+          description: The timestamp granularities to populate for this transcription. `response_format` must be set verbose_json to use timestamp granularities. Currently `segment` is supported.
+          enum:
+          - segment
+          example: segment
+          type: string
+      required:
+      - model
+      type: object
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    AudioTranscriptionResponseSegments:
+      properties:
+        end:
+          description: End time of the segment in seconds.
+          type: number
+        id:
+          description: Unique identifier of the segment.
+          type: number
+        start:
+          description: Start time of the segment in seconds.
+          type: number
+        text:
+          description: Text content of the segment.
+          type: string
+      required:
+      - id
+      - start
+      - end
+      - text
+      type: object
+    AudioTranscriptionResponse:
+      description: Response fields vary by model. `distil-whisper/distil-large-v2` returns `text`, `duration`, and `segments` in `verbose_json` mode. `openai/whisper-large-v3-turbo` returns `text` only. `deepgram/nova-3` returns `text` and, depending on `model_config`, may include `words` with per-word timestamps and speaker labels.
+      properties:
+        duration:
+          description: The duration of the audio file in seconds. Returned by `distil-whisper/distil-large-v2` and `deepgram/nova-3` when `response_format` is `verbose_json`. Not returned by `openai/whisper-large-v3-turbo`.
+          type: number
+        segments:
+          description: Segments of the transcribed text and their corresponding details. Returned by `distil-whisper/distil-large-v2` when `response_format` is `verbose_json`. Not returned by `openai/whisper-large-v3-turbo`.
+          items:
+            $ref: '#/components/schemas/AudioTranscriptionResponseSegments'
+          type: array
+        text:
+          description: The transcribed text for the audio file.
+          type: string
+        words:
+          description: Word-level timestamps and optional speaker labels. Only returned by `deepgram/nova-3` when word-level output is enabled via `model_config`.
+          items:
+            $ref: '#/components/schemas/AudioTranscriptionResponseWord'
+          type: array
+      required:
+      - text
+      type: object
+  securitySchemes:
+    bearerAuth:
+      scheme: bearer
+      type: http
+    branded-calling_bearerAuth:
+      description: API key passed as a Bearer token in the Authorization header
+      scheme: bearer
+      type: http
+    oauthClientAuth:
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+      flows:
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+        clientCredentials:
+          scopes:
+            admin: Administrative access to Telnyx resources
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+      type: oauth2
+    outbound-voice-profiles_bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http
+    pronunciation-dicts_bearerAuth:
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+      scheme: bearer
+      type: http
+    stored-payment-transactions_bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http

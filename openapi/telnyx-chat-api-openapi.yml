@@ -1,0 +1,453 @@
+openapi: 3.1.0
+info:
+  contact:
+    email: support@telnyx.com
+  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
+  title: Telnyx Access Tokens Chat API
+  version: 2.0.0
+  x-endpoint-cost: light
+servers:
+- description: Version 2.0.0 of the Telnyx API
+  url: https://api.telnyx.com/v2
+security:
+- bearerAuth: []
+tags:
+- description: Generate text with LLMs
+  name: Chat
+paths:
+  /ai/chat/completions:
+    post:
+      deprecated: true
+      description: '**Deprecated**: Use `POST /v2/ai/openai/chat/completions` instead. Chat with a language model. This endpoint is consistent with the [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat) and may be used with the OpenAI JS or Python SDK.'
+      operationId: chat_public_chat_completions_post
+      requestBody:
+        content:
+          application/json:
+            example:
+              messages:
+              - content: You are a friendly chatbot.
+                role: system
+              - content: Hello, world!
+                role: user
+            schema:
+              $ref: '#/components/schemas/ChatCompletionRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Create a chat completion
+      tags:
+      - Chat
+      x-hidden: true
+      x-latency-category: responsive
+  /ai/models:
+    get:
+      deprecated: true
+      description: '**Deprecated**: Use `GET /v2/ai/openai/models` instead. This endpoint returns a list of Open Source and OpenAI models that are available for use. <br /><br /> **Note**: Model `id`''s will be in the form `{source}/{model_name}`. For example `openai/gpt-4` or `mistralai/Mistral-7B-Instruct-v0.1` consistent with HuggingFace naming conventions.'
+      operationId: get_models_public_models_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelsResponse'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get available models
+      tags:
+      - Chat
+      x-hidden: true
+      x-latency-category: responsive
+  /ai/summarize:
+    post:
+      description: "Generate a summary of a file's contents. \n\n Supports the following text formats: \n- PDF, HTML, txt, json, csv\n\n Supports the following media formats (billed for both the transcription and summary): \n- flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm\n- Up to 100 MB"
+      operationId: PostSummary
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SummaryRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SummaryResponseData'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Summarize file content
+      tags:
+      - Chat
+      x-latency-category: responsive
+components:
+  schemas:
+    SummaryResponse:
+      properties:
+        summary:
+          title: Summary
+          type: string
+      required:
+      - summary
+      title: SummaryResponse
+      type: object
+    ModelMetadata:
+      properties:
+        created:
+          title: Created
+          type: integer
+        id:
+          title: Id
+          type: string
+        object:
+          default: model
+          title: Object
+          type: string
+        owned_by:
+          title: Owned By
+          type: string
+      required:
+      - id
+      - created
+      - owned_by
+      title: ModelMetadata
+      type: object
+    BucketIds:
+      properties:
+        bucket_ids:
+          description: List of [embedded storage buckets](https://developers.telnyx.com/api-reference/embeddings/embed-documents) to use for retrieval-augmented generation.
+          items:
+            type: string
+          type: array
+        max_num_results:
+          description: The maximum number of results to retrieve as context for the language model.
+          type: integer
+      required:
+      - bucket_ids
+      title: BucketIds
+      type: object
+    ChatCompletionSystemMessageParam:
+      properties:
+        content:
+          oneOf:
+          - title: Content String
+            type: string
+          - items:
+              additionalProperties: false
+              properties:
+                image_url:
+                  type: string
+                text:
+                  type: string
+                type:
+                  enum:
+                  - text
+                  - image_url
+                  type: string
+              required:
+              - type
+              type: object
+            title: Text and Image Array
+            type: array
+        role:
+          enum:
+          - system
+          - user
+          - assistant
+          - tool
+          type: string
+      required:
+      - content
+      - role
+      title: ChatCompletionSystemMessageParam
+      type: object
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
+    SummaryResponseData:
+      properties:
+        data:
+          $ref: '#/components/schemas/SummaryResponse'
+      required:
+      - data
+      title: SummaryResponseData
+      type: object
+    ChatCompletionRequest:
+      properties:
+        api_key_ref:
+          description: If you are using an external inference provider like xAI or OpenAI, this field allows you to pass along a reference to your API key. After creating an [integration secret](https://developers.telnyx.com/api-reference/integration-secrets/create-a-secret) for you API key, pass the secret's `identifier` in this field.
+          type: string
+        best_of:
+          description: This is used with `use_beam_search` to determine how many candidate beams to explore.
+          type: integer
+        early_stopping:
+          default: false
+          description: This is used with `use_beam_search`. If `true`, generation stops as soon as there are `best_of` complete candidates; if `false`, a heuristic is applied and the generation stops when is it very unlikely to find better candidates.
+          type: boolean
+        enable_thinking:
+          default: true
+          description: Whether to enable the thinking/reasoning phase for models that support it (e.g., QwQ, Qwen3). When set to false, the model will skip the internal reasoning step and respond directly, which can reduce latency. Defaults to true.
+          type: boolean
+        frequency_penalty:
+          default: 0
+          description: Higher values will penalize the model from repeating the same output tokens.
+          type: number
+        guided_choice:
+          description: If specified, the output will be exactly one of the choices.
+          items:
+            type: string
+          type: array
+        guided_json:
+          additionalProperties: true
+          description: Must be a valid JSON schema. If specified, the output will follow the JSON schema.
+          type: object
+        guided_regex:
+          description: If specified, the output will follow the regex pattern.
+          type: string
+        length_penalty:
+          default: 1
+          description: This is used with `use_beam_search` to prefer shorter or longer completions.
+          type: number
+        logprobs:
+          default: false
+          description: Whether to return log probabilities of the output tokens or not. If true, returns the log probabilities of each output token returned in the `content` of `message`.
+          type: boolean
+        max_tokens:
+          description: Maximum number of completion tokens the model should generate.
+          type: integer
+        messages:
+          description: A list of the previous chat messages for context.
+          example:
+          - content: You are a friendly chatbot.
+            role: system
+          - content: Hello, world!
+            role: user
+          items:
+            $ref: '#/components/schemas/ChatCompletionSystemMessageParam'
+          type: array
+        min_p:
+          description: This is an alternative to `top_p` that [many prefer](https://github.com/huggingface/transformers/issues/27670). Must be in [0, 1].
+          type: number
+        model:
+          default: meta-llama/Meta-Llama-3.1-8B-Instruct
+          description: The language model to chat with.
+          type: string
+        n:
+          description: This will return multiple choices for you instead of a single chat completion.
+          type: number
+        presence_penalty:
+          default: 0
+          description: Higher values will penalize the model from repeating the same output tokens.
+          type: number
+        response_format:
+          $ref: '#/components/schemas/ChatCompletionResponseFormatParam'
+          description: Use this is you want to guarantee a JSON output without defining a schema. For control over the schema, use `guided_json`.
+        seed:
+          description: If specified, the system will make a best effort to sample deterministically, such that repeated requests with the same `seed` and parameters should return the same result.
+          type: integer
+        stop:
+          description: Up to 4 sequences where the API will stop generating further tokens. The returned text will not contain the stop sequence.
+          oneOf:
+          - type: string
+          - items:
+              type: string
+            maxItems: 4
+            type: array
+        stream:
+          default: false
+          description: Whether or not to stream data-only server-sent events as they become available.
+          type: boolean
+        temperature:
+          default: 0.1
+          description: Adjusts the "creativity" of the model. Lower values make the model more deterministic and repetitive, while higher values make the model more random and creative.
+          type: number
+        tool_choice:
+          enum:
+          - none
+          - auto
+          - required
+          type: string
+        tools:
+          description: The `function` tool type follows the same schema as the [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat). The `retrieval` tool type is unique to Telnyx. You may pass a list of [embedded storage buckets](https://developers.telnyx.com/api-reference/embeddings/embed-documents) for retrieval-augmented generation.
+          items:
+            oneOf:
+            - $ref: '#/components/schemas/ChatCompletionToolParam'
+            - $ref: '#/components/schemas/Retrieval'
+          type: array
+        top_logprobs:
+          description: This is used with `logprobs`. An integer between 0 and 20 specifying the number of most likely tokens to return at each token position, each with an associated log probability.
+          type: integer
+        top_p:
+          description: An alternative or complement to `temperature`. This adjusts how many of the top possibilities to consider.
+          type: number
+        use_beam_search:
+          default: false
+          description: Setting this to `true` will allow the model to [explore more completion options](https://huggingface.co/blog/how-to-generate#beam-search). This is not supported by OpenAI.
+          type: boolean
+      required:
+      - messages
+      title: ChatCompletionRequest
+      type: object
+    Retrieval:
+      properties:
+        retrieval:
+          $ref: '#/components/schemas/BucketIds'
+        type:
+          enum:
+          - retrieval
+          type: string
+      required:
+      - type
+      - retrieval
+      title: Retrieval
+      type: object
+    SummaryRequest:
+      properties:
+        bucket:
+          description: The name of the bucket that contains the file to be summarized.
+          type: string
+        filename:
+          description: The name of the file to be summarized.
+          type: string
+        system_prompt:
+          description: A system prompt to guide the summary generation.
+          type: string
+      required:
+      - bucket
+      - filename
+      title: SummaryRequest
+      type: object
+    ModelsResponse:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/ModelMetadata'
+          title: Data
+          type: array
+        object:
+          default: list
+          title: Object
+          type: string
+      required:
+      - data
+      title: ModelsResponse
+      type: object
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    ChatCompletionResponseFormatParam:
+      properties:
+        type:
+          enum:
+          - text
+          - json_object
+          type: string
+      required:
+      - type
+      title: ChatCompletionResponseFormatParam
+      type: object
+    ChatCompletionToolParam:
+      properties:
+        function:
+          $ref: '#/components/schemas/FunctionDefinition'
+        type:
+          enum:
+          - function
+          type: string
+      required:
+      - function
+      - type
+      title: Function
+      type: object
+    FunctionDefinition:
+      properties:
+        description:
+          type: string
+        name:
+          type: string
+        parameters:
+          additionalProperties: true
+          type: object
+      required:
+      - name
+      title: FunctionDefinition
+      type: object
+  securitySchemes:
+    bearerAuth:
+      scheme: bearer
+      type: http
+    branded-calling_bearerAuth:
+      description: API key passed as a Bearer token in the Authorization header
+      scheme: bearer
+      type: http
+    oauthClientAuth:
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+      flows:
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+        clientCredentials:
+          scopes:
+            admin: Administrative access to Telnyx resources
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+      type: oauth2
+    outbound-voice-profiles_bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http
+    pronunciation-dicts_bearerAuth:
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+      scheme: bearer
+      type: http
+    stored-payment-transactions_bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http

@@ -1,0 +1,249 @@
+openapi: 3.1.0
+info:
+  contact:
+    email: support@telnyx.com
+  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
+  title: Telnyx Access Tokens Charges Breakdown API
+  version: 2.0.0
+  x-endpoint-cost: light
+servers:
+- description: Version 2.0.0 of the Telnyx API
+  url: https://api.telnyx.com/v2
+security:
+- bearerAuth: []
+tags:
+- name: Charges Breakdown
+paths:
+  /charges_breakdown:
+    get:
+      description: Retrieve a detailed breakdown of monthly charges for phone numbers in a specified date range. The date range cannot exceed 31 days.
+      operationId: GetMonthlyChargesBreakdown
+      parameters:
+      - description: Start date for the charges breakdown in ISO date format (YYYY-MM-DD)
+        in: query
+        name: start_date
+        required: true
+        schema:
+          example: '2025-05-01'
+          format: date
+          type: string
+      - description: End date for the charges breakdown in ISO date format (YYYY-MM-DD). If not provided, defaults to start_date + 1 month. The date is exclusive, data for the end_date itself is not included in the report. The interval between start_date and end_date cannot exceed 31 days.
+        in: query
+        name: end_date
+        required: false
+        schema:
+          example: '2025-06-01'
+          format: date
+          type: string
+      - description: Response format
+        in: query
+        name: format
+        required: false
+        schema:
+          default: json
+          enum:
+          - json
+          - csv
+          example: json
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonthlyChargesBreakdownResponse'
+            text/csv:
+              schema:
+                description: CSV format of the charges breakdown
+                type: string
+          description: Monthly charges breakdown
+        '400':
+          $ref: '#/components/responses/charges_BadRequestErrorResponse'
+        '422':
+          $ref: '#/components/responses/charges_UnprocessableEntityErrorResponse'
+        default:
+          $ref: '#/components/responses/charges_GenericErrorResponse'
+      summary: Get monthly charges breakdown
+      x-latency-category: responsive
+      tags:
+      - Charges Breakdown
+components:
+  responses:
+    charges_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/charges_Errors'
+      description: Unexpected error
+    charges_UnprocessableEntityErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/charges_Errors'
+      description: User account not found
+    charges_BadRequestErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/charges_Errors'
+      description: Invalid request parameters or date range
+  schemas:
+    ServiceDetail:
+      properties:
+        cost:
+          description: Cost per unit as decimal string
+          example: '1.50'
+          type: string
+        cost_type:
+          description: Type of cost (MRC or OTC)
+          example: MRC
+          type: string
+        name:
+          description: Service name
+          example: Local DIDs
+          type: string
+      required:
+      - cost_type
+      - name
+      - cost
+      type: object
+    MonthlyChargesBreakdownResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/BreakdownData'
+      required:
+      - data
+      type: object
+    charges_Error:
+      properties:
+        code:
+          format: integer
+          type: string
+        detail:
+          type: string
+        meta:
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              format: json-pointer
+              type: string
+          type: object
+        title:
+          type: string
+      required:
+      - code
+      - title
+    charges_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/charges_Error'
+          type: array
+    NumberBreakdownResult:
+      properties:
+        charge_type:
+          description: Type of charge for the number
+          example: local
+          type: string
+        service_owner_email:
+          description: Email address of the service owner
+          example: user@example.com
+          format: email
+          type: string
+        service_owner_user_id:
+          description: User ID of the service owner
+          example: 0db0b4aa-a83d-4d4f-ad9b-3ba7c1ac2ce8
+          type: string
+        services:
+          description: List of services associated with this number
+          items:
+            $ref: '#/components/schemas/ServiceDetail'
+          type: array
+        tn:
+          description: Phone number
+          example: '+15551234567'
+          type: string
+      required:
+      - tn
+      - charge_type
+      - service_owner_user_id
+      - service_owner_email
+      - services
+      type: object
+    BreakdownData:
+      properties:
+        currency:
+          description: Currency code
+          example: USD
+          type: string
+        end_date:
+          description: End date of the breakdown period
+          example: '2025-06-01'
+          format: date
+          type: string
+        results:
+          description: List of phone number charge breakdowns
+          items:
+            $ref: '#/components/schemas/NumberBreakdownResult'
+          type: array
+        start_date:
+          description: Start date of the breakdown period
+          example: '2025-05-01'
+          format: date
+          type: string
+        user_email:
+          description: User email address
+          example: user@example.com
+          format: email
+          type: string
+        user_id:
+          description: User identifier
+          example: 0db0b4aa-a83d-4d4f-ad9b-3ba7c1ac2ce8
+          type: string
+      required:
+      - user_id
+      - start_date
+      - end_date
+      - user_email
+      - currency
+      - results
+      type: object
+  securitySchemes:
+    bearerAuth:
+      scheme: bearer
+      type: http
+    branded-calling_bearerAuth:
+      description: API key passed as a Bearer token in the Authorization header
+      scheme: bearer
+      type: http
+    oauthClientAuth:
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+      flows:
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+        clientCredentials:
+          scopes:
+            admin: Administrative access to Telnyx resources
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+      type: oauth2
+    outbound-voice-profiles_bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http
+    pronunciation-dicts_bearerAuth:
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+      scheme: bearer
+      type: http
+    stored-payment-transactions_bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http

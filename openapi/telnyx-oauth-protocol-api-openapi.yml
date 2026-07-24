@@ -1,0 +1,662 @@
+openapi: 3.1.0
+info:
+  contact:
+    email: support@telnyx.com
+  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
+  title: Telnyx Access Tokens OAuth Protocol API
+  version: 2.0.0
+  x-endpoint-cost: light
+servers:
+- description: Version 2.0.0 of the Telnyx API
+  url: https://api.telnyx.com/v2
+security:
+- bearerAuth: []
+tags:
+- name: OAuth Protocol
+paths:
+  /oauth/authorize:
+    get:
+      description: OAuth 2.0 authorization endpoint for the authorization code flow
+      operationId: AuthorizeOAuth
+      parameters:
+      - description: OAuth response type
+        in: query
+        name: response_type
+        required: true
+        schema:
+          enum:
+          - code
+          type: string
+      - description: OAuth client identifier
+        in: query
+        name: client_id
+        required: true
+        schema:
+          type: string
+      - description: Redirect URI
+        in: query
+        name: redirect_uri
+        required: true
+        schema:
+          format: uri
+          type: string
+      - description: Space-separated list of requested scopes
+        example: admin
+        in: query
+        name: scope
+        schema:
+          type: string
+      - description: State parameter for CSRF protection
+        in: query
+        name: state
+        schema:
+          type: string
+      - description: PKCE code challenge
+        in: query
+        name: code_challenge
+        schema:
+          type: string
+      - description: PKCE code challenge method
+        in: query
+        name: code_challenge_method
+        schema:
+          enum:
+          - plain
+          - S256
+          type: string
+      responses:
+        '200':
+          description: Consent page displayed (when consent UI is embedded)
+        '302':
+          description: Redirect to consent page or client with authorization code/error
+        '400':
+          content:
+            text/html:
+              schema:
+                type: string
+          description: Invalid request
+        '404':
+          content:
+            text/html:
+              schema:
+                type: string
+          description: Client not found
+        '422':
+          content:
+            text/html:
+              schema:
+                type: string
+          description: Invalid redirect URI
+      security: []
+      summary: OAuth authorization endpoint
+      tags:
+      - OAuth Protocol
+      x-latency-category: responsive
+  /oauth/consent/{consent_token}:
+    get:
+      description: Retrieve details about an OAuth consent token
+      operationId: GetOAuthConsentToken
+      parameters:
+      - description: OAuth consent token
+        in: path
+        name: consent_token
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentTokenResponse'
+          description: Consent token details
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/oauth_Error'
+          description: Invalid consent token
+      security:
+      - bearerAuth: []
+      summary: Get OAuth consent token
+      tags:
+      - OAuth Protocol
+      x-latency-category: responsive
+  /oauth/grants:
+    post:
+      description: Create an OAuth authorization grant
+      operationId: CreateOAuthGrant
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOAuthGrantRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateGrantResponse'
+          description: Grant created successfully
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/oauth_Error'
+          description: Invalid consent token
+      security:
+      - bearerAuth: []
+      summary: Create OAuth grant
+      tags:
+      - OAuth Protocol
+      x-latency-category: responsive
+  /oauth/introspect:
+    post:
+      description: Introspect an OAuth access token to check its validity and metadata
+      operationId: IntrospectOAuthToken
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IntrospectRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/IntrospectRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntrospectResponse'
+          description: Introspection response
+        '400':
+          content:
+            application/json:
+              example:
+                error: invalid_request
+              schema:
+                $ref: '#/components/schemas/oauth_Error'
+          description: Invalid request
+        '401':
+          content:
+            application/json:
+              example:
+                error: invalid_client
+              schema:
+                $ref: '#/components/schemas/oauth_Error'
+          description: Invalid client credentials
+      security:
+      - oauthClientAuth: []
+      summary: Token introspection
+      tags:
+      - OAuth Protocol
+      x-latency-category: responsive
+  /oauth/jwks:
+    get:
+      description: Retrieve the JSON Web Key Set for token verification
+      operationId: GetOAuthJWKS
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JWKSet'
+          description: JSON Web Key Set
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/oauth_Error'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/oauth_Error'
+          description: Unauthorized
+      security: []
+      summary: JSON Web Key Set
+      tags:
+      - OAuth Protocol
+      x-latency-category: responsive
+  /oauth/register:
+    post:
+      description: Register a new OAuth client dynamically (RFC 7591)
+      operationId: RegisterOAuthClient
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OAuthDynamicRegistrationRequest'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthDynamicRegistrationResponse'
+          description: Client registered successfully
+        '400':
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    example: invalid_client_metadata
+                    type: string
+                  error_description:
+                    example: The client metadata was invalid
+                    type: string
+                  invalid_fields:
+                    additionalProperties:
+                      items:
+                        type: string
+                      type: array
+                    type: object
+                type: object
+          description: Invalid client metadata
+      security: []
+      summary: Dynamic client registration
+      tags:
+      - OAuth Protocol
+      x-latency-category: responsive
+  /oauth/token:
+    post:
+      description: Exchange authorization code, client credentials, or refresh token for access token
+      operationId: ExchangeOAuthToken
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+          description: Token response
+        '400':
+          content:
+            application/json:
+              examples:
+                invalid_grant:
+                  value:
+                    error: invalid_grant
+                invalid_request:
+                  value:
+                    error: invalid_request
+                invalid_scope:
+                  value:
+                    error: invalid_scope
+                unsupported_grant_type:
+                  value:
+                    error: unsupported_grant_type
+              schema:
+                $ref: '#/components/schemas/oauth_Error'
+          description: Invalid request
+        '401':
+          content:
+            application/json:
+              example:
+                error: invalid_client
+              schema:
+                $ref: '#/components/schemas/oauth_Error'
+          description: Invalid client credentials
+      security:
+      - oauthClientAuth: []
+      - {}
+      summary: OAuth token endpoint
+      tags:
+      - OAuth Protocol
+      x-latency-category: responsive
+components:
+  schemas:
+    TokenRequest:
+      properties:
+        client_id:
+          description: OAuth client ID (if not using HTTP Basic auth)
+          type: string
+        client_secret:
+          description: OAuth client secret (if not using HTTP Basic auth)
+          type: string
+        code:
+          description: Authorization code (for authorization_code flow)
+          type: string
+        code_verifier:
+          description: PKCE code verifier (for authorization_code flow)
+          type: string
+        grant_type:
+          description: OAuth 2.0 grant type
+          enum:
+          - client_credentials
+          - authorization_code
+          - refresh_token
+          type: string
+        redirect_uri:
+          description: Redirect URI (for authorization_code flow)
+          format: uri
+          type: string
+        refresh_token:
+          description: Refresh token (for refresh_token flow)
+          type: string
+        scope:
+          description: Space-separated list of requested scopes (for client_credentials)
+          example: admin
+          type: string
+      required:
+      - grant_type
+      type: object
+    IntrospectRequest:
+      properties:
+        token:
+          description: The token to introspect
+          type: string
+      required:
+      - token
+      type: object
+    CreateOAuthGrantRequest:
+      additionalProperties: false
+      properties:
+        allowed:
+          description: Whether the grant is allowed
+          type: boolean
+        consent_token:
+          description: Consent token
+          type: string
+      required:
+      - allowed
+      - consent_token
+      type: object
+    OAuthDynamicRegistrationResponse:
+      properties:
+        client_id:
+          description: Unique client identifier
+          example: abc123def456
+          type: string
+        client_id_issued_at:
+          description: Unix timestamp of when the client ID was issued
+          type: integer
+        client_name:
+          description: Human-readable client name
+          type: string
+        client_secret:
+          description: Client secret (only for confidential clients)
+          type: string
+        grant_types:
+          description: Array of allowed grant types
+          items:
+            type: string
+          type: array
+        logo_uri:
+          description: URL of the client logo
+          format: uri
+          type: string
+        policy_uri:
+          description: URL of the client's privacy policy
+          format: uri
+          type: string
+        redirect_uris:
+          description: Array of redirection URIs
+          items:
+            format: uri
+            type: string
+          type: array
+        response_types:
+          description: Array of allowed response types
+          items:
+            type: string
+          type: array
+        scope:
+          description: Space-separated scope values
+          type: string
+        token_endpoint_auth_method:
+          description: Token endpoint authentication method
+          type: string
+        tos_uri:
+          description: URL of the client's terms of service
+          format: uri
+          type: string
+      required:
+      - client_id
+      - client_id_issued_at
+      type: object
+    ConsentTokenResponse:
+      properties:
+        data:
+          properties:
+            client_id:
+              description: Client ID
+              type: string
+            logo_uri:
+              description: URL of the client logo
+              format: uri
+              type:
+              - string
+              - 'null'
+            name:
+              description: Client name
+              type: string
+            policy_uri:
+              description: URL of the client's privacy policy
+              format: uri
+              type:
+              - string
+              - 'null'
+            redirect_uri:
+              description: The redirect URI for this authorization
+              format: uri
+              type: string
+            requested_scopes:
+              items:
+                properties:
+                  description:
+                    description: Scope description
+                    type: string
+                  id:
+                    description: Scope ID
+                    type: string
+                  name:
+                    description: Scope name
+                    type: string
+                type: object
+              type: array
+            tos_uri:
+              description: URL of the client's terms of service
+              format: uri
+              type:
+              - string
+              - 'null'
+            verified:
+              description: Whether the client is verified
+              type: boolean
+          type: object
+      type: object
+    oauth_Error:
+      properties:
+        error:
+          description: Error code
+          type: string
+        error_description:
+          description: Human-readable error description
+          type: string
+      required:
+      - error
+      type: object
+    OAuthDynamicRegistrationRequest:
+      additionalProperties: false
+      properties:
+        client_name:
+          description: Human-readable string name of the client to be presented to the end-user
+          example: My OAuth Application
+          type: string
+        grant_types:
+          default:
+          - authorization_code
+          description: Array of OAuth 2.0 grant type strings that the client may use
+          items:
+            enum:
+            - authorization_code
+            - client_credentials
+            - refresh_token
+            type: string
+          type: array
+        logo_uri:
+          description: URL of the client logo
+          format: uri
+          type: string
+        policy_uri:
+          description: URL of the client's privacy policy
+          format: uri
+          type: string
+        redirect_uris:
+          description: Array of redirection URI strings for use in redirect-based flows
+          example:
+          - https://example.com/callback
+          items:
+            format: uri
+            type: string
+          type: array
+        response_types:
+          default:
+          - code
+          description: Array of the OAuth 2.0 response type strings that the client may use
+          items:
+            type: string
+          type: array
+        scope:
+          description: Space-separated string of scope values that the client may use
+          example: admin
+          type: string
+        token_endpoint_auth_method:
+          default: client_secret_basic
+          description: Authentication method for the token endpoint
+          enum:
+          - none
+          - client_secret_basic
+          - client_secret_post
+          type: string
+        tos_uri:
+          description: URL of the client's terms of service
+          format: uri
+          type: string
+      type: object
+    IntrospectResponse:
+      properties:
+        active:
+          description: Whether the token is active
+          type: boolean
+        aud:
+          description: Audience
+          type: string
+        client_id:
+          description: Client identifier
+          type: string
+        exp:
+          description: Expiration timestamp
+          type: integer
+        iat:
+          description: Issued at timestamp
+          type: integer
+        iss:
+          description: Issuer
+          type: string
+        scope:
+          description: Space-separated list of scopes
+          type: string
+      required:
+      - active
+      type: object
+    CreateGrantResponse:
+      properties:
+        redirect_uri:
+          description: Redirect URI with authorization code or error
+          format: uri
+          type: string
+      required:
+      - redirect_uri
+      type: object
+    TokenResponse:
+      properties:
+        access_token:
+          description: The access token
+          type: string
+        expires_in:
+          description: Token lifetime in seconds
+          type: integer
+        refresh_token:
+          description: Refresh token (if applicable)
+          type: string
+        scope:
+          description: Space-separated list of granted scopes
+          type: string
+        token_type:
+          description: Token type
+          enum:
+          - Bearer
+          type: string
+      required:
+      - access_token
+      - token_type
+      - expires_in
+      type: object
+    JWKSet:
+      properties:
+        keys:
+          items:
+            properties:
+              alg:
+                description: Algorithm
+                type: string
+              kid:
+                description: Key ID
+                type: string
+              kty:
+                description: Key type
+                type: string
+              use:
+                description: Key use
+                type: string
+            type: object
+          type: array
+      type: object
+  securitySchemes:
+    bearerAuth:
+      scheme: bearer
+      type: http
+    branded-calling_bearerAuth:
+      description: API key passed as a Bearer token in the Authorization header
+      scheme: bearer
+      type: http
+    oauthClientAuth:
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+      flows:
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+        clientCredentials:
+          scopes:
+            admin: Administrative access to Telnyx resources
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+      type: oauth2
+    outbound-voice-profiles_bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http
+    pronunciation-dicts_bearerAuth:
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+      scheme: bearer
+      type: http
+    stored-payment-transactions_bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http

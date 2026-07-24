@@ -1,0 +1,517 @@
+openapi: 3.1.0
+info:
+  contact:
+    email: support@telnyx.com
+  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
+  title: Telnyx Access Tokens Wireless Blocklists API
+  version: 2.0.0
+  x-endpoint-cost: light
+servers:
+- description: Version 2.0.0 of the Telnyx API
+  url: https://api.telnyx.com/v2
+security:
+- bearerAuth: []
+tags:
+- description: Wireless Blocklists operations
+  name: Wireless Blocklists
+paths:
+  /wireless_blocklist_values:
+    get:
+      description: Retrieve all wireless blocklist values for a given blocklist type.
+      operationId: WirelessBlocklistsGetAll
+      parameters:
+      - description: The Wireless Blocklist type for which to list possible values (e.g., `country`, `mcc`, `plmn`).
+        in: query
+        name: type
+        required: true
+        schema:
+          enum:
+          - country
+          - mcc
+          - plmn
+          example: country
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    oneOf:
+                    - items:
+                        $ref: '#/components/schemas/Country'
+                      title: Country
+                      type: array
+                    - items:
+                        $ref: '#/components/schemas/MCC'
+                      title: MCC
+                      type: array
+                    - items:
+                        $ref: '#/components/schemas/PLMN'
+                      title: PLMN
+                      type: array
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+                type: object
+          description: A list of possible wireless blocklist values
+        '404':
+          $ref: '#/components/responses/wireless_ResourceNotFound'
+        default:
+          $ref: '#/components/responses/wireless_GenericErrorResponse'
+      summary: Get all possible wireless blocklist values
+      tags:
+      - Wireless Blocklists
+      x-latency-category: responsive
+  /wireless_blocklists:
+    get:
+      description: Get all Wireless Blocklists belonging to the user.
+      operationId: GetWirelessBlocklistsGateways
+      parameters:
+      - $ref: '#/components/parameters/wireless_PageNumber'
+      - $ref: '#/components/parameters/wireless_PageSize'
+      - description: The name of the Wireless Blocklist.
+        example: my private gateway
+        in: query
+        name: filter[name]
+        required: false
+        schema:
+          type: string
+      - description: When the Private Wireless Gateway was last updated.
+        example: country
+        in: query
+        name: filter[type]
+        required: false
+        schema:
+          type: string
+      - description: Values to filter on (inclusive).
+        example: US,CA
+        in: query
+        name: filter[values]
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/GetAllWirelessBlocklistsResponse'
+        '401':
+          description: Unauthorized
+        default:
+          $ref: '#/components/responses/wireless_GenericErrorResponse'
+      summary: Get all Wireless Blocklists
+      tags:
+      - Wireless Blocklists
+      x-latency-category: responsive
+    post:
+      description: Create a Wireless Blocklist to prevent SIMs from connecting to certain networks.
+      operationId: CreateWirelessBlocklist
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                name:
+                  description: The name of the Wireless Blocklist.
+                  example: My Wireless Blocklist
+                  type: string
+                type:
+                  description: The type of wireless blocklist.
+                  enum:
+                  - country
+                  - mcc
+                  - plmn
+                  example: country
+                  type: string
+                values:
+                  description: Values to block. The values here depend on the `type` of Wireless Blocklist.
+                  example:
+                  - CA
+                  - US
+                  items:
+                    anyOf:
+                    - $ref: '#/components/schemas/CountryCode'
+                    - $ref: '#/components/schemas/MobileCountryCode'
+                    - $ref: '#/components/schemas/PLMNCode'
+                  type: array
+              required:
+              - name
+              - type
+              - values
+              type: object
+        required: true
+      responses:
+        '202':
+          $ref: '#/components/responses/CreateWirelessBlocklistResponse'
+        '422':
+          $ref: '#/components/responses/wireless_UnprocessableEntity'
+        default:
+          $ref: '#/components/responses/wireless_GenericErrorResponse'
+      summary: Create a Wireless Blocklist
+      tags:
+      - Wireless Blocklists
+      x-latency-category: responsive
+  /wireless_blocklists/{id}:
+    delete:
+      description: Deletes the Wireless Blocklist.
+      operationId: DeleteWirelessBlocklist
+      parameters:
+      - $ref: '#/components/parameters/WirelessBlocklistId'
+      responses:
+        '200':
+          $ref: '#/components/responses/DeleteWirelessBlocklistResponse'
+        '404':
+          $ref: '#/components/responses/wireless_ResourceNotFound'
+        default:
+          $ref: '#/components/responses/wireless_GenericErrorResponse'
+      summary: Delete a Wireless Blocklist
+      tags:
+      - Wireless Blocklists
+      x-latency-category: responsive
+    get:
+      description: Retrieve information about a Wireless Blocklist.
+      operationId: GetWirelessBlocklist
+      parameters:
+      - $ref: '#/components/parameters/WirelessBlocklistId'
+      responses:
+        '200':
+          $ref: '#/components/responses/GetWirelessBlocklistResponse'
+        '404':
+          $ref: '#/components/responses/wireless_ResourceNotFound'
+        default:
+          $ref: '#/components/responses/wireless_GenericErrorResponse'
+      summary: Get a Wireless Blocklist
+      tags:
+      - Wireless Blocklists
+      x-latency-category: responsive
+    patch:
+      description: Update a Wireless Blocklist.
+      operationId: UpdateWirelessBlocklist
+      parameters:
+      - $ref: '#/components/parameters/WirelessBlocklistId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                name:
+                  description: The name of the Wireless Blocklist.
+                  example: My Wireless Blocklist
+                  type: string
+                values:
+                  description: Values to block. The values here depend on the `type` of Wireless Blocklist.
+                  example:
+                  - CA
+                  - US
+                  items:
+                    anyOf:
+                    - $ref: '#/components/schemas/CountryCode'
+                    - $ref: '#/components/schemas/MobileCountryCode'
+                    - $ref: '#/components/schemas/PLMNCode'
+                  type: array
+              type: object
+        required: true
+      responses:
+        '202':
+          $ref: '#/components/responses/UpdateWirelessBlocklistResponse'
+        '422':
+          $ref: '#/components/responses/wireless_UnprocessableEntity'
+        default:
+          $ref: '#/components/responses/wireless_GenericErrorResponse'
+      summary: Update a Wireless Blocklist
+      tags:
+      - Wireless Blocklists
+      x-latency-category: responsive
+components:
+  responses:
+    wireless_ResourceNotFound:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/wireless_Error'
+      description: Resource not found
+    UpdateWirelessBlocklistResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/WirelessBlocklist'
+            type: object
+      description: Successful response
+    GetWirelessBlocklistResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/WirelessBlocklist'
+            type: object
+      description: Successful Response
+    wireless_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/wireless_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+    GetAllWirelessBlocklistsResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/WirelessBlocklist'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful Response
+    wireless_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/wireless_Errors'
+      description: Unexpected error
+    DeleteWirelessBlocklistResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/WirelessBlocklist'
+            type: object
+      description: Successful Response
+    CreateWirelessBlocklistResponse:
+      content:
+        application/json:
+          schema:
+            example:
+              data:
+                created_at: '2018-02-02T22:25:27.521Z'
+                id: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+                name: North American Wireless Blocklist
+                record_type: wireless_blocklist
+                type: country
+                updated_at: '2018-02-02T22:25:27.521Z'
+                values:
+                - CA
+                - MX
+                - US
+            properties:
+              data:
+                $ref: '#/components/schemas/WirelessBlocklist'
+            type: object
+      description: Successful Response
+  schemas:
+    WirelessBlocklist:
+      properties:
+        created_at:
+          description: ISO 8601 formatted date-time indicating when the resource was created.
+          example: '2018-02-02T22:25:27.521Z'
+          readOnly: true
+          type: string
+        id:
+          description: Identifies the resource.
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+          format: uuid
+          readOnly: true
+          type: string
+        name:
+          description: The wireless blocklist name.
+          example: My wireless blocklist.
+          type: string
+        record_type:
+          example: wireless_blocklist
+          readOnly: true
+          type: string
+        type:
+          default: country
+          description: The type of the wireless blocklist.
+          enum:
+          - country
+          - mcc
+          - plmn
+          example: country
+          type: string
+        updated_at:
+          description: ISO 8601 formatted date-time indicating when the resource was updated.
+          example: '2018-02-02T22:25:27.521Z'
+          readOnly: true
+          type: string
+        values:
+          description: Values to block. The values here depend on the `type` of Wireless Blocklist.
+          example:
+          - CA
+          - MX
+          - US
+          items:
+            anyOf:
+            - $ref: '#/components/schemas/CountryCode'
+            - $ref: '#/components/schemas/MobileCountryCode'
+            - $ref: '#/components/schemas/PLMNCode'
+          type: array
+      type: object
+    MobileCountryCode:
+      description: Mobile Country Code.
+      example: '311'
+      type: string
+    Country:
+      properties:
+        code:
+          description: ISO 3166-1 Alpha-2 Country Code.
+          example: US
+          type: string
+        name:
+          description: The name of the country.
+          example: United States of America
+          type: string
+      required:
+      - code
+      - name
+      title: Country
+      type: object
+    PLMN:
+      properties:
+        code:
+          description: Public land mobile network code (MCC + MNC).
+          example: '311210'
+          type: string
+        name:
+          description: The name of the network.
+          example: Telnyx, LLC
+          type: string
+      required:
+      - code
+      - name
+      title: Public land mobile network
+      type: object
+    MCC:
+      properties:
+        code:
+          description: Mobile Country Code.
+          example: '311'
+          type: string
+        name:
+          description: The name of the country.
+          example: United States of America
+          type: string
+      required:
+      - code
+      - name
+      title: Mobile Country Code
+      type: object
+    wireless_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/wireless_Error'
+          type: array
+      type: object
+    wireless_Error:
+      properties:
+        code:
+          type: string
+        detail:
+          type: string
+        meta:
+          additionalProperties: true
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+          type: object
+        title:
+          type: string
+      required:
+      - code
+      - title
+      type: object
+    PaginationMeta:
+      properties:
+        page_number:
+          example: 2
+          type: integer
+        page_size:
+          example: 25
+          type: integer
+        total_pages:
+          example: 3
+          type: integer
+        total_results:
+          example: 55
+          type: integer
+      type: object
+    CountryCode:
+      description: ISO 3166-1 Alpha-2 Country Code.
+      example: US
+      type: string
+    PLMNCode:
+      description: Public land mobile network code (MCC + MNC).
+      example: '311210'
+      type: string
+  parameters:
+    WirelessBlocklistId:
+      description: Identifies the wireless blocklist.
+      in: path
+      name: id
+      required: true
+      schema:
+        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+        format: uuid
+        type: string
+    wireless_PageSize:
+      description: The size of the page.
+      in: query
+      name: page[size]
+      schema:
+        default: 20
+        maximum: 250
+        minimum: 1
+        type: integer
+    wireless_PageNumber:
+      description: The page number to load.
+      in: query
+      name: page[number]
+      schema:
+        default: 1
+        minimum: 1
+        type: integer
+  securitySchemes:
+    bearerAuth:
+      scheme: bearer
+      type: http
+    branded-calling_bearerAuth:
+      description: API key passed as a Bearer token in the Authorization header
+      scheme: bearer
+      type: http
+    oauthClientAuth:
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+      flows:
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+        clientCredentials:
+          scopes:
+            admin: Administrative access to Telnyx resources
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+      type: oauth2
+    outbound-voice-profiles_bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http
+    pronunciation-dicts_bearerAuth:
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+      scheme: bearer
+      type: http
+    stored-payment-transactions_bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http

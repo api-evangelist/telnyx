@@ -1,0 +1,448 @@
+openapi: 3.1.0
+info:
+  contact:
+    email: support@telnyx.com
+  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
+  title: Telnyx Access Tokens Inexplicit Number Orders API
+  version: 2.0.0
+  x-endpoint-cost: light
+servers:
+- description: Version 2.0.0 of the Telnyx API
+  url: https://api.telnyx.com/v2
+security:
+- bearerAuth: []
+tags:
+- description: Inexplicit number orders for bulk purchasing without specifying exact numbers
+  name: Inexplicit Number Orders
+paths:
+  /inexplicit_number_orders:
+    get:
+      description: Get a paginated list of inexplicit number orders.
+      operationId: ListInexplicitNumberOrders
+      parameters:
+      - description: The page number to load
+        in: query
+        name: page_number
+        schema:
+          default: 1
+          minimum: 1
+          type: integer
+      - description: The size of the page
+        in: query
+        name: page_size
+        schema:
+          default: 20
+          maximum: 250
+          minimum: 1
+          type: integer
+      responses:
+        '200':
+          $ref: '#/components/responses/InexplicitNumberOrdersResponse'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/numbers_GenericErrorResponse'
+      summary: List inexplicit number orders
+      tags:
+      - Inexplicit Number Orders
+      x-latency-category: responsive
+    post:
+      description: Create an inexplicit number order to programmatically purchase phone numbers without specifying exact numbers.
+      operationId: CreateInexplicitNumberOrder
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InexplicitNumberOrderRequest'
+        required: true
+      responses:
+        '200':
+          $ref: '#/components/responses/InexplicitNumberOrderResponse'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/numbers_GenericErrorResponse'
+      summary: Create an inexplicit number order
+      tags:
+      - Inexplicit Number Orders
+      x-latency-category: responsive
+  /inexplicit_number_orders/{id}:
+    get:
+      description: Get an existing inexplicit number order by ID.
+      operationId: RetrieveInexplicitNumberOrder
+      parameters:
+      - description: Identifies the inexplicit number order
+        in: path
+        name: id
+        required: true
+        schema:
+          format: uuid
+          type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/InexplicitNumberOrderResponse'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/numbers_GenericErrorResponse'
+      summary: Retrieve an inexplicit number order
+      tags:
+      - Inexplicit Number Orders
+      x-latency-category: responsive
+components:
+  schemas:
+    InexplicitNumberOrderRequest:
+      properties:
+        billing_group_id:
+          description: Billing group id to apply to phone numbers that are purchased
+          type: string
+        connection_id:
+          description: Connection id to apply to phone numbers that are purchased
+          type: string
+        customer_reference:
+          description: Reference label for the customer
+          type: string
+        messaging_profile_id:
+          description: Messaging profile id to apply to phone numbers that are purchased
+          type: string
+        ordering_groups:
+          description: Group(s) of numbers to order. You can have multiple ordering_groups objects added to a single request.
+          items:
+            properties:
+              administrative_area:
+                description: Filter for phone numbers in a given state / province
+                type: string
+              count_requested:
+                description: Quantity of phone numbers to order
+                type: string
+              country_iso:
+                description: 'Country where you would like to purchase phone numbers. Allowable values: US, CA'
+                enum:
+                - US
+                - CA
+                type: string
+              exclude_held_numbers:
+                description: Filter to exclude phone numbers that are currently on hold/reserved for your account.
+                type: boolean
+              features:
+                description: Filter for phone numbers that have the features to satisfy your use case (e.g., ["voice"])
+                items:
+                  type: string
+                type: array
+              locality:
+                description: Filter for phone numbers in a given city / region / rate center
+                type: string
+              national_destination_code:
+                description: Filter by area code
+                type: string
+              phone_number:
+                description: Phone number search criteria
+                properties:
+                  contains:
+                    description: Filter for phone numbers that contain the digits specified
+                    type: string
+                  ends_with:
+                    description: Filter by the ending digits of the phone number
+                    type: string
+                  starts_with:
+                    description: Filter by the starting digits of the phone number
+                    type: string
+                type: object
+              phone_number_type:
+                description: Number type (local, toll-free, etc.)
+                type: string
+              quickship:
+                description: Filter to exclude phone numbers that need additional time after to purchase to activate. Only applicable for +1 toll_free numbers.
+                type: boolean
+              strategy:
+                default: always
+                description: 'Ordering strategy. Define what action should be taken if we don''t have enough phone numbers to fulfill your request. Allowable values are: always = proceed with ordering phone numbers, regardless of current inventory levels; never = do not place any orders unless there are enough phone numbers to satisfy the request. If not specified, the always strategy will be enforced.'
+                enum:
+                - always
+                - never
+                type: string
+            required:
+            - country_iso
+            - count_requested
+            - phone_number_type
+            type: object
+          type: array
+      required:
+      - ordering_groups
+      type: object
+    PaginationMeta:
+      properties:
+        page_number:
+          example: 2
+          type: integer
+        page_size:
+          example: 25
+          type: integer
+        total_pages:
+          example: 3
+          type: integer
+        total_results:
+          example: 55
+          type: integer
+      type: object
+    InexplicitNumberOrderResponse:
+      properties:
+        billing_group_id:
+          description: Billing group id to apply to phone numbers that are purchased
+          type: string
+        connection_id:
+          description: Connection id to apply to phone numbers that are purchased
+          type: string
+        created_at:
+          description: ISO 8601 formatted date indicating when the resource was created
+          format: date-time
+          type: string
+        customer_reference:
+          description: Reference label for the customer
+          type: string
+        id:
+          description: Unique identifier for the inexplicit number order
+          type: string
+        messaging_profile_id:
+          description: Messaging profile id to apply to phone numbers that are purchased
+          type: string
+        ordering_groups:
+          items:
+            properties:
+              administrative_area:
+                description: Filter for phone numbers in a given state / province
+                type: string
+              count_allocated:
+                description: Quantity of phone numbers allocated
+                type: integer
+              count_requested:
+                description: Quantity of phone numbers requested
+                type: integer
+              country_iso:
+                description: Country where you would like to purchase phone numbers
+                type: string
+              created_at:
+                description: ISO 8601 formatted date indicating when the ordering group was created
+                format: date-time
+                type: string
+              error_reason:
+                description: Error reason if applicable
+                type: string
+              exclude_held_numbers:
+                description: Filter to exclude phone numbers that are currently on hold/reserved for your account.
+                type: boolean
+              national_destination_code:
+                description: Filter by area code
+                type: string
+              orders:
+                description: Array of orders created to fulfill the inexplicit order
+                items:
+                  properties:
+                    number_order_id:
+                      description: ID of the main number order
+                      format: uuid
+                      type: string
+                    sub_number_order_ids:
+                      description: Array of sub number order IDs
+                      items:
+                        format: uuid
+                        type: string
+                      type: array
+                  required:
+                  - number_order_id
+                  - sub_number_order_ids
+                  type: object
+                type: array
+              phone_number[contains]:
+                description: Filter for phone numbers that contain the digits specified
+                type: string
+              phone_number[ends_with]:
+                description: Filter by the ending digits of the phone number
+                type: string
+              phone_number[starts_with]:
+                description: Filter by the starting digits of the phone number
+                type: string
+              phone_number_type:
+                description: Number type
+                type: string
+              quickship:
+                description: Filter to exclude phone numbers that need additional time after to purchase to activate. Only applicable for +1 toll_free numbers.
+                type: boolean
+              status:
+                description: Status of the ordering group
+                enum:
+                - pending
+                - processing
+                - failed
+                - success
+                - partial_success
+                type: string
+              strategy:
+                description: Ordering strategy used
+                enum:
+                - always
+                - never
+                type: string
+              updated_at:
+                description: ISO 8601 formatted date indicating when the ordering group was updated
+                format: date-time
+                type: string
+            type: object
+          type: array
+        updated_at:
+          description: ISO 8601 formatted date indicating when the resource was updated
+          format: date-time
+          type: string
+      type: object
+    numbers_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/numbers_Error'
+          type: array
+      type: object
+    numbers_Error:
+      properties:
+        code:
+          example: '10007'
+          type: string
+        detail:
+          example: An unexpected error occured.
+          type: string
+        meta:
+          properties:
+            url:
+              description: URL with additional information on the error.
+              example: https://developers.telnyx.com/docs/overview/errors/10015
+              type: string
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              example: /base
+              type: string
+          type: object
+        title:
+          example: Unexpected error
+          type: string
+      type: object
+  responses:
+    InexplicitNumberOrdersResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/InexplicitNumberOrderResponse'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            title: List Inexplicit Number Orders Response
+            type: object
+      description: Successful response with a list of inexplicit number orders.
+    numbers_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+    numbers_NotFoundResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: The requested resource doesn't exist.
+    numbers_UnauthorizedResponse:
+      content:
+        application/json:
+          examples:
+            Authentication Failed:
+              value:
+                errors:
+                - code: '10009'
+                  detail: Could not understand the provided credentials.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+                  title: Authentication failed
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Unauthorized
+    InexplicitNumberOrderResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/InexplicitNumberOrderResponse'
+            title: Inexplicit Number Order Response
+            type: object
+      description: Successful response with details about an inexplicit number order.
+    numbers_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Unexpected error
+    numbers_BadRequestResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Bad request, the request was unacceptable, often due to missing a required parameter.
+  securitySchemes:
+    bearerAuth:
+      scheme: bearer
+      type: http
+    branded-calling_bearerAuth:
+      description: API key passed as a Bearer token in the Authorization header
+      scheme: bearer
+      type: http
+    oauthClientAuth:
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+      flows:
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+        clientCredentials:
+          scopes:
+            admin: Administrative access to Telnyx resources
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+      type: oauth2
+    outbound-voice-profiles_bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http
+    pronunciation-dicts_bearerAuth:
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+      scheme: bearer
+      type: http
+    stored-payment-transactions_bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http

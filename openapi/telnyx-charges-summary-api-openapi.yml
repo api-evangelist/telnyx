@@ -1,0 +1,362 @@
+openapi: 3.1.0
+info:
+  contact:
+    email: support@telnyx.com
+  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
+  title: Telnyx Access Tokens Charges Summary API
+  version: 2.0.0
+  x-endpoint-cost: light
+servers:
+- description: Version 2.0.0 of the Telnyx API
+  url: https://api.telnyx.com/v2
+security:
+- bearerAuth: []
+tags:
+- name: Charges Summary
+paths:
+  /charges_summary:
+    get:
+      description: Retrieve a summary of monthly charges for a specified date range. The date range cannot exceed 31 days.
+      operationId: GetMonthlyChargesSummary
+      parameters:
+      - description: Start date for the charges summary in ISO date format (YYYY-MM-DD)
+        in: query
+        name: start_date
+        required: true
+        schema:
+          example: '2025-05-01'
+          format: date
+          type: string
+      - description: End date for the charges summary in ISO date format (YYYY-MM-DD). The date is exclusive, data for the end_date itself is not included in the report. The interval between start_date and end_date cannot exceed 31 days.
+        in: query
+        name: end_date
+        required: true
+        schema:
+          example: '2025-06-01'
+          format: date
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonthlyChargesSummaryResponse'
+          description: Monthly charges summary
+        '400':
+          $ref: '#/components/responses/charges_BadRequestErrorResponse'
+        '422':
+          $ref: '#/components/responses/charges_UnprocessableEntityErrorResponse'
+        default:
+          $ref: '#/components/responses/charges_GenericErrorResponse'
+      summary: Get monthly charges summary
+      x-latency-category: responsive
+      tags:
+      - Charges Summary
+components:
+  schemas:
+    ComparativeLine:
+      properties:
+        alias:
+          description: Service alias
+          example: local
+          type: string
+        existing_this_month:
+          $ref: '#/components/schemas/MonthDetail'
+        name:
+          description: Service name
+          example: Local DIDs
+          type: string
+        new_this_month:
+          $ref: '#/components/schemas/MonthDetail'
+        type:
+          enum:
+          - comparative
+          example: comparative
+          type: string
+      required:
+      - type
+      - name
+      - alias
+      - new_this_month
+      - existing_this_month
+      type: object
+    SummaryAndTotal:
+      properties:
+        currency:
+          description: Currency code
+          example: USD
+          type: string
+        end_date:
+          description: End date of the summary period
+          example: '2025-06-01'
+          format: date
+          type: string
+        start_date:
+          description: Start date of the summary period
+          example: '2025-05-01'
+          format: date
+          type: string
+        summary:
+          $ref: '#/components/schemas/Summary'
+        total:
+          $ref: '#/components/schemas/TotalSummary'
+        user_email:
+          description: User email address
+          example: user@example.com
+          format: email
+          type: string
+        user_id:
+          description: User identifier
+          example: 0db0b4aa-a83d-4d4f-ad9b-3ba7c1ac2ce8
+          type: string
+      required:
+      - user_id
+      - start_date
+      - end_date
+      - user_email
+      - currency
+      - summary
+      - total
+      type: object
+    AdjustmentLine:
+      properties:
+        amount:
+          description: Adjustment amount as decimal string
+          example: '-10.00'
+          type: string
+        description:
+          description: Description of the adjustment
+          example: Credit for service outage
+          type: string
+        event_date:
+          description: Date when the adjustment occurred
+          example: '2025-05-15'
+          format: date
+          type: string
+      required:
+      - amount
+      - description
+      - event_date
+      type: object
+    TotalSummary:
+      properties:
+        credits:
+          description: Total credits as decimal string
+          example: '-5.00'
+          type: string
+        existing_mrc:
+          description: Total existing monthly recurring charges as decimal string
+          example: '100.00'
+          type: string
+        grand_total:
+          description: Grand total of all charges as decimal string
+          example: '180.00'
+          type: string
+        ledger_adjustments:
+          description: Ledger adjustments as decimal string
+          example: '0.00'
+          type: string
+        new_mrc:
+          description: Total new monthly recurring charges as decimal string
+          example: '50.00'
+          type: string
+        new_otc:
+          description: Total new one-time charges as decimal string
+          example: '25.00'
+          type: string
+        other:
+          description: Other charges as decimal string
+          example: '10.00'
+          type: string
+      required:
+      - new_mrc
+      - new_otc
+      - existing_mrc
+      - other
+      - credits
+      - ledger_adjustments
+      - grand_total
+      type: object
+    MonthDetail:
+      properties:
+        mrc:
+          description: Monthly recurring charge amount as decimal string
+          example: '25.50'
+          type: string
+        otc:
+          description: One-time charge amount as decimal string
+          example: '5.00'
+          type:
+          - string
+          - 'null'
+        quantity:
+          description: Number of items
+          example: 10
+          type: integer
+      required:
+      - quantity
+      - mrc
+      type: object
+    SummaryLine:
+      discriminator:
+        propertyName: type
+      oneOf:
+      - $ref: '#/components/schemas/ComparativeLine'
+      - $ref: '#/components/schemas/SimpleLine'
+    Summary:
+      example:
+        adjustments:
+        - amount: '-10.00'
+          description: Credit for service outage
+          event_date: '2025-05-15'
+        lines:
+        - alias: local
+          existing_this_month:
+            mrc: '20.00'
+            quantity: 8
+          name: Local DIDs
+          new_this_month:
+            mrc: '25.50'
+            otc: '5.00'
+            quantity: 10
+          type: comparative
+        - alias: port_out
+          amount: '15.75'
+          name: Port Out
+          quantity: 100
+          type: simple
+      properties:
+        adjustments:
+          description: List of billing adjustments
+          items:
+            $ref: '#/components/schemas/AdjustmentLine'
+          type: array
+        lines:
+          description: List of charge summary lines
+          items:
+            $ref: '#/components/schemas/SummaryLine'
+          type: array
+      required:
+      - lines
+      - adjustments
+      type: object
+    charges_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/charges_Error'
+          type: array
+    charges_Error:
+      properties:
+        code:
+          format: integer
+          type: string
+        detail:
+          type: string
+        meta:
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              format: json-pointer
+              type: string
+          type: object
+        title:
+          type: string
+      required:
+      - code
+      - title
+    SimpleLine:
+      properties:
+        alias:
+          description: Service alias
+          example: port_out
+          type: string
+        amount:
+          description: Total amount as decimal string
+          example: '15.75'
+          type: string
+        name:
+          description: Service name
+          example: Port Out
+          type: string
+        quantity:
+          description: Number of items
+          example: 100
+          type: integer
+        type:
+          enum:
+          - simple
+          example: simple
+          type: string
+      required:
+      - type
+      - name
+      - alias
+      - quantity
+      - amount
+      type: object
+    MonthlyChargesSummaryResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/SummaryAndTotal'
+      required:
+      - data
+      type: object
+  responses:
+    charges_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/charges_Errors'
+      description: Unexpected error
+    charges_UnprocessableEntityErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/charges_Errors'
+      description: User account not found
+    charges_BadRequestErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/charges_Errors'
+      description: Invalid request parameters or date range
+  securitySchemes:
+    bearerAuth:
+      scheme: bearer
+      type: http
+    branded-calling_bearerAuth:
+      description: API key passed as a Bearer token in the Authorization header
+      scheme: bearer
+      type: http
+    oauthClientAuth:
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+      flows:
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+        clientCredentials:
+          scopes:
+            admin: Administrative access to Telnyx resources
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+      type: oauth2
+    outbound-voice-profiles_bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http
+    pronunciation-dicts_bearerAuth:
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+      scheme: bearer
+      type: http
+    stored-payment-transactions_bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http

@@ -1,0 +1,280 @@
+openapi: 3.1.0
+info:
+  contact:
+    email: support@telnyx.com
+  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
+  title: Telnyx Access Tokens Invoices API
+  version: 2.0.0
+  x-endpoint-cost: light
+servers:
+- description: Version 2.0.0 of the Telnyx API
+  url: https://api.telnyx.com/v2
+security:
+- bearerAuth: []
+tags:
+- name: Invoices
+paths:
+  /invoices:
+    get:
+      description: Retrieve a paginated list of invoices.
+      operationId: ListInvoices
+      parameters:
+      - description: Specifies the sort order for results.
+        in: query
+        name: sort
+        required: false
+        schema:
+          enum:
+          - period_start
+          - -period_start
+          example: period_start
+          type: string
+      - description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
+        explode: true
+        in: query
+        name: page
+        schema:
+          properties:
+            number:
+              default: 1
+              description: The page number to load
+              minimum: 1
+              type: integer
+            size:
+              default: 20
+              description: The size of the page
+              maximum: 250
+              minimum: 1
+              type: integer
+          type: object
+        style: deepObject
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    items:
+                      $ref: '#/components/schemas/Invoice'
+                    type: array
+                  meta:
+                    properties:
+                      page_number:
+                        example: 1
+                        type: integer
+                      page_size:
+                        example: 20
+                        type: integer
+                      total_pages:
+                        example: 1
+                        type: integer
+                      total_results:
+                        example: 20
+                        type: integer
+                    type: object
+                type: object
+          description: List of invoices
+        '403':
+          $ref: '#/components/responses/invoice_ForbiddenErrorResponse'
+        default:
+          $ref: '#/components/responses/invoice_GenericErrorResponse'
+      summary: List invoices
+      x-latency-category: responsive
+      tags:
+      - Invoices
+  /invoices/{id}:
+    get:
+      description: Retrieve a single invoice by its unique identifier.
+      operationId: GetInvoiceById
+      parameters:
+      - description: Invoice UUID
+        in: path
+        name: id
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - description: Invoice action
+        in: query
+        name: action
+        required: false
+        schema:
+          enum:
+          - json
+          - link
+          example: json
+          type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/InvoiceDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestErrorResponse'
+        '403':
+          $ref: '#/components/responses/invoice_ForbiddenErrorResponse'
+        '404':
+          $ref: '#/components/responses/invoice_NotFoundErrorResponse'
+        default:
+          $ref: '#/components/responses/invoice_GenericErrorResponse'
+      summary: Get invoice by ID
+      x-latency-category: responsive
+      tags:
+      - Invoices
+components:
+  schemas:
+    Invoice:
+      properties:
+        file_id:
+          example: 454ea3b0-9eaa-4fa9-992e-6d9f31c0a37e
+          format: uuid
+          type: string
+        invoice_id:
+          example: 48eff763-ea80-4345-b688-78249eb165a8
+          format: uuid
+          type: string
+        paid:
+          example: true
+          type: boolean
+        period_end:
+          example: '2023-11-30'
+          format: date
+          type: string
+        period_start:
+          example: '2023-11-01'
+          format: date
+          type: string
+        url:
+          example: https://api.telnyx.com:443/v2/invoices/48eff763-ea80-4345-b688-78249eb165a8
+          format: uri
+          type: string
+      type: object
+    invoice_Error:
+      properties:
+        code:
+          type: string
+        detail:
+          type: string
+        meta:
+          additionalProperties: true
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+          type: object
+        title:
+          type: string
+      required:
+      - code
+      - title
+      type: object
+    invoice_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/invoice_Error'
+          type: array
+      type: object
+    InvoiceDetail:
+      properties:
+        download_url:
+          description: Present only if the query parameter `action=link` is set.
+          example: https://us-east-1.telnyxstorage.com/porting-documents/telnyx/...
+          format: uri
+          type: string
+        file_id:
+          example: 454ea3b0-9eaa-4fa9-992e-6d9f31c0a37e
+          format: uuid
+          type: string
+        invoice_id:
+          example: 48eff763-ea80-4345-b688-78249eb165a8
+          format: uuid
+          type: string
+        paid:
+          example: true
+          type: boolean
+        period_end:
+          example: '2023-11-30'
+          format: date
+          type: string
+        period_start:
+          example: '2023-11-01'
+          format: date
+          type: string
+        url:
+          example: https://api.telnyx.com:443/v2/invoices/48eff763-ea80-4345-b688-78249eb165a8
+          format: uri
+          type: string
+      type: object
+  responses:
+    invoice_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/invoice_Errors'
+      description: Unexpected error
+    BadRequestErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/invoice_Errors'
+      description: Invalid request parameters
+    InvoiceDetailResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/InvoiceDetail'
+            type: object
+      description: Get invoice details
+    invoice_NotFoundErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/invoice_Errors'
+      description: Invoice not found
+    invoice_ForbiddenErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/invoice_Errors'
+      description: Insufficient permissions to access invoices
+  securitySchemes:
+    bearerAuth:
+      scheme: bearer
+      type: http
+    branded-calling_bearerAuth:
+      description: API key passed as a Bearer token in the Authorization header
+      scheme: bearer
+      type: http
+    oauthClientAuth:
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+      flows:
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+        clientCredentials:
+          scopes:
+            admin: Administrative access to Telnyx resources
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+      type: oauth2
+    outbound-voice-profiles_bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http
+    pronunciation-dicts_bearerAuth:
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+      scheme: bearer
+      type: http
+    stored-payment-transactions_bearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http
