@@ -1,9 +1,9 @@
-openapi: 3.1.0
+openapi: 3.2.0
 info:
   contact:
     email: support@telnyx.com
   description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
-  title: Telnyx Access Tokens Whatsapp messaging API
+  title: Telnyx Whatsapp messaging API
   version: 2.0.0
   x-endpoint-cost: light
 servers:
@@ -41,6 +41,302 @@ paths:
       x-latency-category: responsive
 components:
   schemas:
+    WhatsappContact:
+      properties:
+        addresses:
+          items:
+            properties:
+              city:
+                type: string
+              country:
+                type: string
+              country_code:
+                type: string
+              state:
+                type: string
+              street:
+                type: string
+              type:
+                type: string
+              zip:
+                type: string
+            type: object
+          type: array
+        birthday:
+          type: string
+        emails:
+          items:
+            properties:
+              email:
+                type: string
+              type:
+                type: string
+            type: object
+          type: array
+        name:
+          type: string
+        org:
+          properties:
+            company:
+              type: string
+            department:
+              type: string
+            title:
+              type: string
+          type: object
+        phones:
+          items:
+            properties:
+              phone:
+                type: string
+                x-format: E+164
+              type:
+                type: string
+              wa_id:
+                type: string
+            type: object
+          type: array
+        urls:
+          items:
+            properties:
+              type:
+                type: string
+              url:
+                format: url
+                type: string
+            type: object
+          type: array
+      type: object
+    WhatsappMessageContent:
+      properties:
+        audio:
+          $ref: '#/components/schemas/WhatsappMedia'
+        biz_opaque_callback_data:
+          description: custom data to return with status update
+          type: string
+        contacts:
+          items:
+            $ref: '#/components/schemas/WhatsappContact'
+          type: array
+        document:
+          $ref: '#/components/schemas/WhatsappMedia'
+        image:
+          $ref: '#/components/schemas/WhatsappMedia'
+        interactive:
+          $ref: '#/components/schemas/WhatsappInteractive'
+        location:
+          $ref: '#/components/schemas/WhatsappLocation'
+        reaction:
+          $ref: '#/components/schemas/WhatsappReaction'
+        sticker:
+          $ref: '#/components/schemas/WhatsappMedia'
+        template:
+          description: Template message object. Provide either template_id or name + language to identify the template.
+          properties:
+            components:
+              description: Template parameter values for header, body, and button components.
+              items:
+                properties:
+                  index:
+                    description: Button index (required for button components)
+                    type: integer
+                  parameters:
+                    items:
+                      properties:
+                        text:
+                          type: string
+                        type:
+                          enum:
+                          - text
+                          - image
+                          - video
+                          - document
+                          - currency
+                          - date_time
+                          type: string
+                      type: object
+                    type: array
+                  sub_type:
+                    enum:
+                    - quick_reply
+                    - url
+                    type: string
+                  type:
+                    enum:
+                    - header
+                    - body
+                    - button
+                    type: string
+                type: object
+              type: array
+            language:
+              description: Template language. Required unless template_id is provided.
+              properties:
+                code:
+                  description: Language code (e.g. en_US)
+                  example: en_US
+                  type: string
+                policy:
+                  example: deterministic
+                  type: string
+              required:
+              - code
+              type: object
+            name:
+              description: Template name as registered with Meta. Required unless template_id is provided.
+              example: order_confirmation
+              type: string
+            template_id:
+              description: Telnyx template ID (the id field from template list/get responses). When provided, name and language are resolved automatically.
+              example: 019cd44b-3a1c-781b-956e-bd33e9fd2ac6
+              type: string
+          type: object
+        text:
+          description: Text message content. Can only be sent within a 24-hour customer service window.
+          properties:
+            body:
+              description: The text message body.
+              example: Hello from Telnyx!
+              type: string
+            preview_url:
+              default: false
+              description: Whether to show a URL preview in the message.
+              type: boolean
+          required:
+          - body
+          type: object
+        type:
+          enum:
+          - audio
+          - document
+          - image
+          - sticker
+          - video
+          - interactive
+          - location
+          - template
+          - reaction
+          - contacts
+          - text
+          type: string
+        video:
+          $ref: '#/components/schemas/WhatsappMedia'
+      type: object
+    WhatsappReaction:
+      properties:
+        emoji:
+          type: string
+        message_id:
+          type: string
+      type: object
+    RCSTo:
+      items:
+        $ref: '#/components/schemas/RCSToItem'
+      type: array
+    RCSToItem:
+      properties:
+        carrier:
+          example: Verizon Wireless
+          type: string
+        line_type:
+          example: Wireless
+          type: string
+        phone_number:
+          example: '+13125551234'
+          type: string
+        status:
+          example: queued
+          type: string
+      type: object
+    WhatsappMessage:
+      properties:
+        from:
+          description: Phone number in +E.164 format associated with Whatsapp account
+          example: '+13125551234'
+          type: string
+        messaging_profile_id:
+          description: Messaging profile ID - required if the 'from' number is not SMS-enabled
+          format: uuid
+          type: string
+        to:
+          description: Phone number in +E.164 format
+          example: '+13125551234'
+          type: string
+        type:
+          description: Message type - must be set to "WHATSAPP"
+          enum:
+          - WHATSAPP
+          example: WHATSAPP
+          type: string
+        webhook_url:
+          description: The URL where webhooks related to this message will be sent.
+          format: url
+          type: string
+        whatsapp_message:
+          $ref: '#/components/schemas/WhatsappMessageContent'
+      required:
+      - from
+      - to
+      - whatsapp_message
+      type: object
+    WhatsappMedia:
+      properties:
+        caption:
+          description: media caption
+          type: string
+        filename:
+          description: file name with extension
+          type: string
+        link:
+          description: media URL
+          example: http://example.com/media.jpg
+          format: url
+          type: string
+        voice:
+          description: true if voice message
+          type: boolean
+      type: object
+    WhatsappLocation:
+      properties:
+        address:
+          type: string
+        latitude:
+          type: string
+        longitude:
+          type: string
+        name:
+          type: string
+      type: object
+    messaging_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/messaging_Error'
+          type: array
+    messaging_Error:
+      properties:
+        code:
+          type: string
+          x-format: integer
+        detail:
+          type: string
+        meta:
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              format: json-pointer
+              type: string
+          type: object
+        title:
+          type: string
+      required:
+      - code
+      - title
     WhatsappResponse:
       properties:
         data:
@@ -107,82 +403,6 @@ components:
               - number
               - 'null'
           type: object
-      type: object
-    WhatsappReaction:
-      properties:
-        emoji:
-          type: string
-        message_id:
-          type: string
-      type: object
-    WhatsappMedia:
-      properties:
-        caption:
-          description: media caption
-          type: string
-        filename:
-          description: file name with extension
-          type: string
-        link:
-          description: media URL
-          example: http://example.com/media.jpg
-          format: url
-          type: string
-        voice:
-          description: true if voice message
-          type: boolean
-      type: object
-    RCSToItem:
-      properties:
-        carrier:
-          example: Verizon Wireless
-          type: string
-        line_type:
-          example: Wireless
-          type: string
-        phone_number:
-          example: '+13125551234'
-          type: string
-        status:
-          example: queued
-          type: string
-      type: object
-    messaging_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/messaging_Error'
-          type: array
-    WhatsappMessage:
-      properties:
-        from:
-          description: Phone number in +E.164 format associated with Whatsapp account
-          example: '+13125551234'
-          type: string
-        messaging_profile_id:
-          description: Messaging profile ID - required if the 'from' number is not SMS-enabled
-          format: uuid
-          type: string
-        to:
-          description: Phone number in +E.164 format
-          example: '+13125551234'
-          type: string
-        type:
-          description: Message type - must be set to "WHATSAPP"
-          enum:
-          - WHATSAPP
-          example: WHATSAPP
-          type: string
-        webhook_url:
-          description: The URL where webhooks related to this message will be sent.
-          format: url
-          type: string
-        whatsapp_message:
-          $ref: '#/components/schemas/WhatsappMessageContent'
-      required:
-      - from
-      - to
-      - whatsapp_message
       type: object
     WhatsappInteractive:
       properties:
@@ -330,226 +550,6 @@ components:
           - location_request_message
           type: string
       type: object
-    WhatsappMessageContent:
-      properties:
-        audio:
-          $ref: '#/components/schemas/WhatsappMedia'
-        biz_opaque_callback_data:
-          description: custom data to return with status update
-          type: string
-        contacts:
-          items:
-            $ref: '#/components/schemas/WhatsappContact'
-          type: array
-        document:
-          $ref: '#/components/schemas/WhatsappMedia'
-        image:
-          $ref: '#/components/schemas/WhatsappMedia'
-        interactive:
-          $ref: '#/components/schemas/WhatsappInteractive'
-        location:
-          $ref: '#/components/schemas/WhatsappLocation'
-        reaction:
-          $ref: '#/components/schemas/WhatsappReaction'
-        sticker:
-          $ref: '#/components/schemas/WhatsappMedia'
-        template:
-          description: Template message object. Provide either template_id or name + language to identify the template.
-          properties:
-            components:
-              description: Template parameter values for header, body, and button components.
-              items:
-                properties:
-                  index:
-                    description: Button index (required for button components)
-                    type: integer
-                  parameters:
-                    items:
-                      properties:
-                        text:
-                          type: string
-                        type:
-                          enum:
-                          - text
-                          - image
-                          - video
-                          - document
-                          - currency
-                          - date_time
-                          type: string
-                      type: object
-                    type: array
-                  sub_type:
-                    enum:
-                    - quick_reply
-                    - url
-                    type: string
-                  type:
-                    enum:
-                    - header
-                    - body
-                    - button
-                    type: string
-                type: object
-              type: array
-            language:
-              description: Template language. Required unless template_id is provided.
-              properties:
-                code:
-                  description: Language code (e.g. en_US)
-                  example: en_US
-                  type: string
-                policy:
-                  example: deterministic
-                  type: string
-              required:
-              - code
-              type: object
-            name:
-              description: Template name as registered with Meta. Required unless template_id is provided.
-              example: order_confirmation
-              type: string
-            template_id:
-              description: Telnyx template ID (the id field from template list/get responses). When provided, name and language are resolved automatically.
-              example: 019cd44b-3a1c-781b-956e-bd33e9fd2ac6
-              type: string
-          type: object
-        text:
-          description: Text message content. Can only be sent within a 24-hour customer service window.
-          properties:
-            body:
-              description: The text message body.
-              example: Hello from Telnyx!
-              type: string
-            preview_url:
-              default: false
-              description: Whether to show a URL preview in the message.
-              type: boolean
-          required:
-          - body
-          type: object
-        type:
-          enum:
-          - audio
-          - document
-          - image
-          - sticker
-          - video
-          - interactive
-          - location
-          - template
-          - reaction
-          - contacts
-          - text
-          type: string
-        video:
-          $ref: '#/components/schemas/WhatsappMedia'
-      type: object
-    messaging_Error:
-      properties:
-        code:
-          type: string
-          x-format: integer
-        detail:
-          type: string
-        meta:
-          type: object
-        source:
-          properties:
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              format: json-pointer
-              type: string
-          type: object
-        title:
-          type: string
-      required:
-      - code
-      - title
-    WhatsappContact:
-      properties:
-        addresses:
-          items:
-            properties:
-              city:
-                type: string
-              country:
-                type: string
-              country_code:
-                type: string
-              state:
-                type: string
-              street:
-                type: string
-              type:
-                type: string
-              zip:
-                type: string
-            type: object
-          type: array
-        birthday:
-          type: string
-        emails:
-          items:
-            properties:
-              email:
-                type: string
-              type:
-                type: string
-            type: object
-          type: array
-        name:
-          type: string
-        org:
-          properties:
-            company:
-              type: string
-            department:
-              type: string
-            title:
-              type: string
-          type: object
-        phones:
-          items:
-            properties:
-              phone:
-                type: string
-                x-format: E+164
-              type:
-                type: string
-              wa_id:
-                type: string
-            type: object
-          type: array
-        urls:
-          items:
-            properties:
-              type:
-                type: string
-              url:
-                format: url
-                type: string
-            type: object
-          type: array
-      type: object
-    WhatsappLocation:
-      properties:
-        address:
-          type: string
-        latitude:
-          type: string
-        longitude:
-          type: string
-        name:
-          type: string
-      type: object
-    RCSTo:
-      items:
-        $ref: '#/components/schemas/RCSToItem'
-      type: array
   responses:
     messaging_GenericErrorResponse:
       content:

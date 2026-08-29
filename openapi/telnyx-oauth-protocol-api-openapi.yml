@@ -1,9 +1,9 @@
-openapi: 3.1.0
+openapi: 3.2.0
 info:
   contact:
     email: support@telnyx.com
   description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
-  title: Telnyx Access Tokens OAuth Protocol API
+  title: Telnyx OAuth Protocol API
   version: 2.0.0
   x-endpoint-cost: light
 servers:
@@ -318,6 +318,26 @@ paths:
       x-latency-category: responsive
 components:
   schemas:
+    JWKSet:
+      properties:
+        keys:
+          items:
+            properties:
+              alg:
+                description: Algorithm
+                type: string
+              kid:
+                description: Key ID
+                type: string
+              kty:
+                description: Key type
+                type: string
+              use:
+                description: Key use
+                type: string
+            type: object
+          type: array
+      type: object
     TokenRequest:
       properties:
         client_id:
@@ -353,26 +373,80 @@ components:
       required:
       - grant_type
       type: object
-    IntrospectRequest:
+    TokenResponse:
       properties:
-        token:
-          description: The token to introspect
+        access_token:
+          description: The access token
+          type: string
+        expires_in:
+          description: Token lifetime in seconds
+          type: integer
+        refresh_token:
+          description: Refresh token (if applicable)
+          type: string
+        scope:
+          description: Space-separated list of granted scopes
+          type: string
+        token_type:
+          description: Token type
+          enum:
+          - Bearer
           type: string
       required:
-      - token
+      - access_token
+      - token_type
+      - expires_in
       type: object
-    CreateOAuthGrantRequest:
-      additionalProperties: false
+    ConsentTokenResponse:
       properties:
-        allowed:
-          description: Whether the grant is allowed
-          type: boolean
-        consent_token:
-          description: Consent token
-          type: string
-      required:
-      - allowed
-      - consent_token
+        data:
+          properties:
+            client_id:
+              description: Client ID
+              type: string
+            logo_uri:
+              description: URL of the client logo
+              format: uri
+              type:
+              - string
+              - 'null'
+            name:
+              description: Client name
+              type: string
+            policy_uri:
+              description: URL of the client's privacy policy
+              format: uri
+              type:
+              - string
+              - 'null'
+            redirect_uri:
+              description: The redirect URI for this authorization
+              format: uri
+              type: string
+            requested_scopes:
+              items:
+                properties:
+                  description:
+                    description: Scope description
+                    type: string
+                  id:
+                    description: Scope ID
+                    type: string
+                  name:
+                    description: Scope name
+                    type: string
+                type: object
+              type: array
+            tos_uri:
+              description: URL of the client's terms of service
+              format: uri
+              type:
+              - string
+              - 'null'
+            verified:
+              description: Whether the client is verified
+              type: boolean
+          type: object
       type: object
     OAuthDynamicRegistrationResponse:
       properties:
@@ -427,56 +501,61 @@ components:
       - client_id
       - client_id_issued_at
       type: object
-    ConsentTokenResponse:
+    IntrospectResponse:
       properties:
-        data:
-          properties:
-            client_id:
-              description: Client ID
-              type: string
-            logo_uri:
-              description: URL of the client logo
-              format: uri
-              type:
-              - string
-              - 'null'
-            name:
-              description: Client name
-              type: string
-            policy_uri:
-              description: URL of the client's privacy policy
-              format: uri
-              type:
-              - string
-              - 'null'
-            redirect_uri:
-              description: The redirect URI for this authorization
-              format: uri
-              type: string
-            requested_scopes:
-              items:
-                properties:
-                  description:
-                    description: Scope description
-                    type: string
-                  id:
-                    description: Scope ID
-                    type: string
-                  name:
-                    description: Scope name
-                    type: string
-                type: object
-              type: array
-            tos_uri:
-              description: URL of the client's terms of service
-              format: uri
-              type:
-              - string
-              - 'null'
-            verified:
-              description: Whether the client is verified
-              type: boolean
-          type: object
+        active:
+          description: Whether the token is active
+          type: boolean
+        aud:
+          description: Audience
+          type: string
+        client_id:
+          description: Client identifier
+          type: string
+        exp:
+          description: Expiration timestamp
+          type: integer
+        iat:
+          description: Issued at timestamp
+          type: integer
+        iss:
+          description: Issuer
+          type: string
+        scope:
+          description: Space-separated list of scopes
+          type: string
+      required:
+      - active
+      type: object
+    CreateOAuthGrantRequest:
+      additionalProperties: false
+      properties:
+        allowed:
+          description: Whether the grant is allowed
+          type: boolean
+        consent_token:
+          description: Consent token
+          type: string
+      required:
+      - allowed
+      - consent_token
+      type: object
+    IntrospectRequest:
+      properties:
+        token:
+          description: The token to introspect
+          type: string
+      required:
+      - token
+      type: object
+    CreateGrantResponse:
+      properties:
+        redirect_uri:
+          description: Redirect URI with authorization code or error
+          format: uri
+          type: string
+      required:
+      - redirect_uri
       type: object
     oauth_Error:
       properties:
@@ -546,85 +625,6 @@ components:
           description: URL of the client's terms of service
           format: uri
           type: string
-      type: object
-    IntrospectResponse:
-      properties:
-        active:
-          description: Whether the token is active
-          type: boolean
-        aud:
-          description: Audience
-          type: string
-        client_id:
-          description: Client identifier
-          type: string
-        exp:
-          description: Expiration timestamp
-          type: integer
-        iat:
-          description: Issued at timestamp
-          type: integer
-        iss:
-          description: Issuer
-          type: string
-        scope:
-          description: Space-separated list of scopes
-          type: string
-      required:
-      - active
-      type: object
-    CreateGrantResponse:
-      properties:
-        redirect_uri:
-          description: Redirect URI with authorization code or error
-          format: uri
-          type: string
-      required:
-      - redirect_uri
-      type: object
-    TokenResponse:
-      properties:
-        access_token:
-          description: The access token
-          type: string
-        expires_in:
-          description: Token lifetime in seconds
-          type: integer
-        refresh_token:
-          description: Refresh token (if applicable)
-          type: string
-        scope:
-          description: Space-separated list of granted scopes
-          type: string
-        token_type:
-          description: Token type
-          enum:
-          - Bearer
-          type: string
-      required:
-      - access_token
-      - token_type
-      - expires_in
-      type: object
-    JWKSet:
-      properties:
-        keys:
-          items:
-            properties:
-              alg:
-                description: Algorithm
-                type: string
-              kid:
-                description: Key ID
-                type: string
-              kty:
-                description: Key type
-                type: string
-              use:
-                description: Key use
-                type: string
-            type: object
-          type: array
       type: object
   securitySchemes:
     bearerAuth:

@@ -1,9 +1,9 @@
-openapi: 3.1.0
+openapi: 3.2.0
 info:
   contact:
     email: support@telnyx.com
   description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
-  title: Telnyx Access Tokens Whatsapp Message Templates API
+  title: Telnyx Whatsapp Message Templates API
   version: 2.0.0
   x-endpoint-cost: light
 servers:
@@ -121,58 +121,36 @@ paths:
       - Whatsapp Message Templates
       x-latency-category: responsive
 components:
-  parameters:
-    WhatsappTemplateId:
-      description: Whatsapp message template ID
-      in: path
-      name: id
-      required: true
-      schema:
-        type: string
-    PageConsolidated:
-      description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
-      explode: true
-      in: query
-      name: page
-      schema:
-        properties:
-          number:
-            default: 1
-            description: The page number to load
-            minimum: 1
-            type: integer
-          size:
-            default: 20
-            description: The size of the page
-            maximum: 250
-            minimum: 1
-            type: integer
-        type: object
-      style: deepObject
+  responses:
+    WhatsappTemplateListResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/WhatsappTemplateData'
+                type: array
+              meta:
+                $ref: '#/components/schemas/messaging_PaginationMeta'
+            type: object
+      description: Successful response with Whatsapp template
+    messaging_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors'
+      description: Unexpected error
+    WhatsappTemplateSingleResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/WhatsappTemplateData'
+            type: object
+      description: Successful response with Whatsapp template
   schemas:
-    messaging_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/messaging_Error'
-          type: array
-    WhatsappTemplateFooterComponent:
-      description: Optional footer displayed at the bottom of the message. Does not support variables.
-      properties:
-        code_expiration_minutes:
-          description: OTP code expiration time in minutes. Used in AUTHENTICATION template footers instead of free-form text.
-          type: integer
-        text:
-          description: Footer text. Maximum 60 characters. For non-authentication templates.
-          maxLength: 60
-          type: string
-        type:
-          enum:
-          - FOOTER
-          type: string
-      required:
-      - type
-      type: object
     messaging_PaginationMeta:
       properties:
         page_number:
@@ -192,31 +170,6 @@ components:
       - total_results
       - page_size
       - page_number
-      type: object
-    WhatsappTemplateBodyComponent:
-      description: The main text content of the message. Supports multiple variable parameters ({{1}}, {{2}}, etc.). Variables cannot be at the start or end. Maximum 1024 characters.
-      properties:
-        example:
-          description: Sample values for body variables. Required when body text contains parameters.
-          properties:
-            body_text:
-              description: Array containing one array of sample values, one per variable in order.
-              items:
-                items:
-                  type: string
-                type: array
-              type: array
-          type: object
-        text:
-          description: Body text content. Use {{1}}, {{2}}, etc. for variable placeholders. Required for MARKETING and UTILITY templates. Optional for AUTHENTICATION templates where Meta provides the built-in OTP body.
-          maxLength: 1024
-          type: string
-        type:
-          enum:
-          - BODY
-          type: string
-      required:
-      - type
       type: object
     WhatsappTemplateButtonsComponent:
       description: Optional interactive buttons. Maximum 3 buttons per template.
@@ -290,6 +243,47 @@ components:
       - type
       - buttons
       type: object
+    WhatsappTemplateData:
+      properties:
+        category:
+          enum:
+          - MARKETING
+          - UTILITY
+          - AUTHENTICATION
+          type: string
+        components:
+          description: Template components (header, body, footer, buttons) as submitted, including example values.
+          items:
+            type: object
+          type: array
+        created_at:
+          format: date-time
+          type: string
+        id:
+          type: string
+        language:
+          type: string
+        name:
+          type: string
+        record_type:
+          example: whatsapp_message_template
+          type: string
+        rejection_reason:
+          type: string
+        status:
+          description: Current template status from Meta (e.g. PENDING, APPROVED, REJECTED, PAUSED, DISABLED). Additional statuses may be returned as Meta evolves the template lifecycle.
+          type: string
+        template_id:
+          type: string
+        updated_at:
+          format: date-time
+          type: string
+        whatsapp_business_account:
+          properties:
+            id:
+              type: string
+          type: object
+      type: object
     WhatsappUpdateTemplateRequest:
       properties:
         category:
@@ -310,66 +304,6 @@ components:
             - $ref: '#/components/schemas/WhatsappTemplateCarouselComponent'
           type: array
       type: object
-    WhatsappCreateTemplateRequest:
-      properties:
-        category:
-          description: 'Template category: AUTHENTICATION, UTILITY, or MARKETING.'
-          enum:
-          - MARKETING
-          - UTILITY
-          - AUTHENTICATION
-          type: string
-        components:
-          description: Template components defining message structure. Passed through to Meta Graph API. Templates with variables must include example values. Supports HEADER, BODY, FOOTER, BUTTONS, CAROUSEL and any future Meta component types.
-          items:
-            description: A template component. Additional Meta component types not listed here are also accepted.
-            oneOf:
-            - $ref: '#/components/schemas/WhatsappTemplateHeaderComponent'
-            - $ref: '#/components/schemas/WhatsappTemplateBodyComponent'
-            - $ref: '#/components/schemas/WhatsappTemplateFooterComponent'
-            - $ref: '#/components/schemas/WhatsappTemplateButtonsComponent'
-            - $ref: '#/components/schemas/WhatsappTemplateCarouselComponent'
-          type: array
-        language:
-          description: Template language code (e.g. en_US, es, pt_BR).
-          type: string
-        name:
-          description: Template name. Lowercase letters, numbers, and underscores only.
-          type: string
-        waba_id:
-          description: The WhatsApp Business Account ID.
-          type: string
-      required:
-      - waba_id
-      - name
-      - category
-      - language
-      - components
-      type: object
-    messaging_Error:
-      properties:
-        code:
-          type: string
-          x-format: integer
-        detail:
-          type: string
-        meta:
-          type: object
-        source:
-          properties:
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              format: json-pointer
-              type: string
-          type: object
-        title:
-          type: string
-      required:
-      - code
-      - title
     WhatsappTemplateHeaderComponent:
       description: Optional header displayed at the top of the message.
       properties:
@@ -428,76 +362,142 @@ components:
       - type
       - cards
       type: object
-    WhatsappTemplateData:
+    WhatsappCreateTemplateRequest:
       properties:
         category:
+          description: 'Template category: AUTHENTICATION, UTILITY, or MARKETING.'
           enum:
           - MARKETING
           - UTILITY
           - AUTHENTICATION
           type: string
         components:
-          description: Template components (header, body, footer, buttons) as submitted, including example values.
+          description: Template components defining message structure. Passed through to Meta Graph API. Templates with variables must include example values. Supports HEADER, BODY, FOOTER, BUTTONS, CAROUSEL and any future Meta component types.
           items:
-            type: object
+            description: A template component. Additional Meta component types not listed here are also accepted.
+            oneOf:
+            - $ref: '#/components/schemas/WhatsappTemplateHeaderComponent'
+            - $ref: '#/components/schemas/WhatsappTemplateBodyComponent'
+            - $ref: '#/components/schemas/WhatsappTemplateFooterComponent'
+            - $ref: '#/components/schemas/WhatsappTemplateButtonsComponent'
+            - $ref: '#/components/schemas/WhatsappTemplateCarouselComponent'
           type: array
-        created_at:
-          format: date-time
-          type: string
-        id:
-          type: string
         language:
+          description: Template language code (e.g. en_US, es, pt_BR).
           type: string
         name:
+          description: Template name. Lowercase letters, numbers, and underscores only.
           type: string
-        record_type:
-          example: whatsapp_message_template
+        waba_id:
+          description: The WhatsApp Business Account ID.
           type: string
-        rejection_reason:
+      required:
+      - waba_id
+      - name
+      - category
+      - language
+      - components
+      type: object
+    WhatsappTemplateFooterComponent:
+      description: Optional footer displayed at the bottom of the message. Does not support variables.
+      properties:
+        code_expiration_minutes:
+          description: OTP code expiration time in minutes. Used in AUTHENTICATION template footers instead of free-form text.
+          type: integer
+        text:
+          description: Footer text. Maximum 60 characters. For non-authentication templates.
+          maxLength: 60
           type: string
-        status:
-          description: Current template status from Meta (e.g. PENDING, APPROVED, REJECTED, PAUSED, DISABLED). Additional statuses may be returned as Meta evolves the template lifecycle.
+        type:
+          enum:
+          - FOOTER
           type: string
-        template_id:
-          type: string
-        updated_at:
-          format: date-time
-          type: string
-        whatsapp_business_account:
+      required:
+      - type
+      type: object
+    WhatsappTemplateBodyComponent:
+      description: The main text content of the message. Supports multiple variable parameters ({{1}}, {{2}}, etc.). Variables cannot be at the start or end. Maximum 1024 characters.
+      properties:
+        example:
+          description: Sample values for body variables. Required when body text contains parameters.
           properties:
-            id:
+            body_text:
+              description: Array containing one array of sample values, one per variable in order.
+              items:
+                items:
+                  type: string
+                type: array
+              type: array
+          type: object
+        text:
+          description: Body text content. Use {{1}}, {{2}}, etc. for variable placeholders. Required for MARKETING and UTILITY templates. Optional for AUTHENTICATION templates where Meta provides the built-in OTP body.
+          maxLength: 1024
+          type: string
+        type:
+          enum:
+          - BODY
+          type: string
+      required:
+      - type
+      type: object
+    messaging_Error:
+      properties:
+        code:
+          type: string
+          x-format: integer
+        detail:
+          type: string
+        meta:
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              format: json-pointer
               type: string
           type: object
-      type: object
-  responses:
-    messaging_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/messaging_Errors'
-      description: Unexpected error
-    WhatsappTemplateSingleResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/WhatsappTemplateData'
-            type: object
-      description: Successful response with Whatsapp template
-    WhatsappTemplateListResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/WhatsappTemplateData'
-                type: array
-              meta:
-                $ref: '#/components/schemas/messaging_PaginationMeta'
-            type: object
-      description: Successful response with Whatsapp template
+        title:
+          type: string
+      required:
+      - code
+      - title
+    messaging_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/messaging_Error'
+          type: array
+  parameters:
+    WhatsappTemplateId:
+      description: Whatsapp message template ID
+      in: path
+      name: id
+      required: true
+      schema:
+        type: string
+    PageConsolidated:
+      description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
+      explode: true
+      in: query
+      name: page
+      schema:
+        properties:
+          number:
+            default: 1
+            description: The page number to load
+            minimum: 1
+            type: integer
+          size:
+            default: 20
+            description: The size of the page
+            maximum: 250
+            minimum: 1
+            type: integer
+        type: object
+      style: deepObject
   securitySchemes:
     bearerAuth:
       scheme: bearer

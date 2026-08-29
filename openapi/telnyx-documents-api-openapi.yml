@@ -1,9 +1,9 @@
-openapi: 3.1.0
+openapi: 3.2.0
 info:
   contact:
     email: support@telnyx.com
   description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
-  title: Telnyx Access Tokens Documents API
+  title: Telnyx Documents API
   version: 2.0.0
   x-endpoint-cost: light
 servers:
@@ -216,6 +216,13 @@ paths:
       x-latency-category: responsive
 components:
   responses:
+    DownloadDocServiceDocumentResponse:
+      content:
+        '*':
+          schema:
+            format: binary
+            type: string
+      description: Successful response
     ListDocServiceDocumentsResponse:
       content:
         application/json:
@@ -229,18 +236,6 @@ components:
                 $ref: '#/components/schemas/PaginationMeta'
             type: object
       description: Successful response
-    documents_UnprocessableEntity:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/documents_Errors'
-      description: Unprocessable entity. Check the 'detail' field in response for details.
-    documents_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/documents_Errors'
-      description: Unexpected error
     ListDocServiceDocumentLinksResponse:
       content:
         application/json:
@@ -254,6 +249,18 @@ components:
                 $ref: '#/components/schemas/PaginationMeta'
             type: object
       description: Successful response
+    documents_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/documents_Errors'
+      description: Unexpected error
+    documents_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/documents_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
     ResourceNotFound:
       content:
         application/json:
@@ -269,32 +276,25 @@ components:
                 $ref: '#/components/schemas/DocServiceDocument'
             type: object
       description: Successful response
-    DownloadDocServiceDocumentResponse:
-      content:
-        '*':
-          schema:
-            format: binary
-            type: string
-      description: Successful response
   parameters:
-    FilterDocumentLinksConsolidated:
-      description: 'Consolidated filter parameter for document links (deepObject style). Originally: filter[linked_record_type], filter[linked_resource_id]'
+    documents_PageConsolidated:
+      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
       explode: true
       in: query
-      name: filter
-      required: false
+      name: page
       schema:
-        additionalProperties: false
         properties:
-          linked_record_type:
-            description: The linked_record_type of the document to filter on.
-            example: porting_order
-            type: string
-          linked_resource_id:
-            description: The linked_resource_id of the document to filter on.
-            example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-            format: uuid
-            type: string
+          number:
+            default: 1
+            description: The page number to load
+            minimum: 1
+            type: integer
+          size:
+            default: 20
+            description: The size of the page
+            maximum: 250
+            minimum: 1
+            type: integer
         type: object
       style: deepObject
     Id:
@@ -325,24 +325,24 @@ components:
           - -updated_at
           type: string
         type: array
-    documents_PageConsolidated:
-      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
+    FilterDocumentLinksConsolidated:
+      description: 'Consolidated filter parameter for document links (deepObject style). Originally: filter[linked_record_type], filter[linked_resource_id]'
       explode: true
       in: query
-      name: page
+      name: filter
+      required: false
       schema:
+        additionalProperties: false
         properties:
-          number:
-            default: 1
-            description: The page number to load
-            minimum: 1
-            type: integer
-          size:
-            default: 20
-            description: The size of the page
-            maximum: 250
-            minimum: 1
-            type: integer
+          linked_record_type:
+            description: The linked_record_type of the document to filter on.
+            example: porting_order
+            type: string
+          linked_resource_id:
+            description: The linked_resource_id of the document to filter on.
+            example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+            format: uuid
+            type: string
         type: object
       style: deepObject
     FilterDocumentsConsolidated:
@@ -404,54 +404,24 @@ components:
         type: object
       style: deepObject
   schemas:
-    DocServiceDocumentLink:
-      allOf:
-      - $ref: '#/components/schemas/DocServiceRecord'
-      - properties:
-          document_id:
-            description: Identifies the associated document.
-            example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-            format: uuid
-            readOnly: true
-            type: string
-          linked_record_type:
-            description: The linked resource's record type.
-            example: porting_order
-            readOnly: true
-            type: string
-          linked_resource_id:
-            description: Identifies the linked resource.
-            example: 132091b4-442b-4a2a-b87f-61e707e46d54
-            readOnly: true
-            type: string
-          record_type:
-            description: Identifies the type of the resource.
-            example: document_link
-            readOnly: true
-            type: string
-        type: object
-    DocServiceRecord:
+    CreateDocServiceDocumentRequest:
       properties:
-        created_at:
-          description: ISO 8601 formatted date-time indicating when the resource was created.
-          example: '2018-02-02T22:25:27.521Z'
-          readOnly: true
+        customer_reference:
+          description: A customer reference string for customer look ups.
+          example: MY REF 001
           type: string
-        id:
-          description: Identifies the resource.
-          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-          format: uuid
-          readOnly: true
+        file:
+          description: Alternatively, instead of the URL you can provide the Base64 encoded contents of the file you are uploading.
+          example: ZXhhbXBsZSBvZiBlbmNvZGVkIGNvbnRlbnQ=
+          format: byte
           type: string
-        record_type:
-          description: Identifies the type of the resource.
-          example: sample_record_type
-          readOnly: true
+        filename:
+          description: The filename of the document.
+          example: test-document.pdf
           type: string
-        updated_at:
-          description: ISO 8601 formatted date-time indicating when the resource was updated.
-          example: '2018-02-02T22:25:27.521Z'
-          readOnly: true
+        url:
+          description: If the file is already hosted publicly, you can provide a URL and have the documents service fetch it for you.
+          example: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
           type: string
       type: object
     CreateMultiPartDocServiceDocumentRequest:
@@ -464,6 +434,21 @@ components:
           description: The file you are uploading.
           format: binary
           type: string
+      type: object
+    PaginationMeta:
+      properties:
+        page_number:
+          example: 2
+          type: integer
+        page_size:
+          example: 25
+          type: integer
+        total_pages:
+          example: 3
+          type: integer
+        total_results:
+          example: 55
+          type: integer
       type: object
     documents_Error:
       properties:
@@ -488,28 +473,6 @@ components:
       required:
       - code
       - title
-      type: object
-    documents_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/documents_Error'
-          type: array
-      type: object
-    PaginationMeta:
-      properties:
-        page_number:
-          example: 2
-          type: integer
-        page_size:
-          example: 25
-          type: integer
-        total_pages:
-          example: 3
-          type: integer
-        total_results:
-          example: 55
-          type: integer
       type: object
     DocServiceDocument:
       allOf:
@@ -573,24 +536,61 @@ components:
             readOnly: true
             type: string
         type: object
-    CreateDocServiceDocumentRequest:
+    DocServiceDocumentLink:
+      allOf:
+      - $ref: '#/components/schemas/DocServiceRecord'
+      - properties:
+          document_id:
+            description: Identifies the associated document.
+            example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+            format: uuid
+            readOnly: true
+            type: string
+          linked_record_type:
+            description: The linked resource's record type.
+            example: porting_order
+            readOnly: true
+            type: string
+          linked_resource_id:
+            description: Identifies the linked resource.
+            example: 132091b4-442b-4a2a-b87f-61e707e46d54
+            readOnly: true
+            type: string
+          record_type:
+            description: Identifies the type of the resource.
+            example: document_link
+            readOnly: true
+            type: string
+        type: object
+    documents_Errors:
       properties:
-        customer_reference:
-          description: A customer reference string for customer look ups.
-          example: MY REF 001
+        errors:
+          items:
+            $ref: '#/components/schemas/documents_Error'
+          type: array
+      type: object
+    DocServiceRecord:
+      properties:
+        created_at:
+          description: ISO 8601 formatted date-time indicating when the resource was created.
+          example: '2018-02-02T22:25:27.521Z'
+          readOnly: true
           type: string
-        file:
-          description: Alternatively, instead of the URL you can provide the Base64 encoded contents of the file you are uploading.
-          example: ZXhhbXBsZSBvZiBlbmNvZGVkIGNvbnRlbnQ=
-          format: byte
+        id:
+          description: Identifies the resource.
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+          format: uuid
+          readOnly: true
           type: string
-        filename:
-          description: The filename of the document.
-          example: test-document.pdf
+        record_type:
+          description: Identifies the type of the resource.
+          example: sample_record_type
+          readOnly: true
           type: string
-        url:
-          description: If the file is already hosted publicly, you can provide a URL and have the documents service fetch it for you.
-          example: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+        updated_at:
+          description: ISO 8601 formatted date-time indicating when the resource was updated.
+          example: '2018-02-02T22:25:27.521Z'
+          readOnly: true
           type: string
       type: object
   securitySchemes:

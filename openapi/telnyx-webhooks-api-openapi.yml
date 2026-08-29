@@ -1,9 +1,9 @@
-openapi: 3.1.0
+openapi: 3.2.0
 info:
   contact:
     email: support@telnyx.com
   description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
-  title: Telnyx Access Tokens Webhooks API
+  title: Telnyx Webhooks API
   version: 2.0.0
   x-endpoint-cost: light
 servers:
@@ -123,21 +123,103 @@ paths:
       - Webhooks
       x-latency-category: responsive
 components:
-  responses:
-    ListWebhookDeliveriesResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/webhook_delivery'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMetaSimple'
-            type: object
-      description: A paginated array of webhook_delivery attempts
   schemas:
+    http_headers:
+      description: List of headers, limited to 10kB.
+      example:
+      - - header_name
+        - header_value
+      items:
+        items:
+          type: string
+        type: array
+      type: array
+    PaginationMetaSimple:
+      properties:
+        page_number:
+          example: 2
+          type: integer
+        page_size:
+          example: 25
+          type: integer
+        total_pages:
+          example: 3
+          type: integer
+        total_results:
+          example: 55
+          type: integer
+      type: object
+    attempt:
+      description: Webhook delivery attempt details.
+      example:
+      - finished_at: '2020-08-10T14:00:05.595Z'
+        http:
+          request:
+            headers:
+            - - Accept
+              - '*/*'
+            url: https://fallback.example.com/webhooks
+          response:
+            body: All good.
+            headers:
+            - - Content-Type
+              - text/html
+            status: 200
+        started_at: '2020-08-10T14:00:05.364Z'
+        status: delivered
+      - errors:
+        - 75499
+        finished_at: '2020-08-10T14:00:05.360Z'
+        http:
+          request:
+            headers:
+            - - Accept
+              - '*/*'
+            url: https://typo.example.com/webhooks
+          response:
+            body: Oops. Not found.
+            headers:
+            - - Content-Type
+              - text/html
+            - - Pragma
+              - no-cache
+            status: 404
+        started_at: '2020-08-10T14:00:05.004Z'
+        status: failed
+      - errors:
+        - code: '75001'
+          detail: Unable to resolve the webhook URL domain name
+          title: Could not resolve name
+        finished_at: '2020-08-10T14:00:05.000Z'
+        http:
+          reponse: null
+          request:
+            headers:
+            - 'Accept: */*'
+            url: https://slow.example.com/webhooks
+        started_at: '2020-08-10T14:00:00.000Z'
+        status: failed
+      properties:
+        errors:
+          description: Webhook delivery error codes.
+          items:
+            type: integer
+          type: array
+        finished_at:
+          description: ISO 8601 timestamp indicating when the attempt has finished.
+          format: date-time
+          type: string
+        http:
+          $ref: '#/components/schemas/http'
+        started_at:
+          description: ISO 8601 timestamp indicating when the attempt was initiated.
+          format: date-time
+          type: string
+        status:
+          enum:
+          - delivered
+          - failed
+          type: string
     webhook_delivery:
       description: Record of all attempts to deliver a webhook.
       properties:
@@ -268,102 +350,20 @@ components:
               example: 200
               type: integer
           type: object
-    PaginationMetaSimple:
-      properties:
-        page_number:
-          example: 2
-          type: integer
-        page_size:
-          example: 25
-          type: integer
-        total_pages:
-          example: 3
-          type: integer
-        total_results:
-          example: 55
-          type: integer
-      type: object
-    http_headers:
-      description: List of headers, limited to 10kB.
-      example:
-      - - header_name
-        - header_value
-      items:
-        items:
-          type: string
-        type: array
-      type: array
-    attempt:
-      description: Webhook delivery attempt details.
-      example:
-      - finished_at: '2020-08-10T14:00:05.595Z'
-        http:
-          request:
-            headers:
-            - - Accept
-              - '*/*'
-            url: https://fallback.example.com/webhooks
-          response:
-            body: All good.
-            headers:
-            - - Content-Type
-              - text/html
-            status: 200
-        started_at: '2020-08-10T14:00:05.364Z'
-        status: delivered
-      - errors:
-        - 75499
-        finished_at: '2020-08-10T14:00:05.360Z'
-        http:
-          request:
-            headers:
-            - - Accept
-              - '*/*'
-            url: https://typo.example.com/webhooks
-          response:
-            body: Oops. Not found.
-            headers:
-            - - Content-Type
-              - text/html
-            - - Pragma
-              - no-cache
-            status: 404
-        started_at: '2020-08-10T14:00:05.004Z'
-        status: failed
-      - errors:
-        - code: '75001'
-          detail: Unable to resolve the webhook URL domain name
-          title: Could not resolve name
-        finished_at: '2020-08-10T14:00:05.000Z'
-        http:
-          reponse: null
-          request:
-            headers:
-            - 'Accept: */*'
-            url: https://slow.example.com/webhooks
-        started_at: '2020-08-10T14:00:00.000Z'
-        status: failed
-      properties:
-        errors:
-          description: Webhook delivery error codes.
-          items:
-            type: integer
-          type: array
-        finished_at:
-          description: ISO 8601 timestamp indicating when the attempt has finished.
-          format: date-time
-          type: string
-        http:
-          $ref: '#/components/schemas/http'
-        started_at:
-          description: ISO 8601 timestamp indicating when the attempt was initiated.
-          format: date-time
-          type: string
-        status:
-          enum:
-          - delivered
-          - failed
-          type: string
+  responses:
+    ListWebhookDeliveriesResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/webhook_delivery'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMetaSimple'
+            type: object
+      description: A paginated array of webhook_delivery attempts
   parameters:
     PageConsolidated:
       description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'

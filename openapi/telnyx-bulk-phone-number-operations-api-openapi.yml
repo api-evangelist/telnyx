@@ -1,9 +1,9 @@
-openapi: 3.1.0
+openapi: 3.2.0
 info:
   contact:
     email: support@telnyx.com
   description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
-  title: Telnyx Access Tokens Bulk Phone Number Operations API
+  title: Telnyx Bulk Phone Number Operations API
   version: 2.0.0
   x-endpoint-cost: light
 servers:
@@ -417,31 +417,64 @@ paths:
       x-group-parameters: 'true'
       x-latency-category: responsive
 components:
+  responses:
+    numbers_BadRequestResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Bad request, the request was unacceptable, often due to missing a required parameter.
+    ListPhoneNumbersJobsResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PhoneNumbersJob'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            title: List Phone Numbers Background Jobs Response
+            type: object
+      description: Successful response with a list of phone numbers background jobs.
+    numbers_UnauthorizedResponse:
+      content:
+        application/json:
+          examples:
+            Authentication Failed:
+              value:
+                errors:
+                - code: '10009'
+                  detail: Could not understand the provided credentials.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+                  title: Authentication failed
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Unauthorized
+    numbers_ForbiddenResponse:
+      content:
+        application/json:
+          examples:
+            Not authorized:
+              $ref: '#/components/examples/NotAuthorized'
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Forbidden
+    numbers_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Unexpected error
+    numbers_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
   schemas:
-    PhoneNumbersJobDeletePhoneNumbersRequest:
-      example:
-        phone_numbers:
-        - '+19705555098'
-        - '+19715555098'
-        - '32873127836'
-      properties:
-        phone_numbers:
-          items:
-            description: Array of phone number ids and/or phone numbers in E164 format to update
-            type: string
-          type: array
-      required:
-      - phone_numbers
-      type: object
-    PhoneNumbersJobPendingOperation:
-      properties:
-        id:
-          description: The phone number's ID
-          type: string
-        phone_number:
-          description: The phone number in e164 format.
-          type: string
-      type: object
     UpdatePhoneNumberVoiceSettingsRequest:
       example:
         call_forwarding:
@@ -500,8 +533,109 @@ components:
           - channel
           type: string
       type: object
-    PhoneNumbersJobSuccessfulOperation:
+    PhoneNumbersJobUpdateEmergencySettingsRequest:
+      example:
+        emergency_address_id: '53829456729313'
+        emergency_enabled: true
+        phone_numbers:
+        - '+19705555098'
+        - '+19715555098'
+        - '32873127836'
       properties:
+        emergency_address_id:
+          description: Identifies the address to be used with emergency services. Required if emergency_enabled is true, must be null or omitted if emergency_enabled is false.
+          type:
+          - string
+          - 'null'
+        emergency_enabled:
+          description: Indicates whether to enable or disable emergency services on the numbers.
+          type: boolean
+        phone_numbers:
+          items:
+            description: Array of phone number ids and/or phone numbers in E164 format to update
+            type: string
+          type: array
+      required:
+      - emergency_enabled
+      - phone_numbers
+      type: object
+    MediaFeatures:
+      description: The media features settings for a phone number.
+      example:
+        accept_any_rtp_packets_enabled: true
+        rtp_auto_adjust_enabled: true
+        t38_fax_gateway_enabled: true
+      properties:
+        accept_any_rtp_packets_enabled:
+          default: false
+          description: When enabled, Telnyx will accept RTP packets from any customer-side IP address and port, not just those to which Telnyx is sending RTP.
+          type: boolean
+        rtp_auto_adjust_enabled:
+          default: true
+          description: When RTP Auto-Adjust is enabled, the destination RTP address port will be automatically changed to match the source of the incoming RTP packets.
+          type: boolean
+        t38_fax_gateway_enabled:
+          default: false
+          description: Controls whether Telnyx will accept a T.38 re-INVITE for this phone number. Note that Telnyx will not send a T.38 re-INVITE; this option only controls whether one will be accepted.
+          type: boolean
+      type: object
+    CallRecording:
+      description: The call recording settings for a phone number.
+      example:
+        inbound_call_recording_channels: single
+        inbound_call_recording_enabled: true
+        inbound_call_recording_format: wav
+      properties:
+        inbound_call_recording_channels:
+          default: single
+          description: When using 'dual' channels, final audio file will be stereo recorded with the first leg on channel A, and the rest on channel B.
+          enum:
+          - single
+          - dual
+          type: string
+        inbound_call_recording_enabled:
+          default: false
+          description: When enabled, any inbound call to this number will be recorded.
+          type: boolean
+        inbound_call_recording_format:
+          default: wav
+          description: The audio file format for calls being recorded.
+          enum:
+          - wav
+          - mp3
+          type: string
+      type: object
+    PhoneNumbersJobPhoneNumber:
+      properties:
+        id:
+          description: The phone number's ID
+          type: string
+        phone_number:
+          description: The phone number in e164 format.
+          example: '+19705555000'
+          type: string
+      type: object
+    PaginationMeta:
+      properties:
+        page_number:
+          example: 2
+          type: integer
+        page_size:
+          example: 25
+          type: integer
+        total_pages:
+          example: 3
+          type: integer
+        total_results:
+          example: 55
+          type: integer
+      type: object
+    PhoneNumbersJobFailedOperation:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/numbers_Error'
+          type: array
         id:
           description: The phone number's ID
           type: string
@@ -509,19 +643,20 @@ components:
           description: The phone number in e164 format.
           type: string
       type: object
-    CnamListing:
-      description: The CNAM listing settings for a phone number.
+    PhoneNumbersJobDeletePhoneNumbersRequest:
       example:
-        cnam_listing_details: example
-        cnam_listing_enabled: true
+        phone_numbers:
+        - '+19705555098'
+        - '+19715555098'
+        - '32873127836'
       properties:
-        cnam_listing_details:
-          description: The CNAM listing details for this number. Must be alphanumeric characters or spaces with a maximum length of 15. Requires cnam_listing_enabled to also be set to true.
-          type: string
-        cnam_listing_enabled:
-          default: false
-          description: Enables CNAM listings for this number. Requires cnam_listing_details to also be set.
-          type: boolean
+        phone_numbers:
+          items:
+            description: Array of phone number ids and/or phone numbers in E164 format to update
+            type: string
+          type: array
+      required:
+      - phone_numbers
       type: object
     numbers_Error:
       properties:
@@ -550,6 +685,15 @@ components:
           type: object
         title:
           example: Unexpected error
+          type: string
+      type: object
+    PhoneNumbersJobSuccessfulOperation:
+      properties:
+        id:
+          description: The phone number's ID
+          type: string
+        phone_number:
+          description: The phone number in e164 format.
           type: string
       type: object
     PhoneNumbersJobUpdatePhoneNumbersRequest:
@@ -604,18 +748,49 @@ components:
       required:
       - phone_numbers
       type: object
-    PhoneNumbersJobFailedOperation:
+    CallForwarding:
+      description: The call forwarding settings for a phone number.
+      example:
+        call_forwarding_enabled: true
+        forwarding_type: always
+        forwards_to: '+13035559123'
+      properties:
+        call_forwarding_enabled:
+          default: true
+          description: Indicates if call forwarding will be enabled for this number if forwards_to and forwarding_type are filled in. Defaults to true for backwards compatibility with APIV1 use of numbers endpoints.
+          example: true
+          type: boolean
+        forwarding_type:
+          description: Call forwarding type. 'forwards_to' must be set for this to have an effect.
+          enum:
+          - always
+          - on-failure
+          example: always
+          type: string
+        forwards_to:
+          description: The phone number to which inbound calls to this number are forwarded. Inbound calls will not be forwarded if this field is left blank. If set, must be a +E.164-formatted phone number.
+          type: string
+      type: object
+    CnamListing:
+      description: The CNAM listing settings for a phone number.
+      example:
+        cnam_listing_details: example
+        cnam_listing_enabled: true
+      properties:
+        cnam_listing_details:
+          description: The CNAM listing details for this number. Must be alphanumeric characters or spaces with a maximum length of 15. Requires cnam_listing_enabled to also be set to true.
+          type: string
+        cnam_listing_enabled:
+          default: false
+          description: Enables CNAM listings for this number. Requires cnam_listing_details to also be set.
+          type: boolean
+      type: object
+    numbers_Errors:
       properties:
         errors:
           items:
             $ref: '#/components/schemas/numbers_Error'
           type: array
-        id:
-          description: The phone number's ID
-          type: string
-        phone_number:
-          description: The phone number in e164 format.
-          type: string
       type: object
     PhoneNumbersJob:
       example:
@@ -717,133 +892,84 @@ components:
           readOnly: true
           type: string
       type: object
-    PhoneNumbersJobUpdateEmergencySettingsRequest:
-      example:
-        emergency_address_id: '53829456729313'
-        emergency_enabled: true
-        phone_numbers:
-        - '+19705555098'
-        - '+19715555098'
-        - '32873127836'
-      properties:
-        emergency_address_id:
-          description: Identifies the address to be used with emergency services. Required if emergency_enabled is true, must be null or omitted if emergency_enabled is false.
-          type:
-          - string
-          - 'null'
-        emergency_enabled:
-          description: Indicates whether to enable or disable emergency services on the numbers.
-          type: boolean
-        phone_numbers:
-          items:
-            description: Array of phone number ids and/or phone numbers in E164 format to update
-            type: string
-          type: array
-      required:
-      - emergency_enabled
-      - phone_numbers
-      type: object
-    CallForwarding:
-      description: The call forwarding settings for a phone number.
-      example:
-        call_forwarding_enabled: true
-        forwarding_type: always
-        forwards_to: '+13035559123'
-      properties:
-        call_forwarding_enabled:
-          default: true
-          description: Indicates if call forwarding will be enabled for this number if forwards_to and forwarding_type are filled in. Defaults to true for backwards compatibility with APIV1 use of numbers endpoints.
-          example: true
-          type: boolean
-        forwarding_type:
-          description: Call forwarding type. 'forwards_to' must be set for this to have an effect.
-          enum:
-          - always
-          - on-failure
-          example: always
-          type: string
-        forwards_to:
-          description: The phone number to which inbound calls to this number are forwarded. Inbound calls will not be forwarded if this field is left blank. If set, must be a +E.164-formatted phone number.
-          type: string
-      type: object
-    CallRecording:
-      description: The call recording settings for a phone number.
-      example:
-        inbound_call_recording_channels: single
-        inbound_call_recording_enabled: true
-        inbound_call_recording_format: wav
-      properties:
-        inbound_call_recording_channels:
-          default: single
-          description: When using 'dual' channels, final audio file will be stereo recorded with the first leg on channel A, and the rest on channel B.
-          enum:
-          - single
-          - dual
-          type: string
-        inbound_call_recording_enabled:
-          default: false
-          description: When enabled, any inbound call to this number will be recorded.
-          type: boolean
-        inbound_call_recording_format:
-          default: wav
-          description: The audio file format for calls being recorded.
-          enum:
-          - wav
-          - mp3
-          type: string
-      type: object
-    numbers_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/numbers_Error'
-          type: array
-      type: object
-    MediaFeatures:
-      description: The media features settings for a phone number.
-      example:
-        accept_any_rtp_packets_enabled: true
-        rtp_auto_adjust_enabled: true
-        t38_fax_gateway_enabled: true
-      properties:
-        accept_any_rtp_packets_enabled:
-          default: false
-          description: When enabled, Telnyx will accept RTP packets from any customer-side IP address and port, not just those to which Telnyx is sending RTP.
-          type: boolean
-        rtp_auto_adjust_enabled:
-          default: true
-          description: When RTP Auto-Adjust is enabled, the destination RTP address port will be automatically changed to match the source of the incoming RTP packets.
-          type: boolean
-        t38_fax_gateway_enabled:
-          default: false
-          description: Controls whether Telnyx will accept a T.38 re-INVITE for this phone number. Note that Telnyx will not send a T.38 re-INVITE; this option only controls whether one will be accepted.
-          type: boolean
-      type: object
-    PaginationMeta:
-      properties:
-        page_number:
-          example: 2
-          type: integer
-        page_size:
-          example: 25
-          type: integer
-        total_pages:
-          example: 3
-          type: integer
-        total_results:
-          example: 55
-          type: integer
-      type: object
-    PhoneNumbersJobPhoneNumber:
+    PhoneNumbersJobPendingOperation:
       properties:
         id:
           description: The phone number's ID
           type: string
         phone_number:
           description: The phone number in e164 format.
-          example: '+19705555000'
           type: string
       type: object
+  examples:
+    MixedIdsAndE164Values:
+      value:
+        errors:
+        - code: '10015'
+          detail: You must specify either all phone numbers in the e164 format or all as phone number ids
+          meta:
+            url: https://developers.telnyx.com/docs/overview/errors/10015
+          source:
+            pointer: /phone_numbers
+          title: Bad Request
+    MaximumAllowedPhoneNumbers:
+      value:
+        errors:
+        - code: '10015'
+          detail: 1000 numbers is the maximum allowed.
+          meta:
+            url: https://developers.telnyx.com/docs/overview/errors/10015
+          source:
+            pointer: /phone_numbers
+          title: Bad Request
+    MinimumAllowedPhoneNumbers:
+      value:
+        errors:
+        - code: '10015'
+          detail: You must provide at least 1 phone number.
+          meta:
+            url: https://developers.telnyx.com/docs/overview/errors/10015
+          source:
+            pointer: /phone_numbers
+          title: Bad Request
+    PhoneNumbersMustBePresent:
+      value:
+        errors:
+        - code: '10015'
+          detail: must be present
+          meta:
+            url: https://developers.telnyx.com/docs/overview/errors/10015
+          source:
+            pointer: /phone_numbers
+          title: Bad Request
+    Maximum20JobsAllowed:
+      value:
+        errors:
+        - code: '10015'
+          detail: You can have at most 20 pending or in progress jobs
+          meta:
+            url: https://developers.telnyx.com/docs/overview/errors/10015
+          source:
+            pointer: /base
+          title: Bad Request
+    NotAuthorized:
+      value:
+        errors:
+        - code: '10006'
+          detail: You are not authorized to access the requested resource.
+          meta:
+            url: https://developers.telnyx.com/docs/overview/errors/10006
+          title: Not authorized
+    PhoneNumberOwnership:
+      value:
+        errors:
+        - code: '10015'
+          detail: You must own every number in the bulk request
+          meta:
+            url: https://developers.telnyx.com/docs/overview/errors/10015
+          source:
+            pointer: /phone_numbers
+          title: Bad Request
   parameters:
     numbers_PageConsolidated:
       description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
@@ -865,132 +991,6 @@ components:
             type: integer
         type: object
       style: deepObject
-  responses:
-    numbers_UnprocessableEntity:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/numbers_Errors'
-      description: Unprocessable entity. Check the 'detail' field in response for details.
-    numbers_ForbiddenResponse:
-      content:
-        application/json:
-          examples:
-            Not authorized:
-              $ref: '#/components/examples/NotAuthorized'
-          schema:
-            $ref: '#/components/schemas/numbers_Errors'
-      description: Forbidden
-    numbers_UnauthorizedResponse:
-      content:
-        application/json:
-          examples:
-            Authentication Failed:
-              value:
-                errors:
-                - code: '10009'
-                  detail: Could not understand the provided credentials.
-                  meta:
-                    url: https://developers.telnyx.com/docs/overview/errors/10009
-                  title: Authentication failed
-          schema:
-            $ref: '#/components/schemas/numbers_Errors'
-      description: Unauthorized
-    ListPhoneNumbersJobsResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/PhoneNumbersJob'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            title: List Phone Numbers Background Jobs Response
-            type: object
-      description: Successful response with a list of phone numbers background jobs.
-    numbers_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/numbers_Errors'
-      description: Unexpected error
-    numbers_BadRequestResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/numbers_Errors'
-      description: Bad request, the request was unacceptable, often due to missing a required parameter.
-  examples:
-    PhoneNumbersMustBePresent:
-      value:
-        errors:
-        - code: '10015'
-          detail: must be present
-          meta:
-            url: https://developers.telnyx.com/docs/overview/errors/10015
-          source:
-            pointer: /phone_numbers
-          title: Bad Request
-    MixedIdsAndE164Values:
-      value:
-        errors:
-        - code: '10015'
-          detail: You must specify either all phone numbers in the e164 format or all as phone number ids
-          meta:
-            url: https://developers.telnyx.com/docs/overview/errors/10015
-          source:
-            pointer: /phone_numbers
-          title: Bad Request
-    Maximum20JobsAllowed:
-      value:
-        errors:
-        - code: '10015'
-          detail: You can have at most 20 pending or in progress jobs
-          meta:
-            url: https://developers.telnyx.com/docs/overview/errors/10015
-          source:
-            pointer: /base
-          title: Bad Request
-    PhoneNumberOwnership:
-      value:
-        errors:
-        - code: '10015'
-          detail: You must own every number in the bulk request
-          meta:
-            url: https://developers.telnyx.com/docs/overview/errors/10015
-          source:
-            pointer: /phone_numbers
-          title: Bad Request
-    MinimumAllowedPhoneNumbers:
-      value:
-        errors:
-        - code: '10015'
-          detail: You must provide at least 1 phone number.
-          meta:
-            url: https://developers.telnyx.com/docs/overview/errors/10015
-          source:
-            pointer: /phone_numbers
-          title: Bad Request
-    MaximumAllowedPhoneNumbers:
-      value:
-        errors:
-        - code: '10015'
-          detail: 1000 numbers is the maximum allowed.
-          meta:
-            url: https://developers.telnyx.com/docs/overview/errors/10015
-          source:
-            pointer: /phone_numbers
-          title: Bad Request
-    NotAuthorized:
-      value:
-        errors:
-        - code: '10006'
-          detail: You are not authorized to access the requested resource.
-          meta:
-            url: https://developers.telnyx.com/docs/overview/errors/10006
-          title: Not authorized
   securitySchemes:
     bearerAuth:
       scheme: bearer

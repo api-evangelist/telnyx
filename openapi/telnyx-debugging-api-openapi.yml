@@ -1,9 +1,9 @@
-openapi: 3.1.0
+openapi: 3.2.0
 info:
   contact:
     email: support@telnyx.com
   description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
-  title: Telnyx Access Tokens Debugging API
+  title: Telnyx Debugging API
   version: 2.0.0
   x-endpoint-cost: light
 servers:
@@ -40,7 +40,144 @@ paths:
       x-group-parameters: 'true'
       x-latency-category: responsive
 components:
+  parameters:
+    call-control_PageConsolidated:
+      description: 'Consolidated page parameter (deepObject style). Originally: page[after], page[before], page[limit], page[size], page[number]'
+      explode: true
+      in: query
+      name: page
+      schema:
+        properties:
+          after:
+            default: 'null'
+            description: Opaque identifier of next page
+            type: string
+          before:
+            default: 'null'
+            description: Opaque identifier of previous page
+            type: string
+          limit:
+            default: 20
+            description: Limit of records per single page
+            maximum: 250
+            minimum: 1
+            type: integer
+          number:
+            default: 1
+            description: The page number to load
+            minimum: 1
+            type: integer
+          size:
+            default: 20
+            description: The size of the page
+            maximum: 250
+            minimum: 1
+            type: integer
+        type: object
+      style: deepObject
+    call-control_FilterConsolidated:
+      description: 'Consolidated filter parameter (deepObject style). Originally: filter[application_name][contains], filter[outbound.outbound_voice_profile_id], filter[leg_id], filter[application_session_id], filter[connection_id], filter[product], filter[failed], filter[from], filter[to], filter[name], filter[type], filter[occurred_at][eq/gt/gte/lt/lte], filter[status]'
+      explode: true
+      in: query
+      name: filter
+      schema:
+        properties:
+          application_name:
+            additionalProperties: false
+            description: Application name filters
+            properties:
+              contains:
+                default: 'null'
+                description: If present, applications with <code>application_name</code> containing the given value will be returned. Matching is not case-sensitive. Requires at least three characters.
+                type: string
+            type: object
+          application_session_id:
+            description: The unique identifier of the call session. A session may include multiple call leg events.
+            format: uuid
+            type: string
+          connection_id:
+            description: The unique identifier of the conection.
+            type: string
+          failed:
+            description: Delivery failed or not.
+            example: false
+            type: boolean
+          from:
+            description: Filter by From number.
+            example: '+12025550142'
+            type: string
+          leg_id:
+            description: The unique identifier of an individual call leg.
+            format: uuid
+            type: string
+          name:
+            description: If present, conferences will be filtered to those with a matching `name` attribute. Matching is case-sensitive
+            type: string
+          occurred_at:
+            additionalProperties: false
+            description: Event occurred_at filters
+            properties:
+              eq:
+                description: 'Event occurred_at: equal'
+                example: '2019-03-29T11:10:00Z'
+                type: string
+              gt:
+                description: 'Event occurred_at: greater than'
+                example: '2019-03-29T11:10:00Z'
+                type: string
+              gte:
+                description: 'Event occurred_at: greater than or equal'
+                example: '2019-03-29T11:10:00Z'
+                type: string
+              lt:
+                description: 'Event occurred_at: lower than'
+                example: '2019-03-29T11:10:00Z'
+                type: string
+              lte:
+                description: 'Event occurred_at: lower than or equal'
+                example: '2019-03-29T11:10:00Z'
+                type: string
+            type: object
+          outbound.outbound_voice_profile_id:
+            description: Identifies the associated outbound voice profile.
+            example: '1293384261075731499'
+            type: string
+            x-format: int64
+          product:
+            description: Filter by product.
+            enum:
+            - call_control
+            - fax
+            - texml
+            example: texml
+            type: string
+          status:
+            description: If present, conferences will be filtered by status.
+            enum:
+            - init
+            - in_progress
+            - completed
+            type: string
+          to:
+            description: Filter by To number.
+            example: '+12025550142'
+            type: string
+          type:
+            description: Event type
+            enum:
+            - command
+            - webhook
+            example: webhook
+            type: string
+        type: object
+      style: deepObject
   responses:
+    call-control_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/call-control_Errors'
+      description: Unexpected error
     ListCallEventsResponse:
       content:
         application/json:
@@ -55,12 +192,6 @@ components:
             title: List Call Events Response
             type: object
       description: Successful response with a list of call events.
-    call-control_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/call-control_Errors'
-      description: Unexpected error
     UnprocessableEntityResponse:
       content:
         application/json:
@@ -231,6 +362,36 @@ components:
           example: 55
           type: integer
       type: object
+    call-control_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/call-control_Error'
+          type: array
+    call-control_Error:
+      properties:
+        code:
+          format: integer
+          type: string
+        detail:
+          type: string
+        meta:
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              format: json-pointer
+              type: string
+          type: object
+        title:
+          type: string
+      required:
+      - code
+      - title
     CallEvent:
       example:
         call_leg_id: 308fe500-5213-11e9-ace7-02420a0f0668
@@ -282,167 +443,6 @@ components:
       - metadata
       title: Call Event
       type: object
-    call-control_Error:
-      properties:
-        code:
-          format: integer
-          type: string
-        detail:
-          type: string
-        meta:
-          type: object
-        source:
-          properties:
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              format: json-pointer
-              type: string
-          type: object
-        title:
-          type: string
-      required:
-      - code
-      - title
-    call-control_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/call-control_Error'
-          type: array
-  parameters:
-    call-control_FilterConsolidated:
-      description: 'Consolidated filter parameter (deepObject style). Originally: filter[application_name][contains], filter[outbound.outbound_voice_profile_id], filter[leg_id], filter[application_session_id], filter[connection_id], filter[product], filter[failed], filter[from], filter[to], filter[name], filter[type], filter[occurred_at][eq/gt/gte/lt/lte], filter[status]'
-      explode: true
-      in: query
-      name: filter
-      schema:
-        properties:
-          application_name:
-            additionalProperties: false
-            description: Application name filters
-            properties:
-              contains:
-                default: 'null'
-                description: If present, applications with <code>application_name</code> containing the given value will be returned. Matching is not case-sensitive. Requires at least three characters.
-                type: string
-            type: object
-          application_session_id:
-            description: The unique identifier of the call session. A session may include multiple call leg events.
-            format: uuid
-            type: string
-          connection_id:
-            description: The unique identifier of the conection.
-            type: string
-          failed:
-            description: Delivery failed or not.
-            example: false
-            type: boolean
-          from:
-            description: Filter by From number.
-            example: '+12025550142'
-            type: string
-          leg_id:
-            description: The unique identifier of an individual call leg.
-            format: uuid
-            type: string
-          name:
-            description: If present, conferences will be filtered to those with a matching `name` attribute. Matching is case-sensitive
-            type: string
-          occurred_at:
-            additionalProperties: false
-            description: Event occurred_at filters
-            properties:
-              eq:
-                description: 'Event occurred_at: equal'
-                example: '2019-03-29T11:10:00Z'
-                type: string
-              gt:
-                description: 'Event occurred_at: greater than'
-                example: '2019-03-29T11:10:00Z'
-                type: string
-              gte:
-                description: 'Event occurred_at: greater than or equal'
-                example: '2019-03-29T11:10:00Z'
-                type: string
-              lt:
-                description: 'Event occurred_at: lower than'
-                example: '2019-03-29T11:10:00Z'
-                type: string
-              lte:
-                description: 'Event occurred_at: lower than or equal'
-                example: '2019-03-29T11:10:00Z'
-                type: string
-            type: object
-          outbound.outbound_voice_profile_id:
-            description: Identifies the associated outbound voice profile.
-            example: '1293384261075731499'
-            type: string
-            x-format: int64
-          product:
-            description: Filter by product.
-            enum:
-            - call_control
-            - fax
-            - texml
-            example: texml
-            type: string
-          status:
-            description: If present, conferences will be filtered by status.
-            enum:
-            - init
-            - in_progress
-            - completed
-            type: string
-          to:
-            description: Filter by To number.
-            example: '+12025550142'
-            type: string
-          type:
-            description: Event type
-            enum:
-            - command
-            - webhook
-            example: webhook
-            type: string
-        type: object
-      style: deepObject
-    call-control_PageConsolidated:
-      description: 'Consolidated page parameter (deepObject style). Originally: page[after], page[before], page[limit], page[size], page[number]'
-      explode: true
-      in: query
-      name: page
-      schema:
-        properties:
-          after:
-            default: 'null'
-            description: Opaque identifier of next page
-            type: string
-          before:
-            default: 'null'
-            description: Opaque identifier of previous page
-            type: string
-          limit:
-            default: 20
-            description: Limit of records per single page
-            maximum: 250
-            minimum: 1
-            type: integer
-          number:
-            default: 1
-            description: The page number to load
-            minimum: 1
-            type: integer
-          size:
-            default: 20
-            description: The size of the page
-            maximum: 250
-            minimum: 1
-            type: integer
-        type: object
-      style: deepObject
   securitySchemes:
     bearerAuth:
       scheme: bearer

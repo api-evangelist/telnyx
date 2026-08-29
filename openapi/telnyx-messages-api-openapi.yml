@@ -1,9 +1,9 @@
-openapi: 3.1.0
+openapi: 3.2.0
 info:
   contact:
     email: support@telnyx.com
   description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
-  title: Telnyx Access Tokens Messages API
+  title: Telnyx Messages API
   version: 2.0.0
   x-endpoint-cost: light
 servers:
@@ -304,7 +304,372 @@ paths:
       - Messages
       x-latency-category: responsive
 components:
+  responses:
+    messaging_UnprocessableEntityResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors'
+      description: Unprocessable Entity
+    messaging_BadRequestResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors'
+      description: Bad Request
+    messaging_NotFoundResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors'
+      description: Not Found
+    MessageResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/OutboundMessagePayload'
+            title: Message Response
+            type: object
+      description: Successful response with details about a message.
+    messaging_UnauthorizedResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors'
+      description: Unauthorized
+    messaging_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors'
+      description: Unexpected error
   schemas:
+    ToNumber:
+      description: Receiving address (+E.164 formatted phone number or short code).
+      example: +E.164
+      type: string
+      x-format: address
+    CreateGroupMMSMessageRequest:
+      example:
+        from: '+13125551234'
+        media_urls:
+        - http://example.com
+        subject: From Telnyx!
+        text: Hello, World!
+        to:
+        - '+18655551234'
+        - '+14155551234'
+        use_profile_webhooks: true
+        webhook_failover_url: https://backup.example.com/hooks
+        webhook_url: http://example.com/webhooks
+      properties:
+        from:
+          description: Phone number, in +E.164 format, used to send the message.
+          type: string
+          x-format: address
+        media_urls:
+          description: A list of media URLs. The total media size must be less than 1 MB.
+          items:
+            format: url
+            type: string
+          type: array
+        subject:
+          description: Subject of multimedia message
+          type: string
+        text:
+          description: Message body (i.e., content) as a non-empty string.
+          type: string
+        to:
+          description: A list of destinations. No more than 8 destinations are allowed.
+          items:
+            $ref: '#/components/schemas/ToNumber'
+          type: array
+        use_profile_webhooks:
+          default: true
+          description: If the profile this number is associated with has webhooks, use them for delivery notifications. If webhooks are also specified on the message itself, they will be attempted first, then those on the profile.
+          type: boolean
+        webhook_failover_url:
+          description: The failover URL where webhooks related to this message will be sent if sending to the primary URL fails.
+          format: url
+          type: string
+        webhook_url:
+          description: The URL where webhooks related to this message will be sent.
+          format: url
+          type: string
+      required:
+      - from
+      - to
+      type: object
+    messaging_Error:
+      properties:
+        code:
+          type: string
+          x-format: integer
+        detail:
+          type: string
+        meta:
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              format: json-pointer
+              type: string
+          type: object
+        title:
+          type: string
+      required:
+      - code
+      - title
+    CreateNumberPoolMessageRequest:
+      example:
+        media_urls:
+        - http://example.com
+        messaging_profile_id: abc85f64-5717-4562-b3fc-2c9600000000
+        subject: From Telnyx!
+        text: Hello, World!
+        to: '+13125550002'
+        type: MMS
+        use_profile_webhooks: true
+        webhook_failover_url: https://backup.example.com/hooks
+        webhook_url: http://example.com/webhooks
+      properties:
+        auto_detect:
+          default: false
+          description: Automatically detect if an SMS message is unusually long and exceeds a recommended limit of message parts.
+          type: boolean
+        encoding:
+          default: auto
+          description: Encoding to use for the message. `auto` (default) uses smart encoding to automatically select the most efficient encoding. `gsm7` forces GSM-7 encoding (returns 400 if message contains characters that cannot be encoded). `ucs2` forces UCS-2 encoding and disables smart encoding. When set, this overrides the messaging profile's `smart_encoding` setting.
+          enum:
+          - auto
+          - gsm7
+          - ucs2
+          type: string
+        media_urls:
+          description: 'A list of media URLs. The total media size must be less than 1 MB.
+
+
+            **Required for MMS**'
+          items:
+            format: url
+            type: string
+          type: array
+        messaging_profile_id:
+          description: Unique identifier for a messaging profile.
+          type: string
+        subject:
+          description: Subject of multimedia message
+          type: string
+        text:
+          description: 'Message body (i.e., content) as a non-empty string.
+
+
+            **Required for SMS**'
+          type: string
+        to:
+          $ref: '#/components/schemas/ToNumber'
+        type:
+          description: The protocol for sending the message, either SMS or MMS.
+          enum:
+          - SMS
+          - MMS
+          type: string
+        use_profile_webhooks:
+          default: true
+          description: If the profile this number is associated with has webhooks, use them for delivery notifications. If webhooks are also specified on the message itself, they will be attempted first, then those on the profile.
+          type: boolean
+        webhook_failover_url:
+          description: The failover URL where webhooks related to this message will be sent if sending to the primary URL fails.
+          format: url
+          type: string
+        webhook_url:
+          description: The URL where webhooks related to this message will be sent.
+          format: url
+          type: string
+      required:
+      - to
+      - messaging_profile_id
+      type: object
+    CreateMessageRequest:
+      example:
+        from: '+18445550001'
+        media_urls:
+        - http://example.com
+        messaging_profile_id: abc85f64-5717-4562-b3fc-2c9600000000
+        subject: From Telnyx!
+        text: Hello, World!
+        to: '+18445550001'
+        type: MMS
+        use_profile_webhooks: true
+        webhook_failover_url: https://backup.example.com/hooks
+        webhook_url: http://example.com/webhooks
+      properties:
+        auto_detect:
+          default: false
+          description: Automatically detect if an SMS message is unusually long and exceeds a recommended limit of message parts.
+          type: boolean
+        encoding:
+          default: auto
+          description: Encoding to use for the message. `auto` (default) uses smart encoding to automatically select the most efficient encoding. `gsm7` forces GSM-7 encoding (returns 400 if message contains characters that cannot be encoded). `ucs2` forces UCS-2 encoding and disables smart encoding. When set, this overrides the messaging profile's `smart_encoding` setting.
+          enum:
+          - auto
+          - gsm7
+          - ucs2
+          type: string
+        from:
+          description: 'Sending address (+E.164 formatted phone number, alphanumeric sender ID, or short code).
+
+
+            **Required if sending with a phone number, short code, or alphanumeric sender ID.**
+
+            '
+          type: string
+          x-format: address
+        media_urls:
+          description: 'A list of media URLs. The total media size must be less than 1 MB.
+
+
+            **Required for MMS**'
+          items:
+            format: url
+            type: string
+          type: array
+        messaging_profile_id:
+          description: 'Unique identifier for a messaging profile.
+
+
+            **Required if sending via number pool or with an alphanumeric sender ID.**
+
+            '
+          type: string
+        send_at:
+          description: ISO 8601 formatted date indicating when to send the message - accurate up till a minute.
+          format: date-time
+          type:
+          - string
+          - 'null'
+        subject:
+          description: Subject of multimedia message
+          type: string
+        text:
+          description: 'Message body (i.e., content) as a non-empty string.
+
+
+            **Required for SMS**'
+          type: string
+        to:
+          $ref: '#/components/schemas/ToNumber'
+        type:
+          description: The protocol for sending the message, either SMS or MMS.
+          enum:
+          - SMS
+          - MMS
+          type: string
+        use_profile_webhooks:
+          default: true
+          description: If the profile this number is associated with has webhooks, use them for delivery notifications. If webhooks are also specified on the message itself, they will be attempted first, then those on the profile.
+          type: boolean
+        webhook_failover_url:
+          description: The failover URL where webhooks related to this message will be sent if sending to the primary URL fails.
+          format: url
+          type: string
+        webhook_url:
+          description: The URL where webhooks related to this message will be sent.
+          format: url
+          type: string
+      required:
+      - to
+      type: object
+    CreateScheduledMessageRequest:
+      example:
+        from: '+18445550001'
+        messaging_profile_id: abc85f64-5717-4562-b3fc-2c9600000000
+        send_at: '2019-01-23T18:30:00Z'
+        subject: From Telnyx!
+        text: Hello, World!
+        to: '+18445550001'
+        type: SMS
+        use_profile_webhooks: true
+        webhook_failover_url: https://backup.example.com/hooks
+        webhook_url: http://example.com/webhooks
+      properties:
+        auto_detect:
+          default: false
+          description: Automatically detect if an SMS message is unusually long and exceeds a recommended limit of message parts.
+          type: boolean
+        from:
+          description: 'Sending address (+E.164 formatted phone number, alphanumeric sender ID, or short code).
+
+
+            **Required if sending with a phone number, short code, or alphanumeric sender ID.**
+
+            '
+          type: string
+          x-format: address
+        media_urls:
+          description: 'A list of media URLs. The total media size must be less than 1 MB.
+
+
+            **Required for MMS**'
+          items:
+            format: url
+            type: string
+          type: array
+        messaging_profile_id:
+          description: 'Unique identifier for a messaging profile.
+
+
+            **Required if sending via number pool or with an alphanumeric sender ID.**
+
+            '
+          type: string
+        send_at:
+          description: ISO 8601 formatted date indicating when to send the message - accurate up till a minute.
+          format: date-time
+          type: string
+        subject:
+          description: Subject of multimedia message
+          type: string
+        text:
+          description: 'Message body (i.e., content) as a non-empty string.
+
+
+            **Required for SMS**'
+          type: string
+        to:
+          $ref: '#/components/schemas/ToNumber'
+        type:
+          description: The protocol for sending the message, either SMS or MMS.
+          enum:
+          - SMS
+          - MMS
+          type: string
+        use_profile_webhooks:
+          default: true
+          description: If the profile this number is associated with has webhooks, use them for delivery notifications. If webhooks are also specified on the message itself, they will be attempted first, then those on the profile.
+          type: boolean
+        webhook_failover_url:
+          description: The failover URL where webhooks related to this message will be sent if sending to the primary URL fails.
+          format: url
+          type: string
+        webhook_url:
+          description: The URL where webhooks related to this message will be sent.
+          format: url
+          type: string
+      required:
+      - to
+      type: object
+    OutboundMessageResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/OutboundMessagePayload'
+      type: object
     OutboundMessagePayload:
       example:
         cc: []
@@ -625,47 +990,247 @@ components:
           - string
           - 'null'
       type: object
-    CreateShortCodeMessageRequest:
+    InboundMessagePayload:
       example:
-        from: '+18445550001'
-        media_urls:
-        - http://example.com
-        subject: From Telnyx!
-        text: Hello, World!
-        to: '+18445550001'
-        type: MMS
-        use_profile_webhooks: true
-        webhook_failover_url: https://backup.example.com/hooks
-        webhook_url: http://example.com/webhooks
-      properties:
-        auto_detect:
-          default: false
-          description: Automatically detect if an SMS message is unusually long and exceeds a recommended limit of message parts.
-          type: boolean
-        encoding:
-          default: auto
-          description: Encoding to use for the message. `auto` (default) uses smart encoding to automatically select the most efficient encoding. `gsm7` forces GSM-7 encoding (returns 400 if message contains characters that cannot be encoded). `ucs2` forces UCS-2 encoding and disables smart encoding. When set, this overrides the messaging profile's `smart_encoding` setting.
-          enum:
-          - auto
-          - gsm7
-          - ucs2
-          type: string
+        cc: []
+        completed_at: null
+        cost:
+          amount: '0.0051'
+          currency: USD
+        cost_breakdown:
+          carrier_fee:
+            amount: '0.00305'
+            currency: USD
+          rate:
+            amount: '0.00205'
+            currency: USD
+        direction: inbound
+        encoding: GSM-7
+        errors: []
         from:
-          description: Phone number, in +E.164 format, used to send the message.
-          type: string
-          x-format: address
-        media_urls:
-          description: 'A list of media URLs. The total media size must be less than 1 MB.
-
-
-            **Required for MMS**'
+          carrier: T-MOBILE USA, INC.
+          line_type: Wireless
+          phone_number: '+18665550001'
+          status: delivered
+        id: 7ee4241c-f127-47e5-9c34-3aac291f8058
+        media: []
+        messaging_profile_id: 0f512bda-ae1e-4597-8e11-e5f5686b97d3
+        organization_id: b448f9cc-a842-4784-98e9-03c1a5872950
+        parts: 1
+        received_at: '2019-01-23T18:10:02.574Z'
+        record_type: message
+        sent_at: null
+        subject: From Telnyx!
+        tags:
+        - Greetings
+        tcr_campaign_billable: true
+        tcr_campaign_id: TCPA3X7
+        tcr_campaign_registered: REGISTERED
+        text: Hello, World!
+        to:
+        - carrier: TELNYX LLC
+          line_type: VoIP
+          phone_number: '+18445550001'
+          status: delivered
+        type: SMS
+        valid_until: null
+        webhook_failover_url: https://backup.example.com/hooks
+        webhook_url: https://www.example.com/hooks
+      properties:
+        cc:
           items:
-            format: url
+            properties:
+              carrier:
+                description: The carrier of the receiver.
+                type: string
+              line_type:
+                description: The line-type of the receiver.
+                enum:
+                - Wireline
+                - Wireless
+                - VoWiFi
+                - VoIP
+                - Pre-Paid Wireless
+                - ''
+                type: string
+              phone_number:
+                description: Receiving address (+E.164 formatted phone number or short code).
+                type: string
+                x-format: address
+              status:
+                enum:
+                - queued
+                - sending
+                - sent
+                - delivered
+                - sending_failed
+                - delivery_failed
+                - delivery_unconfirmed
+                type: string
+            type: object
+          type: array
+        completed_at:
+          description: Not used for inbound messages.
+          format: date-time
+          type:
+          - string
+          - 'null'
+        cost:
+          properties:
+            amount:
+              description: The amount deducted from your account.
+              type: string
+              x-format: decimal
+            currency:
+              description: The ISO 4217 currency identifier.
+              type: string
+              x-format: iso4217
+          type:
+          - object
+          - 'null'
+        cost_breakdown:
+          description: Detailed breakdown of the message cost components.
+          properties:
+            carrier_fee:
+              properties:
+                amount:
+                  description: The carrier fee amount.
+                  type: string
+                  x-format: decimal
+                currency:
+                  description: The ISO 4217 currency identifier.
+                  type: string
+                  x-format: iso4217
+              type: object
+            rate:
+              properties:
+                amount:
+                  description: The rate amount applied.
+                  type: string
+                  x-format: decimal
+                currency:
+                  description: The ISO 4217 currency identifier.
+                  type: string
+                  x-format: iso4217
+              type: object
+          type:
+          - object
+          - 'null'
+        direction:
+          description: The direction of the message. Inbound messages are sent to you whereas outbound messages are sent from you.
+          enum:
+          - inbound
+          example: inbound
+          type: string
+        encoding:
+          description: Encoding scheme used for the message body.
+          type: string
+        errors:
+          description: These errors may point at addressees when referring to unsuccessful/unconfirmed delivery statuses.
+          items:
+            $ref: '#/components/schemas/messaging_Error'
+          type: array
+        from:
+          properties:
+            carrier:
+              description: The carrier of the sender.
+              type: string
+            line_type:
+              description: The line-type of the sender.
+              enum:
+              - Wireline
+              - Wireless
+              - VoWiFi
+              - VoIP
+              - Pre-Paid Wireless
+              - ''
+              type: string
+            phone_number:
+              description: Sending address (+E.164 formatted phone number, alphanumeric sender ID, or short code).
+              type: string
+              x-format: address
+            status:
+              enum:
+              - received
+              - delivered
+              type: string
+          type: object
+        id:
+          description: Identifies the type of resource.
+          format: uuid
+          type: string
+        media:
+          items:
+            properties:
+              content_type:
+                description: The MIME type of the requested media.
+                type: string
+                x-format: mime-type
+              hash_sha256:
+                description: The SHA256 hash of the requested media.
+                maxLength: 32
+                minLength: 32
+                type: string
+              size:
+                description: The size of the requested media.
+                type: integer
+              url:
+                description: The url of the media requested to be sent.
+                format: url
+                type: string
+            type: object
+          type: array
+        messaging_profile_id:
+          description: Unique identifier for a messaging profile.
+          type: string
+        organization_id:
+          description: Unique identifier for a messaging profile.
+          type: string
+        parts:
+          description: Number of parts into which the message's body must be split.
+          maximum: 10
+          minimum: 1
+          type: integer
+        received_at:
+          description: ISO 8601 formatted date indicating when the message request was received.
+          format: date-time
+          type: string
+        record_type:
+          description: Identifies the type of the resource.
+          enum:
+          - message
+          example: message
+          type: string
+        sent_at:
+          description: Not used for inbound messages.
+          format: date-time
+          type:
+          - string
+          - 'null'
+        subject:
+          description: Message subject.
+          type:
+          - string
+          - 'null'
+        tags:
+          description: Tags associated with the resource.
+          items:
             type: string
           type: array
-        subject:
-          description: Subject of multimedia message
-          type: string
+        tcr_campaign_billable:
+          description: Indicates whether the TCR campaign is billable.
+          type: boolean
+        tcr_campaign_id:
+          description: The Campaign Registry (TCR) campaign ID associated with the message.
+          type:
+          - string
+          - 'null'
+        tcr_campaign_registered:
+          description: The registration status of the TCR campaign.
+          example: REGISTERED
+          type:
+          - string
+          - 'null'
         text:
           description: 'Message body (i.e., content) as a non-empty string.
 
@@ -673,29 +1238,62 @@ components:
             **Required for SMS**'
           type: string
         to:
-          $ref: '#/components/schemas/ToNumber'
+          items:
+            properties:
+              carrier:
+                description: The carrier of the receiver.
+                type: string
+              line_type:
+                description: The line-type of the receiver.
+                enum:
+                - Wireline
+                - Wireless
+                - VoWiFi
+                - VoIP
+                - Pre-Paid Wireless
+                - ''
+                type: string
+              phone_number:
+                description: Receiving address (+E.164 formatted phone number or short code).
+                type: string
+                x-format: address
+              status:
+                enum:
+                - queued
+                - sending
+                - sent
+                - delivered
+                - sending_failed
+                - delivery_failed
+                - delivery_unconfirmed
+                - webhook_delivered
+                type: string
+            type: object
+          type: array
         type:
-          description: The protocol for sending the message, either SMS or MMS.
+          description: The type of message. This value can be either 'sms' or 'mms'.
           enum:
           - SMS
           - MMS
           type: string
-        use_profile_webhooks:
-          default: true
-          description: If the profile this number is associated with has webhooks, use them for delivery notifications. If webhooks are also specified on the message itself, they will be attempted first, then those on the profile.
-          type: boolean
+        valid_until:
+          description: Not used for inbound messages.
+          format: date-time
+          type:
+          - string
+          - 'null'
         webhook_failover_url:
           description: The failover URL where webhooks related to this message will be sent if sending to the primary URL fails.
           format: url
-          type: string
+          type:
+          - string
+          - 'null'
         webhook_url:
           description: The URL where webhooks related to this message will be sent.
           format: url
-          type: string
-      required:
-      - from
-      - to
-      type: object
+          type:
+          - string
+          - 'null'
     OutboundMessagePayloadCancelled:
       example:
         cc: []
@@ -1004,616 +1602,6 @@ components:
           - string
           - 'null'
       type: object
-    CreateGroupMMSMessageRequest:
-      example:
-        from: '+13125551234'
-        media_urls:
-        - http://example.com
-        subject: From Telnyx!
-        text: Hello, World!
-        to:
-        - '+18655551234'
-        - '+14155551234'
-        use_profile_webhooks: true
-        webhook_failover_url: https://backup.example.com/hooks
-        webhook_url: http://example.com/webhooks
-      properties:
-        from:
-          description: Phone number, in +E.164 format, used to send the message.
-          type: string
-          x-format: address
-        media_urls:
-          description: A list of media URLs. The total media size must be less than 1 MB.
-          items:
-            format: url
-            type: string
-          type: array
-        subject:
-          description: Subject of multimedia message
-          type: string
-        text:
-          description: Message body (i.e., content) as a non-empty string.
-          type: string
-        to:
-          description: A list of destinations. No more than 8 destinations are allowed.
-          items:
-            $ref: '#/components/schemas/ToNumber'
-          type: array
-        use_profile_webhooks:
-          default: true
-          description: If the profile this number is associated with has webhooks, use them for delivery notifications. If webhooks are also specified on the message itself, they will be attempted first, then those on the profile.
-          type: boolean
-        webhook_failover_url:
-          description: The failover URL where webhooks related to this message will be sent if sending to the primary URL fails.
-          format: url
-          type: string
-        webhook_url:
-          description: The URL where webhooks related to this message will be sent.
-          format: url
-          type: string
-      required:
-      - from
-      - to
-      type: object
-    CreateScheduledMessageRequest:
-      example:
-        from: '+18445550001'
-        messaging_profile_id: abc85f64-5717-4562-b3fc-2c9600000000
-        send_at: '2019-01-23T18:30:00Z'
-        subject: From Telnyx!
-        text: Hello, World!
-        to: '+18445550001'
-        type: SMS
-        use_profile_webhooks: true
-        webhook_failover_url: https://backup.example.com/hooks
-        webhook_url: http://example.com/webhooks
-      properties:
-        auto_detect:
-          default: false
-          description: Automatically detect if an SMS message is unusually long and exceeds a recommended limit of message parts.
-          type: boolean
-        from:
-          description: 'Sending address (+E.164 formatted phone number, alphanumeric sender ID, or short code).
-
-
-            **Required if sending with a phone number, short code, or alphanumeric sender ID.**
-
-            '
-          type: string
-          x-format: address
-        media_urls:
-          description: 'A list of media URLs. The total media size must be less than 1 MB.
-
-
-            **Required for MMS**'
-          items:
-            format: url
-            type: string
-          type: array
-        messaging_profile_id:
-          description: 'Unique identifier for a messaging profile.
-
-
-            **Required if sending via number pool or with an alphanumeric sender ID.**
-
-            '
-          type: string
-        send_at:
-          description: ISO 8601 formatted date indicating when to send the message - accurate up till a minute.
-          format: date-time
-          type: string
-        subject:
-          description: Subject of multimedia message
-          type: string
-        text:
-          description: 'Message body (i.e., content) as a non-empty string.
-
-
-            **Required for SMS**'
-          type: string
-        to:
-          $ref: '#/components/schemas/ToNumber'
-        type:
-          description: The protocol for sending the message, either SMS or MMS.
-          enum:
-          - SMS
-          - MMS
-          type: string
-        use_profile_webhooks:
-          default: true
-          description: If the profile this number is associated with has webhooks, use them for delivery notifications. If webhooks are also specified on the message itself, they will be attempted first, then those on the profile.
-          type: boolean
-        webhook_failover_url:
-          description: The failover URL where webhooks related to this message will be sent if sending to the primary URL fails.
-          format: url
-          type: string
-        webhook_url:
-          description: The URL where webhooks related to this message will be sent.
-          format: url
-          type: string
-      required:
-      - to
-      type: object
-    CreateNumberPoolMessageRequest:
-      example:
-        media_urls:
-        - http://example.com
-        messaging_profile_id: abc85f64-5717-4562-b3fc-2c9600000000
-        subject: From Telnyx!
-        text: Hello, World!
-        to: '+13125550002'
-        type: MMS
-        use_profile_webhooks: true
-        webhook_failover_url: https://backup.example.com/hooks
-        webhook_url: http://example.com/webhooks
-      properties:
-        auto_detect:
-          default: false
-          description: Automatically detect if an SMS message is unusually long and exceeds a recommended limit of message parts.
-          type: boolean
-        encoding:
-          default: auto
-          description: Encoding to use for the message. `auto` (default) uses smart encoding to automatically select the most efficient encoding. `gsm7` forces GSM-7 encoding (returns 400 if message contains characters that cannot be encoded). `ucs2` forces UCS-2 encoding and disables smart encoding. When set, this overrides the messaging profile's `smart_encoding` setting.
-          enum:
-          - auto
-          - gsm7
-          - ucs2
-          type: string
-        media_urls:
-          description: 'A list of media URLs. The total media size must be less than 1 MB.
-
-
-            **Required for MMS**'
-          items:
-            format: url
-            type: string
-          type: array
-        messaging_profile_id:
-          description: Unique identifier for a messaging profile.
-          type: string
-        subject:
-          description: Subject of multimedia message
-          type: string
-        text:
-          description: 'Message body (i.e., content) as a non-empty string.
-
-
-            **Required for SMS**'
-          type: string
-        to:
-          $ref: '#/components/schemas/ToNumber'
-        type:
-          description: The protocol for sending the message, either SMS or MMS.
-          enum:
-          - SMS
-          - MMS
-          type: string
-        use_profile_webhooks:
-          default: true
-          description: If the profile this number is associated with has webhooks, use them for delivery notifications. If webhooks are also specified on the message itself, they will be attempted first, then those on the profile.
-          type: boolean
-        webhook_failover_url:
-          description: The failover URL where webhooks related to this message will be sent if sending to the primary URL fails.
-          format: url
-          type: string
-        webhook_url:
-          description: The URL where webhooks related to this message will be sent.
-          format: url
-          type: string
-      required:
-      - to
-      - messaging_profile_id
-      type: object
-    ToNumber:
-      description: Receiving address (+E.164 formatted phone number or short code).
-      example: +E.164
-      type: string
-      x-format: address
-    OutboundMessageResponse:
-      properties:
-        data:
-          $ref: '#/components/schemas/OutboundMessagePayload'
-      type: object
-    CreateMessageRequest:
-      example:
-        from: '+18445550001'
-        media_urls:
-        - http://example.com
-        messaging_profile_id: abc85f64-5717-4562-b3fc-2c9600000000
-        subject: From Telnyx!
-        text: Hello, World!
-        to: '+18445550001'
-        type: MMS
-        use_profile_webhooks: true
-        webhook_failover_url: https://backup.example.com/hooks
-        webhook_url: http://example.com/webhooks
-      properties:
-        auto_detect:
-          default: false
-          description: Automatically detect if an SMS message is unusually long and exceeds a recommended limit of message parts.
-          type: boolean
-        encoding:
-          default: auto
-          description: Encoding to use for the message. `auto` (default) uses smart encoding to automatically select the most efficient encoding. `gsm7` forces GSM-7 encoding (returns 400 if message contains characters that cannot be encoded). `ucs2` forces UCS-2 encoding and disables smart encoding. When set, this overrides the messaging profile's `smart_encoding` setting.
-          enum:
-          - auto
-          - gsm7
-          - ucs2
-          type: string
-        from:
-          description: 'Sending address (+E.164 formatted phone number, alphanumeric sender ID, or short code).
-
-
-            **Required if sending with a phone number, short code, or alphanumeric sender ID.**
-
-            '
-          type: string
-          x-format: address
-        media_urls:
-          description: 'A list of media URLs. The total media size must be less than 1 MB.
-
-
-            **Required for MMS**'
-          items:
-            format: url
-            type: string
-          type: array
-        messaging_profile_id:
-          description: 'Unique identifier for a messaging profile.
-
-
-            **Required if sending via number pool or with an alphanumeric sender ID.**
-
-            '
-          type: string
-        send_at:
-          description: ISO 8601 formatted date indicating when to send the message - accurate up till a minute.
-          format: date-time
-          type:
-          - string
-          - 'null'
-        subject:
-          description: Subject of multimedia message
-          type: string
-        text:
-          description: 'Message body (i.e., content) as a non-empty string.
-
-
-            **Required for SMS**'
-          type: string
-        to:
-          $ref: '#/components/schemas/ToNumber'
-        type:
-          description: The protocol for sending the message, either SMS or MMS.
-          enum:
-          - SMS
-          - MMS
-          type: string
-        use_profile_webhooks:
-          default: true
-          description: If the profile this number is associated with has webhooks, use them for delivery notifications. If webhooks are also specified on the message itself, they will be attempted first, then those on the profile.
-          type: boolean
-        webhook_failover_url:
-          description: The failover URL where webhooks related to this message will be sent if sending to the primary URL fails.
-          format: url
-          type: string
-        webhook_url:
-          description: The URL where webhooks related to this message will be sent.
-          format: url
-          type: string
-      required:
-      - to
-      type: object
-    InboundMessagePayload:
-      example:
-        cc: []
-        completed_at: null
-        cost:
-          amount: '0.0051'
-          currency: USD
-        cost_breakdown:
-          carrier_fee:
-            amount: '0.00305'
-            currency: USD
-          rate:
-            amount: '0.00205'
-            currency: USD
-        direction: inbound
-        encoding: GSM-7
-        errors: []
-        from:
-          carrier: T-MOBILE USA, INC.
-          line_type: Wireless
-          phone_number: '+18665550001'
-          status: delivered
-        id: 7ee4241c-f127-47e5-9c34-3aac291f8058
-        media: []
-        messaging_profile_id: 0f512bda-ae1e-4597-8e11-e5f5686b97d3
-        organization_id: b448f9cc-a842-4784-98e9-03c1a5872950
-        parts: 1
-        received_at: '2019-01-23T18:10:02.574Z'
-        record_type: message
-        sent_at: null
-        subject: From Telnyx!
-        tags:
-        - Greetings
-        tcr_campaign_billable: true
-        tcr_campaign_id: TCPA3X7
-        tcr_campaign_registered: REGISTERED
-        text: Hello, World!
-        to:
-        - carrier: TELNYX LLC
-          line_type: VoIP
-          phone_number: '+18445550001'
-          status: delivered
-        type: SMS
-        valid_until: null
-        webhook_failover_url: https://backup.example.com/hooks
-        webhook_url: https://www.example.com/hooks
-      properties:
-        cc:
-          items:
-            properties:
-              carrier:
-                description: The carrier of the receiver.
-                type: string
-              line_type:
-                description: The line-type of the receiver.
-                enum:
-                - Wireline
-                - Wireless
-                - VoWiFi
-                - VoIP
-                - Pre-Paid Wireless
-                - ''
-                type: string
-              phone_number:
-                description: Receiving address (+E.164 formatted phone number or short code).
-                type: string
-                x-format: address
-              status:
-                enum:
-                - queued
-                - sending
-                - sent
-                - delivered
-                - sending_failed
-                - delivery_failed
-                - delivery_unconfirmed
-                type: string
-            type: object
-          type: array
-        completed_at:
-          description: Not used for inbound messages.
-          format: date-time
-          type:
-          - string
-          - 'null'
-        cost:
-          properties:
-            amount:
-              description: The amount deducted from your account.
-              type: string
-              x-format: decimal
-            currency:
-              description: The ISO 4217 currency identifier.
-              type: string
-              x-format: iso4217
-          type:
-          - object
-          - 'null'
-        cost_breakdown:
-          description: Detailed breakdown of the message cost components.
-          properties:
-            carrier_fee:
-              properties:
-                amount:
-                  description: The carrier fee amount.
-                  type: string
-                  x-format: decimal
-                currency:
-                  description: The ISO 4217 currency identifier.
-                  type: string
-                  x-format: iso4217
-              type: object
-            rate:
-              properties:
-                amount:
-                  description: The rate amount applied.
-                  type: string
-                  x-format: decimal
-                currency:
-                  description: The ISO 4217 currency identifier.
-                  type: string
-                  x-format: iso4217
-              type: object
-          type:
-          - object
-          - 'null'
-        direction:
-          description: The direction of the message. Inbound messages are sent to you whereas outbound messages are sent from you.
-          enum:
-          - inbound
-          example: inbound
-          type: string
-        encoding:
-          description: Encoding scheme used for the message body.
-          type: string
-        errors:
-          description: These errors may point at addressees when referring to unsuccessful/unconfirmed delivery statuses.
-          items:
-            $ref: '#/components/schemas/messaging_Error'
-          type: array
-        from:
-          properties:
-            carrier:
-              description: The carrier of the sender.
-              type: string
-            line_type:
-              description: The line-type of the sender.
-              enum:
-              - Wireline
-              - Wireless
-              - VoWiFi
-              - VoIP
-              - Pre-Paid Wireless
-              - ''
-              type: string
-            phone_number:
-              description: Sending address (+E.164 formatted phone number, alphanumeric sender ID, or short code).
-              type: string
-              x-format: address
-            status:
-              enum:
-              - received
-              - delivered
-              type: string
-          type: object
-        id:
-          description: Identifies the type of resource.
-          format: uuid
-          type: string
-        media:
-          items:
-            properties:
-              content_type:
-                description: The MIME type of the requested media.
-                type: string
-                x-format: mime-type
-              hash_sha256:
-                description: The SHA256 hash of the requested media.
-                maxLength: 32
-                minLength: 32
-                type: string
-              size:
-                description: The size of the requested media.
-                type: integer
-              url:
-                description: The url of the media requested to be sent.
-                format: url
-                type: string
-            type: object
-          type: array
-        messaging_profile_id:
-          description: Unique identifier for a messaging profile.
-          type: string
-        organization_id:
-          description: Unique identifier for a messaging profile.
-          type: string
-        parts:
-          description: Number of parts into which the message's body must be split.
-          maximum: 10
-          minimum: 1
-          type: integer
-        received_at:
-          description: ISO 8601 formatted date indicating when the message request was received.
-          format: date-time
-          type: string
-        record_type:
-          description: Identifies the type of the resource.
-          enum:
-          - message
-          example: message
-          type: string
-        sent_at:
-          description: Not used for inbound messages.
-          format: date-time
-          type:
-          - string
-          - 'null'
-        subject:
-          description: Message subject.
-          type:
-          - string
-          - 'null'
-        tags:
-          description: Tags associated with the resource.
-          items:
-            type: string
-          type: array
-        tcr_campaign_billable:
-          description: Indicates whether the TCR campaign is billable.
-          type: boolean
-        tcr_campaign_id:
-          description: The Campaign Registry (TCR) campaign ID associated with the message.
-          type:
-          - string
-          - 'null'
-        tcr_campaign_registered:
-          description: The registration status of the TCR campaign.
-          example: REGISTERED
-          type:
-          - string
-          - 'null'
-        text:
-          description: 'Message body (i.e., content) as a non-empty string.
-
-
-            **Required for SMS**'
-          type: string
-        to:
-          items:
-            properties:
-              carrier:
-                description: The carrier of the receiver.
-                type: string
-              line_type:
-                description: The line-type of the receiver.
-                enum:
-                - Wireline
-                - Wireless
-                - VoWiFi
-                - VoIP
-                - Pre-Paid Wireless
-                - ''
-                type: string
-              phone_number:
-                description: Receiving address (+E.164 formatted phone number or short code).
-                type: string
-                x-format: address
-              status:
-                enum:
-                - queued
-                - sending
-                - sent
-                - delivered
-                - sending_failed
-                - delivery_failed
-                - delivery_unconfirmed
-                - webhook_delivered
-                type: string
-            type: object
-          type: array
-        type:
-          description: The type of message. This value can be either 'sms' or 'mms'.
-          enum:
-          - SMS
-          - MMS
-          type: string
-        valid_until:
-          description: Not used for inbound messages.
-          format: date-time
-          type:
-          - string
-          - 'null'
-        webhook_failover_url:
-          description: The failover URL where webhooks related to this message will be sent if sending to the primary URL fails.
-          format: url
-          type:
-          - string
-          - 'null'
-        webhook_url:
-          description: The URL where webhooks related to this message will be sent.
-          format: url
-          type:
-          - string
-          - 'null'
-    messaging_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/messaging_Error'
-          type: array
     CreateLongCodeMessageRequest:
       example:
         from: '+18445550001'
@@ -1685,71 +1673,83 @@ components:
       - from
       - to
       type: object
-    messaging_Error:
+    CreateShortCodeMessageRequest:
+      example:
+        from: '+18445550001'
+        media_urls:
+        - http://example.com
+        subject: From Telnyx!
+        text: Hello, World!
+        to: '+18445550001'
+        type: MMS
+        use_profile_webhooks: true
+        webhook_failover_url: https://backup.example.com/hooks
+        webhook_url: http://example.com/webhooks
       properties:
-        code:
+        auto_detect:
+          default: false
+          description: Automatically detect if an SMS message is unusually long and exceeds a recommended limit of message parts.
+          type: boolean
+        encoding:
+          default: auto
+          description: Encoding to use for the message. `auto` (default) uses smart encoding to automatically select the most efficient encoding. `gsm7` forces GSM-7 encoding (returns 400 if message contains characters that cannot be encoded). `ucs2` forces UCS-2 encoding and disables smart encoding. When set, this overrides the messaging profile's `smart_encoding` setting.
+          enum:
+          - auto
+          - gsm7
+          - ucs2
           type: string
-          x-format: integer
-        detail:
+        from:
+          description: Phone number, in +E.164 format, used to send the message.
           type: string
-        meta:
-          type: object
-        source:
-          properties:
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              format: json-pointer
-              type: string
-          type: object
-        title:
+          x-format: address
+        media_urls:
+          description: 'A list of media URLs. The total media size must be less than 1 MB.
+
+
+            **Required for MMS**'
+          items:
+            format: url
+            type: string
+          type: array
+        subject:
+          description: Subject of multimedia message
+          type: string
+        text:
+          description: 'Message body (i.e., content) as a non-empty string.
+
+
+            **Required for SMS**'
+          type: string
+        to:
+          $ref: '#/components/schemas/ToNumber'
+        type:
+          description: The protocol for sending the message, either SMS or MMS.
+          enum:
+          - SMS
+          - MMS
+          type: string
+        use_profile_webhooks:
+          default: true
+          description: If the profile this number is associated with has webhooks, use them for delivery notifications. If webhooks are also specified on the message itself, they will be attempted first, then those on the profile.
+          type: boolean
+        webhook_failover_url:
+          description: The failover URL where webhooks related to this message will be sent if sending to the primary URL fails.
+          format: url
+          type: string
+        webhook_url:
+          description: The URL where webhooks related to this message will be sent.
+          format: url
           type: string
       required:
-      - code
-      - title
-  responses:
-    messaging_UnprocessableEntityResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/messaging_Errors'
-      description: Unprocessable Entity
-    messaging_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/messaging_Errors'
-      description: Unexpected error
-    MessageResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/OutboundMessagePayload'
-            title: Message Response
-            type: object
-      description: Successful response with details about a message.
-    messaging_BadRequestResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/messaging_Errors'
-      description: Bad Request
-    messaging_UnauthorizedResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/messaging_Errors'
-      description: Unauthorized
-    messaging_NotFoundResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/messaging_Errors'
-      description: Not Found
+      - from
+      - to
+      type: object
+    messaging_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/messaging_Error'
+          type: array
   securitySchemes:
     bearerAuth:
       scheme: bearer
