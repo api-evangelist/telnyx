@@ -11,7 +11,7 @@ capability_model:
   attribution: Turbo EA Capabilities by Vincent Verdet — Turbo EA, https://github.com/vincentmakes/turbo-ea-capabilities,
     CC BY 4.0
   notice: NOTICE
-edge_count: 27
+edge_count: 34
 edges:
 - tag: SIM Cards
   spec_file: telnyx-sim-cards-api-openapi.yml
@@ -100,6 +100,31 @@ edges:
   evidence: POST /number_block_orders 'Create a number block order'; schemas NumberBlockOrder, CreateNumberBlockOrderRequest
   reason: Ordering and retrieving blocks of telephone numbers is acquisition and assignment of telephone
     numbering resources — numbering resource management (DID provisioning per the vendor description).
+- tag: Authentication Providers
+  spec_file: telnyx-authentication-providers-api-openapi.yml
+  capability_id: BC-620.20
+  capability_id_l1: BC-620
+  capability_name: Identity & Access Management
+  confidence: 0.8
+  evidence: GET /authentication_providers  FindAuthenticationProviders  List all SSO authentication providers
+  reason: CRUD over SSO identity providers scoped to an organization_id — federation configuration, which
+    is squarely Identity & Access Management. Could alternatively read as BC-4230.50 Tenant Identity Federation,
+    but the schema (organization_id, settings_url, short_name) is account-level SSO config rather than
+    tenant fleet management, so the cross-industry IAM capability is the safer edge.
+  recovered_from: sweep-20260828T235257Z-edges.json
+- tag: WireGuard Interfaces
+  spec_file: telnyx-wireguard-interfaces-api-openapi.yml
+  capability_id: BC-600.50
+  capability_id_l1: BC-600
+  capability_name: IT Infrastructure Management
+  confidence: 0.8
+  evidence: POST /wireguard_interfaces  CreateWireguardInterface  Create a WireGuard Interface; GET /wireguard_peers/{id}/config  Retrieve
+    Wireguard config template for Peer
+  reason: Creating and managing WireGuard VPN interfaces and peers, with region placement, is provisioning
+    of network connectivity infrastructure — IT Infrastructure Management (network/cloud). Operations
+    and schemas (Interface, InterfaceStatus, RegionOut) plainly describe network plumbing rather than
+    security governance.
+  recovered_from: sweep-20260828T235257Z-edges.json
 - tag: SIM Card Group Actions
   spec_file: telnyx-sim-card-group-actions-api-openapi.yml
   capability_id: BC-2640.20
@@ -110,6 +135,18 @@ edges:
   reason: Status of asynchronous actions applied to groups of SIM cards (schema SIMCardGroupAction) —
     part of SIM estate lifecycle administration. Slightly lower confidence as the surface is only action-status
     retrieval.
+- tag: Managed Accounts
+  spec_file: telnyx-managed-accounts-api-openapi.yml
+  capability_id: BC-4230.10
+  capability_id_l1: BC-4230
+  capability_name: Tenant Provisioning & Lifecycle
+  confidence: 0.75
+  evidence: POST /managed_accounts  CreateManagedAccount  'Create a new managed account.'; POST /managed_accounts/{id}/actions/disable
+    'Disables a managed account'
+  reason: Creation, enable/disable and limit allocation for sub-accounts managed under a parent account
+    is tenant provisioning and lifecycle in a multi-tenant platform. Some overlap with tenant configuration
+    (channel limits), hence 0.75.
+  recovered_from: sweep-20260828T235257Z-edges.json
 - tag: Mobile Phone Numbers
   spec_file: telnyx-mobile-phone-numbers-api-openapi.yml
   capability_id: BC-2640.30
@@ -182,6 +219,17 @@ edges:
   reason: Manages logical groupings of SIM cards and their wireless gateway/blocklist policy assignment
     — administration of the SIM estate, i.e. SIM & eSIM lifecycle management. Some ambiguity because group-to-gateway
     assignment also touches network configuration.
+- tag: Virtual Cross Connects
+  spec_file: telnyx-virtual-cross-connects-api-openapi.yml
+  capability_id: BC-600.50
+  capability_id_l1: BC-600
+  capability_name: IT Infrastructure Management
+  confidence: 0.72
+  evidence: POST /virtual_cross_connects  CreateVirtualCrossConnect ... GET /virtual_cross_connects_coverage  List
+    Virtual Cross Connect Cloud Coverage; schemas Interface, InterfaceStatus, RegionOut
+  reason: Provisioning and management of private network interconnects to cloud regions, including interfaces
+    and coverage — network/cloud infrastructure provisioning, i.e. IT Infrastructure Management.
+  recovered_from: sweep-20260828T235257Z-edges.json
 - tag: Assistants
   spec_file: telnyx-assistants-api-openapi.yml
   capability_id: BC-610.60
@@ -192,6 +240,29 @@ edges:
     POST /ai/assistants/tests  Create a new assistant test
   reason: Lifecycle of AI assistants including prompts, external LLM config, test suites and runs — AI/ML
     model and agent lifecycle management. Schemas such as ExternalLLM and PromptSyncStatus support this.
+- tag: AutoRechargePreferences
+  spec_file: telnyx-autorechargepreferences-api-openapi.yml
+  capability_id: BC-4250.40
+  capability_id_l1: BC-4250
+  capability_name: Payment Collection & Dunning
+  confidence: 0.7
+  evidence: GET /payment/auto_recharge_prefs  GetAutoRechargePrefs  List auto recharge preferences
+  reason: Under /payment/, this configures automatic account top-up when balance runs low — payment-method-driven
+    automatic collection for a prepaid usage model, which maps to Payment Collection within subscription
+    billing. Confidence moderated because the surface is only two preference endpoints, not the collection
+    process itself.
+  recovered_from: sweep-20260828T235257Z-edges.json
+- tag: Billing Groups
+  spec_file: telnyx-billing-groups-api-openapi.yml
+  capability_id: BC-4250.30
+  capability_id_l1: BC-4250
+  capability_name: Invoicing & Statement Management
+  confidence: 0.7
+  evidence: POST /billing_groups  CreateBillingGroup  Create a billing group
+  reason: Billing groups organise resources for invoicing purposes; schemas include invoice_Error / invoice_Errors,
+    indicating these groups drive invoice segmentation. Maps to Invoicing & Statement Management, though
+    the operations are plain CRUD so confidence is held at 0.7.
+  recovered_from: sweep-20260828T235257Z-edges.json
 - tag: Bulk Phone Number Operations
   spec_file: telnyx-bulk-phone-number-operations-api-openapi.yml
   capability_id: BC-2640.30
@@ -237,6 +308,19 @@ edges:
     before porting; the coverage-verification and CSR creation operations are the number-portability pre-check
     flow. Mapped to Number Portability Management; some residual ambiguity because the spec text does
     not literally say 'porting'.
+- tag: Embeddings
+  spec_file: telnyx-embeddings-api-openapi.yml
+  capability_id: BC-610.60
+  capability_id_l1: BC-610
+  capability_name: Artificial Intelligence Management
+  confidence: 0.7
+  evidence: POST /ai/embeddings 'Embed documents'; POST /ai/embeddings/similarity-search 'Search for documents';
+    schema SupportedEmbeddingModels
+  reason: Operations run AI embedding models over document/URL corpora and perform vector similarity search,
+    with model selection and background task status. This is AI/ML capability delivery, mapped to Artificial
+    Intelligence Management; moderate confidence because it is a vendor-provided inference feature rather
+    than an internal model-lifecycle process.
+  recovered_from: sweep-20260828T235257Z-edges.json
 - tag: Networks
   spec_file: telnyx-networks-api-openapi.yml
   capability_id: BC-2600.20
