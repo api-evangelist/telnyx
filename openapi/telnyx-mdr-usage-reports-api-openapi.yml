@@ -17,7 +17,7 @@ tags:
 paths:
   /legacy/reporting/usage_reports/messaging:
     get:
-      description: 'Fetch all previous requests for MDR usage reports. '
+      description: Fetch all previous requests for MDR usage reports.
       operationId: getMdrUsageReports
       parameters:
       - description: Page number
@@ -214,7 +214,7 @@ paths:
       - MDR Usage Reports
       x-latency-category: interactive
     post:
-      description: 'Submit request for new new messaging usage report. This endpoint will pull and aggregate messaging data in specified time period. '
+      description: Submit request for new new messaging usage report. This endpoint will pull and aggregate messaging data in specified time period.
       operationId: SubmitUsageReport
       requestBody:
         content:
@@ -244,7 +244,7 @@ paths:
       x-latency-category: background
   /reports/mdr_usage_reports/sync:
     get:
-      description: 'Generate and fetch messaging usage report synchronously. This endpoint will both generate and fetch the messaging report over a specified time period. No polling is necessary but the response may take up to a couple of minutes. '
+      description: Generate and fetch messaging usage report synchronously. This endpoint will both generate and fetch the messaging report over a specified time period. No polling is necessary but the response may take up to a couple of minutes.
       operationId: GetMDRUsageReportSync
       parameters:
       - in: query
@@ -358,6 +358,54 @@ paths:
       x-latency-category: interactive
 components:
   schemas:
+    standard_ErrorResponse:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/standard_Error'
+          title: Errors
+          type: array
+      title: ErrorResponse
+      type: object
+    MdrGetUsageReportByIdResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/MdrUsageReportResponseLegacy'
+      type: object
+    reporting_PaginationMeta:
+      properties:
+        page_number:
+          example: 2
+          format: int32
+          type: integer
+        page_size:
+          example: 25
+          format: int32
+          type: integer
+        total_pages:
+          example: 3
+          format: int32
+          type: integer
+        total_results:
+          example: 55
+          format: int32
+          type: integer
+      type: object
+    standard_Error:
+      properties:
+        code:
+          title: Telnyx error code
+          type: string
+        detail:
+          title: Error details
+          type: string
+        title:
+          title: Error title
+          type: string
+      required:
+      - detail
+      title: Error
+      type: object
     MdrPostUsageReportRequest:
       properties:
         aggregation_type:
@@ -382,20 +430,139 @@ components:
       - end_date
       - start_date
       type: object
-    standard_Error:
+    MdrUsageReportResponse:
+      properties:
+        aggregation_type:
+          enum:
+          - NO_AGGREGATION
+          - PROFILE
+          - TAGS
+          type: string
+        connections:
+          items:
+            format: int64
+            type: integer
+          type: array
+        created_at:
+          example: '2020-07-01T00:00:00-06:00'
+          format: date-time
+          type: string
+        end_date:
+          example: '2020-07-01T00:00:00-06:00'
+          format: date-time
+          type: string
+        id:
+          description: Identifies the resource
+          format: uuid
+          type: string
+        profiles:
+          example: My profile
+          type: string
+        record_type:
+          example: mdr_usage_report
+          type: string
+        report_url:
+          example: http://portal.telnyx.com/downloads/report_name_8hvb45Gu.csv
+          type: string
+        result:
+          items:
+            $ref: '#/components/schemas/MdrUsageRecord'
+          type: array
+        start_date:
+          example: '2020-07-01T00:00:00-06:00'
+          format: date-time
+          type: string
+        status:
+          enum:
+          - PENDING
+          - COMPLETE
+          - FAILED
+          - EXPIRED
+          type: string
+        updated_at:
+          example: '2020-07-01T00:00:00-06:00'
+          format: date-time
+          type: string
+      type: object
+    reporting_Error:
       properties:
         code:
-          title: Telnyx error code
+          example: '10011'
           type: string
         detail:
-          title: Error details
+          example: Invalid parameter value
           type: string
         title:
-          title: Error title
+          example: Bad Request
+          type: string
+      type: object
+    MdrUsageRequestLegacy:
+      description: MDR usage request parameters
+      properties:
+        aggregation_type:
+          description: 'Aggregation type: No aggregation = 0, By Messaging Profile = 1, By Tags = 2'
+          example: 0
+          format: int32
+          type: integer
+        end_time:
+          example: '2020-01-02T00:00:00Z'
+          format: date-time
+          type: string
+        managed_accounts:
+          description: List of managed accounts to include
+          example:
+          - f47ac10b-58cc-4372-a567-0e02b2c3d479
+          - 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+          items:
+            format: uuid
+            type: string
+          type: array
+        profiles:
+          description: List of messaging profile IDs to filter by
+          example:
+          - 3fa85f64-5717-4562-b3fc-2c963f66afa6
+          - 7d4e3f8a-9b2c-4e1d-8f5a-1a2b3c4d5e6f
+          items:
+            format: uuid
+            type: string
+          type: array
+        select_all_managed_accounts:
+          example: true
+          type: boolean
+        start_time:
+          example: '2020-01-01T00:00:00Z'
+          format: date-time
           type: string
       required:
-      - detail
-      title: Error
+      - aggregation_type
+      type: object
+    standard_MdrGetUsageReportsResponse:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/MdrUsageReportResponseLegacy'
+          type: array
+        meta:
+          $ref: '#/components/schemas/standard_PaginationMeta'
+      type: object
+    MdrGetUsageReportsResponse:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/MdrUsageReportResponse'
+          type: array
+        meta:
+          $ref: '#/components/schemas/reporting_PaginationMeta'
+      type: object
+    MdrGetUsageReportsByIdResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/MdrUsageReportResponse'
+      type: object
+    MdrGetSyncUsageReportResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/MdrUsageReportResponse'
       type: object
     MdrUsageReportResponseLegacy:
       description: Legacy V2 MDR usage report response
@@ -459,25 +626,6 @@ components:
         data:
           $ref: '#/components/schemas/MdrUsageReportResponseLegacy'
       type: object
-    standard_PaginationMeta:
-      properties:
-        page_number:
-          example: 2
-          format: int32
-          type: integer
-        page_size:
-          example: 25
-          format: int32
-          type: integer
-        total_pages:
-          example: 3
-          format: int32
-          type: integer
-        total_results:
-          example: 55
-          format: int32
-          type: integer
-      type: object
     MdrUsageRecord:
       properties:
         carrier_passthrough_fee:
@@ -523,145 +671,12 @@ components:
           example: TF
           type: string
       type: object
-    reporting_ErrorResponse:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/reporting_Error'
-          type: array
-      type: object
-    MdrUsageReportResponse:
-      properties:
-        aggregation_type:
-          enum:
-          - NO_AGGREGATION
-          - PROFILE
-          - TAGS
-          type: string
-        connections:
-          items:
-            format: int64
-            type: integer
-          type: array
-        created_at:
-          example: '2020-07-01T00:00:00-06:00'
-          format: date-time
-          type: string
-        end_date:
-          example: '2020-07-01T00:00:00-06:00'
-          format: date-time
-          type: string
-        id:
-          description: Identifies the resource
-          format: uuid
-          type: string
-        profiles:
-          example: My profile
-          type: string
-        record_type:
-          example: mdr_usage_report
-          type: string
-        report_url:
-          example: http://portal.telnyx.com/downloads/report_name_8hvb45Gu.csv
-          type: string
-        result:
-          items:
-            $ref: '#/components/schemas/MdrUsageRecord'
-          type: array
-        start_date:
-          example: '2020-07-01T00:00:00-06:00'
-          format: date-time
-          type: string
-        status:
-          enum:
-          - PENDING
-          - COMPLETE
-          - FAILED
-          - EXPIRED
-          type: string
-        updated_at:
-          example: '2020-07-01T00:00:00-06:00'
-          format: date-time
-          type: string
-      type: object
-    MdrGetUsageReportByIdResponse:
-      properties:
-        data:
-          $ref: '#/components/schemas/MdrUsageReportResponseLegacy'
-      type: object
-    MdrPostUsageReportResponse:
-      properties:
-        data:
-          $ref: '#/components/schemas/MdrUsageReportResponseLegacy'
-      type: object
     MdrDeleteUsageReportsResponse:
       properties:
         data:
           $ref: '#/components/schemas/MdrUsageReportResponse'
       type: object
-    MdrPostUsageReportsResponse:
-      properties:
-        data:
-          $ref: '#/components/schemas/MdrUsageReportResponse'
-      type: object
-    MdrUsageRequestLegacy:
-      description: MDR usage request parameters
-      properties:
-        aggregation_type:
-          description: 'Aggregation type: No aggregation = 0, By Messaging Profile = 1, By Tags = 2'
-          example: 0
-          format: int32
-          type: integer
-        end_time:
-          example: '2020-01-02T00:00:00Z'
-          format: date-time
-          type: string
-        managed_accounts:
-          description: List of managed accounts to include
-          example:
-          - f47ac10b-58cc-4372-a567-0e02b2c3d479
-          - 6ba7b810-9dad-11d1-80b4-00c04fd430c8
-          items:
-            format: uuid
-            type: string
-          type: array
-        profiles:
-          description: List of messaging profile IDs to filter by
-          example:
-          - 3fa85f64-5717-4562-b3fc-2c963f66afa6
-          - 7d4e3f8a-9b2c-4e1d-8f5a-1a2b3c4d5e6f
-          items:
-            format: uuid
-            type: string
-          type: array
-        select_all_managed_accounts:
-          example: true
-          type: boolean
-        start_time:
-          example: '2020-01-01T00:00:00Z'
-          format: date-time
-          type: string
-      required:
-      - aggregation_type
-      type: object
-    MdrGetUsageReportsByIdResponse:
-      properties:
-        data:
-          $ref: '#/components/schemas/MdrUsageReportResponse'
-      type: object
-    reporting_Error:
-      properties:
-        code:
-          example: '10011'
-          type: string
-        detail:
-          example: Invalid parameter value
-          type: string
-        title:
-          example: Bad Request
-          type: string
-      type: object
-    reporting_PaginationMeta:
+    standard_PaginationMeta:
       properties:
         page_number:
           example: 2
@@ -680,37 +695,22 @@ components:
           format: int32
           type: integer
       type: object
-    MdrGetUsageReportsResponse:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/MdrUsageReportResponse'
-          type: array
-        meta:
-          $ref: '#/components/schemas/reporting_PaginationMeta'
-      type: object
-    standard_ErrorResponse:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/standard_Error'
-          title: Errors
-          type: array
-      title: ErrorResponse
-      type: object
-    standard_MdrGetUsageReportsResponse:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/MdrUsageReportResponseLegacy'
-          type: array
-        meta:
-          $ref: '#/components/schemas/standard_PaginationMeta'
-      type: object
-    MdrGetSyncUsageReportResponse:
+    MdrPostUsageReportsResponse:
       properties:
         data:
           $ref: '#/components/schemas/MdrUsageReportResponse'
+      type: object
+    MdrPostUsageReportResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/MdrUsageReportResponseLegacy'
+      type: object
+    reporting_ErrorResponse:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/reporting_Error'
+          type: array
       type: object
   securitySchemes:
     bearerAuth:

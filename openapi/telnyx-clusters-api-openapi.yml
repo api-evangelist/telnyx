@@ -53,7 +53,7 @@ paths:
       - Clusters
       x-latency-category: responsive
     post:
-      description: Starts a background task to compute how the data in an [embedded storage bucket](https://developers.telnyx.com/api-reference/embeddings/embed-documents) is clustered. This helps identify common themes and patterns in the data.
+      description: Starts a background task to compute how the data in an embedded storage bucket is clustered. This helps identify common themes and patterns in the data.
       operationId: compute_new_cluster_public_text_clusters_post
       requestBody:
         content:
@@ -179,22 +179,46 @@ paths:
       x-latency-category: responsive
 components:
   schemas:
-    Meta:
+    RecursiveCluster:
       properties:
-        page_number:
-          type: integer
-        page_size:
-          type: integer
-        total_pages:
-          type: integer
-        total_results:
+        cluster_header:
+          type: string
+        cluster_id:
+          type: string
+        cluster_summary:
+          type: string
+        nodes:
+          items:
+            $ref: '#/components/schemas/ClusterNode'
+          type: array
+        subclusters:
+          items:
+            $ref: '#/components/schemas/RecursiveCluster'
+          type: array
+        total_number_of_nodes:
           type: integer
       required:
-      - total_pages
-      - total_results
-      - page_number
-      - page_size
-      title: Meta
+      - cluster_id
+      - cluster_summary
+      - total_number_of_nodes
+      title: RecursiveCluster
+      type: object
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    ClusteringStatusResponseData:
+      properties:
+        data:
+          $ref: '#/components/schemas/ClusteringStatusResponse'
+      required:
+      - data
+      title: ClusteringStatusResponseData
       type: object
     ClusteringRequestInfo:
       properties:
@@ -224,21 +248,94 @@ components:
       - min_subcluster_size
       title: ClusteringRequestInfo
       type: object
-    ClusteringStatusResponse:
+    TextClusteringResponse:
       properties:
-        bucket:
+        task_id:
           type: string
-        clusters:
-          items:
-            $ref: '#/components/schemas/RecursiveCluster'
-          type: array
-        status:
-          $ref: '#/components/schemas/TaskStatus'
       required:
-      - status
-      - bucket
-      - clusters
-      title: ClusteringStatusResponse
+      - task_id
+      title: TextClusteringResponse
+      type: object
+    Meta:
+      properties:
+        page_number:
+          type: integer
+        page_size:
+          type: integer
+        total_pages:
+          type: integer
+        total_results:
+          type: integer
+      required:
+      - total_pages
+      - total_results
+      - page_number
+      - page_size
+      title: Meta
+      type: object
+    TaskStatus:
+      enum:
+      - pending
+      - starting
+      - running
+      - completed
+      - failed
+      title: TaskStatus
+      type: string
+    ClusterNode:
+      properties:
+        filename:
+          description: The corresponding source file of your embedded storage bucket that the node is from.
+          type: string
+        text:
+          description: The text of the node.
+          type: string
+      required:
+      - filename
+      - text
+      title: ClusterNode
+      type: object
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
+    ClusteringRequestInfoData:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/ClusteringRequestInfo'
+          type: array
+        meta:
+          $ref: '#/components/schemas/Meta'
+      required:
+      - data
+      - meta
+      title: ClusteringRequestInfoData
+      type: object
+    TextClusteringResponseData:
+      properties:
+        data:
+          $ref: '#/components/schemas/TextClusteringResponse'
+      required:
+      - data
+      title: TextClusteringResponseData
       type: object
     PublicTextClusteringRequest:
       properties:
@@ -265,118 +362,21 @@ components:
       - bucket
       title: PublicTextClusteringRequest
       type: object
-    ValidationError:
+    ClusteringStatusResponse:
       properties:
-        loc:
-          items:
-            anyOf:
-            - type: string
-            - type: integer
-          title: Location
-          type: array
-        msg:
-          title: Message
+        bucket:
           type: string
-        type:
-          title: Error Type
-          type: string
-      required:
-      - loc
-      - msg
-      - type
-      title: ValidationError
-      type: object
-    ClusterNode:
-      properties:
-        filename:
-          description: The corresponding source file of your embedded storage bucket that the node is from.
-          type: string
-        text:
-          description: The text of the node.
-          type: string
-      required:
-      - filename
-      - text
-      title: ClusterNode
-      type: object
-    TaskStatus:
-      enum:
-      - pending
-      - starting
-      - running
-      - completed
-      - failed
-      title: TaskStatus
-      type: string
-    TextClusteringResponseData:
-      properties:
-        data:
-          $ref: '#/components/schemas/TextClusteringResponse'
-      required:
-      - data
-      title: TextClusteringResponseData
-      type: object
-    HTTPValidationError:
-      properties:
-        detail:
-          items:
-            $ref: '#/components/schemas/ValidationError'
-          title: Detail
-          type: array
-      title: HTTPValidationError
-      type: object
-    ClusteringStatusResponseData:
-      properties:
-        data:
-          $ref: '#/components/schemas/ClusteringStatusResponse'
-      required:
-      - data
-      title: ClusteringStatusResponseData
-      type: object
-    RecursiveCluster:
-      properties:
-        cluster_header:
-          type: string
-        cluster_id:
-          type: string
-        cluster_summary:
-          type: string
-        nodes:
-          items:
-            $ref: '#/components/schemas/ClusterNode'
-          type: array
-        subclusters:
+        clusters:
           items:
             $ref: '#/components/schemas/RecursiveCluster'
           type: array
-        total_number_of_nodes:
-          type: integer
+        status:
+          $ref: '#/components/schemas/TaskStatus'
       required:
-      - cluster_id
-      - cluster_summary
-      - total_number_of_nodes
-      title: RecursiveCluster
-      type: object
-    ClusteringRequestInfoData:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/ClusteringRequestInfo'
-          type: array
-        meta:
-          $ref: '#/components/schemas/Meta'
-      required:
-      - data
-      - meta
-      title: ClusteringRequestInfoData
-      type: object
-    TextClusteringResponse:
-      properties:
-        task_id:
-          type: string
-      required:
-      - task_id
-      title: TextClusteringResponse
+      - status
+      - bucket
+      - clusters
+      title: ClusteringStatusResponse
       type: object
   securitySchemes:
     bearerAuth:

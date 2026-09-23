@@ -64,83 +64,116 @@ paths:
       - Bundles
       x-latency-category: responsive
 components:
-  parameters:
-    bundle-pricing_PageConsolidated:
-      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
-      explode: true
-      in: query
-      name: page
-      schema:
-        properties:
-          number:
-            default: 1
-            description: The page number to load.
-            minimum: 1
-            type: integer
-          size:
-            default: 20
-            description: The size of the page.
-            maximum: 250
-            minimum: 1
-            type: integer
-        type: object
-      style: deepObject
-    AuthorizationBearer:
-      description: 'Format: Bearer <TOKEN>'
-      in: header
-      name: authorization_bearer
-      schema:
-        description: Authenticates the request with your Telnyx API V2 KEY
-        type: string
-    BundleId:
-      in: path
-      name: bundle_id
-      required: true
-      schema:
-        description: Billing bundle's ID, this is used to identify the billing bundle in the API.
-        example: 8661948c-a386-4385-837f-af00f40f111a
-        format: uuid
-        title: Bundle Id
-        type: string
-    bundle-pricing_FilterConsolidated:
-      description: 'Consolidated filter parameter (deepObject style). Supports filtering by country_iso and resource. Examples: filter[country_iso]=US or filter[resource]=+15617819942'
-      explode: true
-      in: query
-      name: filter
-      schema:
-        properties:
-          country_iso:
-            description: Filter by country code.
-            items:
-              example: US
-              type: string
-            title: Filter[Country Iso]
-            type: array
-          resource:
-            description: Filter by resource.
-            items:
-              description: Filter by resource.
-              example: '+15617819942'
-              type: string
-            title: Filter[Resource]
-            type: array
-        type: object
-      style: deepObject
+  responses:
+    UnauthorizedErrorResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              errors:
+                items:
+                  properties:
+                    code:
+                      type: string
+                    detail:
+                      type: string
+                    title:
+                      type: string
+                  type: object
+                type: array
+            type: object
+      description: Authentication required or invalid credentials
+    bundle-pricing_NotFoundErrorResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              errors:
+                items:
+                  properties:
+                    code:
+                      type: string
+                    detail:
+                      type: string
+                    title:
+                      type: string
+                  type: object
+                type: array
+            type: object
+      description: Resource not found
+    bundle-pricing_BadRequestErrorResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              errors:
+                items:
+                  properties:
+                    code:
+                      type: string
+                    detail:
+                      type: string
+                    title:
+                      type: string
+                  type: object
+                type: array
+            type: object
+      description: Invalid request parameters
+    bundle-pricing_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              errors:
+                items:
+                  properties:
+                    code:
+                      type: string
+                    detail:
+                      type: string
+                    title:
+                      type: string
+                  type: object
+                type: array
+            type: object
+      description: Unexpected error
   schemas:
-    PaginatedBillingBundlesResponse:
+    PaginationResponse:
       properties:
-        data:
-          items:
-            $ref: '#/components/schemas/BillingBundleSummary'
-          title: Data
-          type: array
-        meta:
-          $ref: '#/components/schemas/PaginationResponse'
+        page_number:
+          description: The current page number.
+          example: 2
+          title: Page Number
+          type: integer
+        page_size:
+          description: The number of results per page.
+          example: 25
+          title: Page Size
+          type: integer
+        total_pages:
+          description: Total number of pages from the results.
+          example: 3
+          title: Total Pages
+          type: integer
+        total_results:
+          description: Total number of results returned.
+          example: 55
+          title: Total Results
+          type: integer
       required:
-      - meta
-      - data
-      title: PaginatedBillingBundlesResponse
+      - total_results
+      - total_pages
+      - page_number
+      - page_size
+      title: PaginationResponse
       type: object
+    BundleLimitDirection:
+      description: An enumeration.
+      enum:
+      - inbound
+      - outbound
+      title: BundleLimitDirection
+      type: string
     BillingBundleSchema:
       properties:
         active:
@@ -199,6 +232,80 @@ components:
       required:
       - data
       title: BillingBundleResponse
+      type: object
+    BillingBundleSummary:
+      properties:
+        cost_code:
+          description: Bundle's cost code, this is used to identify the bundle in the billing system.
+          example: BUNDLE-PRICING-BASIC-MRC
+          title: Cost Code
+          type: string
+        created_at:
+          description: Date the bundle was created.
+          format: date
+          title: Created At
+          type: string
+        currency:
+          description: Bundle's currency code.
+          example: USD
+          title: Currency
+          type: string
+        id:
+          description: Bundle's ID, this is used to identify the bundle in the API.
+          example: 7ecd040e-6bac-4139-9160-3c0427d98fea
+          format: uuid
+          title: Id
+          type: string
+        is_public:
+          description: Available to all customers or only to specific customers.
+          title: Is Public
+          type: boolean
+        mrc_price:
+          description: Monthly recurring charge price.
+          example: 2.0
+          format: float
+          title: Mrc Price
+          type: number
+        name:
+          description: Bundle's name, this is used to identify the bundle in the UI.
+          example: Australia Basic
+          title: Name
+          type: string
+        slug:
+          description: Slugified version of the bundle's name.
+          example: basic-au-e4f8
+          title: Slug
+          type: string
+        specs:
+          example:
+          - 1 AU Number
+          - Emergency Calling
+          - All inbound and outbound calling billed pay-as-you-go
+          items:
+            type: string
+          title: Specs
+          type: array
+      required:
+      - id
+      - name
+      - cost_code
+      - is_public
+      - created_at
+      title: BillingBundleSummary
+      type: object
+    PaginatedBillingBundlesResponse:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/BillingBundleSummary'
+          title: Data
+          type: array
+        meta:
+          $ref: '#/components/schemas/PaginationResponse'
+      required:
+      - meta
+      - data
+      title: PaginatedBillingBundlesResponse
       type: object
     BundleLimitSchema:
       properties:
@@ -264,175 +371,68 @@ components:
       - updated_at
       title: BundleLimitSchema
       type: object
-    BundleLimitDirection:
-      description: An enumeration.
-      enum:
-      - inbound
-      - outbound
-      title: BundleLimitDirection
-      type: string
-    PaginationResponse:
-      properties:
-        page_number:
-          description: The current page number.
-          example: 2
-          title: Page Number
-          type: integer
-        page_size:
-          description: The number of results per page.
-          example: 25
-          title: Page Size
-          type: integer
-        total_pages:
-          description: Total number of pages from the results.
-          example: 3
-          title: Total Pages
-          type: integer
-        total_results:
-          description: Total number of results returned.
-          example: 55
-          title: Total Results
-          type: integer
-      required:
-      - total_results
-      - total_pages
-      - page_number
-      - page_size
-      title: PaginationResponse
-      type: object
-    BillingBundleSummary:
-      properties:
-        cost_code:
-          description: Bundle's cost code, this is used to identify the bundle in the billing system.
-          example: BUNDLE-PRICING-BASIC-MRC
-          title: Cost Code
-          type: string
-        created_at:
-          description: Date the bundle was created.
-          format: date
-          title: Created At
-          type: string
-        currency:
-          description: Bundle's currency code.
-          example: USD
-          title: Currency
-          type: string
-        id:
-          description: Bundle's ID, this is used to identify the bundle in the API.
-          example: 7ecd040e-6bac-4139-9160-3c0427d98fea
-          format: uuid
-          title: Id
-          type: string
-        is_public:
-          description: Available to all customers or only to specific customers.
-          title: Is Public
-          type: boolean
-        mrc_price:
-          description: Monthly recurring charge price.
-          example: 2.0
-          format: float
-          title: Mrc Price
-          type: number
-        name:
-          description: Bundle's name, this is used to identify the bundle in the UI.
-          example: Australia Basic
-          title: Name
-          type: string
-        slug:
-          description: Slugified version of the bundle's name.
-          example: basic-au-e4f8
-          title: Slug
-          type: string
-        specs:
-          example:
-          - 1 AU Number
-          - Emergency Calling
-          - All inbound and outbound calling billed pay-as-you-go
-          items:
-            type: string
-          title: Specs
-          type: array
-      required:
-      - id
-      - name
-      - cost_code
-      - is_public
-      - created_at
-      title: BillingBundleSummary
-      type: object
-  responses:
-    bundle-pricing_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              errors:
-                items:
-                  properties:
-                    code:
-                      type: string
-                    detail:
-                      type: string
-                    title:
-                      type: string
-                  type: object
-                type: array
-            type: object
-      description: Unexpected error
-    UnauthorizedErrorResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              errors:
-                items:
-                  properties:
-                    code:
-                      type: string
-                    detail:
-                      type: string
-                    title:
-                      type: string
-                  type: object
-                type: array
-            type: object
-      description: Authentication required or invalid credentials
-    bundle-pricing_NotFoundErrorResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              errors:
-                items:
-                  properties:
-                    code:
-                      type: string
-                    detail:
-                      type: string
-                    title:
-                      type: string
-                  type: object
-                type: array
-            type: object
-      description: Resource not found
-    bundle-pricing_BadRequestErrorResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              errors:
-                items:
-                  properties:
-                    code:
-                      type: string
-                    detail:
-                      type: string
-                    title:
-                      type: string
-                  type: object
-                type: array
-            type: object
-      description: Invalid request parameters
+  parameters:
+    bundle-pricing_FilterConsolidated:
+      description: 'Consolidated filter parameter (deepObject style). Supports filtering by country_iso and resource. Examples: filter[country_iso]=US or filter[resource]=+15617819942'
+      explode: true
+      in: query
+      name: filter
+      schema:
+        properties:
+          country_iso:
+            description: Filter by country code.
+            items:
+              example: US
+              type: string
+            title: Filter[Country Iso]
+            type: array
+          resource:
+            description: Filter by resource.
+            items:
+              description: Filter by resource.
+              example: '+15617819942'
+              type: string
+            title: Filter[Resource]
+            type: array
+        type: object
+      style: deepObject
+    bundle-pricing_PageConsolidated:
+      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
+      explode: true
+      in: query
+      name: page
+      schema:
+        properties:
+          number:
+            default: 1
+            description: The page number to load.
+            minimum: 1
+            type: integer
+          size:
+            default: 20
+            description: The size of the page.
+            maximum: 250
+            minimum: 1
+            type: integer
+        type: object
+      style: deepObject
+    AuthorizationBearer:
+      description: 'Format: Bearer <TOKEN>'
+      in: header
+      name: authorization_bearer
+      schema:
+        description: Authenticates the request with your Telnyx API V2 KEY
+        type: string
+    BundleId:
+      in: path
+      name: bundle_id
+      required: true
+      schema:
+        description: Billing bundle's ID, this is used to identify the billing bundle in the API.
+        example: 8661948c-a386-4385-837f-af00f40f111a
+        format: uuid
+        title: Bundle Id
+        type: string
   securitySchemes:
     bearerAuth:
       scheme: bearer

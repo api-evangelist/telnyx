@@ -122,19 +122,6 @@ paths:
       x-latency-category: responsive
 components:
   responses:
-    WhatsappTemplateListResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/WhatsappTemplateData'
-                type: array
-              meta:
-                $ref: '#/components/schemas/messaging_PaginationMeta'
-            type: object
-      description: Successful response with Whatsapp template
     messaging_GenericErrorResponse:
       content:
         application/json:
@@ -150,27 +137,81 @@ components:
                 $ref: '#/components/schemas/WhatsappTemplateData'
             type: object
       description: Successful response with Whatsapp template
+    WhatsappTemplateListResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/WhatsappTemplateData'
+                type: array
+              meta:
+                $ref: '#/components/schemas/messaging_PaginationMeta'
+            type: object
+      description: Successful response with Whatsapp template
   schemas:
-    messaging_PaginationMeta:
+    WhatsappTemplateHeaderComponent:
+      description: Optional header displayed at the top of the message.
       properties:
-        page_number:
-          example: 2
-          type: integer
-        page_size:
-          example: 25
-          type: integer
-        total_pages:
-          example: 3
-          type: integer
-        total_results:
-          example: 55
-          type: integer
+        example:
+          description: Sample values for header variables.
+          properties:
+            header_handle:
+              description: Media handle for IMAGE, VIDEO, or DOCUMENT headers.
+              items:
+                type: string
+              type: array
+            header_text:
+              description: Sample values for text header variables.
+              items:
+                type: string
+              type: array
+          type: object
+        format:
+          description: 'Header format type: TEXT (supports one variable), IMAGE, VIDEO, DOCUMENT, or LOCATION.'
+          enum:
+          - TEXT
+          - IMAGE
+          - VIDEO
+          - DOCUMENT
+          - LOCATION
+          type: string
+        text:
+          description: Header text. Required when format is TEXT. Supports one variable ({{1}}). Variables cannot be at the start or end.
+          type: string
+        type:
+          enum:
+          - HEADER
+          type: string
       required:
-      - total_pages
-      - total_results
-      - page_size
-      - page_number
+      - type
+      - format
       type: object
+    messaging_Error:
+      properties:
+        code:
+          type: string
+          x-format: integer
+        detail:
+          type: string
+        meta:
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              format: json-pointer
+              type: string
+          type: object
+        title:
+          type: string
+      required:
+      - code
+      - title
     WhatsappTemplateButtonsComponent:
       description: Optional interactive buttons. Maximum 3 buttons per template.
       properties:
@@ -243,6 +284,70 @@ components:
       - type
       - buttons
       type: object
+    WhatsappTemplateCarouselComponent:
+      description: Carousel component for multi-card templates. Each card can contain its own header, body, and buttons.
+      properties:
+        cards:
+          description: Array of card objects, each with its own components.
+          items:
+            properties:
+              components:
+                items:
+                  type: object
+                type: array
+            type: object
+          type: array
+        type:
+          enum:
+          - CAROUSEL
+          type: string
+      required:
+      - type
+      - cards
+      type: object
+    WhatsappTemplateFooterComponent:
+      description: Optional footer displayed at the bottom of the message. Does not support variables.
+      properties:
+        code_expiration_minutes:
+          description: OTP code expiration time in minutes. Used in AUTHENTICATION template footers instead of free-form text.
+          type: integer
+        text:
+          description: Footer text. Maximum 60 characters. For non-authentication templates.
+          maxLength: 60
+          type: string
+        type:
+          enum:
+          - FOOTER
+          type: string
+      required:
+      - type
+      type: object
+    messaging_PaginationMeta:
+      properties:
+        page_number:
+          example: 2
+          type: integer
+        page_size:
+          example: 25
+          type: integer
+        total_pages:
+          example: 3
+          type: integer
+        total_results:
+          example: 55
+          type: integer
+      required:
+      - total_pages
+      - total_results
+      - page_size
+      - page_number
+      type: object
+    messaging_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/messaging_Error'
+          type: array
     WhatsappTemplateData:
       properties:
         category:
@@ -304,63 +409,30 @@ components:
             - $ref: '#/components/schemas/WhatsappTemplateCarouselComponent'
           type: array
       type: object
-    WhatsappTemplateHeaderComponent:
-      description: Optional header displayed at the top of the message.
+    WhatsappTemplateBodyComponent:
+      description: The main text content of the message. Supports multiple variable parameters ({{1}}, {{2}}, etc.). Variables cannot be at the start or end. Maximum 1024 characters.
       properties:
         example:
-          description: Sample values for header variables.
+          description: Sample values for body variables. Required when body text contains parameters.
           properties:
-            header_handle:
-              description: Media handle for IMAGE, VIDEO, or DOCUMENT headers.
+            body_text:
+              description: Array containing one array of sample values, one per variable in order.
               items:
-                type: string
-              type: array
-            header_text:
-              description: Sample values for text header variables.
-              items:
-                type: string
+                items:
+                  type: string
+                type: array
               type: array
           type: object
-        format:
-          description: 'Header format type: TEXT (supports one variable), IMAGE, VIDEO, DOCUMENT, or LOCATION.'
-          enum:
-          - TEXT
-          - IMAGE
-          - VIDEO
-          - DOCUMENT
-          - LOCATION
-          type: string
         text:
-          description: Header text. Required when format is TEXT. Supports one variable ({{1}}). Variables cannot be at the start or end.
+          description: Body text content. Use {{1}}, {{2}}, etc. for variable placeholders. Required for MARKETING and UTILITY templates. Optional for AUTHENTICATION templates where Meta provides the built-in OTP body.
+          maxLength: 1024
           type: string
         type:
           enum:
-          - HEADER
+          - BODY
           type: string
       required:
       - type
-      - format
-      type: object
-    WhatsappTemplateCarouselComponent:
-      description: Carousel component for multi-card templates. Each card can contain its own header, body, and buttons.
-      properties:
-        cards:
-          description: Array of card objects, each with its own components.
-          items:
-            properties:
-              components:
-                items:
-                  type: object
-                type: array
-            type: object
-          type: array
-        type:
-          enum:
-          - CAROUSEL
-          type: string
-      required:
-      - type
-      - cards
       type: object
     WhatsappCreateTemplateRequest:
       properties:
@@ -398,86 +470,7 @@ components:
       - language
       - components
       type: object
-    WhatsappTemplateFooterComponent:
-      description: Optional footer displayed at the bottom of the message. Does not support variables.
-      properties:
-        code_expiration_minutes:
-          description: OTP code expiration time in minutes. Used in AUTHENTICATION template footers instead of free-form text.
-          type: integer
-        text:
-          description: Footer text. Maximum 60 characters. For non-authentication templates.
-          maxLength: 60
-          type: string
-        type:
-          enum:
-          - FOOTER
-          type: string
-      required:
-      - type
-      type: object
-    WhatsappTemplateBodyComponent:
-      description: The main text content of the message. Supports multiple variable parameters ({{1}}, {{2}}, etc.). Variables cannot be at the start or end. Maximum 1024 characters.
-      properties:
-        example:
-          description: Sample values for body variables. Required when body text contains parameters.
-          properties:
-            body_text:
-              description: Array containing one array of sample values, one per variable in order.
-              items:
-                items:
-                  type: string
-                type: array
-              type: array
-          type: object
-        text:
-          description: Body text content. Use {{1}}, {{2}}, etc. for variable placeholders. Required for MARKETING and UTILITY templates. Optional for AUTHENTICATION templates where Meta provides the built-in OTP body.
-          maxLength: 1024
-          type: string
-        type:
-          enum:
-          - BODY
-          type: string
-      required:
-      - type
-      type: object
-    messaging_Error:
-      properties:
-        code:
-          type: string
-          x-format: integer
-        detail:
-          type: string
-        meta:
-          type: object
-        source:
-          properties:
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              format: json-pointer
-              type: string
-          type: object
-        title:
-          type: string
-      required:
-      - code
-      - title
-    messaging_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/messaging_Error'
-          type: array
   parameters:
-    WhatsappTemplateId:
-      description: Whatsapp message template ID
-      in: path
-      name: id
-      required: true
-      schema:
-        type: string
     PageConsolidated:
       description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
       explode: true
@@ -498,6 +491,13 @@ components:
             type: integer
         type: object
       style: deepObject
+    WhatsappTemplateId:
+      description: Whatsapp message template ID
+      in: path
+      name: id
+      required: true
+      schema:
+        type: string
   securitySchemes:
     bearerAuth:
       scheme: bearer

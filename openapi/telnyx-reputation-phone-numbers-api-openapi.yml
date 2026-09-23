@@ -274,60 +274,16 @@ paths:
       - Reputation Phone Numbers
       x-latency-category: responsive
 components:
-  responses:
-    BadRequest:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/branded-calling_ErrorResponse'
-      description: Bad request — invalid input or validation error
-    Unauthorized:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/branded-calling_ErrorResponse'
-      description: Unauthorized — missing or invalid API key
-    NotFound:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/branded-calling_ErrorResponse'
-      description: Resource not found
   schemas:
-    ReputationPhoneNumberPublic:
+    ReputationPhoneNumberList:
       properties:
-        created_at:
-          description: When the number was associated
-          format: date-time
-          type: string
-        enterprise_id:
-          description: ID of the associated enterprise
-          format: uuid
-          type: string
-        id:
-          description: Unique identifier
-          format: uuid
-          type: string
-        phone_number:
-          description: Phone number in E.164 format
-          example: '+16035551234'
-          type: string
-        updated_at:
-          description: When the record was last updated
-          format: date-time
-          type: string
+        data:
+          items:
+            $ref: '#/components/schemas/ReputationPhoneNumberPublic'
+          type: array
+        meta:
+          $ref: '#/components/schemas/MetaInfo'
       type: object
-    ReputationPhoneNumberWithReputationData:
-      allOf:
-      - $ref: '#/components/schemas/ReputationPhoneNumberPublic'
-      - properties:
-          reputation_data:
-            description: Reputation metrics (null if not yet fetched)
-            oneOf:
-            - $ref: '#/components/schemas/ReputationData'
-            - nullable: true
-              type: object
-        type: object
     MetaInfo:
       properties:
         page_number:
@@ -343,6 +299,50 @@ components:
           description: Total number of results
           type: integer
       type: object
+    TelnyxError:
+      properties:
+        code:
+          description: Telnyx error code
+          example: '10015'
+          type: string
+        detail:
+          description: Human-readable error detail
+          example: User has already agreed to Terms of Service version v1.0.0
+          type: string
+        meta:
+          properties:
+            url:
+              description: Link to error documentation
+              format: uri
+              type: string
+          type: object
+        source:
+          description: Reference to the field that caused the error
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the field that caused the error
+              example: /body/organization_type
+              type: string
+          type: object
+        title:
+          description: Short error title
+          example: Bad Request
+          type: string
+      required:
+      - code
+      - title
+      type: object
+    ReputationPhoneNumberWithReputationData:
+      allOf:
+      - $ref: '#/components/schemas/ReputationPhoneNumberPublic'
+      - properties:
+          reputation_data:
+            description: Reputation metrics (null if not yet fetched)
+            oneOf:
+            - $ref: '#/components/schemas/ReputationData'
+            - nullable: true
+              type: object
+        type: object
     branded-calling_ErrorResponse:
       properties:
         errors:
@@ -350,14 +350,10 @@ components:
             $ref: '#/components/schemas/TelnyxError'
           type: array
       type: object
-    ReputationPhoneNumberList:
+    ReputationPhoneNumberWithReputation:
       properties:
         data:
-          items:
-            $ref: '#/components/schemas/ReputationPhoneNumberPublic'
-          type: array
-        meta:
-          $ref: '#/components/schemas/MetaInfo'
+          $ref: '#/components/schemas/ReputationPhoneNumberWithReputationData'
       type: object
     ReputationPhoneNumberListWithReputation:
       properties:
@@ -413,44 +409,6 @@ components:
           nullable: true
           type: string
       type: object
-    TelnyxError:
-      properties:
-        code:
-          description: Telnyx error code
-          example: '10015'
-          type: string
-        detail:
-          description: Human-readable error detail
-          example: User has already agreed to Terms of Service version v1.0.0
-          type: string
-        meta:
-          properties:
-            url:
-              description: Link to error documentation
-              format: uri
-              type: string
-          type: object
-        source:
-          description: Reference to the field that caused the error
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the field that caused the error
-              example: /body/organization_type
-              type: string
-          type: object
-        title:
-          description: Short error title
-          example: Bad Request
-          type: string
-      required:
-      - code
-      - title
-      type: object
-    ReputationPhoneNumberWithReputation:
-      properties:
-        data:
-          $ref: '#/components/schemas/ReputationPhoneNumberWithReputationData'
-      type: object
     ReputationPhoneNumberCreate:
       properties:
         phone_numbers:
@@ -465,6 +423,48 @@ components:
       required:
       - phone_numbers
       type: object
+    ReputationPhoneNumberPublic:
+      properties:
+        created_at:
+          description: When the number was associated
+          format: date-time
+          type: string
+        enterprise_id:
+          description: ID of the associated enterprise
+          format: uuid
+          type: string
+        id:
+          description: Unique identifier
+          format: uuid
+          type: string
+        phone_number:
+          description: Phone number in E.164 format
+          example: '+16035551234'
+          type: string
+        updated_at:
+          description: When the record was last updated
+          format: date-time
+          type: string
+      type: object
+  responses:
+    BadRequest:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/branded-calling_ErrorResponse'
+      description: Bad request — invalid input or validation error
+    Unauthorized:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/branded-calling_ErrorResponse'
+      description: Unauthorized — missing or invalid API key
+    NotFound:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/branded-calling_ErrorResponse'
+      description: Resource not found
   parameters:
     PhoneNumber:
       description: Phone number in E.164 format

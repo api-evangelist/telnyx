@@ -17,7 +17,7 @@ tags:
 paths:
   /legacy/reporting/usage_reports/voice:
     get:
-      description: 'Fetch all previous requests for cdr usage reports. '
+      description: Fetch all previous requests for cdr usage reports.
       operationId: getCdrUsageReports
       parameters:
       - description: Page number
@@ -152,7 +152,7 @@ paths:
       x-latency-category: responsive
   /reports/cdr_usage_reports/sync:
     get:
-      description: 'Generate and fetch voice usage report synchronously. This endpoint will both generate and fetch the voice report over a specified time period. No polling is necessary but the response may take up to a couple of minutes. '
+      description: Generate and fetch voice usage report synchronously. This endpoint will both generate and fetch the voice report over a specified time period. No polling is necessary but the response may take up to a couple of minutes.
       operationId: GetCDRUsageReportSync
       parameters:
       - in: query
@@ -219,17 +219,170 @@ paths:
       x-latency-category: background
 components:
   schemas:
-    reporting_Error:
+    CdrPostUsageReportResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/CdrUsageReportResponseLegacy'
+      type: object
+    CdrGetSyncUsageReportResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/CdrUsageReportResponse'
+      type: object
+    CdrGetUsageReportByIdResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/CdrUsageReportResponseLegacy'
+      type: object
+    CdrUsageReportResponseLegacy:
+      description: Legacy V2 CDR usage report response
+      properties:
+        aggregation_type:
+          description: 'Aggregation type: All = 0, By Connections = 1, By Tags = 2, By Billing Group = 3'
+          format: int32
+          type: integer
+        connections:
+          example:
+          - '1234567890'
+          - '9876543210'
+          items:
+            type: string
+          type: array
+          uniqueItems: true
+        created_at:
+          example: '2018-02-02T22:25:27.521Z'
+          format: date-time
+          type: string
+        end_time:
+          example: '2018-02-02T22:25:27.521Z'
+          format: date-time
+          type: string
+        id:
+          description: Identifies the resource
+          format: uuid
+          type: string
+        product_breakdown:
+          description: 'Product breakdown type: No breakdown = 0, DID vs Toll-free = 1, Country = 2, DID vs Toll-free per Country = 3'
+          format: int32
+          type: integer
+        record_type:
+          example: cdr_usage_report
+          type: string
+        report_url:
+          example: http://portal.telnyx.com/downloads/report_name_8hvb45Gu.csv
+          type: string
+        result:
+          type: object
+        start_time:
+          example: '2018-02-02T22:25:27.521Z'
+          format: date-time
+          type: string
+        status:
+          description: 'Status of the report: Pending = 1, Complete = 2, Failed = 3, Expired = 4'
+          format: int32
+          type: integer
+        updated_at:
+          example: '2018-02-02T22:25:27.521Z'
+          format: date-time
+          type: string
+      type: object
+    CdrDeleteUsageReportResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/CdrUsageReportResponseLegacy'
+      type: object
+    UsageRequestLegacy:
+      description: Request object for CDR usage report
+      properties:
+        aggregation_type:
+          description: 'Aggregation type: All = 0, By Connections = 1, By Tags = 2, By Billing Group = 3'
+          example: 0
+          format: int32
+          type: integer
+        connections:
+          description: List of connections to filter by
+          example:
+          - 123
+          - 456
+          items:
+            description: List of connections to filter by
+            format: int64
+            type: integer
+          type: array
+        end_time:
+          description: End time in ISO format
+          example: '2024-02-01T00:00:00Z'
+          format: date-time
+          type: string
+        managed_accounts:
+          description: List of managed accounts to include
+          example:
+          - f47ac10b-58cc-4372-a567-0e02b2c3d479
+          - 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+          items:
+            format: uuid
+            type: string
+          type: array
+        product_breakdown:
+          description: 'Product breakdown type: No breakdown = 0, DID vs Toll-free = 1, Country = 2, DID vs Toll-free per Country = 3'
+          example: 0
+          format: int32
+          type: integer
+        select_all_managed_accounts:
+          description: Whether to select all managed accounts
+          example: false
+          type: boolean
+        start_time:
+          description: Start time in ISO format
+          example: '2024-02-01T00:00:00Z'
+          format: date-time
+          type: string
+      required:
+      - end_time
+      - start_time
+      type: object
+    standard_PaginationMeta:
+      properties:
+        page_number:
+          example: 2
+          format: int32
+          type: integer
+        page_size:
+          example: 25
+          format: int32
+          type: integer
+        total_pages:
+          example: 3
+          format: int32
+          type: integer
+        total_results:
+          example: 55
+          format: int32
+          type: integer
+      type: object
+    CdrGetUsageReportsResponse:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/CdrUsageReportResponseLegacy'
+          type: array
+        meta:
+          $ref: '#/components/schemas/standard_PaginationMeta'
+      type: object
+    standard_Error:
       properties:
         code:
-          example: '10011'
+          title: Telnyx error code
           type: string
         detail:
-          example: Invalid parameter value
+          title: Error details
           type: string
         title:
-          example: Bad Request
+          title: Error title
           type: string
+      required:
+      - detail
+      title: Error
       type: object
     CdrUsageReportResponse:
       properties:
@@ -292,149 +445,6 @@ components:
           format: date-time
           type: string
       type: object
-    CdrGetUsageReportByIdResponse:
-      properties:
-        data:
-          $ref: '#/components/schemas/CdrUsageReportResponseLegacy'
-      type: object
-    UsageRequestLegacy:
-      description: Request object for CDR usage report
-      properties:
-        aggregation_type:
-          description: 'Aggregation type: All = 0, By Connections = 1, By Tags = 2, By Billing Group = 3'
-          example: 0
-          format: int32
-          type: integer
-        connections:
-          description: List of connections to filter by
-          example:
-          - 123
-          - 456
-          items:
-            description: List of connections to filter by
-            format: int64
-            type: integer
-          type: array
-        end_time:
-          description: End time in ISO format
-          example: '2024-02-01T00:00:00Z'
-          format: date-time
-          type: string
-        managed_accounts:
-          description: List of managed accounts to include
-          example:
-          - f47ac10b-58cc-4372-a567-0e02b2c3d479
-          - 6ba7b810-9dad-11d1-80b4-00c04fd430c8
-          items:
-            format: uuid
-            type: string
-          type: array
-        product_breakdown:
-          description: 'Product breakdown type: No breakdown = 0, DID vs Toll-free = 1, Country = 2, DID vs Toll-free per Country = 3'
-          example: 0
-          format: int32
-          type: integer
-        select_all_managed_accounts:
-          description: Whether to select all managed accounts
-          example: false
-          type: boolean
-        start_time:
-          description: Start time in ISO format
-          example: '2024-02-01T00:00:00Z'
-          format: date-time
-          type: string
-      required:
-      - end_time
-      - start_time
-      type: object
-    CdrGetSyncUsageReportResponse:
-      properties:
-        data:
-          $ref: '#/components/schemas/CdrUsageReportResponse'
-      type: object
-    CdrUsageReportResponseLegacy:
-      description: Legacy V2 CDR usage report response
-      properties:
-        aggregation_type:
-          description: 'Aggregation type: All = 0, By Connections = 1, By Tags = 2, By Billing Group = 3'
-          format: int32
-          type: integer
-        connections:
-          example:
-          - '1234567890'
-          - '9876543210'
-          items:
-            type: string
-          type: array
-          uniqueItems: true
-        created_at:
-          example: '2018-02-02T22:25:27.521Z'
-          format: date-time
-          type: string
-        end_time:
-          example: '2018-02-02T22:25:27.521Z'
-          format: date-time
-          type: string
-        id:
-          description: Identifies the resource
-          format: uuid
-          type: string
-        product_breakdown:
-          description: 'Product breakdown type: No breakdown = 0, DID vs Toll-free = 1, Country = 2, DID vs Toll-free per Country = 3'
-          format: int32
-          type: integer
-        record_type:
-          example: cdr_usage_report
-          type: string
-        report_url:
-          example: http://portal.telnyx.com/downloads/report_name_8hvb45Gu.csv
-          type: string
-        result:
-          type: object
-        start_time:
-          example: '2018-02-02T22:25:27.521Z'
-          format: date-time
-          type: string
-        status:
-          description: 'Status of the report: Pending = 1, Complete = 2, Failed = 3, Expired = 4'
-          format: int32
-          type: integer
-        updated_at:
-          example: '2018-02-02T22:25:27.521Z'
-          format: date-time
-          type: string
-      type: object
-    standard_Error:
-      properties:
-        code:
-          title: Telnyx error code
-          type: string
-        detail:
-          title: Error details
-          type: string
-        title:
-          title: Error title
-          type: string
-      required:
-      - detail
-      title: Error
-      type: object
-    CdrGetUsageReportsResponse:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/CdrUsageReportResponseLegacy'
-          type: array
-        meta:
-          $ref: '#/components/schemas/standard_PaginationMeta'
-      type: object
-    reporting_ErrorResponse:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/reporting_Error'
-          type: array
-      type: object
     standard_ErrorResponse:
       properties:
         errors:
@@ -444,34 +454,24 @@ components:
           type: array
       title: ErrorResponse
       type: object
-    CdrPostUsageReportResponse:
+    reporting_Error:
       properties:
-        data:
-          $ref: '#/components/schemas/CdrUsageReportResponseLegacy'
+        code:
+          example: '10011'
+          type: string
+        detail:
+          example: Invalid parameter value
+          type: string
+        title:
+          example: Bad Request
+          type: string
       type: object
-    CdrDeleteUsageReportResponse:
+    reporting_ErrorResponse:
       properties:
-        data:
-          $ref: '#/components/schemas/CdrUsageReportResponseLegacy'
-      type: object
-    standard_PaginationMeta:
-      properties:
-        page_number:
-          example: 2
-          format: int32
-          type: integer
-        page_size:
-          example: 25
-          format: int32
-          type: integer
-        total_pages:
-          example: 3
-          format: int32
-          type: integer
-        total_results:
-          example: 55
-          format: int32
-          type: integer
+        errors:
+          items:
+            $ref: '#/components/schemas/reporting_Error'
+          type: array
       type: object
   securitySchemes:
     bearerAuth:

@@ -204,7 +204,6 @@ paths:
       x-latency-category: responsive
   /wireguard_peers/{id}/config:
     get:
-      description: Retrieve Wireguard config template for Peer
       operationId: GetWireguardPeerConfig
       parameters:
       - $ref: '#/components/parameters/ResourceId'
@@ -243,13 +242,6 @@ paths:
       x-latency-category: responsive
 components:
   schemas:
-    RegionIn:
-      properties:
-        region_code:
-          description: The region the interface should be deployed to.
-          example: ashburn-va
-          type: string
-      type: object
     WireguardPeerCreate:
       allOf:
       - $ref: '#/components/schemas/WireguardPeer'
@@ -257,6 +249,131 @@ components:
         - wireguard_interface_id
         title: WireguardPeerCreate
         type: object
+    WireguardPeer:
+      allOf:
+      - $ref: '#/components/schemas/Record'
+      - $ref: '#/components/schemas/WireguardPeerPatch'
+      - properties:
+          last_seen:
+            description: ISO 8601 formatted date-time indicating when peer sent traffic last time.
+            example: '2018-02-02T22:25:27.521Z'
+            readOnly: true
+            type: string
+          private_key:
+            description: Your WireGuard `Interface.PrivateKey`.<br /><br />This attribute is only ever utlised if, on POST, you do NOT provide your own `public_key`. In which case, a new Public and Private key pair will be generated for you. When your `private_key` is returned, you must save this immediately as we do not save it within Telnyx. If you lose your Private Key, it can not be recovered.
+            example: qF4EqlZq+5JL2IKYY8ij49daYyfKVhevJrcDxdqC8GU=
+            readOnly: true
+            type: string
+          record_type:
+            description: Identifies the type of the resource.
+            example: wireguard_peer
+            readOnly: true
+            type: string
+          wireguard_interface_id:
+            description: The id of the wireguard interface associated with the peer.
+            example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+            format: uuid
+            type: string
+        title: WireguardPeer
+        type: object
+    WireguardPeerPatch:
+      properties:
+        public_key:
+          description: The WireGuard `PublicKey`.<br /><br />If you do not provide a Public Key, a new Public and Private key pair will be generated for you.
+          example: qF4EqlZq+5JL2IKYY8ij49daYyfKVhevJrcDxdqC8GU=
+          type: string
+      title: WireguardPeerPatch
+      type: object
+    RegionOut:
+      properties:
+        region:
+          properties:
+            code:
+              description: Region code of the interface.
+              example: ashburn-va
+              type: string
+            name:
+              description: Region name of the interface.
+              example: Ashburn
+              type: string
+            record_type:
+              description: Identifies the type of the resource.
+              example: region
+              readOnly: true
+              type: string
+          type: object
+        region_code:
+          description: The region interface is deployed to.
+          example: ashburn-va
+          type: string
+      type: object
+    WireguardInterfaceRead:
+      allOf:
+      - $ref: '#/components/schemas/WireguardInterface'
+      - $ref: '#/components/schemas/RegionOut'
+    WireguardInterfaceCreate:
+      allOf:
+      - $ref: '#/components/schemas/WireguardInterface'
+      - $ref: '#/components/schemas/RegionIn'
+      - required:
+        - network_id
+        - region_code
+        title: WireguardInterfaceCreate
+        type: object
+    RegionIn:
+      properties:
+        region_code:
+          description: The region the interface should be deployed to.
+          example: ashburn-va
+          type: string
+      type: object
+    WireguardInterface:
+      allOf:
+      - $ref: '#/components/schemas/Record'
+      - $ref: '#/components/schemas/Interface'
+      - properties:
+          enable_sip_trunking:
+            description: Enable SIP traffic forwarding over VPN interface.
+            example: false
+            type: boolean
+          endpoint:
+            description: The Telnyx WireGuard peers `Peer.endpoint` value.
+            example: 203.0.113.0:51871
+            readOnly: true
+            type: string
+          public_key:
+            description: The Telnyx WireGuard peers `Peer.PublicKey`.
+            example: qF4EqlZq+5JL2IKYY8ij49daYyfKVhevJrcDxdqC8GU=
+            readOnly: true
+            type: string
+          record_type:
+            description: Identifies the type of the resource.
+            example: wireguard_interface
+            readOnly: true
+            type: string
+        title: WireguardInterface
+        type: object
+    netapps_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/netapps_Error'
+          type: array
+      type: object
+    Interface:
+      properties:
+        name:
+          description: A user specified name for the interface.
+          example: test interface
+          type: string
+        network_id:
+          description: The id of the network associated with the interface.
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+          format: uuid
+          type: string
+        status:
+          $ref: '#/components/schemas/InterfaceStatus'
+      type: object
     PaginationMeta:
       properties:
         page_number:
@@ -296,10 +413,6 @@ components:
           readOnly: true
           type: string
       type: object
-    WireguardInterfaceRead:
-      allOf:
-      - $ref: '#/components/schemas/WireguardInterface'
-      - $ref: '#/components/schemas/RegionOut'
     netapps_Error:
       properties:
         code:
@@ -324,112 +437,6 @@ components:
       - code
       - title
       type: object
-    Interface:
-      properties:
-        name:
-          description: A user specified name for the interface.
-          example: test interface
-          type: string
-        network_id:
-          description: The id of the network associated with the interface.
-          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-          format: uuid
-          type: string
-        status:
-          $ref: '#/components/schemas/InterfaceStatus'
-      type: object
-    netapps_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/netapps_Error'
-          type: array
-      type: object
-    WireguardInterfaceCreate:
-      allOf:
-      - $ref: '#/components/schemas/WireguardInterface'
-      - $ref: '#/components/schemas/RegionIn'
-      - required:
-        - network_id
-        - region_code
-        title: WireguardInterfaceCreate
-        type: object
-    WireguardInterface:
-      allOf:
-      - $ref: '#/components/schemas/Record'
-      - $ref: '#/components/schemas/Interface'
-      - properties:
-          enable_sip_trunking:
-            description: Enable SIP traffic forwarding over VPN interface.
-            example: false
-            type: boolean
-          endpoint:
-            description: The Telnyx WireGuard peers `Peer.endpoint` value.
-            example: 203.0.113.0:51871
-            readOnly: true
-            type: string
-          public_key:
-            description: The Telnyx WireGuard peers `Peer.PublicKey`.
-            example: qF4EqlZq+5JL2IKYY8ij49daYyfKVhevJrcDxdqC8GU=
-            readOnly: true
-            type: string
-          record_type:
-            description: Identifies the type of the resource.
-            example: wireguard_interface
-            readOnly: true
-            type: string
-        title: WireguardInterface
-        type: object
-    WireguardPeer:
-      allOf:
-      - $ref: '#/components/schemas/Record'
-      - $ref: '#/components/schemas/WireguardPeerPatch'
-      - properties:
-          last_seen:
-            description: ISO 8601 formatted date-time indicating when peer sent traffic last time.
-            example: '2018-02-02T22:25:27.521Z'
-            readOnly: true
-            type: string
-          private_key:
-            description: Your WireGuard `Interface.PrivateKey`.<br /><br />This attribute is only ever utlised if, on POST, you do NOT provide your own `public_key`. In which case, a new Public and Private key pair will be generated for you. When your `private_key` is returned, you must save this immediately as we do not save it within Telnyx. If you lose your Private Key, it can not be recovered.
-            example: qF4EqlZq+5JL2IKYY8ij49daYyfKVhevJrcDxdqC8GU=
-            readOnly: true
-            type: string
-          record_type:
-            description: Identifies the type of the resource.
-            example: wireguard_peer
-            readOnly: true
-            type: string
-          wireguard_interface_id:
-            description: The id of the wireguard interface associated with the peer.
-            example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-            format: uuid
-            type: string
-        title: WireguardPeer
-        type: object
-    RegionOut:
-      properties:
-        region:
-          properties:
-            code:
-              description: Region code of the interface.
-              example: ashburn-va
-              type: string
-            name:
-              description: Region name of the interface.
-              example: Ashburn
-              type: string
-            record_type:
-              description: Identifies the type of the resource.
-              example: region
-              readOnly: true
-              type: string
-          type: object
-        region_code:
-          description: The region interface is deployed to.
-          example: ashburn-va
-          type: string
-      type: object
     InterfaceStatus:
       description: The current status of the interface deployment.
       enum:
@@ -440,15 +447,16 @@ components:
       example: provisioned
       readOnly: true
       type: string
-    WireguardPeerPatch:
-      properties:
-        public_key:
-          description: The WireGuard `PublicKey`.<br /><br />If you do not provide a Public Key, a new Public and Private key pair will be generated for you.
-          example: qF4EqlZq+5JL2IKYY8ij49daYyfKVhevJrcDxdqC8GU=
-          type: string
-      title: WireguardPeerPatch
-      type: object
   parameters:
+    ResourceId:
+      description: Identifies the resource.
+      in: path
+      name: id
+      required: true
+      schema:
+        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+        format: uuid
+        type: string
     PageConsolidated:
       description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
       explode: true
@@ -469,44 +477,7 @@ components:
             type: integer
         type: object
       style: deepObject
-    ResourceId:
-      description: Identifies the resource.
-      in: path
-      name: id
-      required: true
-      schema:
-        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-        format: uuid
-        type: string
   responses:
-    WireguardInterfaceResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/WireguardInterfaceRead'
-            type: object
-      description: Successful response
-    netapps_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/netapps_Errors'
-      description: Unexpected error
-    WireguardPeerListResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/WireguardPeer'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful response
     WireguardInterfaceListResponse:
       content:
         application/json:
@@ -520,6 +491,19 @@ components:
                 $ref: '#/components/schemas/PaginationMeta'
             type: object
       description: Successful response
+    WireguardPeerListResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/WireguardPeer'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful response
     WireguardPeerResponse:
       content:
         application/json:
@@ -527,6 +511,21 @@ components:
             properties:
               data:
                 $ref: '#/components/schemas/WireguardPeer'
+            type: object
+      description: Successful response
+    netapps_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/netapps_Errors'
+      description: Unexpected error
+    WireguardInterfaceResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/WireguardInterfaceRead'
             type: object
       description: Successful response
     netapps_UnprocessableEntity:

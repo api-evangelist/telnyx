@@ -345,7 +345,290 @@ paths:
       - Call Recordings
       x-latency-category: responsive
 components:
+  parameters:
+    call-recordings_ConnectionId:
+      description: Uniquely identifies a Telnyx application (Call Control, TeXML) or Sip connection resource.
+      in: path
+      name: connection_id
+      required: true
+      schema:
+        type: string
+    call-recordings_PageConsolidated:
+      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
+      explode: true
+      in: query
+      name: page
+      schema:
+        properties:
+          number:
+            default: 1
+            description: The page number to load.
+            minimum: 1
+            type: integer
+          size:
+            default: 20
+            description: The size of the page.
+            maximum: 250
+            minimum: 1
+            type: integer
+        type: object
+      style: deepObject
+    RecordingId:
+      description: Uniquely identifies the recording by id.
+      in: path
+      name: recording_id
+      required: true
+      schema:
+        type: string
+    RecordingTranscriptionId:
+      description: Uniquely identifies the recording transcription by id.
+      in: path
+      name: recording_transcription_id
+      required: true
+      schema:
+        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+        format: uuid
+        type: string
+  responses:
+    ForbiddenResponse:
+      content:
+        application/json:
+          example:
+            errors:
+            - code: '403'
+              detail: Forbidden
+              title: Forbidden
+          schema:
+            $ref: '#/components/schemas/call-recordings_Errors'
+      description: Forbidden. The request is understood but has been refused.
+    RecordingsResponseBody:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/RecordingResponseData'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: A response containing multiple recordings.
+    RecordingTranscriptionResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/RecordingTranscription'
+            type: object
+      description: A response with a single recording transcription resource.
+    call-recordings_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/call-recordings_Errors'
+      description: Unexpected error.
+    call-recordings_NotFoundResponse:
+      content:
+        application/json:
+          examples:
+            connection_not_found:
+              summary: Connection not found
+              value:
+                errors:
+                - code: '10005'
+                  detail: The requested resource or URL could not be found.
+                  source:
+                    pointer: /connection_id
+                  title: Resource not found
+            not_found:
+              summary: Generic not found
+              value:
+                errors:
+                - code: '404'
+                  detail: Page not found
+                  title: Not Found
+          schema:
+            $ref: '#/components/schemas/call-recordings_Errors'
+      description: Resource not found. The requested resource or URL could not be found.
+    CredentialsResponseBody:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CredentialsResponse'
+      description: A response containing a credentials resource.
+    call-recordings_UnauthorizedResponse:
+      content:
+        application/json:
+          example:
+            errors:
+            - code: '401'
+              detail: Unauthorized
+              title: Unauthorized
+          schema:
+            $ref: '#/components/schemas/call-recordings_Errors'
+      description: Unauthorized. The request lacks valid authentication credentials.
+    RecordingResponseBody:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RecordingResponse'
+      description: A response with a single recording resource.
+    call-recordings_InternalServerErrorResponse:
+      content:
+        application/json:
+          example:
+            errors:
+            - code: '500'
+              detail: Internal server error
+              title: Internal Server Error
+          schema:
+            $ref: '#/components/schemas/call-recordings_Errors'
+      description: Internal server error. An unexpected error occurred on the server.
+    ListRecordingTranscriptionsResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/RecordingTranscription'
+                type: array
+              meta:
+                $ref: '#/components/schemas/call-recordings_CursorPaginationMeta'
+            type: object
+      description: A response listing multiple recording transcriptions.
   schemas:
+    Bucket:
+      description: Name of the bucket to be used to store recording files.
+      example: example-bucket
+      type: string
+    ConnectionIdCredentials:
+      description: Uniquely identifies a Telnyx application (Call Control, TeXML) or Sip connection resource.
+      example: '1234567890'
+      type: string
+    call-recordings_Error:
+      properties:
+        code:
+          description: Error code identifier (string or numeric string).
+          type: string
+        detail:
+          type: string
+        meta:
+          additionalProperties: true
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+          type: object
+        title:
+          type: string
+      required:
+      - code
+      - title
+      type: object
+    GCSConfigurationData:
+      properties:
+        backend:
+          description: Storage backend type
+          enum:
+          - gcs
+          type: string
+        bucket:
+          $ref: '#/components/schemas/Bucket'
+        credentials:
+          $ref: '#/components/schemas/Credentials'
+      required:
+      - backend
+      title: Google Cloud Storage Configuration Data
+      type: object
+    S3ConfigurationData:
+      properties:
+        aws_access_key_id:
+          $ref: '#/components/schemas/AwsAccessKeyId'
+        aws_secret_access_key:
+          $ref: '#/components/schemas/AwsSecretAccessKey'
+        backend:
+          description: Storage backend type
+          enum:
+          - s3
+          type: string
+        bucket:
+          $ref: '#/components/schemas/Bucket'
+        region:
+          $ref: '#/components/schemas/Region'
+      required:
+      - backend
+      title: AWS S3 Storage Configuration Data
+      type: object
+    AzureAccountName:
+      description: Azure Blob Storage account name.
+      example: my-account
+      type: string
+    RecordType:
+      description: Identifies record type.
+      enum:
+      - custom_storage_credentials
+      type: string
+    call-recordings_CursorPaginationMeta:
+      properties:
+        cursors:
+          $ref: '#/components/schemas/Cursor'
+        next:
+          description: Path to next page.
+          example: /v2/recording_transcriptions?page[after]=v1:g3QAAAADZAAKdGVsbnl4X2lkc2wAAAABbQAAACRlYmRiYzdkNi1kZWRmLTExZWQtYTM3MS0wMjQyMGFlZjAwYjRqZAAJdGltZXN0YW1wbggA8Le4pGhpVxdkAAR0eXBlZAAFYWZ0ZXI=
+          type: string
+        previous:
+          description: Path to previous page.
+          example: /v2/recording_transcriptions?page[before]=v1:g3QAAAADZAAKdGVsbnl4X2lkc2wAAAABbQAAACRlYmRiYzdkNi1kZWRmLTExZWQtYTM3MS0wMjQyMGFlZjAwYjRqZAAJdGltZXN0YW1wbggA8Le4pGhpVxdkAAR0eXBlZAAFYWZ0ZXI=
+          type: string
+      title: Cursor Pagination Meta
+      type: object
+    call-recordings_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/call-recordings_Error'
+          type: array
+      type: object
+    AzureConfigurationData:
+      properties:
+        account_key:
+          $ref: '#/components/schemas/AzureAccountKey'
+        account_name:
+          $ref: '#/components/schemas/AzureAccountName'
+        backend:
+          description: Storage backend type
+          enum:
+          - azure
+          type: string
+        bucket:
+          $ref: '#/components/schemas/Bucket'
+      required:
+      - backend
+      title: Azure Blob Storage Configuration Data
+      type: object
+    Credentials:
+      description: Opaque credential token used to authenticate and authorize with storage provider.
+      example: OPAQUE_CREDENTIALS_TOKEN
+      type: string
+    Cursor:
+      properties:
+        after:
+          description: Opaque identifier of next page.
+          example: v1:g3QAAAADZAAKdGVsbnl4X2lkc2wAAAABbQAAACRlYmRiYzdkNi1kZWRmLTExZWQtYTM3MS0wMjQyMGFlZjAwYjRqZAAJdGltZXN0YW1wbggA8Le4pGhpVxdkAAR0eXBlZAAFYWZ0ZXI=
+          type: string
+        before:
+          description: Opaque identifier of previous page.
+          example: v1:g3QAAAADZAAKdGVsbnl4X2lkc2wAAAABbQAAACRlYmRiYzdkNi1kZWRmLTExZWQtYTM3MS0wMjQyMGFlZjAwYjRqZAAJdGltZXN0YW1wbggA8Le4pGhpVxdkAAR0eXBlZAAFYWZ0ZXI=
+          type: string
+      type: object
     CustomStorageConfiguration:
       properties:
         backend:
@@ -375,75 +658,10 @@ components:
       description: AWS secret access key.
       example: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
       type: string
-    AwsAccessKeyId:
-      description: AWS credentials access key id.
-      example: AKIAIOSFODNN7EXAMPLE
-      type: string
     Region:
       description: Region where the bucket is located.
       example: us-east-1
       type: string
-    S3ConfigurationData:
-      properties:
-        aws_access_key_id:
-          $ref: '#/components/schemas/AwsAccessKeyId'
-        aws_secret_access_key:
-          $ref: '#/components/schemas/AwsSecretAccessKey'
-        backend:
-          description: Storage backend type
-          enum:
-          - s3
-          type: string
-        bucket:
-          $ref: '#/components/schemas/Bucket'
-        region:
-          $ref: '#/components/schemas/Region'
-      required:
-      - backend
-      title: AWS S3 Storage Configuration Data
-      type: object
-    RecordType:
-      description: Identifies record type.
-      enum:
-      - custom_storage_credentials
-      type: string
-    Cursor:
-      properties:
-        after:
-          description: Opaque identifier of next page.
-          example: v1:g3QAAAADZAAKdGVsbnl4X2lkc2wAAAABbQAAACRlYmRiYzdkNi1kZWRmLTExZWQtYTM3MS0wMjQyMGFlZjAwYjRqZAAJdGltZXN0YW1wbggA8Le4pGhpVxdkAAR0eXBlZAAFYWZ0ZXI=
-          type: string
-        before:
-          description: Opaque identifier of previous page.
-          example: v1:g3QAAAADZAAKdGVsbnl4X2lkc2wAAAABbQAAACRlYmRiYzdkNi1kZWRmLTExZWQtYTM3MS0wMjQyMGFlZjAwYjRqZAAJdGltZXN0YW1wbggA8Le4pGhpVxdkAAR0eXBlZAAFYWZ0ZXI=
-          type: string
-      type: object
-    GCSConfigurationData:
-      properties:
-        backend:
-          description: Storage backend type
-          enum:
-          - gcs
-          type: string
-        bucket:
-          $ref: '#/components/schemas/Bucket'
-        credentials:
-          $ref: '#/components/schemas/Credentials'
-      required:
-      - backend
-      title: Google Cloud Storage Configuration Data
-      type: object
-    AzureAccountKey:
-      description: Azure Blob Storage account key.
-      example: bPxRfiCYEXAMPLEKEY
-      type: string
-    call-recordings_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/call-recordings_Error'
-          type: array
-      type: object
     PaginationMeta:
       properties:
         page_number:
@@ -458,58 +676,6 @@ components:
         total_results:
           example: 55
           type: integer
-      type: object
-    Bucket:
-      description: Name of the bucket to be used to store recording files.
-      example: example-bucket
-      type: string
-    AzureConfigurationData:
-      properties:
-        account_key:
-          $ref: '#/components/schemas/AzureAccountKey'
-        account_name:
-          $ref: '#/components/schemas/AzureAccountName'
-        backend:
-          description: Storage backend type
-          enum:
-          - azure
-          type: string
-        bucket:
-          $ref: '#/components/schemas/Bucket'
-      required:
-      - backend
-      title: Azure Blob Storage Configuration Data
-      type: object
-    call-recordings_Error:
-      properties:
-        code:
-          description: Error code identifier (string or numeric string).
-          type: string
-        detail:
-          type: string
-        meta:
-          additionalProperties: true
-          type: object
-        source:
-          properties:
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-          type: object
-        title:
-          type: string
-      required:
-      - code
-      - title
-      type: object
-    RecordingResponse:
-      properties:
-        data:
-          $ref: '#/components/schemas/RecordingResponseData'
-      title: RecordingResponse
       type: object
     RecordingTranscription:
       properties:
@@ -552,32 +718,20 @@ components:
           type: string
       title: RecordingTranscriptionsResponseData
       type: object
-    ConnectionIdCredentials:
-      description: Uniquely identifies a Telnyx application (Call Control, TeXML) or Sip connection resource.
-      example: '1234567890'
+    AwsAccessKeyId:
+      description: AWS credentials access key id.
+      example: AKIAIOSFODNN7EXAMPLE
       type: string
-    Credentials:
-      description: Opaque credential token used to authenticate and authorize with storage provider.
-      example: OPAQUE_CREDENTIALS_TOKEN
-      type: string
-    AzureAccountName:
-      description: Azure Blob Storage account name.
-      example: my-account
-      type: string
-    call-recordings_CursorPaginationMeta:
+    RecordingResponse:
       properties:
-        cursors:
-          $ref: '#/components/schemas/Cursor'
-        next:
-          description: Path to next page.
-          example: /v2/recording_transcriptions?page[after]=v1:g3QAAAADZAAKdGVsbnl4X2lkc2wAAAABbQAAACRlYmRiYzdkNi1kZWRmLTExZWQtYTM3MS0wMjQyMGFlZjAwYjRqZAAJdGltZXN0YW1wbggA8Le4pGhpVxdkAAR0eXBlZAAFYWZ0ZXI=
-          type: string
-        previous:
-          description: Path to previous page.
-          example: /v2/recording_transcriptions?page[before]=v1:g3QAAAADZAAKdGVsbnl4X2lkc2wAAAABbQAAACRlYmRiYzdkNi1kZWRmLTExZWQtYTM3MS0wMjQyMGFlZjAwYjRqZAAJdGltZXN0YW1wbggA8Le4pGhpVxdkAAR0eXBlZAAFYWZ0ZXI=
-          type: string
-      title: Cursor Pagination Meta
+        data:
+          $ref: '#/components/schemas/RecordingResponseData'
+      title: RecordingResponse
       type: object
+    AzureAccountKey:
+      description: Azure Blob Storage account key.
+      example: bPxRfiCYEXAMPLEKEY
+      type: string
     RecordingResponseData:
       properties:
         call_control_id:
@@ -688,161 +842,14 @@ components:
       - record_type
       title: CredentialsResponse
       type: object
-  parameters:
-    RecordingId:
-      description: Uniquely identifies the recording by id.
-      in: path
-      name: recording_id
-      required: true
-      schema:
-        type: string
-    call-recordings_PageConsolidated:
-      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
-      explode: true
-      in: query
-      name: page
-      schema:
-        properties:
-          number:
-            default: 1
-            description: The page number to load.
-            minimum: 1
-            type: integer
-          size:
-            default: 20
-            description: The size of the page.
-            maximum: 250
-            minimum: 1
-            type: integer
-        type: object
-      style: deepObject
-    call-recordings_ConnectionId:
-      description: Uniquely identifies a Telnyx application (Call Control, TeXML) or Sip connection resource.
-      in: path
-      name: connection_id
-      required: true
-      schema:
-        type: string
-    RecordingTranscriptionId:
-      description: Uniquely identifies the recording transcription by id.
-      in: path
-      name: recording_transcription_id
-      required: true
-      schema:
-        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-        format: uuid
-        type: string
-  responses:
-    RecordingTranscriptionResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/RecordingTranscription'
-            type: object
-      description: A response with a single recording transcription resource.
-    RecordingResponseBody:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/RecordingResponse'
-      description: A response with a single recording resource.
-    RecordingsResponseBody:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/RecordingResponseData'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: A response containing multiple recordings.
-    call-recordings_InternalServerErrorResponse:
-      content:
-        application/json:
-          example:
-            errors:
-            - code: '500'
-              detail: Internal server error
-              title: Internal Server Error
-          schema:
-            $ref: '#/components/schemas/call-recordings_Errors'
-      description: Internal server error. An unexpected error occurred on the server.
-    call-recordings_NotFoundResponse:
-      content:
-        application/json:
-          examples:
-            connection_not_found:
-              summary: Connection not found
-              value:
-                errors:
-                - code: '10005'
-                  detail: The requested resource or URL could not be found.
-                  source:
-                    pointer: /connection_id
-                  title: Resource not found
-            not_found:
-              summary: Generic not found
-              value:
-                errors:
-                - code: '404'
-                  detail: Page not found
-                  title: Not Found
-          schema:
-            $ref: '#/components/schemas/call-recordings_Errors'
-      description: Resource not found. The requested resource or URL could not be found.
-    ForbiddenResponse:
-      content:
-        application/json:
-          example:
-            errors:
-            - code: '403'
-              detail: Forbidden
-              title: Forbidden
-          schema:
-            $ref: '#/components/schemas/call-recordings_Errors'
-      description: Forbidden. The request is understood but has been refused.
-    call-recordings_UnauthorizedResponse:
-      content:
-        application/json:
-          example:
-            errors:
-            - code: '401'
-              detail: Unauthorized
-              title: Unauthorized
-          schema:
-            $ref: '#/components/schemas/call-recordings_Errors'
-      description: Unauthorized. The request lacks valid authentication credentials.
-    ListRecordingTranscriptionsResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/RecordingTranscription'
-                type: array
-              meta:
-                $ref: '#/components/schemas/call-recordings_CursorPaginationMeta'
-            type: object
-      description: A response listing multiple recording transcriptions.
-    CredentialsResponseBody:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/CredentialsResponse'
-      description: A response containing a credentials resource.
-    call-recordings_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/call-recordings_Errors'
-      description: Unexpected error.
   requestBodies:
+    CreateCredentialsRequest:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CustomStorageConfiguration'
+      description: Creates new credentials resource for the specified connection_id.
+      required: true
     DeleteRecordingsRequest:
       content:
         application/json:
@@ -861,13 +868,6 @@ components:
             - ids
             type: object
       description: Deletes recordings for the given list of IDs.
-      required: true
-    CreateCredentialsRequest:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/CustomStorageConfiguration'
-      description: Creates new credentials resource for the specified connection_id.
       required: true
   securitySchemes:
     bearerAuth:

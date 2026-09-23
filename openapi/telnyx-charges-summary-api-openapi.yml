@@ -54,61 +54,25 @@ paths:
       - Charges Summary
 components:
   schemas:
-    SimpleLine:
+    MonthDetail:
       properties:
-        alias:
-          description: Service alias
-          example: port_out
+        mrc:
+          description: Monthly recurring charge amount as decimal string
+          example: '25.50'
           type: string
-        amount:
-          description: Total amount as decimal string
-          example: '15.75'
-          type: string
-        name:
-          description: Service name
-          example: Port Out
-          type: string
+        otc:
+          description: One-time charge amount as decimal string
+          example: '5.00'
+          type:
+          - string
+          - 'null'
         quantity:
           description: Number of items
-          example: 100
+          example: 10
           type: integer
-        type:
-          enum:
-          - simple
-          example: simple
-          type: string
       required:
-      - type
-      - name
-      - alias
       - quantity
-      - amount
-      type: object
-    ComparativeLine:
-      properties:
-        alias:
-          description: Service alias
-          example: local
-          type: string
-        existing_this_month:
-          $ref: '#/components/schemas/MonthDetail'
-        name:
-          description: Service name
-          example: Local DIDs
-          type: string
-        new_this_month:
-          $ref: '#/components/schemas/MonthDetail'
-        type:
-          enum:
-          - comparative
-          example: comparative
-          type: string
-      required:
-      - type
-      - name
-      - alias
-      - new_this_month
-      - existing_this_month
+      - mrc
       type: object
     charges_Errors:
       properties:
@@ -155,48 +119,94 @@ components:
       - ledger_adjustments
       - grand_total
       type: object
+    ComparativeLine:
+      properties:
+        alias:
+          description: Service alias
+          example: local
+          type: string
+        existing_this_month:
+          $ref: '#/components/schemas/MonthDetail'
+        name:
+          description: Service name
+          example: Local DIDs
+          type: string
+        new_this_month:
+          $ref: '#/components/schemas/MonthDetail'
+        type:
+          enum:
+          - comparative
+          example: comparative
+          type: string
+      required:
+      - type
+      - name
+      - alias
+      - new_this_month
+      - existing_this_month
+      type: object
     SummaryLine:
       discriminator:
         propertyName: type
       oneOf:
       - $ref: '#/components/schemas/ComparativeLine'
       - $ref: '#/components/schemas/SimpleLine'
-    Summary:
-      example:
-        adjustments:
-        - amount: '-10.00'
-          description: Credit for service outage
-          event_date: '2025-05-15'
-        lines:
-        - alias: local
-          existing_this_month:
-            mrc: '20.00'
-            quantity: 8
-          name: Local DIDs
-          new_this_month:
-            mrc: '25.50'
-            otc: '5.00'
-            quantity: 10
-          type: comparative
-        - alias: port_out
-          amount: '15.75'
-          name: Port Out
-          quantity: 100
-          type: simple
+    MonthlyChargesSummaryResponse:
       properties:
-        adjustments:
-          description: List of billing adjustments
-          items:
-            $ref: '#/components/schemas/AdjustmentLine'
-          type: array
-        lines:
-          description: List of charge summary lines
-          items:
-            $ref: '#/components/schemas/SummaryLine'
-          type: array
+        data:
+          $ref: '#/components/schemas/SummaryAndTotal'
       required:
-      - lines
-      - adjustments
+      - data
+      type: object
+    SimpleLine:
+      properties:
+        alias:
+          description: Service alias
+          example: port_out
+          type: string
+        amount:
+          description: Total amount as decimal string
+          example: '15.75'
+          type: string
+        name:
+          description: Service name
+          example: Port Out
+          type: string
+        quantity:
+          description: Number of items
+          example: 100
+          type: integer
+        type:
+          enum:
+          - simple
+          example: simple
+          type: string
+      required:
+      - type
+      - name
+      - alias
+      - quantity
+      - amount
+      type: object
+    AdjustmentLine:
+      properties:
+        amount:
+          description: Adjustment amount as decimal string
+          example: '-10.00'
+          type: string
+        description:
+          description: Description of the adjustment
+          example: Credit for service outage
+          type: string
+        event_date:
+          description: Date when the adjustment occurred
+          example: '2025-05-15'
+          format: date
+          type: string
+      required:
+      - amount
+      - description
+      - event_date
       type: object
     SummaryAndTotal:
       properties:
@@ -236,6 +246,43 @@ components:
       - summary
       - total
       type: object
+    Summary:
+      example:
+        adjustments:
+        - amount: '-10.00'
+          description: Credit for service outage
+          event_date: '2025-05-15'
+        lines:
+        - alias: local
+          existing_this_month:
+            mrc: '20.00'
+            quantity: 8
+          name: Local DIDs
+          new_this_month:
+            mrc: '25.50'
+            otc: '5.00'
+            quantity: 10
+          type: comparative
+        - alias: port_out
+          amount: '15.75'
+          name: Port Out
+          quantity: 100
+          type: simple
+      properties:
+        adjustments:
+          description: List of billing adjustments
+          items:
+            $ref: '#/components/schemas/AdjustmentLine'
+          type: array
+        lines:
+          description: List of charge summary lines
+          items:
+            $ref: '#/components/schemas/SummaryLine'
+          type: array
+      required:
+      - lines
+      - adjustments
+      type: object
     charges_Error:
       properties:
         code:
@@ -260,72 +307,25 @@ components:
       required:
       - code
       - title
-    MonthlyChargesSummaryResponse:
-      properties:
-        data:
-          $ref: '#/components/schemas/SummaryAndTotal'
-      required:
-      - data
-      type: object
-    MonthDetail:
-      properties:
-        mrc:
-          description: Monthly recurring charge amount as decimal string
-          example: '25.50'
-          type: string
-        otc:
-          description: One-time charge amount as decimal string
-          example: '5.00'
-          type:
-          - string
-          - 'null'
-        quantity:
-          description: Number of items
-          example: 10
-          type: integer
-      required:
-      - quantity
-      - mrc
-      type: object
-    AdjustmentLine:
-      properties:
-        amount:
-          description: Adjustment amount as decimal string
-          example: '-10.00'
-          type: string
-        description:
-          description: Description of the adjustment
-          example: Credit for service outage
-          type: string
-        event_date:
-          description: Date when the adjustment occurred
-          example: '2025-05-15'
-          format: date
-          type: string
-      required:
-      - amount
-      - description
-      - event_date
-      type: object
   responses:
-    charges_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/charges_Errors'
-      description: Unexpected error
-    charges_BadRequestErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/charges_Errors'
-      description: Invalid request parameters or date range
     charges_UnprocessableEntityErrorResponse:
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/charges_Errors'
       description: User account not found
+    charges_BadRequestErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/charges_Errors'
+      description: Invalid request parameters or date range
+    charges_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/charges_Errors'
+      description: Unexpected error
   securitySchemes:
     bearerAuth:
       scheme: bearer

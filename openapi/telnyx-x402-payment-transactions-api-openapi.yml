@@ -226,17 +226,6 @@ paths:
       x-latency-category: responsive
 components:
   schemas:
-    X402SettleRequest:
-      properties:
-        id:
-          description: The quote ID to settle.
-          type: string
-        payment_signature:
-          description: Base64-encoded signed payment authorization (x402 PaymentPayload). Can alternatively be provided via the PAYMENT-SIGNATURE header.
-          type: string
-      required:
-      - id
-      type: object
     X402PaymentRequirements:
       description: x402 protocol v2 payment requirements. Contains all information needed to construct and sign a payment authorization.
       properties:
@@ -297,6 +286,15 @@ components:
           - 2
           type: integer
       type: object
+    X402QuoteRequest:
+      properties:
+        amount_usd:
+          description: Amount in USD to fund (minimum 5.00, maximum 10000.00).
+          example: '50.00'
+          type: string
+      required:
+      - amount_usd
+      type: object
     X402QuoteResponse:
       properties:
         data:
@@ -325,38 +323,35 @@ components:
               type: string
           type: object
       type: object
-    x402-transactions_ErrorResponse:
+    X402SettlementErrorResponse:
+      description: Error response for x402 settlement failures. Uses string error codes from the x402 error handling system.
       properties:
         errors:
           items:
             properties:
               code:
+                description: Machine-readable error code.
+                enum:
+                - invalid_signature
+                - expired_authorization
+                - invalid_nonce
+                - insufficient_balance
+                - insufficient_funds
+                - insufficient_allowance
+                - facilitator_unavailable
+                - facilitator_timeout
+                - settlement_timeout
+                - transaction_failed
+                - unknown
                 type: string
               detail:
+                description: Human-readable error description with guidance.
                 type: string
-              meta:
-                properties:
-                  url:
-                    type: string
-                type: object
-              source:
-                properties:
-                  pointer:
-                    type: string
-                type: object
               title:
+                description: Short error title (e.g. "Payment Failed").
                 type: string
             type: object
           type: array
-      type: object
-    X402QuoteRequest:
-      properties:
-        amount_usd:
-          description: Amount in USD to fund (minimum 5.00, maximum 10000.00).
-          example: '50.00'
-          type: string
-      required:
-      - amount_usd
       type: object
     X402TransactionResponse:
       properties:
@@ -393,35 +388,40 @@ components:
               type: string
           type: object
       type: object
-    X402SettlementErrorResponse:
-      description: Error response for x402 settlement failures. Uses string error codes from the x402 error handling system.
+    x402-transactions_ErrorResponse:
       properties:
         errors:
           items:
             properties:
               code:
-                description: Machine-readable error code.
-                enum:
-                - invalid_signature
-                - expired_authorization
-                - invalid_nonce
-                - insufficient_balance
-                - insufficient_funds
-                - insufficient_allowance
-                - facilitator_unavailable
-                - facilitator_timeout
-                - settlement_timeout
-                - transaction_failed
-                - unknown
                 type: string
               detail:
-                description: Human-readable error description with guidance.
                 type: string
+              meta:
+                properties:
+                  url:
+                    type: string
+                type: object
+              source:
+                properties:
+                  pointer:
+                    type: string
+                type: object
               title:
-                description: Short error title (e.g. "Payment Failed").
                 type: string
             type: object
           type: array
+      type: object
+    X402SettleRequest:
+      properties:
+        id:
+          description: The quote ID to settle.
+          type: string
+        payment_signature:
+          description: Base64-encoded signed payment authorization (x402 PaymentPayload). Can alternatively be provided via the PAYMENT-SIGNATURE header.
+          type: string
+      required:
+      - id
       type: object
   securitySchemes:
     bearerAuth:

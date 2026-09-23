@@ -17,7 +17,7 @@ tags:
 paths:
   /ai/conversations:
     get:
-      description: Retrieve a list of all AI conversations configured by the user. Supports [PostgREST-style query parameters](https://postgrest.org/en/stable/api.html#horizontal-filtering-rows) for filtering. Examples are included for the standard metadata fields, but you can filter on any field in the metadata JSON object. For example, to filter by a custom field `metadata->custom_field`, use `metadata->custom_field=eq.value`.
+      description: Retrieve a list of all AI conversations configured by the user. Supports PostgREST-style query parameters for filtering. Examples are included for the standard metadata fields, but you can filter on any field in the metadata JSON object. For example, to filter by a custom field `metadata->custom_field`, use `metadata->custom_field=eq.value`.
       operationId: get_conversations_public_conversations_get
       parameters:
       - description: Filter by conversation ID (e.g. id=eq.123)
@@ -732,77 +732,31 @@ paths:
       x-latency-category: responsive
 components:
   schemas:
-    Meta:
-      properties:
-        page_number:
-          type: integer
-        page_size:
-          type: integer
-        total_pages:
-          type: integer
-        total_results:
-          type: integer
-      required:
-      - total_pages
-      - total_results
-      - page_number
-      - page_size
-      title: Meta
-      type: object
-    InsightTemplateGroupUpdateReq:
-      properties:
-        description:
-          title: Description
-          type: string
-        name:
-          title: Name
-          type: string
-        webhook:
-          title: Webhook
-          type: string
-      title: InsightTemplateGroupUpdateReq
-      type: object
-    ConversationMessageListData:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/ConversationMessage'
-          title: Data
-          type: array
-        meta:
-          $ref: '#/components/schemas/Meta'
-      required:
-      - data
-      - meta
-      title: ConversationMessageListData
-      type: object
-    InsightTemplateGroupDetailRespData:
-      properties:
-        data:
-          $ref: '#/components/schemas/InsightTemplateGroupResp'
-      required:
-      - data
-      title: InsightTemplateGroupDetailRespData
-      type: object
-    InsightTemplateGroupResp:
+    InsightTemplateResp:
       properties:
         created_at:
           format: date-time
           title: Created At
           type: string
-        description:
-          title: Description
-          type: string
         id:
           format: uuid
           title: Id
           type: string
-        insights:
-          items:
-            $ref: '#/components/schemas/InsightTemplateResp'
-          title: Insights
-          type: array
+        insight_type:
+          $ref: '#/components/schemas/TemplateType'
+          default: custom
+        instructions:
+          title: Instructions
+          type: string
+        json_schema:
+          anyOf:
+          - type: string
+          - title: JsonSchemaObject
+            type: object
+          description: If specified, the output will follow the JSON schema.
+          title: Json Schema
         name:
+          default: ''
           title: Name
           type: string
         webhook:
@@ -811,9 +765,17 @@ components:
           type: string
       required:
       - id
-      - name
+      - instructions
       - created_at
-      title: InsightTemplateGroupResp
+      title: InsightTemplateResp
+      type: object
+    InsightTemplateDetailRespData:
+      properties:
+        data:
+          $ref: '#/components/schemas/InsightTemplateResp'
+      required:
+      - data
+      title: InsightTemplateDetailRespData
       type: object
     InsightTemplateGroupCreateReq:
       properties:
@@ -831,12 +793,61 @@ components:
       - name
       title: InsightTemplateGroupCreateReq
       type: object
-    TemplateType:
-      enum:
-      - custom
-      - default
-      title: TemplateType
-      type: string
+    CreateConversationRequest:
+      properties:
+        metadata:
+          additionalProperties:
+            type: string
+          description: Metadata associated with the conversation. Set `ai_disabled` to `true` to create the conversation with AI message responses disabled.
+          type: object
+        name:
+          type: string
+      title: CreateConversationRequest
+      type: object
+    InsightTemplateGroupUpdateReq:
+      properties:
+        description:
+          title: Description
+          type: string
+        name:
+          title: Name
+          type: string
+        webhook:
+          title: Webhook
+          type: string
+      title: InsightTemplateGroupUpdateReq
+      type: object
+    InsightTemplateGroupDetailRespData:
+      properties:
+        data:
+          $ref: '#/components/schemas/InsightTemplateGroupResp'
+      required:
+      - data
+      title: InsightTemplateGroupDetailRespData
+      type: object
+    GetInsightTemplatesRespData:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/InsightTemplateResp'
+          title: Data
+          type: array
+        meta:
+          $ref: '#/components/schemas/Meta'
+      required:
+      - data
+      - meta
+      title: GetInsightTemplatesRespData
+      type: object
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
     UpdateConversationRequest:
       properties:
         metadata:
@@ -846,29 +857,25 @@ components:
           type: object
       title: UpdateConversationRequest
       type: object
-    InsightTemplateCreateReq:
+    TemplateType:
+      enum:
+      - custom
+      - default
+      title: TemplateType
+      type: string
+    GetInsightTemplateGroupsRespData:
       properties:
-        instructions:
-          title: Instructions
-          type: string
-        json_schema:
-          anyOf:
-          - type: string
-          - title: JsonSchemaObject
-            type: object
-          description: If specified, the output will follow the JSON schema.
-          title: Json Schema
-        name:
-          title: Name
-          type: string
-        webhook:
-          default: ''
-          title: Webhook
-          type: string
+        data:
+          items:
+            $ref: '#/components/schemas/InsightTemplateGroupResp'
+          title: Data
+          type: array
+        meta:
+          $ref: '#/components/schemas/Meta'
       required:
-      - instructions
-      - name
-      title: InsightTemplateCreateReq
+      - data
+      - meta
+      title: GetInsightTemplateGroupsRespData
       type: object
     ConversationInsight:
       properties:
@@ -907,6 +914,136 @@ components:
       - status
       - created_at
       - conversation_insights
+      type: object
+    InsightTemplateGroupResp:
+      properties:
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+        description:
+          title: Description
+          type: string
+        id:
+          format: uuid
+          title: Id
+          type: string
+        insights:
+          items:
+            $ref: '#/components/schemas/InsightTemplateResp'
+          title: Insights
+          type: array
+        name:
+          title: Name
+          type: string
+        webhook:
+          default: ''
+          title: Webhook
+          type: string
+      required:
+      - id
+      - name
+      - created_at
+      title: InsightTemplateGroupResp
+      type: object
+    ConversationInsightListData:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/ConversationInsight'
+          title: Data
+          type: array
+        meta:
+          $ref: '#/components/schemas/Meta'
+      required:
+      - data
+      - meta
+      title: ConversationInsightListData
+      type: object
+    InsightTemplateUpdateReq:
+      properties:
+        instructions:
+          title: Instructions
+          type: string
+        json_schema:
+          anyOf:
+          - type: string
+          - title: JsonSchemaObject
+            type: object
+          title: Json Schema
+        name:
+          title: Name
+          type: string
+        webhook:
+          title: Webhook
+          type: string
+      title: InsightTemplateUpdateReq
+      type: object
+    Meta:
+      properties:
+        page_number:
+          type: integer
+        page_size:
+          type: integer
+        total_pages:
+          type: integer
+        total_results:
+          type: integer
+      required:
+      - total_pages
+      - total_results
+      - page_number
+      - page_size
+      title: Meta
+      type: object
+    ConversationsListData:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/Conversation'
+          title: Data
+          type: array
+      required:
+      - data
+      title: ConversationsListData
+      type: object
+    InsightTemplateCreateReq:
+      properties:
+        instructions:
+          title: Instructions
+          type: string
+        json_schema:
+          anyOf:
+          - type: string
+          - title: JsonSchemaObject
+            type: object
+          description: If specified, the output will follow the JSON schema.
+          title: Json Schema
+        name:
+          title: Name
+          type: string
+        webhook:
+          default: ''
+          title: Webhook
+          type: string
+      required:
+      - instructions
+      - name
+      title: InsightTemplateCreateReq
+      type: object
+    ConversationMessageListData:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/ConversationMessage'
+          title: Data
+          type: array
+        meta:
+          $ref: '#/components/schemas/Meta'
+      required:
+      - data
+      - meta
+      title: ConversationMessageListData
       type: object
     ConversationMessage:
       properties:
@@ -964,75 +1101,6 @@ components:
       - role
       - text
       type: object
-    ConversationsListData:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/Conversation'
-          title: Data
-          type: array
-      required:
-      - data
-      title: ConversationsListData
-      type: object
-    HTTPValidationError:
-      properties:
-        detail:
-          items:
-            $ref: '#/components/schemas/ValidationError'
-          title: Detail
-          type: array
-      title: HTTPValidationError
-      type: object
-    GetInsightTemplateGroupsRespData:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/InsightTemplateGroupResp'
-          title: Data
-          type: array
-        meta:
-          $ref: '#/components/schemas/Meta'
-      required:
-      - data
-      - meta
-      title: GetInsightTemplateGroupsRespData
-      type: object
-    ValidationError:
-      properties:
-        loc:
-          items:
-            anyOf:
-            - type: string
-            - type: integer
-          title: Location
-          type: array
-        msg:
-          title: Message
-          type: string
-        type:
-          title: Error Type
-          type: string
-      required:
-      - loc
-      - msg
-      - type
-      title: ValidationError
-      type: object
-    ConversationInsightListData:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/ConversationInsight'
-          title: Data
-          type: array
-        meta:
-          $ref: '#/components/schemas/Meta'
-      required:
-      - data
-      - meta
-      title: ConversationInsightListData
-      type: object
     Conversation:
       properties:
         created_at:
@@ -1068,16 +1136,26 @@ components:
       - metadata
       - last_message_at
       type: object
-    CreateConversationRequest:
+    ValidationError:
       properties:
-        metadata:
-          additionalProperties:
-            type: string
-          description: Metadata associated with the conversation. Set `ai_disabled` to `true` to create the conversation with AI message responses disabled.
-          type: object
-        name:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
           type: string
-      title: CreateConversationRequest
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
       type: object
     CreateMsgReq:
       properties:
@@ -1127,84 +1205,6 @@ components:
       required:
       - role
       title: CreateMsgReq
-      type: object
-    InsightTemplateUpdateReq:
-      properties:
-        instructions:
-          title: Instructions
-          type: string
-        json_schema:
-          anyOf:
-          - type: string
-          - title: JsonSchemaObject
-            type: object
-          title: Json Schema
-        name:
-          title: Name
-          type: string
-        webhook:
-          title: Webhook
-          type: string
-      title: InsightTemplateUpdateReq
-      type: object
-    InsightTemplateResp:
-      properties:
-        created_at:
-          format: date-time
-          title: Created At
-          type: string
-        id:
-          format: uuid
-          title: Id
-          type: string
-        insight_type:
-          $ref: '#/components/schemas/TemplateType'
-          default: custom
-        instructions:
-          title: Instructions
-          type: string
-        json_schema:
-          anyOf:
-          - type: string
-          - title: JsonSchemaObject
-            type: object
-          description: If specified, the output will follow the JSON schema.
-          title: Json Schema
-        name:
-          default: ''
-          title: Name
-          type: string
-        webhook:
-          default: ''
-          title: Webhook
-          type: string
-      required:
-      - id
-      - instructions
-      - created_at
-      title: InsightTemplateResp
-      type: object
-    GetInsightTemplatesRespData:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/InsightTemplateResp'
-          title: Data
-          type: array
-        meta:
-          $ref: '#/components/schemas/Meta'
-      required:
-      - data
-      - meta
-      title: GetInsightTemplatesRespData
-      type: object
-    InsightTemplateDetailRespData:
-      properties:
-        data:
-          $ref: '#/components/schemas/InsightTemplateResp'
-      required:
-      - data
-      title: InsightTemplateDetailRespData
       type: object
   securitySchemes:
     bearerAuth:
