@@ -226,6 +226,143 @@ paths:
       x-latency-category: responsive
 components:
   schemas:
+    X402SettlementErrorResponse:
+      description: Error response for x402 settlement failures. Uses string error codes from the x402 error handling system.
+      properties:
+        errors:
+          items:
+            properties:
+              code:
+                description: Machine-readable error code.
+                enum:
+                - invalid_signature
+                - expired_authorization
+                - invalid_nonce
+                - insufficient_balance
+                - insufficient_funds
+                - insufficient_allowance
+                - facilitator_unavailable
+                - facilitator_timeout
+                - settlement_timeout
+                - transaction_failed
+                - unknown
+                type: string
+              detail:
+                description: Human-readable error description with guidance.
+                type: string
+              title:
+                description: Short error title (e.g. "Payment Failed").
+                type: string
+            type: object
+          type: array
+      type: object
+    X402QuoteRequest:
+      properties:
+        amount_usd:
+          description: Amount in USD to fund (minimum 5.00, maximum 10000.00).
+          example: '50.00'
+          type: string
+      required:
+      - amount_usd
+      type: object
+    x402-transactions_ErrorResponse:
+      properties:
+        errors:
+          items:
+            properties:
+              code:
+                type: string
+              detail:
+                type: string
+              meta:
+                properties:
+                  url:
+                    type: string
+                type: object
+              source:
+                properties:
+                  pointer:
+                    type: string
+                type: object
+              title:
+                type: string
+            type: object
+          type: array
+      type: object
+    X402SettleRequest:
+      properties:
+        id:
+          description: The quote ID to settle.
+          type: string
+        payment_signature:
+          description: Base64-encoded signed payment authorization (x402 PaymentPayload). Can alternatively be provided via the PAYMENT-SIGNATURE header.
+          type: string
+      required:
+      - id
+      type: object
+    X402QuoteResponse:
+      properties:
+        data:
+          properties:
+            amount_crypto:
+              description: The equivalent amount in the payment cryptocurrency's smallest unit (e.g. USDC has 6 decimals, so $50.00 = "50000000").
+              type: string
+            amount_usd:
+              description: The quoted amount in USD.
+              type: string
+            expires_at:
+              description: ISO 8601 timestamp when the quote expires.
+              format: date-time
+              type: string
+            id:
+              description: Unique quote identifier. Use this to settle the payment.
+              type: string
+            network:
+              description: The blockchain network for the payment in CAIP-2 format (e.g. eip155:8453 for Base).
+              type: string
+            payment_requirements:
+              $ref: '#/components/schemas/X402PaymentRequirements'
+            record_type:
+              enum:
+              - quote
+              type: string
+          type: object
+      type: object
+    X402TransactionResponse:
+      properties:
+        data:
+          properties:
+            amount:
+              description: The transaction amount in the specified currency.
+              type: string
+            created_at:
+              description: ISO 8601 timestamp when the transaction was created.
+              format: date-time
+              type: string
+            currency:
+              description: The currency of the transaction amount (e.g. USD).
+              type: string
+            id:
+              description: Unique transaction identifier.
+              type: string
+            quote_id:
+              description: The original quote ID associated with this transaction.
+              type: string
+            record_type:
+              enum:
+              - x402_transaction
+              type: string
+            status:
+              description: The settlement status of the transaction.
+              enum:
+              - settled
+              type: string
+            tx_hash:
+              description: The on-chain transaction hash, if available.
+              nullable: true
+              type: string
+          type: object
+      type: object
     X402PaymentRequirements:
       description: x402 protocol v2 payment requirements. Contains all information needed to construct and sign a payment authorization.
       properties:
@@ -285,143 +422,6 @@ components:
           enum:
           - 2
           type: integer
-      type: object
-    X402QuoteRequest:
-      properties:
-        amount_usd:
-          description: Amount in USD to fund (minimum 5.00, maximum 10000.00).
-          example: '50.00'
-          type: string
-      required:
-      - amount_usd
-      type: object
-    X402QuoteResponse:
-      properties:
-        data:
-          properties:
-            amount_crypto:
-              description: The equivalent amount in the payment cryptocurrency's smallest unit (e.g. USDC has 6 decimals, so $50.00 = "50000000").
-              type: string
-            amount_usd:
-              description: The quoted amount in USD.
-              type: string
-            expires_at:
-              description: ISO 8601 timestamp when the quote expires.
-              format: date-time
-              type: string
-            id:
-              description: Unique quote identifier. Use this to settle the payment.
-              type: string
-            network:
-              description: The blockchain network for the payment in CAIP-2 format (e.g. eip155:8453 for Base).
-              type: string
-            payment_requirements:
-              $ref: '#/components/schemas/X402PaymentRequirements'
-            record_type:
-              enum:
-              - quote
-              type: string
-          type: object
-      type: object
-    X402SettlementErrorResponse:
-      description: Error response for x402 settlement failures. Uses string error codes from the x402 error handling system.
-      properties:
-        errors:
-          items:
-            properties:
-              code:
-                description: Machine-readable error code.
-                enum:
-                - invalid_signature
-                - expired_authorization
-                - invalid_nonce
-                - insufficient_balance
-                - insufficient_funds
-                - insufficient_allowance
-                - facilitator_unavailable
-                - facilitator_timeout
-                - settlement_timeout
-                - transaction_failed
-                - unknown
-                type: string
-              detail:
-                description: Human-readable error description with guidance.
-                type: string
-              title:
-                description: Short error title (e.g. "Payment Failed").
-                type: string
-            type: object
-          type: array
-      type: object
-    X402TransactionResponse:
-      properties:
-        data:
-          properties:
-            amount:
-              description: The transaction amount in the specified currency.
-              type: string
-            created_at:
-              description: ISO 8601 timestamp when the transaction was created.
-              format: date-time
-              type: string
-            currency:
-              description: The currency of the transaction amount (e.g. USD).
-              type: string
-            id:
-              description: Unique transaction identifier.
-              type: string
-            quote_id:
-              description: The original quote ID associated with this transaction.
-              type: string
-            record_type:
-              enum:
-              - x402_transaction
-              type: string
-            status:
-              description: The settlement status of the transaction.
-              enum:
-              - settled
-              type: string
-            tx_hash:
-              description: The on-chain transaction hash, if available.
-              nullable: true
-              type: string
-          type: object
-      type: object
-    x402-transactions_ErrorResponse:
-      properties:
-        errors:
-          items:
-            properties:
-              code:
-                type: string
-              detail:
-                type: string
-              meta:
-                properties:
-                  url:
-                    type: string
-                type: object
-              source:
-                properties:
-                  pointer:
-                    type: string
-                type: object
-              title:
-                type: string
-            type: object
-          type: array
-      type: object
-    X402SettleRequest:
-      properties:
-        id:
-          description: The quote ID to settle.
-          type: string
-        payment_signature:
-          description: Base64-encoded signed payment authorization (x402 PaymentPayload). Can alternatively be provided via the PAYMENT-SIGNATURE header.
-          type: string
-      required:
-      - id
       type: object
   securitySchemes:
     bearerAuth:

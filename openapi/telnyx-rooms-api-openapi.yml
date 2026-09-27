@@ -288,26 +288,15 @@ paths:
       x-latency-category: responsive
 components:
   responses:
-    video_UnprocessableEntity:
+    video_ResourceNotFound:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/video_Errors'
-      description: Unprocessable entity. Check the 'detail' field in response for details.
-    ListRoomsResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/Room'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: List rooms response.
-    PatchRoomResponse:
+            $ref: '#/components/schemas/video_Error'
+      description: Resource not found
+    video_UnauthorizedResponse:
+      description: Unauthorized
+    CreateRoomResponse:
       content:
         application/json:
           schema:
@@ -315,13 +304,16 @@ components:
               data:
                 $ref: '#/components/schemas/Room'
             type: object
-      description: Update room response.
-    video_ResourceNotFound:
+      description: Create room response.
+    GetRoomResponse:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/video_Error'
-      description: Resource not found
+            properties:
+              data:
+                $ref: '#/components/schemas/Room'
+            type: object
+      description: Get room response.
     video_GenericErrorResponse:
       content:
         application/json:
@@ -335,9 +327,7 @@ components:
                 type: boolean
             type: object
       description: Unexpected error
-    video_UnauthorizedResponse:
-      description: Unauthorized
-    GetRoomResponse:
+    PatchRoomResponse:
       content:
         application/json:
           schema:
@@ -345,16 +335,20 @@ components:
               data:
                 $ref: '#/components/schemas/Room'
             type: object
-      description: Get room response.
-    CreateRoomResponse:
+      description: Update room response.
+    ListRoomsResponse:
       content:
         application/json:
           schema:
             properties:
               data:
-                $ref: '#/components/schemas/Room'
+                items:
+                  $ref: '#/components/schemas/Room'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
             type: object
-      description: Create room response.
+      description: List rooms response.
     ListRoomSessionsResponse:
       content:
         application/json:
@@ -368,7 +362,101 @@ components:
                 $ref: '#/components/schemas/PaginationMeta'
             type: object
       description: List room sessions response.
+    video_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/video_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
   schemas:
+    video_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/video_Error'
+          type: array
+      type: object
+    PatchRoomRequest:
+      properties:
+        enable_recording:
+          default: false
+          description: Enable or disable recording for that room.
+          example: true
+          type: boolean
+        max_participants:
+          default: 10
+          description: The maximum amount of participants allowed in a room. If new participants try to join after that limit is reached, their request will be rejected.
+          example: 10
+          maximum: 50
+          minimum: 2
+          type: integer
+        unique_name:
+          description: The unique (within the Telnyx account scope) name of the room.
+          example: My room
+          type: string
+        webhook_event_failover_url:
+          default: ''
+          description: The failover URL where webhooks related to this room will be sent if sending to the primary URL fails. Must include a scheme, such as 'https'.
+          example: https://failover.example.com
+          format: uri
+          type: string
+        webhook_event_url:
+          description: The URL where webhooks related to this room will be sent. Must include a scheme, such as 'https'.
+          example: https://example.com
+          format: uri
+          type: string
+        webhook_timeout_secs:
+          default: null
+          description: Specifies how many seconds to wait before timing out a webhook.
+          example: 25
+          maximum: 30
+          minimum: 0
+          type: integer
+      type: object
+    RoomParticipant:
+      example:
+        context: Alice
+        id: 7b61621f-62e0-4aad-ab11-9fd19e272e73
+        joined_at: '2021-04-16T09:46:20.954863Z'
+        left_at: '2021-04-16T10:24:55.962200Z'
+        record_type: room_participant
+        session_id: 7b61621f-5fe4-4aad-ab11-9fd19e272e73
+        updated_at: '2021-04-16T10:24:55.962200Z'
+      properties:
+        context:
+          description: Context provided to the given participant through the client SDK
+          example: Alice
+          type: string
+        id:
+          description: A unique identifier for the room participant.
+          example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+          format: uuid
+          type: string
+        joined_at:
+          description: ISO 8601 timestamp when the participant joined the session.
+          example: '2021-03-26T17:51:59.588408Z'
+          format: date-time
+          type: string
+        left_at:
+          description: ISO 8601 timestamp when the participant left the session.
+          example: '2021-03-26T17:51:59.588408Z'
+          format: date-time
+          type: string
+        record_type:
+          example: room_participant
+          readOnly: true
+          type: string
+        session_id:
+          description: Identify the room session that participant is part of.
+          example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777b0
+          format: uuid
+          type: string
+        updated_at:
+          description: ISO 8601 timestamp when the participant was updated.
+          example: '2021-03-26T17:51:59.588408Z'
+          format: date-time
+          type: string
+      type: object
     CreateRoomRequest:
       properties:
         enable_recording:
@@ -406,90 +494,19 @@ components:
           minimum: 0
           type: integer
       type: object
-    RoomSession:
-      example:
-        active: false
-        created_at: '2021-04-16T09:46:20.954863Z'
-        ended_at: '2021-04-16T10:24:55.962200Z'
-        id: 7b61621f-62e0-4aad-ab11-9fd19e272e73
-        participants: []
-        record_type: room_session
-        room_id: 7b61621f-5fe4-4aad-ab11-9fd19e272e73
-        updated_at: '2021-04-16T10:24:55.962200Z'
+    PaginationMeta:
       properties:
-        active:
-          description: Shows if the room session is active or not.
-          example: false
-          type: boolean
-        created_at:
-          description: ISO 8601 timestamp when the room session was created.
-          example: '2021-03-26T17:51:59.588408Z'
-          format: date-time
-          type: string
-        ended_at:
-          description: ISO 8601 timestamp when the room session has ended.
-          example: '2021-03-26T17:51:59.588408Z'
-          format: date-time
-          type: string
-        id:
-          description: A unique identifier for the room session.
-          example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
-          format: uuid
-          type: string
-        participants:
-          items:
-            $ref: '#/components/schemas/RoomParticipant'
-          type: array
-        record_type:
-          example: room_session
-          readOnly: true
-          type: string
-        room_id:
-          description: Identify the room hosting that room session.
-          example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777b0
-          format: uuid
-          type: string
-        updated_at:
-          description: ISO 8601 timestamp when the room session was updated.
-          example: '2021-03-26T17:51:59.588408Z'
-          format: date-time
-          type: string
-      type: object
-    PatchRoomRequest:
-      properties:
-        enable_recording:
-          default: false
-          description: Enable or disable recording for that room.
-          example: true
-          type: boolean
-        max_participants:
-          default: 10
-          description: The maximum amount of participants allowed in a room. If new participants try to join after that limit is reached, their request will be rejected.
-          example: 10
-          maximum: 50
-          minimum: 2
+        page_number:
+          example: 2
           type: integer
-        unique_name:
-          description: The unique (within the Telnyx account scope) name of the room.
-          example: My room
-          type: string
-        webhook_event_failover_url:
-          default: ''
-          description: The failover URL where webhooks related to this room will be sent if sending to the primary URL fails. Must include a scheme, such as 'https'.
-          example: https://failover.example.com
-          format: uri
-          type: string
-        webhook_event_url:
-          description: The URL where webhooks related to this room will be sent. Must include a scheme, such as 'https'.
-          example: https://example.com
-          format: uri
-          type: string
-        webhook_timeout_secs:
-          default: null
-          description: Specifies how many seconds to wait before timing out a webhook.
+        page_size:
           example: 25
-          maximum: 30
-          minimum: 0
+          type: integer
+        total_pages:
+          example: 3
+          type: integer
+        total_results:
+          example: 55
           type: integer
       type: object
     Room:
@@ -574,6 +591,55 @@ components:
           minimum: 0
           type: integer
       type: object
+    RoomSession:
+      example:
+        active: false
+        created_at: '2021-04-16T09:46:20.954863Z'
+        ended_at: '2021-04-16T10:24:55.962200Z'
+        id: 7b61621f-62e0-4aad-ab11-9fd19e272e73
+        participants: []
+        record_type: room_session
+        room_id: 7b61621f-5fe4-4aad-ab11-9fd19e272e73
+        updated_at: '2021-04-16T10:24:55.962200Z'
+      properties:
+        active:
+          description: Shows if the room session is active or not.
+          example: false
+          type: boolean
+        created_at:
+          description: ISO 8601 timestamp when the room session was created.
+          example: '2021-03-26T17:51:59.588408Z'
+          format: date-time
+          type: string
+        ended_at:
+          description: ISO 8601 timestamp when the room session has ended.
+          example: '2021-03-26T17:51:59.588408Z'
+          format: date-time
+          type: string
+        id:
+          description: A unique identifier for the room session.
+          example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+          format: uuid
+          type: string
+        participants:
+          items:
+            $ref: '#/components/schemas/RoomParticipant'
+          type: array
+        record_type:
+          example: room_session
+          readOnly: true
+          type: string
+        room_id:
+          description: Identify the room hosting that room session.
+          example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777b0
+          format: uuid
+          type: string
+        updated_at:
+          description: ISO 8601 timestamp when the room session was updated.
+          example: '2021-03-26T17:51:59.588408Z'
+          format: date-time
+          type: string
+      type: object
     video_Error:
       properties:
         code:
@@ -597,72 +663,6 @@ components:
       required:
       - code
       - title
-      type: object
-    video_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/video_Error'
-          type: array
-      type: object
-    RoomParticipant:
-      example:
-        context: Alice
-        id: 7b61621f-62e0-4aad-ab11-9fd19e272e73
-        joined_at: '2021-04-16T09:46:20.954863Z'
-        left_at: '2021-04-16T10:24:55.962200Z'
-        record_type: room_participant
-        session_id: 7b61621f-5fe4-4aad-ab11-9fd19e272e73
-        updated_at: '2021-04-16T10:24:55.962200Z'
-      properties:
-        context:
-          description: Context provided to the given participant through the client SDK
-          example: Alice
-          type: string
-        id:
-          description: A unique identifier for the room participant.
-          example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
-          format: uuid
-          type: string
-        joined_at:
-          description: ISO 8601 timestamp when the participant joined the session.
-          example: '2021-03-26T17:51:59.588408Z'
-          format: date-time
-          type: string
-        left_at:
-          description: ISO 8601 timestamp when the participant left the session.
-          example: '2021-03-26T17:51:59.588408Z'
-          format: date-time
-          type: string
-        record_type:
-          example: room_participant
-          readOnly: true
-          type: string
-        session_id:
-          description: Identify the room session that participant is part of.
-          example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777b0
-          format: uuid
-          type: string
-        updated_at:
-          description: ISO 8601 timestamp when the participant was updated.
-          example: '2021-03-26T17:51:59.588408Z'
-          format: date-time
-          type: string
-      type: object
-    PaginationMeta:
-      properties:
-        page_number:
-          example: 2
-          type: integer
-        page_size:
-          example: 25
-          type: integer
-        total_pages:
-          example: 3
-          type: integer
-        total_results:
-          example: 55
-          type: integer
       type: object
   parameters:
     video_PageConsolidated:

@@ -213,6 +213,28 @@ paths:
       x-latency-category: responsive
 components:
   schemas:
+    NetworkCreate:
+      allOf:
+      - $ref: '#/components/schemas/Network'
+      - required:
+        - name
+        title: NetworkCreate
+        type: object
+    PaginationMeta:
+      properties:
+        page_number:
+          example: 2
+          type: integer
+        page_size:
+          example: 25
+          type: integer
+        total_pages:
+          example: 3
+          type: integer
+        total_results:
+          example: 55
+          type: integer
+      type: object
     Network:
       allOf:
       - $ref: '#/components/schemas/Record'
@@ -228,6 +250,48 @@ components:
             type: string
         title: Network
         type: object
+    InterfaceStatus:
+      description: The current status of the interface deployment.
+      enum:
+      - created
+      - provisioning
+      - provisioned
+      - deleting
+      example: provisioned
+      readOnly: true
+      type: string
+    NetworkInterface:
+      allOf:
+      - $ref: '#/components/schemas/Record'
+      - $ref: '#/components/schemas/Interface'
+      - $ref: '#/components/schemas/RegionOut'
+      - properties:
+          record_type:
+            description: Identifies the type of the resource.
+            example: network_interface
+            readOnly: true
+            type: string
+          type:
+            description: Identifies the type of the interface.
+            example: wireguard_interface
+            readOnly: true
+            type: string
+        title: NetworkInterface
+        type: object
+    Interface:
+      properties:
+        name:
+          description: A user specified name for the interface.
+          example: test interface
+          type: string
+        network_id:
+          description: The id of the network associated with the interface.
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+          format: uuid
+          type: string
+        status:
+          $ref: '#/components/schemas/InterfaceStatus'
+      type: object
     RegionOut:
       properties:
         region:
@@ -249,6 +313,30 @@ components:
         region_code:
           description: The region interface is deployed to.
           example: ashburn-va
+          type: string
+      type: object
+    Record:
+      properties:
+        created_at:
+          description: ISO 8601 formatted date-time indicating when the resource was created.
+          example: '2018-02-02T22:25:27.521Z'
+          readOnly: true
+          type: string
+        id:
+          description: Identifies the resource.
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+          format: uuid
+          readOnly: true
+          type: string
+        record_type:
+          description: Identifies the type of the resource.
+          example: sample_record_type
+          readOnly: true
+          type: string
+        updated_at:
+          description: ISO 8601 formatted date-time indicating when the resource was updated.
+          example: '2018-02-02T22:25:27.521Z'
+          readOnly: true
           type: string
       type: object
     DefaultGateway:
@@ -275,91 +363,6 @@ components:
             type: string
         title: DefaultGateway
         type: object
-    netapps_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/netapps_Error'
-          type: array
-      type: object
-    NetworkInterface:
-      allOf:
-      - $ref: '#/components/schemas/Record'
-      - $ref: '#/components/schemas/Interface'
-      - $ref: '#/components/schemas/RegionOut'
-      - properties:
-          record_type:
-            description: Identifies the type of the resource.
-            example: network_interface
-            readOnly: true
-            type: string
-          type:
-            description: Identifies the type of the interface.
-            example: wireguard_interface
-            readOnly: true
-            type: string
-        title: NetworkInterface
-        type: object
-    NetworkCreate:
-      allOf:
-      - $ref: '#/components/schemas/Network'
-      - required:
-        - name
-        title: NetworkCreate
-        type: object
-    Interface:
-      properties:
-        name:
-          description: A user specified name for the interface.
-          example: test interface
-          type: string
-        network_id:
-          description: The id of the network associated with the interface.
-          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-          format: uuid
-          type: string
-        status:
-          $ref: '#/components/schemas/InterfaceStatus'
-      type: object
-    PaginationMeta:
-      properties:
-        page_number:
-          example: 2
-          type: integer
-        page_size:
-          example: 25
-          type: integer
-        total_pages:
-          example: 3
-          type: integer
-        total_results:
-          example: 55
-          type: integer
-      type: object
-    Record:
-      properties:
-        created_at:
-          description: ISO 8601 formatted date-time indicating when the resource was created.
-          example: '2018-02-02T22:25:27.521Z'
-          readOnly: true
-          type: string
-        id:
-          description: Identifies the resource.
-          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-          format: uuid
-          readOnly: true
-          type: string
-        record_type:
-          description: Identifies the type of the resource.
-          example: sample_record_type
-          readOnly: true
-          type: string
-        updated_at:
-          description: ISO 8601 formatted date-time indicating when the resource was updated.
-          example: '2018-02-02T22:25:27.521Z'
-          readOnly: true
-          type: string
-      type: object
     netapps_Error:
       properties:
         code:
@@ -384,16 +387,74 @@ components:
       - code
       - title
       type: object
-    InterfaceStatus:
-      description: The current status of the interface deployment.
-      enum:
-      - created
-      - provisioning
-      - provisioned
-      - deleting
-      example: provisioned
-      readOnly: true
-      type: string
+    netapps_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/netapps_Error'
+          type: array
+      type: object
+  responses:
+    netapps_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/netapps_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+    DefaultGatewayResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/DefaultGateway'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful response
+    netapps_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/netapps_Errors'
+      description: Unexpected error
+    NetworkInterfaceListResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/NetworkInterface'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful response
+    NetworkResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/Network'
+            type: object
+      description: Successful response
+    NetworkListResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/Network'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful response
   parameters:
     ResourceId:
       description: Identifies the resource.
@@ -424,67 +485,6 @@ components:
             type: integer
         type: object
       style: deepObject
-  responses:
-    NetworkInterfaceListResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/NetworkInterface'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful response
-    NetworkResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/Network'
-            type: object
-      description: Successful response
-    netapps_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/netapps_Errors'
-      description: Unexpected error
-    DefaultGatewayResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/DefaultGateway'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful response
-    netapps_UnprocessableEntity:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/netapps_Errors'
-      description: Unprocessable entity. Check the 'detail' field in response for details.
-    NetworkListResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/Network'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful response
   securitySchemes:
     bearerAuth:
       scheme: bearer

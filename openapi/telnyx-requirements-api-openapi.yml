@@ -60,7 +60,54 @@ paths:
       - Requirements
       x-latency-category: responsive
 components:
+  responses:
+    DocReqsRequirementResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/DocReqsRequirement'
+            type: object
+      description: Successful response
+    ListRequirementsResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/DocReqsRequirementList'
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful response
+    documents_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/documents_Errors'
+      description: Unexpected error
   parameters:
+    documents_PageConsolidated:
+      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
+      explode: true
+      in: query
+      name: page
+      schema:
+        properties:
+          number:
+            default: 1
+            description: The page number to load
+            minimum: 1
+            type: integer
+          size:
+            default: 20
+            description: The size of the page
+            maximum: 250
+            minimum: 1
+            type: integer
+        type: object
+      style: deepObject
     DocReqsRequirementId:
       description: Uniquely identifies the requirement_type record
       example: a9dad8d5-fdbd-49d7-aa23-39bb08a5ebaa
@@ -122,27 +169,11 @@ components:
           - -phone_number_type
           type: string
         type: array
-    documents_PageConsolidated:
-      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
-      explode: true
-      in: query
-      name: page
-      schema:
-        properties:
-          number:
-            default: 1
-            description: The page number to load
-            minimum: 1
-            type: integer
-          size:
-            default: 20
-            description: The size of the page
-            maximum: 250
-            minimum: 1
-            type: integer
-        type: object
-      style: deepObject
   schemas:
+    DocReqsRequirementList:
+      items:
+        $ref: '#/components/schemas/DocReqsRequirement'
+      type: array
     documents_Errors:
       properties:
         errors:
@@ -150,29 +181,64 @@ components:
             $ref: '#/components/schemas/documents_Error'
           type: array
       type: object
-    documents_Error:
+    DocReqsRequirement:
       properties:
-        code:
+        action:
+          description: Indicates whether this requirement applies to branded_calling, ordering, porting, or both ordering and porting
+          enum:
+          - both
+          - branded_calling
+          - ordering
+          - porting
+          example: ordering
+          readOnly: false
           type: string
-        detail:
+        country_code:
+          description: The 2-character (ISO 3166-1 alpha-2) country code where this requirement applies
+          example: FR
+          readOnly: false
           type: string
-        meta:
-          additionalProperties: true
-          type: object
-        source:
-          properties:
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-          type: object
-        title:
+        created_at:
+          description: ISO 8601 formatted date-time indicating when the resource was created.
+          example: '2021-04-09T22:25:27.521Z'
+          readOnly: true
           type: string
-      required:
-      - code
-      - title
+        id:
+          description: Identifies the associated document
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+          format: uuid
+          readOnly: true
+          type: string
+        locality:
+          description: The locality where this requirement applies
+          example: Nice
+          readOnly: false
+          type: string
+        phone_number_type:
+          description: Indicates the phone_number_type this requirement applies to. Leave blank if this requirement applies to all number_types.
+          enum:
+          - local
+          - national
+          - toll_free
+          example: local
+          readOnly: false
+          type: string
+        record_type:
+          description: Identifies the type of the resource.
+          example: requirement
+          readOnly: true
+          type: string
+        requirements_types:
+          description: Lists the requirement types necessary to fulfill this requirement
+          items:
+            $ref: '#/components/schemas/DocReqsRequirementType'
+          readOnly: true
+          type: array
+        updated_at:
+          description: ISO 8601 formatted date-time indicating when the resource was last updated.
+          example: '2021-04-12T20:20:20.020Z'
+          readOnly: true
+          type: string
       type: object
     DocReqsRequirementType:
       properties:
@@ -258,69 +324,6 @@ components:
           readOnly: true
           type: string
       type: object
-    DocReqsRequirement:
-      properties:
-        action:
-          description: Indicates whether this requirement applies to branded_calling, ordering, porting, or both ordering and porting
-          enum:
-          - both
-          - branded_calling
-          - ordering
-          - porting
-          example: ordering
-          readOnly: false
-          type: string
-        country_code:
-          description: The 2-character (ISO 3166-1 alpha-2) country code where this requirement applies
-          example: FR
-          readOnly: false
-          type: string
-        created_at:
-          description: ISO 8601 formatted date-time indicating when the resource was created.
-          example: '2021-04-09T22:25:27.521Z'
-          readOnly: true
-          type: string
-        id:
-          description: Identifies the associated document
-          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-          format: uuid
-          readOnly: true
-          type: string
-        locality:
-          description: The locality where this requirement applies
-          example: Nice
-          readOnly: false
-          type: string
-        phone_number_type:
-          description: Indicates the phone_number_type this requirement applies to. Leave blank if this requirement applies to all number_types.
-          enum:
-          - local
-          - national
-          - toll_free
-          example: local
-          readOnly: false
-          type: string
-        record_type:
-          description: Identifies the type of the resource.
-          example: requirement
-          readOnly: true
-          type: string
-        requirements_types:
-          description: Lists the requirement types necessary to fulfill this requirement
-          items:
-            $ref: '#/components/schemas/DocReqsRequirementType'
-          readOnly: true
-          type: array
-        updated_at:
-          description: ISO 8601 formatted date-time indicating when the resource was last updated.
-          example: '2021-04-12T20:20:20.020Z'
-          readOnly: true
-          type: string
-      type: object
-    DocReqsRequirementList:
-      items:
-        $ref: '#/components/schemas/DocReqsRequirement'
-      type: array
     PaginationMeta:
       properties:
         page_number:
@@ -336,33 +339,30 @@ components:
           example: 55
           type: integer
       type: object
-  responses:
-    documents_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/documents_Errors'
-      description: Unexpected error
-    DocReqsRequirementResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/DocReqsRequirement'
-            type: object
-      description: Successful response
-    ListRequirementsResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/DocReqsRequirementList'
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful response
+    documents_Error:
+      properties:
+        code:
+          type: string
+        detail:
+          type: string
+        meta:
+          additionalProperties: true
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+          type: object
+        title:
+          type: string
+      required:
+      - code
+      - title
+      type: object
   securitySchemes:
     bearerAuth:
       scheme: bearer

@@ -252,76 +252,11 @@ paths:
       x-latency-category: interactive
 components:
   schemas:
-    TelnyxDesignClone:
-      description: Create a voice clone from a voice design using the Telnyx provider.
-      example:
-        gender: male
-        language: en
-        name: clone-narrator
-        provider: telnyx
-        voice_design_id: 550e8400-e29b-41d4-a716-446655440000
-      properties:
-        gender:
-          description: Gender of the voice clone.
-          enum:
-          - male
-          - female
-          - neutral
-          type: string
-        language:
-          description: ISO 639-1 language code for the clone. Supports the combined Telnyx language set.
-          type: string
-        name:
-          description: Name for the voice clone.
-          maxLength: 255
-          minLength: 1
-          type: string
-        provider:
-          default: telnyx
-          description: Voice synthesis provider. Defaults to `telnyx`.
-          enum:
-          - telnyx
-          - Telnyx
-          type: string
-        voice_design_id:
-          description: UUID of the source voice design to clone.
-          format: uuid
-          type: string
-      required:
-      - name
-      - voice_design_id
-      - language
-      - gender
-      type: object
-    VoiceCloneResponse:
-      description: Response envelope for a single voice clone.
-      example:
-        data:
-          created_at: '2024-01-01T00:00:00Z'
-          gender: male
-          id: 660f9511-f3ac-52e5-b827-557766551111
-          label: Speak in a warm, friendly tone
-          language: en
-          model_id: Qwen3TTS
-          name: clone-narrator
-          provider: Telnyx
-          provider_supported_models:
-          - Qwen3TTS
-          provider_voice_id: 660f9511-f3ac-52e5-b827-557766551111
-          record_type: voice_clone
-          source_voice_design_id: 550e8400-e29b-41d4-a716-446655440000
-          source_voice_design_version: 1
-          status: active
-          updated_at: '2024-01-01T00:00:00Z'
-      properties:
-        data:
-          $ref: '#/components/schemas/VoiceCloneData'
-      type: object
-    MinimaxClone:
-      description: Upload-based voice clone using the Minimax provider.
+    TelnyxQwen3TTSClone:
+      description: Upload-based voice clone using the Telnyx Qwen3TTS model (default).
       properties:
         audio_file:
-          description: 'Audio file to clone the voice from. Supported formats: WAV, MP3, FLAC, OGG, M4A. For best quality, provide 5–10 seconds of clear, uninterrupted speech. Maximum size: 20MB.'
+          description: 'Audio file to clone the voice from. Supported formats: WAV, MP3, FLAC, OGG, M4A. For best quality, provide 5–10 seconds of clear, uninterrupted speech. Maximum size: 5MB.'
           format: binary
           type: string
         gender:
@@ -335,13 +270,13 @@ components:
           description: Optional custom label describing the voice style.
           type: string
         language:
-          description: ISO 639-1 language code from the Minimax language set.
+          description: ISO 639-1 language code from the Qwen language set.
           pattern: ^([Aa]uto|[a-z]{2,3}(-[A-Za-z0-9]{2,8})*)$
           type: string
         model_id:
-          description: TTS model identifier. Nullable — defaults to speech-2.8-turbo.
+          description: TTS model identifier. Nullable/omittable — defaults to Qwen3TTS.
           enum:
-          - speech-2.8-turbo
+          - Qwen3TTS
           - null
           type:
           - string
@@ -351,10 +286,10 @@ components:
           maxLength: 255
           type: string
         provider:
-          description: Voice synthesis provider. Must be `minimax`.
+          description: Voice synthesis provider. Must be `telnyx`.
           enum:
-          - minimax
-          - Minimax
+          - telnyx
+          - Telnyx
           type: string
         ref_text:
           description: Optional transcript of the audio file. Providing this improves clone quality.
@@ -365,32 +300,6 @@ components:
       - language
       - gender
       - provider
-      type: object
-    VoiceCloneUploadRequest:
-      description: 'Multipart form data for creating a voice clone from a direct audio upload. Maximum file size: 5MB for Telnyx, 20MB for Minimax.'
-      oneOf:
-      - $ref: '#/components/schemas/TelnyxQwen3TTSClone'
-      - $ref: '#/components/schemas/TelnyxUltraClone'
-      - $ref: '#/components/schemas/MinimaxClone'
-    voice-designs_ErrorObject:
-      description: A single error object.
-      properties:
-        code:
-          description: Telnyx-specific error code.
-          type: string
-        detail:
-          description: Detailed, human-readable explanation of the error.
-          type: string
-        source:
-          description: Reference to the source of the error.
-          properties:
-            pointer:
-              description: A JSON Pointer (RFC 6901) to the field that caused the error.
-              type: string
-          type: object
-        title:
-          description: Short, human-readable summary of the error.
-          type: string
       type: object
     VoiceCloneData:
       description: A voice clone object.
@@ -480,16 +389,190 @@ components:
           format: date-time
           type: string
       type: object
-    VoiceCloneListResponse:
-      description: Paginated list of voice clones.
+    voice-designs_ErrorObject:
+      description: A single error object.
       properties:
-        data:
-          description: Array of voice clone objects.
+        code:
+          description: Telnyx-specific error code.
+          type: string
+        detail:
+          description: Detailed, human-readable explanation of the error.
+          type: string
+        source:
+          description: Reference to the source of the error.
+          properties:
+            pointer:
+              description: A JSON Pointer (RFC 6901) to the field that caused the error.
+              type: string
+          type: object
+        title:
+          description: Short, human-readable summary of the error.
+          type: string
+      type: object
+    voice-designs_ErrorResponse:
+      description: Standard error response envelope.
+      example:
+        errors:
+        - code: '10005'
+          detail: Voice design not found
+          title: Resource not found
+      properties:
+        errors:
           items:
-            $ref: '#/components/schemas/VoiceCloneData'
+            $ref: '#/components/schemas/voice-designs_ErrorObject'
           type: array
-        meta:
-          $ref: '#/components/schemas/voice-designs_PaginationMeta'
+      type: object
+    MinimaxDesignClone:
+      description: Create a voice clone from a voice design using the Minimax provider.
+      example:
+        gender: male
+        language: en
+        name: clone-narrator
+        provider: minimax
+        voice_design_id: 550e8400-e29b-41d4-a716-446655440000
+      properties:
+        gender:
+          description: Gender of the voice clone.
+          enum:
+          - male
+          - female
+          - neutral
+          type: string
+        language:
+          description: ISO 639-1 language code for the clone. Supports the Minimax language set.
+          type: string
+        name:
+          description: Name for the voice clone.
+          maxLength: 255
+          minLength: 1
+          type: string
+        provider:
+          description: Voice synthesis provider. Must be `minimax`.
+          enum:
+          - minimax
+          - Minimax
+          type: string
+        voice_design_id:
+          description: UUID of the source voice design to clone.
+          format: uuid
+          type: string
+      required:
+      - name
+      - voice_design_id
+      - language
+      - gender
+      - provider
+      type: object
+    TelnyxDesignClone:
+      description: Create a voice clone from a voice design using the Telnyx provider.
+      example:
+        gender: male
+        language: en
+        name: clone-narrator
+        provider: telnyx
+        voice_design_id: 550e8400-e29b-41d4-a716-446655440000
+      properties:
+        gender:
+          description: Gender of the voice clone.
+          enum:
+          - male
+          - female
+          - neutral
+          type: string
+        language:
+          description: ISO 639-1 language code for the clone. Supports the combined Telnyx language set.
+          type: string
+        name:
+          description: Name for the voice clone.
+          maxLength: 255
+          minLength: 1
+          type: string
+        provider:
+          default: telnyx
+          description: Voice synthesis provider. Defaults to `telnyx`.
+          enum:
+          - telnyx
+          - Telnyx
+          type: string
+        voice_design_id:
+          description: UUID of the source voice design to clone.
+          format: uuid
+          type: string
+      required:
+      - name
+      - voice_design_id
+      - language
+      - gender
+      type: object
+    voice-designs_PaginationMeta:
+      description: Pagination metadata returned with list responses.
+      example:
+        page_number: 1
+        page_size: 20
+        total_pages: 3
+        total_results: 42
+      properties:
+        page_number:
+          description: Current page number (1-based).
+          type: integer
+        page_size:
+          description: Number of results per page.
+          type: integer
+        total_pages:
+          description: Total number of pages.
+          type: integer
+        total_results:
+          description: Total number of results across all pages.
+          type: integer
+      type: object
+    MinimaxClone:
+      description: Upload-based voice clone using the Minimax provider.
+      properties:
+        audio_file:
+          description: 'Audio file to clone the voice from. Supported formats: WAV, MP3, FLAC, OGG, M4A. For best quality, provide 5–10 seconds of clear, uninterrupted speech. Maximum size: 20MB.'
+          format: binary
+          type: string
+        gender:
+          description: Gender of the voice clone.
+          enum:
+          - male
+          - female
+          - neutral
+          type: string
+        label:
+          description: Optional custom label describing the voice style.
+          type: string
+        language:
+          description: ISO 639-1 language code from the Minimax language set.
+          pattern: ^([Aa]uto|[a-z]{2,3}(-[A-Za-z0-9]{2,8})*)$
+          type: string
+        model_id:
+          description: TTS model identifier. Nullable — defaults to speech-2.8-turbo.
+          enum:
+          - speech-2.8-turbo
+          - null
+          type:
+          - string
+          - 'null'
+        name:
+          description: Name for the voice clone.
+          maxLength: 255
+          type: string
+        provider:
+          description: Voice synthesis provider. Must be `minimax`.
+          enum:
+          - minimax
+          - Minimax
+          type: string
+        ref_text:
+          description: Optional transcript of the audio file. Providing this improves clone quality.
+          type: string
+      required:
+      - audio_file
+      - name
+      - language
+      - gender
+      - provider
       type: object
     TelnyxUltraClone:
       description: Upload-based voice clone using the Telnyx Ultra model.
@@ -538,6 +621,17 @@ components:
       - model_id
       - provider
       type: object
+    VoiceCloneListResponse:
+      description: Paginated list of voice clones.
+      properties:
+        data:
+          description: Array of voice clone objects.
+          items:
+            $ref: '#/components/schemas/VoiceCloneData'
+          type: array
+        meta:
+          $ref: '#/components/schemas/voice-designs_PaginationMeta'
+      type: object
     VoiceCloneRequest:
       description: Request body for creating a voice clone from an existing voice design.
       discriminator:
@@ -550,96 +644,36 @@ components:
       oneOf:
       - $ref: '#/components/schemas/TelnyxDesignClone'
       - $ref: '#/components/schemas/MinimaxDesignClone'
-    TelnyxQwen3TTSClone:
-      description: Upload-based voice clone using the Telnyx Qwen3TTS model (default).
-      properties:
-        audio_file:
-          description: 'Audio file to clone the voice from. Supported formats: WAV, MP3, FLAC, OGG, M4A. For best quality, provide 5–10 seconds of clear, uninterrupted speech. Maximum size: 5MB.'
-          format: binary
-          type: string
-        gender:
-          description: Gender of the voice clone.
-          enum:
-          - male
-          - female
-          - neutral
-          type: string
-        label:
-          description: Optional custom label describing the voice style.
-          type: string
-        language:
-          description: ISO 639-1 language code from the Qwen language set.
-          pattern: ^([Aa]uto|[a-z]{2,3}(-[A-Za-z0-9]{2,8})*)$
-          type: string
-        model_id:
-          description: TTS model identifier. Nullable/omittable — defaults to Qwen3TTS.
-          enum:
-          - Qwen3TTS
-          - null
-          type:
-          - string
-          - 'null'
-        name:
-          description: Name for the voice clone.
-          maxLength: 255
-          type: string
-        provider:
-          description: Voice synthesis provider. Must be `telnyx`.
-          enum:
-          - telnyx
-          - Telnyx
-          type: string
-        ref_text:
-          description: Optional transcript of the audio file. Providing this improves clone quality.
-          type: string
-      required:
-      - audio_file
-      - name
-      - language
-      - gender
-      - provider
-      type: object
-    MinimaxDesignClone:
-      description: Create a voice clone from a voice design using the Minimax provider.
+    VoiceCloneResponse:
+      description: Response envelope for a single voice clone.
       example:
-        gender: male
-        language: en
-        name: clone-narrator
-        provider: minimax
-        voice_design_id: 550e8400-e29b-41d4-a716-446655440000
+        data:
+          created_at: '2024-01-01T00:00:00Z'
+          gender: male
+          id: 660f9511-f3ac-52e5-b827-557766551111
+          label: Speak in a warm, friendly tone
+          language: en
+          model_id: Qwen3TTS
+          name: clone-narrator
+          provider: Telnyx
+          provider_supported_models:
+          - Qwen3TTS
+          provider_voice_id: 660f9511-f3ac-52e5-b827-557766551111
+          record_type: voice_clone
+          source_voice_design_id: 550e8400-e29b-41d4-a716-446655440000
+          source_voice_design_version: 1
+          status: active
+          updated_at: '2024-01-01T00:00:00Z'
       properties:
-        gender:
-          description: Gender of the voice clone.
-          enum:
-          - male
-          - female
-          - neutral
-          type: string
-        language:
-          description: ISO 639-1 language code for the clone. Supports the Minimax language set.
-          type: string
-        name:
-          description: Name for the voice clone.
-          maxLength: 255
-          minLength: 1
-          type: string
-        provider:
-          description: Voice synthesis provider. Must be `minimax`.
-          enum:
-          - minimax
-          - Minimax
-          type: string
-        voice_design_id:
-          description: UUID of the source voice design to clone.
-          format: uuid
-          type: string
-      required:
-      - name
-      - voice_design_id
-      - language
-      - gender
-      - provider
+        data:
+          $ref: '#/components/schemas/VoiceCloneData'
       type: object
+    VoiceCloneUploadRequest:
+      description: 'Multipart form data for creating a voice clone from a direct audio upload. Maximum file size: 5MB for Telnyx, 20MB for Minimax.'
+      oneOf:
+      - $ref: '#/components/schemas/TelnyxQwen3TTSClone'
+      - $ref: '#/components/schemas/TelnyxUltraClone'
+      - $ref: '#/components/schemas/MinimaxClone'
     VoiceCloneUpdateRequest:
       description: Request body for updating a voice clone.
       example:
@@ -663,58 +697,7 @@ components:
       required:
       - name
       type: object
-    voice-designs_ErrorResponse:
-      description: Standard error response envelope.
-      example:
-        errors:
-        - code: '10005'
-          detail: Voice design not found
-          title: Resource not found
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/voice-designs_ErrorObject'
-          type: array
-      type: object
-    voice-designs_PaginationMeta:
-      description: Pagination metadata returned with list responses.
-      example:
-        page_number: 1
-        page_size: 20
-        total_pages: 3
-        total_results: 42
-      properties:
-        page_number:
-          description: Current page number (1-based).
-          type: integer
-        page_size:
-          description: Number of results per page.
-          type: integer
-        total_pages:
-          description: Total number of pages.
-          type: integer
-        total_results:
-          description: Total number of results across all pages.
-          type: integer
-      type: object
   parameters:
-    FilterName:
-      description: Case-insensitive substring filter on the name field.
-      in: query
-      name: filter[name]
-      required: false
-      schema:
-        type: string
-    voice-designs_PageSize:
-      description: Number of results per page.
-      in: query
-      name: page[size]
-      required: false
-      schema:
-        default: 20
-        maximum: 250
-        minimum: 1
-        type: integer
     voice-designs_Sort:
       description: Sort order. Prefix with `-` for descending. Defaults to `-created_at`.
       in: query
@@ -749,6 +732,23 @@ components:
         - Telnyx
         - Minimax
         type: string
+    FilterName:
+      description: Case-insensitive substring filter on the name field.
+      in: query
+      name: filter[name]
+      required: false
+      schema:
+        type: string
+    voice-designs_PageSize:
+      description: Number of results per page.
+      in: query
+      name: page[size]
+      required: false
+      schema:
+        default: 20
+        maximum: 250
+        minimum: 1
+        type: integer
   securitySchemes:
     bearerAuth:
       scheme: bearer

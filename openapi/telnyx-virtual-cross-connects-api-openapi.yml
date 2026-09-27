@@ -206,17 +206,19 @@ paths:
       x-latency-category: responsive
 components:
   responses:
-    VirtualCrossConnectListResponse:
+    netapps_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/netapps_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+    VirtualCrossConnectResponse:
       content:
         application/json:
           schema:
             properties:
               data:
-                items:
-                  $ref: '#/components/schemas/VirtualCrossConnectCombined'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
+                $ref: '#/components/schemas/VirtualCrossConnectCombined'
             type: object
       description: Successful response
     VirtualCrossConnectCoverageListResponse:
@@ -238,44 +240,64 @@ components:
           schema:
             $ref: '#/components/schemas/netapps_Errors'
       description: Unexpected error
-    VirtualCrossConnectResponse:
+    VirtualCrossConnectListResponse:
       content:
         application/json:
           schema:
             properties:
               data:
-                $ref: '#/components/schemas/VirtualCrossConnectCombined'
+                items:
+                  $ref: '#/components/schemas/VirtualCrossConnectCombined'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
             type: object
       description: Successful response
-    netapps_UnprocessableEntity:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/netapps_Errors'
-      description: Unprocessable entity. Check the 'detail' field in response for details.
+  parameters:
+    ResourceId:
+      description: Identifies the resource.
+      in: path
+      name: id
+      required: true
+      schema:
+        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+        format: uuid
+        type: string
+    PageConsolidated:
+      description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
+      explode: true
+      in: query
+      name: page
+      schema:
+        properties:
+          number:
+            default: 1
+            description: The page number to load
+            minimum: 1
+            type: integer
+          size:
+            default: 20
+            description: The size of the page
+            maximum: 250
+            minimum: 1
+            type: integer
+        type: object
+      style: deepObject
   schemas:
-    RegionOut:
+    PaginationMeta:
       properties:
-        region:
-          properties:
-            code:
-              description: Region code of the interface.
-              example: ashburn-va
-              type: string
-            name:
-              description: Region name of the interface.
-              example: Ashburn
-              type: string
-            record_type:
-              description: Identifies the type of the resource.
-              example: region
-              readOnly: true
-              type: string
-          type: object
-        region_code:
-          description: The region interface is deployed to.
-          example: ashburn-va
-          type: string
+        page_number:
+          example: 2
+          type: integer
+        page_size:
+          example: 25
+          type: integer
+        total_pages:
+          example: 3
+          type: integer
+        total_results:
+          example: 55
+          type: integer
       type: object
     netapps_Location:
       properties:
@@ -301,6 +323,84 @@ components:
           type: string
       title: Location
       type: object
+    VirtualCrossConnectCombined:
+      allOf:
+      - $ref: '#/components/schemas/VirtualCrossConnectCreate'
+      - $ref: '#/components/schemas/VirtualCrossConnectPatch'
+      - $ref: '#/components/schemas/RegionOut'
+    VirtualCrossConnectPatch:
+      allOf:
+      - properties:
+          primary_cloud_ip:
+            description: The IP address assigned for your side of the Virtual Cross Connect.<br /><br />If none is provided, one will be generated for you.<br /><br />This value can not be patched once the VXC has bene provisioned.
+            example: 169.254.0.2
+            type: string
+          primary_enabled:
+            description: Indicates whether the primary circuit is enabled. Setting this to `false` will disable the circuit.
+            example: true
+            type: boolean
+          primary_routing_announcement:
+            description: Whether the primary BGP route is being announced.
+            example: false
+            type: boolean
+          secondary_cloud_ip:
+            description: The IP address assigned for your side of the Virtual Cross Connect.<br /><br />If none is provided, one will be generated for you.<br /><br />This value can not be patched once the VXC has bene provisioned.
+            example: 169.254.0.4
+            type: string
+          secondary_enabled:
+            description: Indicates whether the secondary circuit is enabled. Setting this to `false` will disable the circuit.
+            example: true
+            type: boolean
+          secondary_routing_announcement:
+            description: Whether the secondary BGP route is being announced.
+            example: false
+            type: boolean
+        title: VirtualCrossConnectPatch
+        type: object
+    InterfaceStatus:
+      description: The current status of the interface deployment.
+      enum:
+      - created
+      - provisioning
+      - provisioned
+      - deleting
+      example: provisioned
+      readOnly: true
+      type: string
+    VirtualCrossConnectCoverage:
+      allOf:
+      - properties:
+          available_bandwidth:
+            description: The available throughput in Megabits per Second (Mbps) for your Virtual Cross Connect.
+            example:
+            - 50
+            - 100
+            - 200
+            - 500
+            items:
+              type: number
+            type: array
+          cloud_provider:
+            description: The Virtual Private Cloud with which you would like to establish a cross connect.
+            enum:
+            - aws
+            - azure
+            - gce
+            example: aws
+            type: string
+          cloud_provider_region:
+            description: The region where your Virtual Private Cloud hosts are located. Should be identical to how the cloud provider names region, i.e. us-east-1 for AWS but Frankfurt for Azure
+            example: us-east-1
+            type: string
+          location:
+            $ref: '#/components/schemas/netapps_Location'
+          record_type:
+            description: Identifies the type of the resource.
+            example: virtual_cross_connects_coverage
+            readOnly: true
+            type: string
+        title: VirtualCrossConnectCoverage
+        type: object
     RegionIn:
       properties:
         region_code:
@@ -308,25 +408,42 @@ components:
           example: ashburn-va
           type: string
       type: object
-    VirtualCrossConnectCreate:
-      allOf:
-      - $ref: '#/components/schemas/VirtualCrossConnect'
-      - $ref: '#/components/schemas/RegionIn'
-      - required:
-        - network_id
-        - region_code
-        - cloud_provider
-        - cloud_provider_region
-        - bgp_asn
-        - primary_cloud_account_id
-        title: VirtualCrossConnectCreate
-        type: object
-    netapps_Errors:
+    Interface:
       properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/netapps_Error'
-          type: array
+        name:
+          description: A user specified name for the interface.
+          example: test interface
+          type: string
+        network_id:
+          description: The id of the network associated with the interface.
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+          format: uuid
+          type: string
+        status:
+          $ref: '#/components/schemas/InterfaceStatus'
+      type: object
+    RegionOut:
+      properties:
+        region:
+          properties:
+            code:
+              description: Region code of the interface.
+              example: ashburn-va
+              type: string
+            name:
+              description: Region name of the interface.
+              example: Ashburn
+              type: string
+            record_type:
+              description: Identifies the type of the resource.
+              example: region
+              readOnly: true
+              type: string
+          type: object
+        region_code:
+          description: The region interface is deployed to.
+          example: ashburn-va
+          type: string
       type: object
     VirtualCrossConnect:
       allOf:
@@ -402,69 +519,6 @@ components:
             type: string
         title: VirtualCrossConnect
         type: object
-    Interface:
-      properties:
-        name:
-          description: A user specified name for the interface.
-          example: test interface
-          type: string
-        network_id:
-          description: The id of the network associated with the interface.
-          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-          format: uuid
-          type: string
-        status:
-          $ref: '#/components/schemas/InterfaceStatus'
-      type: object
-    VirtualCrossConnectCoverage:
-      allOf:
-      - properties:
-          available_bandwidth:
-            description: The available throughput in Megabits per Second (Mbps) for your Virtual Cross Connect.
-            example:
-            - 50
-            - 100
-            - 200
-            - 500
-            items:
-              type: number
-            type: array
-          cloud_provider:
-            description: The Virtual Private Cloud with which you would like to establish a cross connect.
-            enum:
-            - aws
-            - azure
-            - gce
-            example: aws
-            type: string
-          cloud_provider_region:
-            description: The region where your Virtual Private Cloud hosts are located. Should be identical to how the cloud provider names region, i.e. us-east-1 for AWS but Frankfurt for Azure
-            example: us-east-1
-            type: string
-          location:
-            $ref: '#/components/schemas/netapps_Location'
-          record_type:
-            description: Identifies the type of the resource.
-            example: virtual_cross_connects_coverage
-            readOnly: true
-            type: string
-        title: VirtualCrossConnectCoverage
-        type: object
-    PaginationMeta:
-      properties:
-        page_number:
-          example: 2
-          type: integer
-        page_size:
-          example: 25
-          type: integer
-        total_pages:
-          example: 3
-          type: integer
-        total_results:
-          example: 55
-          type: integer
-      type: object
     Record:
       properties:
         created_at:
@@ -489,6 +543,19 @@ components:
           readOnly: true
           type: string
       type: object
+    VirtualCrossConnectCreate:
+      allOf:
+      - $ref: '#/components/schemas/VirtualCrossConnect'
+      - $ref: '#/components/schemas/RegionIn'
+      - required:
+        - network_id
+        - region_code
+        - cloud_provider
+        - cloud_provider_region
+        - bgp_asn
+        - primary_cloud_account_id
+        title: VirtualCrossConnectCreate
+        type: object
     netapps_Error:
       properties:
         code:
@@ -513,80 +580,13 @@ components:
       - code
       - title
       type: object
-    VirtualCrossConnectCombined:
-      allOf:
-      - $ref: '#/components/schemas/VirtualCrossConnectCreate'
-      - $ref: '#/components/schemas/VirtualCrossConnectPatch'
-      - $ref: '#/components/schemas/RegionOut'
-    InterfaceStatus:
-      description: The current status of the interface deployment.
-      enum:
-      - created
-      - provisioning
-      - provisioned
-      - deleting
-      example: provisioned
-      readOnly: true
-      type: string
-    VirtualCrossConnectPatch:
-      allOf:
-      - properties:
-          primary_cloud_ip:
-            description: The IP address assigned for your side of the Virtual Cross Connect.<br /><br />If none is provided, one will be generated for you.<br /><br />This value can not be patched once the VXC has bene provisioned.
-            example: 169.254.0.2
-            type: string
-          primary_enabled:
-            description: Indicates whether the primary circuit is enabled. Setting this to `false` will disable the circuit.
-            example: true
-            type: boolean
-          primary_routing_announcement:
-            description: Whether the primary BGP route is being announced.
-            example: false
-            type: boolean
-          secondary_cloud_ip:
-            description: The IP address assigned for your side of the Virtual Cross Connect.<br /><br />If none is provided, one will be generated for you.<br /><br />This value can not be patched once the VXC has bene provisioned.
-            example: 169.254.0.4
-            type: string
-          secondary_enabled:
-            description: Indicates whether the secondary circuit is enabled. Setting this to `false` will disable the circuit.
-            example: true
-            type: boolean
-          secondary_routing_announcement:
-            description: Whether the secondary BGP route is being announced.
-            example: false
-            type: boolean
-        title: VirtualCrossConnectPatch
-        type: object
-  parameters:
-    ResourceId:
-      description: Identifies the resource.
-      in: path
-      name: id
-      required: true
-      schema:
-        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-        format: uuid
-        type: string
-    PageConsolidated:
-      description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
-      explode: true
-      in: query
-      name: page
-      schema:
-        properties:
-          number:
-            default: 1
-            description: The page number to load
-            minimum: 1
-            type: integer
-          size:
-            default: 20
-            description: The size of the page
-            maximum: 250
-            minimum: 1
-            type: integer
-        type: object
-      style: deepObject
+    netapps_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/netapps_Error'
+          type: array
+      type: object
   securitySchemes:
     bearerAuth:
       scheme: bearer

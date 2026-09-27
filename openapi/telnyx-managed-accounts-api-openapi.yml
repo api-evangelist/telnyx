@@ -218,65 +218,155 @@ paths:
       - Managed Accounts
       x-latency-category: responsive
 components:
+  responses:
+    managed-accounts_ForbiddenResponse:
+      description: Unauthorized response. Happens when the current user is not authorized to access the endpoint.
+    UnprocessableManagedAccountEntity:
+      content:
+        application/json:
+          schema:
+            properties:
+              errors:
+                items:
+                  $ref: '#/components/schemas/UnprocessableEntityError'
+                type: array
+            type: object
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+    ManagedAccountResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/ManagedAccount'
+            type: object
+      description: Successful response with information about a single managed account.
+    ListManagedAccountsAllocatableGlobalOutboundChannelsResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/ManagedAccountsGlobalOutboundChannels'
+            type: object
+      description: Successful response with information about allocatable global outbound channels.
+    managed-accounts_UnauthorizedResponse:
+      description: Unauthenticated response. Happens when the current user cannot be authenticated.
+    ListManagedAccountsResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/ManagedAccountMultiListing'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful response with a list of managed accounts.
+    UpdateManagedAccountGlobalChannelLimitResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/SingleManagedAccountGlobalOutboundChannels'
+            type: object
+      description: Successful response with information about the allocatable global outbound channels for the given account.
+  parameters:
+    managed-accounts_Sort:
+      description: "Specifies the sort order for results. By default sorting direction is ascending. To have the results sorted in descending order add the <code> -</code> prefix.<br/><br/>\nThat is: <ul>\n  <li>\n    <code>email</code>: sorts the result by the\n    <code>email</code> field in ascending order.\n  </li>\n\n  <li>\n    <code>-email</code>: sorts the result by the\n    <code>email</code> field in descending order.\n  </li>\n</ul> <br/> If not given, results are sorted by <code>created_at</code> in descending order."
+      in: query
+      name: sort
+      required: false
+      schema:
+        default: created_at
+        enum:
+        - created_at
+        - email
+        example: email
+        type: string
+    IncludeCancelledAccounts:
+      description: Specifies if cancelled accounts should be included in the results.
+      in: query
+      name: include_cancelled_accounts
+      required: false
+      schema:
+        default: false
+        example: true
+        type: boolean
+    PageConsolidated:
+      description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
+      explode: true
+      in: query
+      name: page
+      schema:
+        properties:
+          number:
+            default: 1
+            description: The page number to load
+            minimum: 1
+            type: integer
+          size:
+            default: 20
+            description: The size of the page
+            maximum: 250
+            minimum: 1
+            type: integer
+        type: object
+      style: deepObject
+    managed-accounts_FilterConsolidated:
+      description: 'Consolidated filter parameter (deepObject style). Originally: filter[email][contains], filter[email][eq], filter[organization_name][contains], filter[organization_name][eq]'
+      explode: true
+      in: query
+      name: filter
+      required: false
+      schema:
+        additionalProperties: false
+        example:
+          email:
+            contains: john
+          organization_name:
+            eq: Example Company LLC
+        properties:
+          email:
+            additionalProperties: false
+            properties:
+              contains:
+                description: If present, email containing the given value will be returned. Matching is not case-sensitive. Requires at least three characters.
+                type: string
+              eq:
+                description: If present, only returns results with the <code>email</code> matching exactly the value given.
+                type: string
+            type: object
+          organization_name:
+            additionalProperties: false
+            properties:
+              contains:
+                description: If present, only returns results with the <code>organization_name</code> containing the given value. Matching is not case-sensitive. Requires at least three characters.
+                type: string
+              eq:
+                description: If present, only returns results with the <code>organization_name</code> matching exactly the value given.
+                type: string
+            type: object
+        type: object
+      style: deepObject
   schemas:
-    ManagedAccountsGlobalOutboundChannels:
-      example:
-        allocatable_global_outbound_channels: 500
-        record_type: allocatable_global_outbound_channels
-        total_global_channels_allocated: 135
+    PaginationMeta:
       properties:
-        allocatable_global_outbound_channels:
-          description: The total amount of allocatable global outbound channels available to the authenticated manager. Will be 0 if the feature is not enabled for their account.
-          example: 500
+        page_number:
+          example: 2
           type: integer
-        managed_account_allow_custom_pricing:
-          description: Boolean value that indicates if the managed account is able to have custom pricing set for it or not. If false, uses the pricing of the manager account. Defaults to false. This value may be changed, but there may be time lag between when the value is changed and pricing changes take effect.
-          example: false
-          type: boolean
-        record_type:
-          description: The type of the data contained in this record.
-          example: allocatable_global_outbound_channels
-          type: string
-        total_global_channels_allocated:
-          description: The total number of allocatable global outbound channels currently allocated across all managed accounts for the authenticated user. This includes any amount of channels allocated by default at managed account creation time. Will be 0 if the feature is not enabled for their account.
-          example: 135
+        page_size:
+          example: 25
           type: integer
-      title: Managed Accounts Global Outbound Channels
-      type: object
-    ManagedAccountBalance:
-      example:
-        available_credit: '400.00'
-        balance: '300.00'
-        credit_limit: '100.00'
-        currency: USD
-        record_type: balance
-      properties:
-        available_credit:
-          description: Available amount to spend (balance + credit limit)
-          example: '400.00'
-          type: string
-          x-format: decimal
-        balance:
-          description: The account's current balance.
-          example: '300.00'
-          type: string
-          x-format: decimal
-        credit_limit:
-          description: The account's credit limit.
-          example: '100.00'
-          type: string
-          x-format: decimal
-        currency:
-          description: The ISO 4217 currency identifier.
-          example: USD
-          type: string
-          x-format: iso4217
-        record_type:
-          description: Identifies the type of the resource.
-          enum:
-          - balance
-          example: balance
-          type: string
+        total_pages:
+          example: 3
+          type: integer
+        total_results:
+          example: 55
+          type: integer
       type: object
     UpdateManagedAccountGlobalChannelLimitRequest:
       example:
@@ -287,62 +377,6 @@ components:
           example: 30
           type: integer
       title: Update Managed Account Global Outbound Channels Request
-      type: object
-    ManagedAccountMultiListing:
-      properties:
-        api_user:
-          description: The manager account's email, which serves as the V1 API user identifier
-          example: managed_account@example.com
-          type: string
-        created_at:
-          description: ISO 8601 formatted date indicating when the resource was created.
-          example: '2018-02-02T22:25:27.521Z'
-          type: string
-        email:
-          description: The managed account's email.
-          example: user@example.com
-          format: email
-          type: string
-        id:
-          description: Uniquely identifies the managed account.
-          example: f65ceda4-6522-4ad6-aede-98de83385123
-          format: uuid
-          type: string
-        managed_account_allow_custom_pricing:
-          description: Boolean value that indicates if the managed account is able to have custom pricing set for it or not. If false, uses the pricing of the manager account. Defaults to false. There may be time lag between when the value is changed and pricing changes take effect.
-          example: true
-          type: boolean
-        manager_account_id:
-          description: The ID of the manager account associated with the managed account.
-          example: f65ceda4-6522-4ad6-aede-98de83385123
-          type: string
-        organization_name:
-          description: The organization the managed account is associated with.
-          example: Example Company LLC
-          type: string
-        record_type:
-          description: Identifies the type of the resource.
-          enum:
-          - managed_account
-          example: managed_account
-          type: string
-        rollup_billing:
-          description: Boolean value that indicates if the billing information and charges to the managed account "roll up" to the manager account. If true, the managed account will not have its own balance and will use the shared balance with the manager account. This value cannot be changed after account creation without going through Telnyx support as changes require manual updates to the account ledger. Defaults to false.
-          example: false
-          type: boolean
-        updated_at:
-          description: ISO 8601 formatted date indicating when the resource was updated.
-          example: '2018-02-02T22:25:27.521Z'
-          type: string
-      required:
-      - record_type
-      - id
-      - email
-      - api_user
-      - manager_account_id
-      - created_at
-      - updated_at
-      title: ManagedAccount
       type: object
     ManagedAccount:
       properties:
@@ -412,6 +446,41 @@ components:
       - updated_at
       title: ManagedAccount
       type: object
+    ManagedAccountBalance:
+      example:
+        available_credit: '400.00'
+        balance: '300.00'
+        credit_limit: '100.00'
+        currency: USD
+        record_type: balance
+      properties:
+        available_credit:
+          description: Available amount to spend (balance + credit limit)
+          example: '400.00'
+          type: string
+          x-format: decimal
+        balance:
+          description: The account's current balance.
+          example: '300.00'
+          type: string
+          x-format: decimal
+        credit_limit:
+          description: The account's credit limit.
+          example: '100.00'
+          type: string
+          x-format: decimal
+        currency:
+          description: The ISO 4217 currency identifier.
+          example: USD
+          type: string
+          x-format: iso4217
+        record_type:
+          description: Identifies the type of the resource.
+          enum:
+          - balance
+          example: balance
+          type: string
+      type: object
     SingleManagedAccountGlobalOutboundChannels:
       example:
         channel_limit: 30
@@ -441,31 +510,6 @@ components:
           example: managed_account_global_outbound_settings
           type: string
       title: Global Outbound Channels Details for a Managed Account
-      type: object
-    PaginationMeta:
-      properties:
-        page_number:
-          example: 2
-          type: integer
-        page_size:
-          example: 25
-          type: integer
-        total_pages:
-          example: 3
-          type: integer
-        total_results:
-          example: 55
-          type: integer
-      type: object
-    UpdateManagedAccountRequest:
-      example:
-        managed_account_allow_custom_pricing: true
-      properties:
-        managed_account_allow_custom_pricing:
-          description: Boolean value that indicates if the managed account is able to have custom pricing set for it or not. If false, uses the pricing of the manager account. Defaults to false. This value may be changed, but there may be time lag between when the value is changed and pricing changes take effect.
-          example: false
-          type: boolean
-      title: Update Managed Account Request
       type: object
     UnprocessableEntityError:
       properties:
@@ -525,140 +569,96 @@ components:
       - business_name
       title: Create Managed Account Request
       type: object
-  responses:
-    UnprocessableManagedAccountEntity:
-      content:
-        application/json:
-          schema:
-            properties:
-              errors:
-                items:
-                  $ref: '#/components/schemas/UnprocessableEntityError'
-                type: array
-            type: object
-      description: Unprocessable entity. Check the 'detail' field in response for details.
-    managed-accounts_ForbiddenResponse:
-      description: Unauthorized response. Happens when the current user is not authorized to access the endpoint.
-    ListManagedAccountsResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/ManagedAccountMultiListing'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful response with a list of managed accounts.
-    UpdateManagedAccountGlobalChannelLimitResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/SingleManagedAccountGlobalOutboundChannels'
-            type: object
-      description: Successful response with information about the allocatable global outbound channels for the given account.
-    ManagedAccountResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/ManagedAccount'
-            type: object
-      description: Successful response with information about a single managed account.
-    managed-accounts_UnauthorizedResponse:
-      description: Unauthenticated response. Happens when the current user cannot be authenticated.
-    ListManagedAccountsAllocatableGlobalOutboundChannelsResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/ManagedAccountsGlobalOutboundChannels'
-            type: object
-      description: Successful response with information about allocatable global outbound channels.
-  parameters:
-    PageConsolidated:
-      description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
-      explode: true
-      in: query
-      name: page
-      schema:
-        properties:
-          number:
-            default: 1
-            description: The page number to load
-            minimum: 1
-            type: integer
-          size:
-            default: 20
-            description: The size of the page
-            maximum: 250
-            minimum: 1
-            type: integer
-        type: object
-      style: deepObject
-    managed-accounts_FilterConsolidated:
-      description: 'Consolidated filter parameter (deepObject style). Originally: filter[email][contains], filter[email][eq], filter[organization_name][contains], filter[organization_name][eq]'
-      explode: true
-      in: query
-      name: filter
-      required: false
-      schema:
-        additionalProperties: false
-        example:
-          email:
-            contains: john
-          organization_name:
-            eq: Example Company LLC
-        properties:
-          email:
-            additionalProperties: false
-            properties:
-              contains:
-                description: If present, email containing the given value will be returned. Matching is not case-sensitive. Requires at least three characters.
-                type: string
-              eq:
-                description: If present, only returns results with the <code>email</code> matching exactly the value given.
-                type: string
-            type: object
-          organization_name:
-            additionalProperties: false
-            properties:
-              contains:
-                description: If present, only returns results with the <code>organization_name</code> containing the given value. Matching is not case-sensitive. Requires at least three characters.
-                type: string
-              eq:
-                description: If present, only returns results with the <code>organization_name</code> matching exactly the value given.
-                type: string
-            type: object
-        type: object
-      style: deepObject
-    IncludeCancelledAccounts:
-      description: Specifies if cancelled accounts should be included in the results.
-      in: query
-      name: include_cancelled_accounts
-      required: false
-      schema:
-        default: false
-        example: true
-        type: boolean
-    managed-accounts_Sort:
-      description: "Specifies the sort order for results. By default sorting direction is ascending. To have the results sorted in descending order add the <code> -</code> prefix.<br/><br/>\nThat is: <ul>\n  <li>\n    <code>email</code>: sorts the result by the\n    <code>email</code> field in ascending order.\n  </li>\n\n  <li>\n    <code>-email</code>: sorts the result by the\n    <code>email</code> field in descending order.\n  </li>\n</ul> <br/> If not given, results are sorted by <code>created_at</code> in descending order."
-      in: query
-      name: sort
-      required: false
-      schema:
-        default: created_at
-        enum:
-        - created_at
-        - email
-        example: email
-        type: string
+    ManagedAccountMultiListing:
+      properties:
+        api_user:
+          description: The manager account's email, which serves as the V1 API user identifier
+          example: managed_account@example.com
+          type: string
+        created_at:
+          description: ISO 8601 formatted date indicating when the resource was created.
+          example: '2018-02-02T22:25:27.521Z'
+          type: string
+        email:
+          description: The managed account's email.
+          example: user@example.com
+          format: email
+          type: string
+        id:
+          description: Uniquely identifies the managed account.
+          example: f65ceda4-6522-4ad6-aede-98de83385123
+          format: uuid
+          type: string
+        managed_account_allow_custom_pricing:
+          description: Boolean value that indicates if the managed account is able to have custom pricing set for it or not. If false, uses the pricing of the manager account. Defaults to false. There may be time lag between when the value is changed and pricing changes take effect.
+          example: true
+          type: boolean
+        manager_account_id:
+          description: The ID of the manager account associated with the managed account.
+          example: f65ceda4-6522-4ad6-aede-98de83385123
+          type: string
+        organization_name:
+          description: The organization the managed account is associated with.
+          example: Example Company LLC
+          type: string
+        record_type:
+          description: Identifies the type of the resource.
+          enum:
+          - managed_account
+          example: managed_account
+          type: string
+        rollup_billing:
+          description: Boolean value that indicates if the billing information and charges to the managed account "roll up" to the manager account. If true, the managed account will not have its own balance and will use the shared balance with the manager account. This value cannot be changed after account creation without going through Telnyx support as changes require manual updates to the account ledger. Defaults to false.
+          example: false
+          type: boolean
+        updated_at:
+          description: ISO 8601 formatted date indicating when the resource was updated.
+          example: '2018-02-02T22:25:27.521Z'
+          type: string
+      required:
+      - record_type
+      - id
+      - email
+      - api_user
+      - manager_account_id
+      - created_at
+      - updated_at
+      title: ManagedAccount
+      type: object
+    ManagedAccountsGlobalOutboundChannels:
+      example:
+        allocatable_global_outbound_channels: 500
+        record_type: allocatable_global_outbound_channels
+        total_global_channels_allocated: 135
+      properties:
+        allocatable_global_outbound_channels:
+          description: The total amount of allocatable global outbound channels available to the authenticated manager. Will be 0 if the feature is not enabled for their account.
+          example: 500
+          type: integer
+        managed_account_allow_custom_pricing:
+          description: Boolean value that indicates if the managed account is able to have custom pricing set for it or not. If false, uses the pricing of the manager account. Defaults to false. This value may be changed, but there may be time lag between when the value is changed and pricing changes take effect.
+          example: false
+          type: boolean
+        record_type:
+          description: The type of the data contained in this record.
+          example: allocatable_global_outbound_channels
+          type: string
+        total_global_channels_allocated:
+          description: The total number of allocatable global outbound channels currently allocated across all managed accounts for the authenticated user. This includes any amount of channels allocated by default at managed account creation time. Will be 0 if the feature is not enabled for their account.
+          example: 135
+          type: integer
+      title: Managed Accounts Global Outbound Channels
+      type: object
+    UpdateManagedAccountRequest:
+      example:
+        managed_account_allow_custom_pricing: true
+      properties:
+        managed_account_allow_custom_pricing:
+          description: Boolean value that indicates if the managed account is able to have custom pricing set for it or not. If false, uses the pricing of the manager account. Defaults to false. This value may be changed, but there may be time lag between when the value is changed and pricing changes take effect.
+          example: false
+          type: boolean
+      title: Update Managed Account Request
+      type: object
   securitySchemes:
     bearerAuth:
       scheme: bearer

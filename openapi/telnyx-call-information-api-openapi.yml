@@ -52,6 +52,56 @@ paths:
       x-group-parameters: 'true'
       x-latency-category: responsive
 components:
+  parameters:
+    call-control_PageConsolidated:
+      description: 'Consolidated page parameter (deepObject style). Originally: page[after], page[before], page[limit], page[size], page[number]'
+      explode: true
+      in: query
+      name: page
+      schema:
+        properties:
+          after:
+            default: 'null'
+            description: Opaque identifier of next page
+            type: string
+          before:
+            default: 'null'
+            description: Opaque identifier of previous page
+            type: string
+          limit:
+            default: 20
+            description: Limit of records per single page
+            maximum: 250
+            minimum: 1
+            type: integer
+          number:
+            default: 1
+            description: The page number to load
+            minimum: 1
+            type: integer
+          size:
+            default: 20
+            description: The size of the page
+            maximum: 250
+            minimum: 1
+            type: integer
+        type: object
+      style: deepObject
+    CallControlId:
+      description: Unique identifier and token for controlling the call
+      in: path
+      name: call_control_id
+      required: true
+      schema:
+        type: string
+    ConnectionId:
+      description: Telnyx connection id
+      in: path
+      name: connection_id
+      required: true
+      schema:
+        example: '1293384261075731461'
+        type: string
   schemas:
     call-control_Error:
       properties:
@@ -77,6 +127,69 @@ components:
       required:
       - code
       - title
+    Call:
+      example:
+        call_control_id: v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg
+        call_duration: 50
+        call_leg_id: 2dc6fc34-f9e0-11ea-b68e-02420a0f7768
+        call_session_id: 2dc1b3c8-f9e0-11ea-bc5a-02420a0f7768
+        client_state: aGF2ZSBhIG5pY2UgZGF5ID1d
+        end_time: '2019-01-23T18:11:52.574Z'
+        is_alive: false
+        record_type: call
+        start_time: '2019-01-23T18:10:02.574Z'
+      properties:
+        call_control_id:
+          description: Unique identifier and token for controlling the call.
+          example: v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg
+          type: string
+        call_duration:
+          description: Indicates the duration of the call in seconds
+          example: 50
+          type: integer
+        call_leg_id:
+          description: ID that is unique to the call and can be used to correlate webhook events
+          example: 428c31b6-7af4-4bcb-b7f5-5013ef9657c1
+          type: string
+        call_session_id:
+          description: ID that is unique to the call session and can be used to correlate webhook events. Call session is a group of related call legs that logically belong to the same phone call, e.g. an inbound and outbound leg of a transferred call
+          example: 428c31b6-7af4-4bcb-b68e-5013ef9657c1
+          type: string
+        client_state:
+          description: State received from a command.
+          example: aGF2ZSBhIG5pY2UgZGF5ID1d
+          type: string
+        end_time:
+          description: ISO 8601 formatted date indicating when the call ended. Only present when the call is not alive
+          example: '2019-01-23T18:11:52.574Z'
+          type: string
+        is_alive:
+          description: Indicates whether the call is alive or not. For Dial command it will always be `false` (dialing is asynchronous).
+          example: true
+          type: boolean
+        record_type:
+          enum:
+          - call
+          example: call
+          type: string
+        start_time:
+          description: ISO 8601 formatted date indicating when the call started
+          example: '2019-01-23T18:10:02.574Z'
+          type: string
+      required:
+      - call_control_id
+      - call_leg_id
+      - call_session_id
+      - is_alive
+      - record_type
+      title: Call
+      type: object
+    call-control_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/call-control_Error'
+          type: array
     Cursor:
       properties:
         after:
@@ -148,120 +261,13 @@ components:
           type: integer
       title: Cursor Pagination Meta
       type: object
-    Call:
-      example:
-        call_control_id: v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg
-        call_duration: 50
-        call_leg_id: 2dc6fc34-f9e0-11ea-b68e-02420a0f7768
-        call_session_id: 2dc1b3c8-f9e0-11ea-bc5a-02420a0f7768
-        client_state: aGF2ZSBhIG5pY2UgZGF5ID1d
-        end_time: '2019-01-23T18:11:52.574Z'
-        is_alive: false
-        record_type: call
-        start_time: '2019-01-23T18:10:02.574Z'
-      properties:
-        call_control_id:
-          description: Unique identifier and token for controlling the call.
-          example: v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg
-          type: string
-        call_duration:
-          description: Indicates the duration of the call in seconds
-          example: 50
-          type: integer
-        call_leg_id:
-          description: ID that is unique to the call and can be used to correlate webhook events
-          example: 428c31b6-7af4-4bcb-b7f5-5013ef9657c1
-          type: string
-        call_session_id:
-          description: ID that is unique to the call session and can be used to correlate webhook events. Call session is a group of related call legs that logically belong to the same phone call, e.g. an inbound and outbound leg of a transferred call
-          example: 428c31b6-7af4-4bcb-b68e-5013ef9657c1
-          type: string
-        client_state:
-          description: State received from a command.
-          example: aGF2ZSBhIG5pY2UgZGF5ID1d
-          type: string
-        end_time:
-          description: ISO 8601 formatted date indicating when the call ended. Only present when the call is not alive
-          example: '2019-01-23T18:11:52.574Z'
-          type: string
-        is_alive:
-          description: Indicates whether the call is alive or not. For Dial command it will always be `false` (dialing is asynchronous).
-          example: true
-          type: boolean
-        record_type:
-          enum:
-          - call
-          example: call
-          type: string
-        start_time:
-          description: ISO 8601 formatted date indicating when the call started
-          example: '2019-01-23T18:10:02.574Z'
-          type: string
-      required:
-      - call_control_id
-      - call_leg_id
-      - call_session_id
-      - is_alive
-      - record_type
-      title: Call
-      type: object
-    call-control_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/call-control_Error'
-          type: array
-  parameters:
-    ConnectionId:
-      description: Telnyx connection id
-      in: path
-      name: connection_id
-      required: true
-      schema:
-        example: '1293384261075731461'
-        type: string
-    CallControlId:
-      description: Unique identifier and token for controlling the call
-      in: path
-      name: call_control_id
-      required: true
-      schema:
-        type: string
-    call-control_PageConsolidated:
-      description: 'Consolidated page parameter (deepObject style). Originally: page[after], page[before], page[limit], page[size], page[number]'
-      explode: true
-      in: query
-      name: page
-      schema:
-        properties:
-          after:
-            default: 'null'
-            description: Opaque identifier of next page
-            type: string
-          before:
-            default: 'null'
-            description: Opaque identifier of previous page
-            type: string
-          limit:
-            default: 20
-            description: Limit of records per single page
-            maximum: 250
-            minimum: 1
-            type: integer
-          number:
-            default: 1
-            description: The page number to load
-            minimum: 1
-            type: integer
-          size:
-            default: 20
-            description: The size of the page
-            maximum: 250
-            minimum: 1
-            type: integer
-        type: object
-      style: deepObject
   responses:
+    call-control_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/call-control_Errors'
+      description: Unexpected error
     UnprocessableEntityResponse:
       content:
         application/json:
@@ -440,12 +446,6 @@ components:
             title: Retrieve Call Status Response
             type: object
       description: Successful response with details about a call status.
-    call-control_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/call-control_Errors'
-      description: Unexpected error
   securitySchemes:
     bearerAuth:
       scheme: bearer

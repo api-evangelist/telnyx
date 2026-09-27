@@ -170,82 +170,111 @@ paths:
       - User Bundles
       x-latency-category: responsive
 components:
+  parameters:
+    AuthorizationBearer:
+      description: 'Format: Bearer <TOKEN>'
+      in: header
+      name: authorization_bearer
+      schema:
+        description: Authenticates the request with your Telnyx API V2 KEY
+        type: string
+    bundle-pricing_FilterConsolidated:
+      description: 'Consolidated filter parameter (deepObject style). Supports filtering by country_iso and resource. Examples: filter[country_iso]=US or filter[resource]=+15617819942'
+      explode: true
+      in: query
+      name: filter
+      schema:
+        properties:
+          country_iso:
+            description: Filter by country code.
+            items:
+              example: US
+              type: string
+            title: Filter[Country Iso]
+            type: array
+          resource:
+            description: Filter by resource.
+            items:
+              description: Filter by resource.
+              example: '+15617819942'
+              type: string
+            title: Filter[Resource]
+            type: array
+        type: object
+      style: deepObject
+    UserBundleId:
+      in: path
+      name: user_bundle_id
+      required: true
+      schema:
+        description: User bundle's ID, this is used to identify the user bundle in the API.
+        example: ca1d2263-d1f1-43ac-ba53-248e7a4bb26a
+        format: uuid
+        title: User Bundle Id
+        type: string
+    bundle-pricing_PageConsolidated:
+      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
+      explode: true
+      in: query
+      name: page
+      schema:
+        properties:
+          number:
+            default: 1
+            description: The page number to load.
+            minimum: 1
+            type: integer
+          size:
+            default: 20
+            description: The size of the page.
+            maximum: 250
+            minimum: 1
+            type: integer
+        type: object
+      style: deepObject
   schemas:
-    CreatedUserBundlesResponse:
+    UserBundle:
       properties:
-        data:
-          items:
-            $ref: '#/components/schemas/UserBundle'
-          type: array
-      required:
-      - data
-      title: CreatedUserBundlesResponse
-      type: object
-    UnusedUserBundlesResponse:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/UnusedUserBundlesSchema'
-          title: Data
-          type: array
-      required:
-      - data
-      title: UnusedUserBundlesResponse
-      type: object
-    CreateUserBundlesBulkRequest:
-      properties:
-        idempotency_key:
-          description: Idempotency key for the request. Can be any UUID, but should always be unique for each request.
-          example: 12ade33a-21c0-473b-b055-b3c836e1c292
+        active:
+          description: Status of the user bundle.
+          example: true
+          type: boolean
+        billing_bundle:
+          $ref: '#/components/schemas/BillingBundleSummary'
+        created_at:
+          description: Date the user bundle was created.
+          example: '2025-01-20'
+          format: date
+          type: string
+        id:
+          description: User bundle's ID, this is used to identify the user bundle in the API.
+          example: ca1d2263-d1f1-43ac-ba53-248e7a4bb26a
           format: uuid
           type: string
-        items:
+        resources:
+          example: []
           items:
-            properties:
-              billing_bundle_id:
-                description: Quantity of user bundles to order.
-                example: 12ade33a-21c0-473b-b055-b3c836e1c292
-                format: uuid
-                type: string
-              quantity:
-                description: Quantity of user bundles to order.
-                type: integer
-            required:
-            - billing_bundle_id
-            - quantity
-            type: object
+            $ref: '#/components/schemas/UserBundleResourceSchema'
           type: array
-          writeOnly: true
-      type: object
-    UserBundleCreateResponse:
-      properties:
-        data:
-          $ref: '#/components/schemas/UserBundle'
+        updated_at:
+          description: Date the user bundle was last updated.
+          example: '2025-01-20'
+          format: date
+          type:
+          - string
+          - 'null'
+        user_id:
+          description: The customer's ID that owns this user bundle.
+          example: 16856d8c-cd59-4b08-9ac2-1ebb01d419e1
+          format: uuid
+          type: string
       required:
-      - data
-      title: UserBundleCreateResponse
-      type: object
-    PaginatedUserBundlesResponse:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/UserBundle'
-          title: Data
-          type: array
-        meta:
-          $ref: '#/components/schemas/PaginationResponse'
-      required:
-      - meta
-      - data
-      title: PaginatedUserBundlesResponse
-      type: object
-    UserBundleResponse:
-      properties:
-        data:
-          $ref: '#/components/schemas/UserBundle'
-      required:
-      - data
-      title: UserBundleResponse
+      - id
+      - active
+      - user_id
+      - created_at
+      - billing_bundle
+      - resources
       type: object
     UserBundleResourcesResponse:
       properties:
@@ -258,87 +287,21 @@ components:
       - data
       title: UserBundleResourcesResponse
       type: object
-    UnusedUserBundlesSchema:
+    UserBundleResponse:
       properties:
-        billing_bundle:
-          $ref: '#/components/schemas/BillingBundleSummary'
-        user_bundle_ids:
-          description: List of user bundle IDs for given bundle.
-          example:
-          - 1e650b96-4c6a-4d6f-b8ed-87c3fcacf595
-          - 53beb701-1231-4548-8abf-c802f38b14aa
-          items:
-            format: uuid
-            type: string
-          title: User Bundle Ids
-          type: array
+        data:
+          $ref: '#/components/schemas/UserBundle'
       required:
-      - billing_bundle
-      - user_bundle_ids
-      title: UnusedUserBundlesSchema
+      - data
+      title: UserBundleResponse
       type: object
-    UserBundleResourceSchema:
+    UserBundleCreateResponse:
       properties:
-        created_at:
-          description: Date the resource was created.
-          example: '2025-01-20'
-          format: date
-          type: string
-        id:
-          description: Resource's ID.
-          example: ca1d2263-d1f1-43ac-ba53-248e7a4bb26a
-          format: uuid
-          type: string
-        resource:
-          description: The resource itself (usually a phone number).
-          example: '+15617819942'
-          type: string
-        resource_type:
-          description: The type of the resource (usually 'number').
-          example: number
-          type: string
-        updated_at:
-          description: Date the resource was last updated.
-          example: '2025-01-20'
-          format: date
-          type:
-          - string
-          - 'null'
+        data:
+          $ref: '#/components/schemas/UserBundle'
       required:
-      - id
-      - resource
-      - resource_type
-      - created_at
-      title: UserBundleResourceSchema
-      type: object
-    PaginationResponse:
-      properties:
-        page_number:
-          description: The current page number.
-          example: 2
-          title: Page Number
-          type: integer
-        page_size:
-          description: The number of results per page.
-          example: 25
-          title: Page Size
-          type: integer
-        total_pages:
-          description: Total number of pages from the results.
-          example: 3
-          title: Total Pages
-          type: integer
-        total_results:
-          description: Total number of results returned.
-          example: 55
-          title: Total Results
-          type: integer
-      required:
-      - total_results
-      - total_pages
-      - page_number
-      - page_size
-      title: PaginationResponse
+      - data
+      title: UserBundleCreateResponse
       type: object
     BillingBundleSummary:
       properties:
@@ -400,111 +363,148 @@ components:
       - created_at
       title: BillingBundleSummary
       type: object
-    UserBundle:
+    PaginatedUserBundlesResponse:
       properties:
-        active:
-          description: Status of the user bundle.
-          example: true
-          type: boolean
+        data:
+          items:
+            $ref: '#/components/schemas/UserBundle'
+          title: Data
+          type: array
+        meta:
+          $ref: '#/components/schemas/PaginationResponse'
+      required:
+      - meta
+      - data
+      title: PaginatedUserBundlesResponse
+      type: object
+    UnusedUserBundlesSchema:
+      properties:
         billing_bundle:
           $ref: '#/components/schemas/BillingBundleSummary'
+        user_bundle_ids:
+          description: List of user bundle IDs for given bundle.
+          example:
+          - 1e650b96-4c6a-4d6f-b8ed-87c3fcacf595
+          - 53beb701-1231-4548-8abf-c802f38b14aa
+          items:
+            format: uuid
+            type: string
+          title: User Bundle Ids
+          type: array
+      required:
+      - billing_bundle
+      - user_bundle_ids
+      title: UnusedUserBundlesSchema
+      type: object
+    UserBundleResourceSchema:
+      properties:
         created_at:
-          description: Date the user bundle was created.
+          description: Date the resource was created.
           example: '2025-01-20'
           format: date
           type: string
         id:
-          description: User bundle's ID, this is used to identify the user bundle in the API.
+          description: Resource's ID.
           example: ca1d2263-d1f1-43ac-ba53-248e7a4bb26a
           format: uuid
           type: string
-        resources:
-          example: []
-          items:
-            $ref: '#/components/schemas/UserBundleResourceSchema'
-          type: array
+        resource:
+          description: The resource itself (usually a phone number).
+          example: '+15617819942'
+          type: string
+        resource_type:
+          description: The type of the resource (usually 'number').
+          example: number
+          type: string
         updated_at:
-          description: Date the user bundle was last updated.
+          description: Date the resource was last updated.
           example: '2025-01-20'
           format: date
           type:
           - string
           - 'null'
-        user_id:
-          description: The customer's ID that owns this user bundle.
-          example: 16856d8c-cd59-4b08-9ac2-1ebb01d419e1
-          format: uuid
-          type: string
       required:
       - id
-      - active
-      - user_id
+      - resource
+      - resource_type
       - created_at
-      - billing_bundle
-      - resources
+      title: UserBundleResourceSchema
       type: object
-  parameters:
-    AuthorizationBearer:
-      description: 'Format: Bearer <TOKEN>'
-      in: header
-      name: authorization_bearer
-      schema:
-        description: Authenticates the request with your Telnyx API V2 KEY
-        type: string
-    UserBundleId:
-      in: path
-      name: user_bundle_id
-      required: true
-      schema:
-        description: User bundle's ID, this is used to identify the user bundle in the API.
-        example: ca1d2263-d1f1-43ac-ba53-248e7a4bb26a
-        format: uuid
-        title: User Bundle Id
-        type: string
-    bundle-pricing_FilterConsolidated:
-      description: 'Consolidated filter parameter (deepObject style). Supports filtering by country_iso and resource. Examples: filter[country_iso]=US or filter[resource]=+15617819942'
-      explode: true
-      in: query
-      name: filter
-      schema:
-        properties:
-          country_iso:
-            description: Filter by country code.
-            items:
-              example: US
-              type: string
-            title: Filter[Country Iso]
-            type: array
-          resource:
-            description: Filter by resource.
-            items:
-              description: Filter by resource.
-              example: '+15617819942'
-              type: string
-            title: Filter[Resource]
-            type: array
-        type: object
-      style: deepObject
-    bundle-pricing_PageConsolidated:
-      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
-      explode: true
-      in: query
-      name: page
-      schema:
-        properties:
-          number:
-            default: 1
-            description: The page number to load.
-            minimum: 1
-            type: integer
-          size:
-            default: 20
-            description: The size of the page.
-            maximum: 250
-            minimum: 1
-            type: integer
-        type: object
-      style: deepObject
+    CreateUserBundlesBulkRequest:
+      properties:
+        idempotency_key:
+          description: Idempotency key for the request. Can be any UUID, but should always be unique for each request.
+          example: 12ade33a-21c0-473b-b055-b3c836e1c292
+          format: uuid
+          type: string
+        items:
+          items:
+            properties:
+              billing_bundle_id:
+                description: Quantity of user bundles to order.
+                example: 12ade33a-21c0-473b-b055-b3c836e1c292
+                format: uuid
+                type: string
+              quantity:
+                description: Quantity of user bundles to order.
+                type: integer
+            required:
+            - billing_bundle_id
+            - quantity
+            type: object
+          type: array
+          writeOnly: true
+      type: object
+    UnusedUserBundlesResponse:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/UnusedUserBundlesSchema'
+          title: Data
+          type: array
+      required:
+      - data
+      title: UnusedUserBundlesResponse
+      type: object
+    CreatedUserBundlesResponse:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/UserBundle'
+          type: array
+      required:
+      - data
+      title: CreatedUserBundlesResponse
+      type: object
+    PaginationResponse:
+      properties:
+        page_number:
+          description: The current page number.
+          example: 2
+          title: Page Number
+          type: integer
+        page_size:
+          description: The number of results per page.
+          example: 25
+          title: Page Size
+          type: integer
+        total_pages:
+          description: Total number of pages from the results.
+          example: 3
+          title: Total Pages
+          type: integer
+        total_results:
+          description: Total number of results returned.
+          example: 55
+          title: Total Results
+          type: integer
+      required:
+      - total_results
+      - total_pages
+      - page_number
+      - page_size
+      title: PaginationResponse
+      type: object
   responses:
     bundle-pricing_UnprocessableEntityErrorResponse:
       content:
@@ -524,6 +524,24 @@ components:
                 type: array
             type: object
       description: Request cannot be processed
+    bundle-pricing_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              errors:
+                items:
+                  properties:
+                    code:
+                      type: string
+                    detail:
+                      type: string
+                    title:
+                      type: string
+                  type: object
+                type: array
+            type: object
+      description: Unexpected error
     UnauthorizedErrorResponse:
       content:
         application/json:
@@ -578,24 +596,6 @@ components:
                 type: array
             type: object
       description: Invalid request parameters
-    bundle-pricing_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              errors:
-                items:
-                  properties:
-                    code:
-                      type: string
-                    detail:
-                      type: string
-                    title:
-                      type: string
-                  type: object
-                type: array
-            type: object
-      description: Unexpected error
   securitySchemes:
     bearerAuth:
       scheme: bearer

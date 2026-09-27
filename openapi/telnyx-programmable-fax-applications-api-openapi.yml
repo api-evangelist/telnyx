@@ -141,6 +141,36 @@ components:
       type:
       - string
       - 'null'
+    WebhookTimeoutSecs:
+      default: null
+      description: Specifies how many seconds to wait before timing out a webhook.
+      example: 25
+      maximum: 30
+      minimum: 0
+      title: Webhook Timeout Secs
+      type:
+      - integer
+      - 'null'
+    PaginationMeta:
+      properties:
+        page_number:
+          example: 2
+          type: integer
+        page_size:
+          example: 25
+          type: integer
+        total_pages:
+          example: 3
+          type: integer
+        total_results:
+          example: 55
+          type: integer
+      type: object
+    IntId:
+      description: Uniquely identifies the resource.
+      example: '1293384261075731499'
+      title: Int ID
+      type: string
     CreateFaxApplicationRequest:
       example:
         active: false
@@ -217,13 +247,6 @@ components:
       - webhook_event_url
       title: Create Fax Application Request
       type: object
-    programmable-fax_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/programmable-fax_Error'
-          type: array
-      type: object
     FaxEmailRecipient:
       default: null
       description: Specifies an email address where faxes sent to this application will be forwarded to (as pdf or tiff attachments)
@@ -232,6 +255,17 @@ components:
       type:
       - string
       - 'null'
+    ConnectionActive:
+      default: true
+      description: Specifies whether the connection can be used.
+      example: false
+      title: Connection Active
+      type: boolean
+    OutboundVoiceProfileId:
+      description: Identifies the associated outbound voice profile.
+      example: '1293384261075731499'
+      title: Outbound Voice Profile ID
+      type: string
     AnchorsiteOverride:
       default: Latency
       description: '`Latency` directs Telnyx to route media through the site with the lowest round-trip time to the user''s connection. Telnyx calculates this time using ICMP ping messages. This can be disabled by specifying a site to handle all media.'
@@ -249,22 +283,37 @@ components:
       example: Amsterdam, Netherlands
       title: Anchorsite Override
       type: string
-    IntId:
-      description: Uniquely identifies the resource.
-      example: '1293384261075731499'
-      title: Int ID
-      type: string
     WebhookEventUrl:
       description: The URL where webhooks related to this connection will be sent. Must include a scheme, such as 'https'.
       example: https://example.com
       format: uri
       title: Webhook Event URL
       type: string
-    OutboundVoiceProfileId:
-      description: Identifies the associated outbound voice profile.
-      example: '1293384261075731499'
-      title: Outbound Voice Profile ID
-      type: string
+    ErrorResponse:
+      properties:
+        errors:
+          items:
+            properties:
+              code:
+                type: string
+              detail:
+                type: string
+              meta:
+                properties:
+                  url:
+                    format: uri
+                    type: string
+                type: object
+              source:
+                properties:
+                  pointer:
+                    type: string
+                type: object
+              title:
+                type: string
+            type: object
+          type: array
+      type: object
     FaxApplication:
       example:
         active: false
@@ -377,6 +426,18 @@ components:
       - code
       - title
       type: object
+    ApplicationName:
+      description: A user-assigned name to help manage the application.
+      example: call-router
+      title: Application Name
+      type: string
+    programmable-fax_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/programmable-fax_Error'
+          type: array
+      type: object
     UpdateFaxApplicationRequest:
       example:
         active: false
@@ -454,149 +515,27 @@ components:
       - webhook_event_url
       title: Update Fax Application Request
       type: object
-    ErrorResponse:
-      properties:
-        errors:
-          items:
-            properties:
-              code:
-                type: string
-              detail:
-                type: string
-              meta:
-                properties:
-                  url:
-                    format: uri
-                    type: string
-                type: object
-              source:
-                properties:
-                  pointer:
-                    type: string
-                type: object
-              title:
-                type: string
-            type: object
-          type: array
-      type: object
-    PaginationMeta:
-      properties:
-        page_number:
-          example: 2
-          type: integer
-        page_size:
-          example: 25
-          type: integer
-        total_pages:
-          example: 3
-          type: integer
-        total_results:
-          example: 55
-          type: integer
-      type: object
-    ConnectionActive:
-      default: true
-      description: Specifies whether the connection can be used.
-      example: false
-      title: Connection Active
-      type: boolean
-    WebhookTimeoutSecs:
-      default: null
-      description: Specifies how many seconds to wait before timing out a webhook.
-      example: 25
-      maximum: 30
-      minimum: 0
-      title: Webhook Timeout Secs
-      type:
-      - integer
-      - 'null'
-    ApplicationName:
-      description: A user-assigned name to help manage the application.
-      example: call-router
-      title: Application Name
-      type: string
-  responses:
-    UnauthenticatedResponse:
-      content:
-        application/json:
-          examples:
-            Authentication Failed:
-              value:
-                errors:
-                - code: '10009'
-                  detail: Could not understand the provided credentials.
-                  meta:
-                    url: https://developers.telnyx.com/docs/overview/errors/10009
-                  title: Authentication failed
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-      description: Unauthorized
-    FaxApplicationResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/FaxApplication'
-            title: Fax Application Response
-            type: object
-      description: Successful response
-    programmable-fax_NotFoundResponse:
-      content:
-        application/json:
-          example:
-            errors:
-            - code: '404'
-              detail: The requested resource does not exist
-              title: Not Found
-          schema:
-            $ref: '#/components/schemas/programmable-fax_Errors'
-      description: The requested resource does not exist
-    programmable-fax_UnprocessableEntityResponse:
-      content:
-        application/json:
-          example:
-            errors:
-            - code: '422'
-              detail: The request parameters failed validation
-              title: Unprocessable Entity
-          schema:
-            $ref: '#/components/schemas/programmable-fax_Errors'
-      description: Unprocessable entity. The request was well-formed but contains semantic errors.
-    programmable-fax_UnauthorizedResponse:
-      description: Unauthorized
-    programmable-fax_BadRequestResponse:
-      content:
-        application/json:
-          examples:
-            missingParameter:
-              value:
-                errors:
-                - code: '10015'
-                  detail: The request failed because it was not well-formed.
-                  meta:
-                    url: https://developers.telnyx.com/docs/overview/errors/10015
-                  source:
-                    pointer: /
-                  title: Bad Request
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-      description: Bad request, the request was unacceptable, often due to missing a required parameter.
-    GetAllFaxApplicationsResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/FaxApplication'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            title: Get All Fax Applications Response
-            type: object
-      description: Successful response
   parameters:
+    programmable-fax_SortApplication:
+      description: "Specifies the sort order for results. By default sorting direction is ascending. To have the results sorted in descending order add the <code> -</code> prefix.<br/><br/>\nThat is: <ul>\n  <li>\n    <code>application_name</code>: sorts the result by the\n    <code>application_name</code> field in ascending order.\n  </li>\n\n  <li>\n    <code>-application_name</code>: sorts the result by the\n    <code>application_name</code> field in descending order.\n  </li>\n</ul> <br/> If not given, results are sorted by <code>created_at</code> in descending order."
+      in: query
+      name: sort
+      schema:
+        default: created_at
+        enum:
+        - created_at
+        - application_name
+        - active
+        example: application_name
+        type: string
+    id:
+      description: Identifies the resource.
+      in: path
+      name: id
+      required: true
+      schema:
+        example: '1293384261075731499'
+        type: string
     PageConsolidated:
       description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
       explode: true
@@ -638,26 +577,87 @@ components:
             type: string
         type: object
       style: deepObject
-    id:
-      description: Identifies the resource.
-      in: path
-      name: id
-      required: true
-      schema:
-        example: '1293384261075731499'
-        type: string
-    programmable-fax_SortApplication:
-      description: "Specifies the sort order for results. By default sorting direction is ascending. To have the results sorted in descending order add the <code> -</code> prefix.<br/><br/>\nThat is: <ul>\n  <li>\n    <code>application_name</code>: sorts the result by the\n    <code>application_name</code> field in ascending order.\n  </li>\n\n  <li>\n    <code>-application_name</code>: sorts the result by the\n    <code>application_name</code> field in descending order.\n  </li>\n</ul> <br/> If not given, results are sorted by <code>created_at</code> in descending order."
-      in: query
-      name: sort
-      schema:
-        default: created_at
-        enum:
-        - created_at
-        - application_name
-        - active
-        example: application_name
-        type: string
+  responses:
+    programmable-fax_BadRequestResponse:
+      content:
+        application/json:
+          examples:
+            missingParameter:
+              value:
+                errors:
+                - code: '10015'
+                  detail: The request failed because it was not well-formed.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10015
+                  source:
+                    pointer: /
+                  title: Bad Request
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+      description: Bad request, the request was unacceptable, often due to missing a required parameter.
+    programmable-fax_UnprocessableEntityResponse:
+      content:
+        application/json:
+          example:
+            errors:
+            - code: '422'
+              detail: The request parameters failed validation
+              title: Unprocessable Entity
+          schema:
+            $ref: '#/components/schemas/programmable-fax_Errors'
+      description: Unprocessable entity. The request was well-formed but contains semantic errors.
+    programmable-fax_NotFoundResponse:
+      content:
+        application/json:
+          example:
+            errors:
+            - code: '404'
+              detail: The requested resource does not exist
+              title: Not Found
+          schema:
+            $ref: '#/components/schemas/programmable-fax_Errors'
+      description: The requested resource does not exist
+    programmable-fax_UnauthorizedResponse:
+      description: Unauthorized
+    GetAllFaxApplicationsResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/FaxApplication'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            title: Get All Fax Applications Response
+            type: object
+      description: Successful response
+    UnauthenticatedResponse:
+      content:
+        application/json:
+          examples:
+            Authentication Failed:
+              value:
+                errors:
+                - code: '10009'
+                  detail: Could not understand the provided credentials.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+                  title: Authentication failed
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+      description: Unauthorized
+    FaxApplicationResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/FaxApplication'
+            title: Fax Application Response
+            type: object
+      description: Successful response
   securitySchemes:
     bearerAuth:
       scheme: bearer

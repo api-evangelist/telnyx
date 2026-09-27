@@ -189,53 +189,73 @@ paths:
       x-latency-category: responsive
 components:
   schemas:
-    CostSummary:
+    ChildRelationshipInfo:
       properties:
-        currency:
-          description: ISO 4217 currency code.
+        child_event:
           type: string
-        total:
-          description: Total session cost as a decimal string.
+        child_product:
           type: string
-      required:
-      - total
-      - currency
-      type: object
-    SessionAnalysisErrorResponse:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/SessionAnalysisError'
-          type: array
-      required:
-      - errors
-      type: object
-    QueryParameterInfo:
-      properties:
-        default:
+        child_record_type:
           type: string
+        cost_rollup:
+          type: boolean
         description:
           type: string
-        enum_values:
-          items:
-            type: string
-          type:
-          - array
-          - 'null'
-        max:
-          type:
-          - integer
-          - 'null'
-        min:
-          type:
-          - integer
-          - 'null'
-        type:
+        relationship_type:
+          type: string
+        traversal_enabled:
+          type: boolean
+        via:
+          $ref: '#/components/schemas/MetadataFieldMapping'
+      required:
+      - relationship_type
+      - via
+      - cost_rollup
+      - traversal_enabled
+      - description
+      - child_product
+      - child_event
+      - child_record_type
+      type: object
+    SessionAnalysisError:
+      properties:
+        code:
+          type: string
+        detail:
+          type: string
+        message:
           type: string
       required:
-      - type
-      - default
+      - code
+      - message
+      type: object
+    ParentRelationshipInfo:
+      properties:
+        cost_rollup:
+          type: boolean
+        description:
+          type: string
+        parent_event:
+          type: string
+        parent_product:
+          type: string
+        parent_record_type:
+          type: string
+        relationship_type:
+          type: string
+        traversal_enabled:
+          type: boolean
+        via:
+          $ref: '#/components/schemas/MetadataFieldMapping'
+      required:
+      - relationship_type
+      - via
+      - cost_rollup
+      - traversal_enabled
       - description
+      - parent_product
+      - parent_event
+      - parent_record_type
       type: object
     RecordTypeMetadataResponse:
       properties:
@@ -273,15 +293,19 @@ components:
       - examples
       - meta
       type: object
-    MetadataFieldMapping:
+    ResponseMeta:
       properties:
-        local_field:
-          type: string
-        parent_field:
-          type: string
+        event_count:
+          description: Total number of events in the session tree.
+          type: integer
+        products:
+          description: List of distinct products involved in the session.
+          items:
+            type: string
+          type: array
       required:
-      - local_field
-      - parent_field
+      - event_count
+      - products
       type: object
     FieldMapping:
       properties:
@@ -295,33 +319,65 @@ components:
       - local_field
       - parent_field
       type: object
-    ParentRelationshipInfo:
+    RelationshipMetadata:
       properties:
-        cost_rollup:
-          type: boolean
-        description:
-          type: string
-        parent_event:
-          type: string
-        parent_product:
-          type: string
-        parent_record_type:
-          type: string
-        relationship_type:
-          type: string
-        traversal_enabled:
-          type: boolean
-        via:
-          $ref: '#/components/schemas/MetadataFieldMapping'
+        max_recommended_depth:
+          type: integer
+        total_children:
+          type: integer
+        total_parents:
+          type: integer
+        total_siblings:
+          type: integer
       required:
-      - relationship_type
+      - total_children
+      - total_siblings
+      - total_parents
+      - max_recommended_depth
+      type: object
+    MetadataOverviewResponse:
+      properties:
+        meta:
+          $ref: '#/components/schemas/MetadataInfo'
+        query_parameters:
+          additionalProperties:
+            $ref: '#/components/schemas/QueryParameterInfo'
+          description: Map of supported query parameter names to their definitions.
+          type: object
+        record_types:
+          items:
+            $ref: '#/components/schemas/RecordTypeInfo'
+          type: array
+      required:
+      - record_types
+      - query_parameters
+      - meta
+      type: object
+    MetadataInfo:
+      properties:
+        last_updated:
+          format: date-time
+          type: string
+        total_record_types:
+          type: integer
+      required:
+      - total_record_types
+      - last_updated
+      type: object
+    RelationshipInfo:
+      properties:
+        parent_id:
+          description: Identifier of the parent event.
+          type: string
+        type:
+          description: Relationship type identifier.
+          type: string
+        via:
+          $ref: '#/components/schemas/FieldMapping'
+      required:
+      - type
       - via
-      - cost_rollup
-      - traversal_enabled
-      - description
-      - parent_product
-      - parent_event
-      - parent_record_type
+      - parent_id
       type: object
     RecordTypeInfo:
       properties:
@@ -354,44 +410,33 @@ components:
       - child_relationships
       - parent_relationships
       type: object
-    Links:
+    CostInfo:
       properties:
-        records:
-          description: Link to the underlying detail records.
+        cumulative_cost:
+          description: Cumulative cost including all descendants.
           type: string
-        self:
-          description: Link to this session analysis node.
+        currency:
+          description: ISO 4217 currency code.
+          type: string
+        event_cost:
+          description: Cost of this individual event.
           type: string
       required:
-      - self
-      - records
+      - event_cost
+      - cumulative_cost
+      - currency
       type: object
-    MetadataInfo:
+    CostSummary:
       properties:
-        last_updated:
-          format: date-time
+        currency:
+          description: ISO 4217 currency code.
           type: string
-        total_record_types:
-          type: integer
+        total:
+          description: Total session cost as a decimal string.
+          type: string
       required:
-      - total_record_types
-      - last_updated
-      type: object
-    RelationshipMetadata:
-      properties:
-        max_recommended_depth:
-          type: integer
-        total_children:
-          type: integer
-        total_parents:
-          type: integer
-        total_siblings:
-          type: integer
-      required:
-      - total_children
-      - total_siblings
-      - total_parents
-      - max_recommended_depth
+      - total
+      - currency
       type: object
     SessionAnalysisResponse:
       properties:
@@ -409,18 +454,6 @@ components:
       - cost
       - root
       - meta
-      type: object
-    SessionAnalysisError:
-      properties:
-        code:
-          type: string
-        detail:
-          type: string
-        message:
-          type: string
-      required:
-      - code
-      - message
       type: object
     EventNode:
       properties:
@@ -460,96 +493,63 @@ components:
       - record
       - children
       type: object
-    ChildRelationshipInfo:
+    SessionAnalysisErrorResponse:
       properties:
-        child_event:
+        errors:
+          items:
+            $ref: '#/components/schemas/SessionAnalysisError'
+          type: array
+      required:
+      - errors
+      type: object
+    MetadataFieldMapping:
+      properties:
+        local_field:
           type: string
-        child_product:
+        parent_field:
           type: string
-        child_record_type:
+      required:
+      - local_field
+      - parent_field
+      type: object
+    Links:
+      properties:
+        records:
+          description: Link to the underlying detail records.
           type: string
-        cost_rollup:
-          type: boolean
+        self:
+          description: Link to this session analysis node.
+          type: string
+      required:
+      - self
+      - records
+      type: object
+    QueryParameterInfo:
+      properties:
+        default:
+          type: string
         description:
           type: string
-        relationship_type:
-          type: string
-        traversal_enabled:
-          type: boolean
-        via:
-          $ref: '#/components/schemas/MetadataFieldMapping'
-      required:
-      - relationship_type
-      - via
-      - cost_rollup
-      - traversal_enabled
-      - description
-      - child_product
-      - child_event
-      - child_record_type
-      type: object
-    MetadataOverviewResponse:
-      properties:
-        meta:
-          $ref: '#/components/schemas/MetadataInfo'
-        query_parameters:
-          additionalProperties:
-            $ref: '#/components/schemas/QueryParameterInfo'
-          description: Map of supported query parameter names to their definitions.
-          type: object
-        record_types:
-          items:
-            $ref: '#/components/schemas/RecordTypeInfo'
-          type: array
-      required:
-      - record_types
-      - query_parameters
-      - meta
-      type: object
-    RelationshipInfo:
-      properties:
-        parent_id:
-          description: Identifier of the parent event.
-          type: string
-        type:
-          description: Relationship type identifier.
-          type: string
-        via:
-          $ref: '#/components/schemas/FieldMapping'
-      required:
-      - type
-      - via
-      - parent_id
-      type: object
-    CostInfo:
-      properties:
-        cumulative_cost:
-          description: Cumulative cost including all descendants.
-          type: string
-        currency:
-          description: ISO 4217 currency code.
-          type: string
-        event_cost:
-          description: Cost of this individual event.
-          type: string
-      required:
-      - event_cost
-      - cumulative_cost
-      - currency
-      type: object
-    ResponseMeta:
-      properties:
-        event_count:
-          description: Total number of events in the session tree.
-          type: integer
-        products:
-          description: List of distinct products involved in the session.
+        enum_values:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - 'null'
+        max:
+          type:
+          - integer
+          - 'null'
+        min:
+          type:
+          - integer
+          - 'null'
+        type:
+          type: string
       required:
-      - event_count
-      - products
+      - type
+      - default
+      - description
       type: object
   securitySchemes:
     bearerAuth:
