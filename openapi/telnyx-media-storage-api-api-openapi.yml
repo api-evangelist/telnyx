@@ -161,34 +161,49 @@ paths:
       x-latency-category: interactive
 components:
   schemas:
-    MediaResource:
+    UploadMediaMultipartRequest:
       example:
-        content_type: application/xml
-        created_at: '2019-01-23T18:10:02.574Z'
-        expires_at: '2020-01-23T18:10:02.574Z'
-        media_name: f5586561-8ff0-4291-a0ac-84fe544797bd
-        updated_at: '2019-01-23T18:10:02.574Z'
+        media: string($binary)
+        media_name: my-file
+        ttl_secs: 86400
       properties:
-        content_type:
-          description: Content type of the file
-          example: application/xml
-          type: string
-        created_at:
-          description: ISO 8601 formatted date of when the media resource was created
-          example: '2019-01-23T18:10:02.574Z'
-          type: string
-        expires_at:
-          description: ISO 8601 formatted date of when the media resource will expire and be deleted.
-          example: '2020-01-23T18:10:02.574Z'
+        media:
+          description: The file you want to upload. The maximum allowed size is 20 MB.
+          format: binary
           type: string
         media_name:
-          description: Uniquely identifies a media resource.
+          description: The unique identifier of a file.
+          example: my_file
           type: string
-        updated_at:
-          description: ISO 8601 formatted date of when the media resource was last updated
-          example: '2019-01-23T18:10:02.574Z'
+        ttl_secs:
+          description: The number of seconds after which the media resource will be deleted, defaults to 2 days. The maximum allowed vale is 630720000, which translates to 20 years.
+          example: 86400
+          type: integer
+      required:
+      - media
+      title: Upload media multipart request
+      type: object
+    media-storage_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/media-storage_Error'
+          type: array
+      type: object
+    UpdateMediaMultipartRequest:
+      example:
+        media: string($binary)
+        ttl_secs: 86400
+      properties:
+        media:
+          description: The file you want to upload. The maximum allowed size is 20 MB.
+          format: binary
           type: string
-      title: Media Resource
+        ttl_secs:
+          description: The number of seconds after which the media resource will be deleted, defaults to 2 days. The maximum allowed vale is 630720000, which translates to 20 years.
+          example: 86400
+          type: integer
+      title: Upload media multipart request
       type: object
     media-storage_Error:
       properties:
@@ -213,6 +228,21 @@ components:
       required:
       - code
       - title
+      type: object
+    PaginationMeta:
+      properties:
+        page_number:
+          example: 2
+          type: integer
+        page_size:
+          example: 25
+          type: integer
+        total_pages:
+          example: 3
+          type: integer
+        total_results:
+          example: 55
+          type: integer
       type: object
     UpdateMediaRequest:
       example:
@@ -251,66 +281,59 @@ components:
       - media_url
       title: Upload media request
       type: object
-    PaginationMeta:
-      properties:
-        page_number:
-          example: 2
-          type: integer
-        page_size:
-          example: 25
-          type: integer
-        total_pages:
-          example: 3
-          type: integer
-        total_results:
-          example: 55
-          type: integer
-      type: object
-    UpdateMediaMultipartRequest:
+    MediaResource:
       example:
-        media: string($binary)
-        ttl_secs: 86400
+        content_type: application/xml
+        created_at: '2019-01-23T18:10:02.574Z'
+        expires_at: '2020-01-23T18:10:02.574Z'
+        media_name: f5586561-8ff0-4291-a0ac-84fe544797bd
+        updated_at: '2019-01-23T18:10:02.574Z'
       properties:
-        media:
-          description: The file you want to upload. The maximum allowed size is 20 MB.
-          format: binary
+        content_type:
+          description: Content type of the file
+          example: application/xml
           type: string
-        ttl_secs:
-          description: The number of seconds after which the media resource will be deleted, defaults to 2 days. The maximum allowed vale is 630720000, which translates to 20 years.
-          example: 86400
-          type: integer
-      title: Upload media multipart request
-      type: object
-    media-storage_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/media-storage_Error'
-          type: array
-      type: object
-    UploadMediaMultipartRequest:
-      example:
-        media: string($binary)
-        media_name: my-file
-        ttl_secs: 86400
-      properties:
-        media:
-          description: The file you want to upload. The maximum allowed size is 20 MB.
-          format: binary
+        created_at:
+          description: ISO 8601 formatted date of when the media resource was created
+          example: '2019-01-23T18:10:02.574Z'
+          type: string
+        expires_at:
+          description: ISO 8601 formatted date of when the media resource will expire and be deleted.
+          example: '2020-01-23T18:10:02.574Z'
           type: string
         media_name:
-          description: The unique identifier of a file.
-          example: my_file
+          description: Uniquely identifies a media resource.
           type: string
-        ttl_secs:
-          description: The number of seconds after which the media resource will be deleted, defaults to 2 days. The maximum allowed vale is 630720000, which translates to 20 years.
-          example: 86400
-          type: integer
-      required:
-      - media
-      title: Upload media multipart request
+        updated_at:
+          description: ISO 8601 formatted date of when the media resource was last updated
+          example: '2019-01-23T18:10:02.574Z'
+          type: string
+      title: Media Resource
       type: object
   responses:
+    MediaResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/MediaResource'
+            title: Media resource response
+            type: object
+      description: A response describing a media resource
+    media-storage_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/media-storage_Errors'
+      description: Unexpected error
+    MediaDownloadResponse:
+      content:
+        application/octet-stream:
+          schema:
+            format: binary
+            type: string
+      description: A response describing a media resource
     ListMediaResponse:
       content:
         application/json:
@@ -325,29 +348,6 @@ components:
             title: List of media resources response
             type: object
       description: A response with a list of media resources
-    MediaResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/MediaResource'
-            title: Media resource response
-            type: object
-      description: A response describing a media resource
-    MediaDownloadResponse:
-      content:
-        application/octet-stream:
-          schema:
-            format: binary
-            type: string
-      description: A response describing a media resource
-    media-storage_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/media-storage_Errors'
-      description: Unexpected error
   parameters:
     MediaName:
       description: Uniquely identifies a media resource.

@@ -115,90 +115,109 @@ paths:
       - Customer Service Record
       x-latency-category: responsive
 components:
-  parameters:
-    customer_service_record_FilterConsolidated:
-      description: 'Consolidated filter parameter (deepObject style). Originally: filter[phone_number][eq], filter[phone_number][in][], filter[status][eq], filter[status][in][], filter[created_at][lt], filter[created_at][gt]'
-      explode: true
-      in: query
-      name: filter
-      schema:
-        properties:
-          created_at:
+  responses:
+    ListCustomerServiceRecords:
+      content:
+        application/json:
+          schema:
             properties:
-              gt:
-                description: Filters records to those created after a specific date.
-                example: '2020-01-01T00:00:00Z'
-                format: date-time
-                type: string
-              lt:
-                description: Filters records to those created before a specific date.
-                example: '2020-01-01T00:00:00Z'
-                format: date-time
-                type: string
-            type: object
-          phone_number:
-            properties:
-              eq:
-                description: Filters records to those with a specified number.
-                example: '+12441239999'
-                type: string
-              in:
-                description: Filters records to those with at least one number in the list.
+              data:
                 items:
-                  example: '+12441239999'
-                  type: string
+                  $ref: '#/components/schemas/CustomerServiceRecord'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful Response
+    customer_service_record_UnauthorizedErrorResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              errors:
+                items:
+                  $ref: '#/components/schemas/UnauthorizedError'
+                type: array
+      description: The required authentication headers were either invalid or not included in the request.
+    ShowCustomerServiceRecord:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/CustomerServiceRecord'
+            type: object
+      description: Successful Response
+    ResourceNotFoundErrorResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              errors:
+                items:
+                  $ref: '#/components/schemas/customer_service_record_ResourceNotFoundError'
+                type: array
+      description: Resource not found
+    ListCustomerServiceRecordPhoneNumberCoverage:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/CustomerServiceRecordPhoneNumberCoverage'
                 type: array
             type: object
-          status:
+      description: Successful Response
+    CreateCustomerServiceRecord:
+      content:
+        application/json:
+          schema:
+            example:
+              data:
+                created_at: '2023-01-01T00:00:00Z'
+                error_message: null
+                id: db7cebdb-21a8-4e89-8f51-e03ba6b799bb
+                phone_number: '+2003271000'
+                result: null
+                status: pending
+                updated_at: '2023-01-01T00:00:00Z'
+                webhook_url: https://example.com/webhook
             properties:
-              eq:
-                description: Filters records to those with a specific status.
-                enum:
-                - pending
-                - completed
-                - failed
-                example: pending
-                type: string
-              in:
-                description: Filters records to those with a least one status in the list.
-                items:
-                  enum:
-                  - pending
-                  - completed
-                  - failed
-                  example: pending
-                  type: string
-                type: array
+              data:
+                $ref: '#/components/schemas/CustomerServiceRecord'
             type: object
-        type: object
-      style: deepObject
-    customer_service_record_PageConsolidated:
-      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
-      explode: true
-      in: query
-      name: page
-      schema:
-        properties:
-          number:
-            default: 1
-            description: The page number to load
-            minimum: 1
-            type: integer
-          size:
-            default: 20
-            description: The size of the page
-            maximum: 250
-            minimum: 1
-            type: integer
-        type: object
-      style: deepObject
-    PathCustomerServiceRecordId:
-      description: The ID of the customer service record
-      in: path
-      name: customer_service_record_id
-      required: true
-      schema:
-        type: string
+      description: Successful Response
+    UnexpectedErrorResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              errors:
+                items:
+                  $ref: '#/components/schemas/UnexpectedError'
+                type: array
+      description: An unexpected error occurred.
+    customer_service_record_UnprocessableEntityErrorResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              errors:
+                items:
+                  $ref: '#/components/schemas/customer_service_record_UnprocessableEntityError'
+                type: array
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+    customer_service_record_ForbiddenErrorResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              errors:
+                items:
+                  $ref: '#/components/schemas/ForbiddenError'
+                type: array
+      description: You do not have permission to perform the requested action on the specified resource or resources.
   schemas:
     PaginationMeta:
       properties:
@@ -215,6 +234,52 @@ components:
           example: 55
           type: integer
       type: object
+    UnauthorizedError:
+      allOf:
+      - $ref: '#/components/schemas/GenericError'
+      - properties:
+          code:
+            example: '10009'
+            type: string
+          detail:
+            example: The required authentication headers were either invalid or not included in the request.
+            type: string
+          meta:
+            properties:
+              url:
+                example: https://developers.telnyx.com/docs/overview/errors/10009
+                type: string
+            type: object
+          title:
+            example: Authentication failed
+            type: string
+        type: object
+    customer_service_record_UnprocessableEntityError:
+      allOf:
+      - $ref: '#/components/schemas/GenericError'
+      - properties:
+          code:
+            example: '10002'
+            type: string
+          detail:
+            example: The phone number is invalid.
+            type: string
+          meta:
+            properties:
+              url:
+                example: https://developers.telnyx.com/docs/overview/errors/10002
+                type: string
+            type: object
+          source:
+            properties:
+              pointer:
+                example: /phone_numbers
+                type: string
+            type: object
+          title:
+            example: Invalid phone number
+            type: string
+        type: object
     GenericError:
       properties:
         code:
@@ -236,6 +301,26 @@ components:
         title:
           type: string
       type: object
+    customer_service_record_ResourceNotFoundError:
+      allOf:
+      - $ref: '#/components/schemas/GenericError'
+      - properties:
+          code:
+            example: '10005'
+            type: string
+          detail:
+            example: The requested resource or URL could not be found.
+            type: string
+          meta:
+            properties:
+              url:
+                example: https://developers.telnyx.com/docs/overview/errors/10005
+                type: string
+            type: object
+          title:
+            example: Resource not found
+            type: string
+        type: object
     CustomerServiceRecord:
       properties:
         created_at:
@@ -344,72 +429,6 @@ components:
           example: https://example.com/webhook
           type: string
       type: object
-    customer_service_record_ResourceNotFoundError:
-      allOf:
-      - $ref: '#/components/schemas/GenericError'
-      - properties:
-          code:
-            example: '10005'
-            type: string
-          detail:
-            example: The requested resource or URL could not be found.
-            type: string
-          meta:
-            properties:
-              url:
-                example: https://developers.telnyx.com/docs/overview/errors/10005
-                type: string
-            type: object
-          title:
-            example: Resource not found
-            type: string
-        type: object
-    customer_service_record_UnprocessableEntityError:
-      allOf:
-      - $ref: '#/components/schemas/GenericError'
-      - properties:
-          code:
-            example: '10002'
-            type: string
-          detail:
-            example: The phone number is invalid.
-            type: string
-          meta:
-            properties:
-              url:
-                example: https://developers.telnyx.com/docs/overview/errors/10002
-                type: string
-            type: object
-          source:
-            properties:
-              pointer:
-                example: /phone_numbers
-                type: string
-            type: object
-          title:
-            example: Invalid phone number
-            type: string
-        type: object
-    UnauthorizedError:
-      allOf:
-      - $ref: '#/components/schemas/GenericError'
-      - properties:
-          code:
-            example: '10009'
-            type: string
-          detail:
-            example: The required authentication headers were either invalid or not included in the request.
-            type: string
-          meta:
-            properties:
-              url:
-                example: https://developers.telnyx.com/docs/overview/errors/10009
-                type: string
-            type: object
-          title:
-            example: Authentication failed
-            type: string
-        type: object
     UnexpectedError:
       allOf:
       - $ref: '#/components/schemas/GenericError'
@@ -428,26 +447,6 @@ components:
             type: object
           title:
             example: Unexpected error
-            type: string
-        type: object
-    ForbiddenError:
-      allOf:
-      - $ref: '#/components/schemas/GenericError'
-      - properties:
-          code:
-            example: '10010'
-            type: string
-          detail:
-            example: You do not have permission to perform the requested action on the specified resource or resources.
-            type: string
-          meta:
-            properties:
-              url:
-                example: https://developers.telnyx.com/docs/overview/errors/10010
-                type: string
-            type: object
-          title:
-            example: Authorization failed
             type: string
         type: object
     CustomerServiceRecordPhoneNumberCoverage:
@@ -486,6 +485,26 @@ components:
           example: customer_service_record_phone_number_coverage
           type: string
       type: object
+    ForbiddenError:
+      allOf:
+      - $ref: '#/components/schemas/GenericError'
+      - properties:
+          code:
+            example: '10010'
+            type: string
+          detail:
+            example: You do not have permission to perform the requested action on the specified resource or resources.
+            type: string
+          meta:
+            properties:
+              url:
+                example: https://developers.telnyx.com/docs/overview/errors/10010
+                type: string
+            type: object
+          title:
+            example: Authorization failed
+            type: string
+        type: object
     CustomerServiceRecordAdditionalData:
       properties:
         account_number:
@@ -534,109 +553,90 @@ components:
           pattern: ^\d{5}$
           type: string
       type: object
-  responses:
-    customer_service_record_UnprocessableEntityErrorResponse:
-      content:
-        application/json:
-          schema:
+  parameters:
+    customer_service_record_FilterConsolidated:
+      description: 'Consolidated filter parameter (deepObject style). Originally: filter[phone_number][eq], filter[phone_number][in][], filter[status][eq], filter[status][in][], filter[created_at][lt], filter[created_at][gt]'
+      explode: true
+      in: query
+      name: filter
+      schema:
+        properties:
+          created_at:
             properties:
-              errors:
-                items:
-                  $ref: '#/components/schemas/customer_service_record_UnprocessableEntityError'
-                type: array
-      description: Unprocessable entity. Check the 'detail' field in response for details.
-    ShowCustomerServiceRecord:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/CustomerServiceRecord'
+              gt:
+                description: Filters records to those created after a specific date.
+                example: '2020-01-01T00:00:00Z'
+                format: date-time
+                type: string
+              lt:
+                description: Filters records to those created before a specific date.
+                example: '2020-01-01T00:00:00Z'
+                format: date-time
+                type: string
             type: object
-      description: Successful Response
-    customer_service_record_UnauthorizedErrorResponse:
-      content:
-        application/json:
-          schema:
+          phone_number:
             properties:
-              errors:
+              eq:
+                description: Filters records to those with a specified number.
+                example: '+12441239999'
+                type: string
+              in:
+                description: Filters records to those with at least one number in the list.
                 items:
-                  $ref: '#/components/schemas/UnauthorizedError'
-                type: array
-      description: The required authentication headers were either invalid or not included in the request.
-    ListCustomerServiceRecordPhoneNumberCoverage:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/CustomerServiceRecordPhoneNumberCoverage'
+                  example: '+12441239999'
+                  type: string
                 type: array
             type: object
-      description: Successful Response
-    CreateCustomerServiceRecord:
-      content:
-        application/json:
-          schema:
-            example:
-              data:
-                created_at: '2023-01-01T00:00:00Z'
-                error_message: null
-                id: db7cebdb-21a8-4e89-8f51-e03ba6b799bb
-                phone_number: '+2003271000'
-                result: null
-                status: pending
-                updated_at: '2023-01-01T00:00:00Z'
-                webhook_url: https://example.com/webhook
+          status:
             properties:
-              data:
-                $ref: '#/components/schemas/CustomerServiceRecord'
+              eq:
+                description: Filters records to those with a specific status.
+                enum:
+                - pending
+                - completed
+                - failed
+                example: pending
+                type: string
+              in:
+                description: Filters records to those with a least one status in the list.
+                items:
+                  enum:
+                  - pending
+                  - completed
+                  - failed
+                  example: pending
+                  type: string
+                type: array
             type: object
-      description: Successful Response
-    customer_service_record_ForbiddenErrorResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              errors:
-                items:
-                  $ref: '#/components/schemas/ForbiddenError'
-                type: array
-      description: You do not have permission to perform the requested action on the specified resource or resources.
-    UnexpectedErrorResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              errors:
-                items:
-                  $ref: '#/components/schemas/UnexpectedError'
-                type: array
-      description: An unexpected error occurred.
-    ResourceNotFoundErrorResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              errors:
-                items:
-                  $ref: '#/components/schemas/customer_service_record_ResourceNotFoundError'
-                type: array
-      description: Resource not found
-    ListCustomerServiceRecords:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/CustomerServiceRecord'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful Response
+        type: object
+      style: deepObject
+    PathCustomerServiceRecordId:
+      description: The ID of the customer service record
+      in: path
+      name: customer_service_record_id
+      required: true
+      schema:
+        type: string
+    customer_service_record_PageConsolidated:
+      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
+      explode: true
+      in: query
+      name: page
+      schema:
+        properties:
+          number:
+            default: 1
+            description: The page number to load
+            minimum: 1
+            type: integer
+          size:
+            default: 20
+            description: The size of the page
+            maximum: 250
+            minimum: 1
+            type: integer
+        type: object
+      style: deepObject
   requestBodies:
     VerifyCustomerServiceRecordPhoneNumberCoverage:
       content:

@@ -233,56 +233,11 @@ paths:
       - Whatsapp Phone Numbers
       x-latency-category: responsive
 components:
-  responses:
-    WhatsappCallingSettingsResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/WhatsappCallingSettingsData'
-            type: object
-      description: Successful response with Whatsapp calling settings
-    messaging_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/messaging_Errors'
-      description: Unexpected error
-    WhatsappProfileSingleResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/WhatsappProfileData'
-            type: object
-      description: Successful response with Whatsapp profile
-    WhatsappPhonesListResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/WhatsappPhoneResponse'
-                type: array
-              meta:
-                $ref: '#/components/schemas/messaging_PaginationMeta'
-            type: object
-      description: Successful response with Whatsapp phone numbers
   parameters:
     WabaId:
       description: Whatsapp Business Account ID
       in: path
       name: id
-      required: true
-      schema:
-        type: string
-    WhatsappPhoneNumber:
-      description: Phone number (E.164 format)
-      in: path
-      name: phone_number
       required: true
       schema:
         type: string
@@ -306,7 +261,96 @@ components:
             type: integer
         type: object
       style: deepObject
+    WhatsappPhoneNumber:
+      description: Phone number (E.164 format)
+      in: path
+      name: phone_number
+      required: true
+      schema:
+        type: string
+  responses:
+    WhatsappPhonesListResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/WhatsappPhoneResponse'
+                type: array
+              meta:
+                $ref: '#/components/schemas/messaging_PaginationMeta'
+            type: object
+      description: Successful response with Whatsapp phone numbers
+    WhatsappCallingSettingsResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/WhatsappCallingSettingsData'
+            type: object
+      description: Successful response with Whatsapp calling settings
+    WhatsappProfileSingleResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/WhatsappProfileData'
+            type: object
+      description: Successful response with Whatsapp profile
+    messaging_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors'
+      description: Unexpected error
   schemas:
+    WhatsappUpdateProfileRequest:
+      properties:
+        about:
+          maxLength: 139
+          type: string
+        address:
+          type: string
+        category:
+          type: string
+        description:
+          maxLength: 512
+          type: string
+        display_name:
+          type: string
+        email:
+          type: string
+        profile_id:
+          description: Messaging profile ID for inbound messages
+          format: uuid
+          type: string
+        website:
+          type: string
+      type: object
+    WhatsappResendVerificationRequest:
+      properties:
+        verification_method:
+          default: sms
+          enum:
+          - sms
+          - voice
+          type: string
+      type: object
+    WhatsappProfilePhotoData:
+      properties:
+        phone_number_id:
+          description: Meta phone number ID
+          type: string
+        profile_photo_url:
+          description: URL of the business profile photo (served by Meta's CDN). May be empty if no photo is set.
+          type: string
+        record_type:
+          example: whatsapp_phone_number_profile_photos
+          type: string
+      type: object
     WhatsappProfileData:
       properties:
         about:
@@ -344,34 +388,6 @@ components:
         website:
           type: string
       type: object
-    WhatsappResendVerificationRequest:
-      properties:
-        verification_method:
-          default: sms
-          enum:
-          - sms
-          - voice
-          type: string
-      type: object
-    WhatsappPhoneNumberVerificationRequest:
-      properties:
-        display_name:
-          type: string
-        language:
-          default: en_US
-          type: string
-        phone_number:
-          type: string
-        verification_method:
-          default: sms
-          enum:
-          - sms
-          - voice
-          type: string
-      required:
-      - phone_number
-      - display_name
-      type: object
     WhatsappCallingSettingsData:
       properties:
         enabled:
@@ -385,32 +401,6 @@ components:
           type: string
         updated_at:
           format: date-time
-          type: string
-      type: object
-    WhatsappVerifyCodeRequest:
-      properties:
-        code:
-          type: string
-      required:
-      - code
-      type: object
-    WhatsappPatchCallingSettingsRequest:
-      properties:
-        enabled:
-          type: boolean
-      required:
-      - enabled
-      type: object
-    WhatsappProfilePhotoData:
-      properties:
-        phone_number_id:
-          description: Meta phone number ID
-          type: string
-        profile_photo_url:
-          description: URL of the business profile photo (served by Meta's CDN). May be empty if no photo is set.
-          type: string
-        record_type:
-          example: whatsapp_phone_number_profile_photos
           type: string
       type: object
     WhatsappPhoneResponse:
@@ -445,30 +435,25 @@ components:
           description: WABA ID of Whatsapp business account
           type: string
       type: object
-    messaging_Error:
+    WhatsappPhoneNumberVerificationRequest:
       properties:
-        code:
+        display_name:
           type: string
-          x-format: integer
-        detail:
+        language:
+          default: en_US
           type: string
-        meta:
-          type: object
-        source:
-          properties:
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              format: json-pointer
-              type: string
-          type: object
-        title:
+        phone_number:
+          type: string
+        verification_method:
+          default: sms
+          enum:
+          - sms
+          - voice
           type: string
       required:
-      - code
-      - title
+      - phone_number
+      - display_name
+      type: object
     messaging_PaginationMeta:
       properties:
         page_number:
@@ -495,28 +480,43 @@ components:
           items:
             $ref: '#/components/schemas/messaging_Error'
           type: array
-    WhatsappUpdateProfileRequest:
+    WhatsappPatchCallingSettingsRequest:
       properties:
-        about:
-          maxLength: 139
+        enabled:
+          type: boolean
+      required:
+      - enabled
+      type: object
+    messaging_Error:
+      properties:
+        code:
           type: string
-        address:
+          x-format: integer
+        detail:
           type: string
-        category:
+        meta:
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              format: json-pointer
+              type: string
+          type: object
+        title:
           type: string
-        description:
-          maxLength: 512
+      required:
+      - code
+      - title
+    WhatsappVerifyCodeRequest:
+      properties:
+        code:
           type: string
-        display_name:
-          type: string
-        email:
-          type: string
-        profile_id:
-          description: Messaging profile ID for inbound messages
-          format: uuid
-          type: string
-        website:
-          type: string
+      required:
+      - code
       type: object
     WhatsappProfilePhotoResponse:
       properties:

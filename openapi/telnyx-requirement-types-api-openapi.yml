@@ -59,13 +59,57 @@ paths:
       - Requirement Types
       x-latency-category: responsive
 components:
+  responses:
+    documents_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/documents_Errors'
+      description: Unexpected error
+    DocReqsListRequirementTypesResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/DocReqsRequirementTypeList'
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful response
+    DocReqsRequirementTypeResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/DocReqsRequirementType'
+            type: object
+      description: Successful response
   schemas:
-    documents_Errors:
+    documents_Error:
       properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/documents_Error'
-          type: array
+        code:
+          type: string
+        detail:
+          type: string
+        meta:
+          additionalProperties: true
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+          type: object
+        title:
+          type: string
+      required:
+      - code
+      - title
       type: object
     DocReqsRequirementType:
       properties:
@@ -166,62 +210,37 @@ components:
           example: 55
           type: integer
       type: object
+    documents_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/documents_Error'
+          type: array
+      type: object
     DocReqsRequirementTypeList:
       items:
         $ref: '#/components/schemas/DocReqsRequirementType'
       type: array
-    documents_Error:
-      properties:
-        code:
-          type: string
-        detail:
-          type: string
-        meta:
-          additionalProperties: true
-          type: object
-        source:
-          properties:
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-          type: object
-        title:
-          type: string
-      required:
-      - code
-      - title
-      type: object
-  responses:
-    DocReqsRequirementTypeResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/DocReqsRequirementType'
-            type: object
-      description: Successful response
-    DocReqsListRequirementTypesResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/DocReqsRequirementTypeList'
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful response
-    documents_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/documents_Errors'
-      description: Unexpected error
   parameters:
+    FilterRequirementTypesConsolidated:
+      description: 'Consolidated filter parameter for requirement types (deepObject style). Originally: filter[name]'
+      explode: true
+      in: query
+      name: filter
+      required: false
+      schema:
+        additionalProperties: false
+        properties:
+          name:
+            additionalProperties: false
+            properties:
+              contains:
+                description: Filters requirement types to those whose name contains a certain string.
+                example: utility bill
+                type: string
+            type: object
+        type: object
+      style: deepObject
     SortRequirementTypesConsolidated:
       description: 'Consolidated sort parameter for requirement types (deepObject style). Originally: sort[]'
       in: query
@@ -250,25 +269,6 @@ components:
       schema:
         format: uuid
         type: string
-    FilterRequirementTypesConsolidated:
-      description: 'Consolidated filter parameter for requirement types (deepObject style). Originally: filter[name]'
-      explode: true
-      in: query
-      name: filter
-      required: false
-      schema:
-        additionalProperties: false
-        properties:
-          name:
-            additionalProperties: false
-            properties:
-              contains:
-                description: Filters requirement types to those whose name contains a certain string.
-                example: utility bill
-                type: string
-            type: object
-        type: object
-      style: deepObject
   securitySchemes:
     bearerAuth:
       scheme: bearer

@@ -122,31 +122,6 @@ paths:
       - Outbound Voice Profiles
       x-latency-category: responsive
 components:
-  responses:
-    OutboundVoiceProfileResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/OutboundVoiceProfile'
-            title: Outbound Voice Profile Response
-            type: object
-      description: Successful response
-    ListOutboundVoiceProfilesResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/OutboundVoiceProfile'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            title: List Outbound Voice Profiles Response
-            type: object
-      description: Successful response
   schemas:
     ServicePlan:
       default: global
@@ -154,6 +129,20 @@ components:
       enum:
       - global
       example: global
+      type: string
+    UsagePaymentMethod:
+      default: rate-deck
+      description: Setting for how costs for outbound profile are calculated.
+      enum:
+      - rate-deck
+      example: rate-deck
+      type: string
+    TrafficType:
+      default: conversational
+      description: Specifies the type of traffic allowed in this profile.
+      enum:
+      - conversational
+      example: conversational
       type: string
     PaginationMeta:
       properties:
@@ -281,6 +270,45 @@ components:
       required:
       - name
       title: Outbound Voice Profile
+      type: object
+    OutboundCallRecording:
+      example:
+        call_recording_caller_phone_numbers:
+        - '+19705555098'
+        call_recording_channels: dual
+        call_recording_format: mp3
+        call_recording_type: by_caller_phone_number
+      properties:
+        call_recording_caller_phone_numbers:
+          description: When call_recording_type is 'by_caller_phone_number', only outbound calls using one of these numbers will be recorded. Numbers must be specified in E164 format.
+          example:
+          - '+19705555098'
+          items:
+            type: string
+          type: array
+        call_recording_channels:
+          default: single
+          description: When using 'dual' channels, the final audio file will be a stereo recording with the first leg on channel A, and the rest on channel B.
+          enum:
+          - single
+          - dual
+          example: dual
+          type: string
+        call_recording_format:
+          default: wav
+          description: The audio file format for calls being recorded.
+          enum:
+          - wav
+          - mp3
+          example: mp3
+          type: string
+        call_recording_type:
+          description: Specifies which calls are recorded.
+          enum:
+          - all
+          - none
+          - by_caller_phone_number
+          type: string
       type: object
     OutboundVoiceProfile:
       example:
@@ -422,45 +450,6 @@ components:
       - name
       title: Outbound Voice Profile
       type: object
-    OutboundCallRecording:
-      example:
-        call_recording_caller_phone_numbers:
-        - '+19705555098'
-        call_recording_channels: dual
-        call_recording_format: mp3
-        call_recording_type: by_caller_phone_number
-      properties:
-        call_recording_caller_phone_numbers:
-          description: When call_recording_type is 'by_caller_phone_number', only outbound calls using one of these numbers will be recorded. Numbers must be specified in E164 format.
-          example:
-          - '+19705555098'
-          items:
-            type: string
-          type: array
-        call_recording_channels:
-          default: single
-          description: When using 'dual' channels, the final audio file will be a stereo recording with the first leg on channel A, and the rest on channel B.
-          enum:
-          - single
-          - dual
-          example: dual
-          type: string
-        call_recording_format:
-          default: wav
-          description: The audio file format for calls being recorded.
-          enum:
-          - wav
-          - mp3
-          example: mp3
-          type: string
-        call_recording_type:
-          description: Specifies which calls are recorded.
-          enum:
-          - all
-          - none
-          - by_caller_phone_number
-          type: string
-      type: object
     CreateOutboundVoiceProfileRequest:
       example:
         billing_group_id: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
@@ -573,20 +562,6 @@ components:
       - name
       title: Outbound Voice Profile
       type: object
-    TrafficType:
-      default: conversational
-      description: Specifies the type of traffic allowed in this profile.
-      enum:
-      - conversational
-      example: conversational
-      type: string
-    UsagePaymentMethod:
-      default: rate-deck
-      description: Setting for how costs for outbound profile are calculated.
-      enum:
-      - rate-deck
-      example: rate-deck
-      type: string
   parameters:
     outbound-voice-profiles_PageConsolidated:
       description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
@@ -608,6 +583,27 @@ components:
             type: integer
         type: object
       style: deepObject
+    SortOutboundVoiceProfile:
+      description: "Specifies the sort order for results. By default sorting direction is ascending. To have the results sorted in descending order add the <code>-</code> prefix.<br/><br/>\nThat is: <ul>\n  <li>\n    <code>name</code>: sorts the result by the\n    <code>name</code> field in ascending order.\n  </li>\n\n  <li>\n    <code>-name</code>: sorts the result by the\n    <code>name</code> field in descending order.\n  </li>\n</ul> <br/>"
+      in: query
+      name: sort
+      schema:
+        default: -created_at
+        enum:
+        - enabled
+        - -enabled
+        - created_at
+        - -created_at
+        - name
+        - -name
+        - service_plan
+        - -service_plan
+        - traffic_type
+        - -traffic_type
+        - usage_payment_method
+        - -usage_payment_method
+        example: name
+        type: string
     id:
       description: Identifies the resource.
       in: path
@@ -633,27 +629,31 @@ components:
             type: object
         type: object
       style: deepObject
-    SortOutboundVoiceProfile:
-      description: "Specifies the sort order for results. By default sorting direction is ascending. To have the results sorted in descending order add the <code>-</code> prefix.<br/><br/>\nThat is: <ul>\n  <li>\n    <code>name</code>: sorts the result by the\n    <code>name</code> field in ascending order.\n  </li>\n\n  <li>\n    <code>-name</code>: sorts the result by the\n    <code>name</code> field in descending order.\n  </li>\n</ul> <br/>"
-      in: query
-      name: sort
-      schema:
-        default: -created_at
-        enum:
-        - enabled
-        - -enabled
-        - created_at
-        - -created_at
-        - name
-        - -name
-        - service_plan
-        - -service_plan
-        - traffic_type
-        - -traffic_type
-        - usage_payment_method
-        - -usage_payment_method
-        example: name
-        type: string
+  responses:
+    OutboundVoiceProfileResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/OutboundVoiceProfile'
+            title: Outbound Voice Profile Response
+            type: object
+      description: Successful response
+    ListOutboundVoiceProfilesResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/OutboundVoiceProfile'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            title: List Outbound Voice Profiles Response
+            type: object
+      description: Successful response
   securitySchemes:
     bearerAuth:
       scheme: bearer
