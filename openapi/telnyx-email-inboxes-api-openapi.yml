@@ -1,0 +1,2611 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Email Inboxes API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Email Inboxes
+  description: Create and manage agent inboxes, retrieve inbound messages and threads, and reply to or forward messages.
+paths:
+  /email_inboxes:
+    get:
+      tags:
+      - Email Inboxes
+      operationId: ListEmailInboxes
+      summary: List email inboxes
+      description: Lists the account's non-deleted inboxes newest first using stable cursor pagination.
+      parameters:
+      - name: page_size
+        in: query
+        required: false
+        description: Number of results to return. Defaults to 20; maximum is 250.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 250
+          default: 20
+      - name: page_cursor
+        in: query
+        required: false
+        description: Opaque cursor returned by the previous inbox page.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Paginated email inboxes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailInboxListResponse'
+              example:
+                data:
+                - id: 11111111-1111-1111-1111-111111111111
+                  record_type: email_inbox
+                  address: agent-1@abc123def456.mail.test.telnyx.com
+                  status: active
+                  domain_id: 22222222-2222-2222-2222-222222222222
+                  domain: abc123def456.mail.test.telnyx.com
+                  settings: {}
+                  created_at: '2026-07-12T00:00:00Z'
+                  updated_at: '2026-07-12T00:00:00Z'
+                meta:
+                  page_size: 20
+                  page_cursor: MjAyNi0wNy0xMlQwMCUzQTAwJTNBMDBafDExMTExMTExLTExMTEtMTExMS0xMTExLTExMTExMTExMTExMQ
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '422':
+          description: Pagination validation failed (10015).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              examples:
+                invalidPageSize:
+                  value:
+                    errors:
+                    - code: '10015'
+                      title: Validation Failed
+                      detail: page_size must be between 1 and 250
+                      source:
+                        pointer: /page_size
+                invalidPageCursor:
+                  value:
+                    errors:
+                    - code: '10015'
+                      title: Validation Failed
+                      detail: cursor is invalid or corrupted
+                      source:
+                        pointer: /page_cursor
+        '503':
+          $ref: '#/components/responses/email_ServiceUnavailableResponse'
+    post:
+      tags:
+      - Email Inboxes
+      operationId: CreateEmailInbox
+      summary: Create an email inbox
+      description: 'Creates an inbox on an inbound-enabled domain. When `domain_id` is omitted, Telnyx
+
+        allocates the account''s shared inbound subdomain so the inbox is immediately usable
+
+        without customer DNS setup. When `username` is omitted, a unique username is generated.'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEmailInboxRequest'
+            examples:
+              generatedUsername:
+                value: {}
+              instantInbox:
+                value:
+                  username: agent-1
+              customDomainInbox:
+                value:
+                  username: support
+                  domain_id: 22222222-2222-2222-2222-222222222222
+      responses:
+        '201':
+          description: Email inbox created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailInboxResponse'
+              example:
+                data:
+                  id: 11111111-1111-1111-1111-111111111111
+                  record_type: email_inbox
+                  address: agent-1@abc123def456.mail.test.telnyx.com
+                  status: active
+                  domain_id: 22222222-2222-2222-2222-222222222222
+                  domain: abc123def456.mail.test.telnyx.com
+                  settings: {}
+                  created_at: '2026-07-12T00:00:00Z'
+                  updated_at: '2026-07-12T00:00:00Z'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '422':
+          description: Inbox validation failed (10015).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              example:
+                errors:
+                - code: '10015'
+                  title: Validation Failed
+                  detail: username must start and end with a letter or digit and may contain only lowercase letters, digits, dots, hyphens, and underscores
+                  source:
+                    pointer: /data/attributes/username
+        '503':
+          $ref: '#/components/responses/email_ServiceUnavailableResponse'
+  /email_inboxes/{id}:
+    delete:
+      tags:
+      - Email Inboxes
+      operationId: DeleteEmailInbox
+      summary: Delete an email inbox
+      description: Soft-deletes an account-scoped inbox. Its address remains reserved and the inbox is no longer returned by list or get operations.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Email inbox UUID.
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Email inbox deleted. The response has no body.
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          description: Email inbox not found, already deleted, or owned by another account (10001).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              example:
+                errors:
+                - code: '10001'
+                  title: Not Found
+                  detail: The requested email_inbox was not found
+        '503':
+          $ref: '#/components/responses/email_ServiceUnavailableResponse'
+    get:
+      tags:
+      - Email Inboxes
+      operationId: GetEmailInbox
+      summary: Get an email inbox
+      description: Returns an account-scoped, non-deleted inbox. Missing and foreign inboxes are indistinguishable.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Email inbox UUID.
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Email inbox details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailInboxResponse'
+              example:
+                data:
+                  id: 11111111-1111-1111-1111-111111111111
+                  record_type: email_inbox
+                  address: agent-1@abc123def456.mail.test.telnyx.com
+                  status: active
+                  domain_id: 22222222-2222-2222-2222-222222222222
+                  domain: abc123def456.mail.test.telnyx.com
+                  settings: {}
+                  created_at: '2026-07-12T00:00:00Z'
+                  updated_at: '2026-07-12T00:00:00Z'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          description: Email inbox not found (10001).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              example:
+                errors:
+                - code: '10001'
+                  title: Not Found
+                  detail: The requested email_inbox was not found
+        '503':
+          $ref: '#/components/responses/email_ServiceUnavailableResponse'
+  /email_inboxes/{inbox_id}/filters:
+    parameters:
+    - $ref: '#/components/parameters/InboxIdPathParam'
+    delete:
+      tags:
+      - Email Inboxes
+      operationId: RemoveEmailInboxFilterEntries
+      summary: Remove sender filter entries from an inbox
+      description: 'Removes entries from either the allowlist or blocklist. The operation is
+
+        idempotent: removing an entry that is not present still returns the current
+
+        filter lists.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MutateInboxFiltersRequest'
+            example:
+              type: allowlist
+              entries:
+              - former-partner@example.com
+      responses:
+        '200':
+          $ref: '#/components/responses/InboxFiltersResponse'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+        '503':
+          $ref: '#/components/responses/email_ServiceUnavailableResponse'
+    get:
+      tags:
+      - Email Inboxes
+      operationId: ListEmailInboxFilters
+      summary: List sender filters for an inbox
+      description: 'Returns the inbox''s sender allowlist and blocklist. Entries are normalized
+
+        to lowercase. A blocklist match takes precedence over an allowlist match;
+
+        when both lists are empty, all senders are accepted.'
+      responses:
+        '200':
+          $ref: '#/components/responses/InboxFiltersResponse'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '503':
+          $ref: '#/components/responses/email_ServiceUnavailableResponse'
+    post:
+      tags:
+      - Email Inboxes
+      operationId: AddEmailInboxFilterEntries
+      summary: Add sender filter entries to an inbox
+      description: 'Adds entries to either the allowlist or blocklist. The operation is an
+
+        idempotent set union: entries already present remain unchanged.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MutateInboxFiltersRequest'
+            example:
+              type: blocklist
+              entries:
+              - '@spam.example'
+      responses:
+        '200':
+          $ref: '#/components/responses/InboxFiltersResponse'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+        '503':
+          $ref: '#/components/responses/email_ServiceUnavailableResponse'
+    put:
+      tags:
+      - Email Inboxes
+      operationId: ReplaceEmailInboxFilters
+      summary: Replace sender filters for an inbox
+      description: 'Replaces both sender filter lists atomically. Omitting either list clears
+
+        that list. Use `POST` or `DELETE` for incremental changes.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceInboxFiltersRequest'
+            example:
+              allowlist:
+              - trusted@example.com
+              - '@partner.example'
+              blocklist:
+              - '@spam.example'
+      responses:
+        '200':
+          $ref: '#/components/responses/InboxFiltersResponse'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+        '503':
+          $ref: '#/components/responses/email_ServiceUnavailableResponse'
+  /email_inboxes/{inbox_id}/messages:
+    get:
+      tags:
+      - Email Inboxes
+      operationId: ListEmailInboxMessages
+      summary: List and search messages in an inbox
+      description: 'Lists inbound messages newest first. All access is scoped to the authenticated
+
+        account. `filter[search]` performs PostgreSQL full-text search over the subject,
+
+        plain-text body, and HTML body. Filters compose with stable cursor pagination.'
+      parameters:
+      - name: inbox_id
+        in: path
+        required: true
+        description: Email inbox UUID.
+        schema:
+          type: string
+          format: uuid
+      - name: filter[from]
+        in: query
+        required: false
+        description: Case-insensitive literal substring of the sender address.
+        schema:
+          type: string
+      - name: filter[subject]
+        in: query
+        required: false
+        description: Case-insensitive literal substring of the subject.
+        schema:
+          type: string
+      - name: filter[received_after]
+        in: query
+        required: false
+        description: Inclusive ISO 8601 lower bound for the received timestamp.
+        schema:
+          type: string
+          format: date-time
+      - name: filter[received_before]
+        in: query
+        required: false
+        description: Inclusive ISO 8601 upper bound for the received timestamp.
+        schema:
+          type: string
+          format: date-time
+      - name: filter[read]
+        in: query
+        required: false
+        description: Whether the message has a read timestamp.
+        schema:
+          type: boolean
+      - name: filter[unread]
+        in: query
+        required: false
+        description: Whether the message has no read timestamp. Set to `true` to return only unread messages.
+        schema:
+          type: boolean
+      - name: filter[label]
+        in: query
+        required: false
+        description: Returns only messages carrying this label. Matching is exact and case-sensitive. Reserved `telnyx:` labels can be filtered on even though they cannot be written by customers.
+        schema:
+          type: string
+          maxLength: 255
+      - name: filter[search]
+        in: query
+        required: false
+        description: Full-text query over subject and body, up to 500 characters.
+        schema:
+          type: string
+          maxLength: 500
+      - name: page[size]
+        in: query
+        required: false
+        description: Number of results to return. Defaults to 25; maximum is 100.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+      - name: page[after]
+        in: query
+        required: false
+        description: Opaque cursor returned by the previous page.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Paginated inbox messages.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboundMessageListResponse'
+              example:
+                data:
+                - id: 55555555-5555-5555-5555-555555555555
+                  record_type: email_message
+                  direction: inbound
+                  status: received
+                  inbox_id: 11111111-1111-1111-1111-111111111111
+                  thread_id: 33333333-3333-3333-3333-333333333333
+                  message_id: <message@example.com>
+                  in_reply_to: <earlier@example.com>
+                  references:
+                  - <earlier@example.com>
+                  from:
+                    email: alice@example.com
+                    name: Alice
+                  to:
+                  - email: agent@inbox.example.test
+                  cc: []
+                  bcc: []
+                  reply_to: []
+                  subject: Project update
+                  text_body_url: null
+                  html_body_url: null
+                  reply_text: Thanks, I will send it today.
+                  has_quoted_text: true
+                  headers: {}
+                  inline_files: []
+                  attachments: []
+                  labels: []
+                  read_at: null
+                  received_at: '2026-07-15T12:30:00Z'
+                  sent_at: null
+                  created_at: '2026-07-15T12:30:00Z'
+                  updated_at: '2026-07-15T12:30:00Z'
+                meta:
+                  page_size: 25
+                  page_cursor: MjAyNi0wNy0xNVQxMjozMDowMFp8NTU1NTU1NTUtNTU1NS01NTU1LTU1NTUtNTU1NTU1NTU1NTU1
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+        '503':
+          description: Inbound message storage is temporarily unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              example:
+                errors:
+                - code: '10016'
+                  title: Service Unavailable
+                  detail: Inbox messages are temporarily unavailable. Please try again later.
+  /email_inboxes/{inbox_id}/messages/{message_id}:
+    patch:
+      tags:
+      - Email Inboxes
+      operationId: UpdateEmailInboxMessage
+      summary: Update an inbox message
+      description: 'Updates the explicit read state of an account-scoped inbound message. Set `read_at`
+
+        to `true` to mark the message read at the server''s current time, to an ISO 8601
+
+        timestamp to use that timestamp, or to `null` to mark the message unread. Repeating
+
+        the same update is idempotent.'
+      parameters:
+      - name: inbox_id
+        in: path
+        required: true
+        description: Email inbox UUID.
+        schema:
+          type: string
+          format: uuid
+      - name: message_id
+        in: path
+        required: true
+        description: Inbound email message UUID.
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateInboundMessageRequest'
+            examples:
+              markRead:
+                value:
+                  read_at: true
+              markUnread:
+                value:
+                  read_at: null
+              explicitTimestamp:
+                value:
+                  read_at: '2026-07-23T12:34:56Z'
+      responses:
+        '200':
+          description: Updated inbox message.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboundMessageResponse'
+              example:
+                data:
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  record_type: email_message
+                  direction: inbound
+                  status: received
+                  inbox_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  thread_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  message_id: string
+                  in_reply_to: string
+                  references:
+                  - string
+                  from:
+                    email: example@telnyx.com
+                    name: string
+                  to:
+                  - email: example@telnyx.com
+                    name: string
+                  cc:
+                  - email: example@telnyx.com
+                    name: string
+                  bcc:
+                  - email: example@telnyx.com
+                    name: string
+                  reply_to:
+                  - email: example@telnyx.com
+                    name: string
+                  subject: string
+                  text_body_url: https://example.com
+                  html_body_url: https://example.com
+                  reply_text: string
+                  has_quoted_text: false
+                  headers:
+                    Message-ID: <message-id@example.com>
+                  inline_files: []
+                  attachments: []
+                  labels:
+                  - string
+                  read_at: '2024-01-23T18:10:02.574Z'
+                  received_at: '2024-01-23T18:10:02.574Z'
+                  sent_at: '2024-01-23T18:10:02.574Z'
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  updated_at: '2024-01-23T18:10:02.574Z'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+        '503':
+          $ref: '#/components/responses/email_ServiceUnavailableResponse'
+  /email_inboxes/{inbox_id}/messages/{message_id}/actions/forward:
+    post:
+      tags:
+      - Email Inboxes
+      operationId: ForwardEmailInboxMessage
+      summary: Forward an inbox message
+      description: 'Sends from the inbox address through the standard email send pipeline to caller-supplied
+
+        To, Cc, and Bcc recipients. `to` must contain at least one recipient. Optional `text` and
+
+        `html` are prepended to a forwarded-message block containing the original metadata and
+
+        available body content. The subject is prefixed with `Fwd:` unless it already has that prefix.
+
+
+        Threading headers are derived from the original message: `In-Reply-To` is set to its
+
+        RFC Message-ID, and `References` contains the original References values plus that
+
+        Message-ID, de-duplicated and limited to the most recent 20 values.'
+      parameters:
+      - name: inbox_id
+        in: path
+        required: true
+        description: Email inbox UUID.
+        schema:
+          type: string
+          format: uuid
+      - name: message_id
+        in: path
+        required: true
+        description: Inbound email message UUID.
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForwardEmailInboxMessageRequest'
+            example:
+              to: new@example.com
+              cc:
+              - email: copy@example.com
+              bcc:
+              - blind@example.com
+              text: FYI
+      responses:
+        '202':
+          description: Forward accepted by the standard email send pipeline.
+          headers:
+            X-Telnyx-Reputation-Warning:
+              description: Present with `warn` when the accepted send uses a sender domain in the reputation warn band; delivery proceeds with reduced sending limits.
+              schema:
+                type: string
+                enum:
+                - warn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailMessageResponse'
+              example:
+                data:
+                  record_type: email_message
+                  id: 44444444-4444-4444-4444-444444444444
+                  status: queued
+                  from:
+                    email: agent@inbox.example.test
+                  to:
+                  - email: new@example.com
+                  cc:
+                  - email: copy@example.com
+                  bcc:
+                  - email: blind@example.com
+                  reply_to: null
+                  subject: 'Fwd: Project update'
+                  tags: []
+                  metadata: {}
+                  template_id: null
+                  template_variables: {}
+                  attachments: []
+                  events: []
+                  created_at: '2026-07-15T12:35:00Z'
+        '400':
+          $ref: '#/components/responses/email_BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/email_ForbiddenResponse'
+        '404':
+          description: The inbox, source message, or sending domain was not found (10001).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              examples:
+                inboxNotFound:
+                  value:
+                    errors:
+                    - code: '10001'
+                      title: Not Found
+                      detail: The requested email_inbox was not found
+                messageNotFound:
+                  value:
+                    errors:
+                    - code: '10001'
+                      title: Not Found
+                      detail: The requested email_message was not found
+        '422':
+          description: Forward validation failed (10015), or all recipients are suppressed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              examples:
+                invalidRecipients:
+                  value:
+                    errors:
+                    - code: '10015'
+                      title: Validation Failed
+                      detail: to must contain at least one recipient
+                      source:
+                        pointer: /data/attributes/to
+                allRecipientsSuppressed:
+                  value:
+                    errors:
+                    - code: recipient_suppressed
+                      title: Recipient Suppressed
+                      detail: All recipients are suppressed. The email was not sent.
+                    suppressed:
+                    - to: new@example.com
+                      reason: hard_bounce
+                      scope: account
+                      override_allowed: false
+        '429':
+          $ref: '#/components/responses/EmailSendTooManyRequestsResponse'
+        '503':
+          description: Inbox message actions or the email domain service are temporarily unavailable (10016).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              example:
+                errors:
+                - code: '10016'
+                  title: Service Unavailable
+                  detail: Inbox message actions are temporarily unavailable. Please try again later.
+  /email_inboxes/{inbox_id}/messages/{message_id}/actions/reply:
+    post:
+      tags:
+      - Email Inboxes
+      operationId: ReplyToEmailInboxMessage
+      summary: Reply to an inbox message
+      description: 'Sends from the inbox address through the standard email send pipeline. The recipient is
+
+        the original `Reply-To`, falling back to `From`; original Cc recipients are not included.
+
+        The subject is prefixed with `Re:` unless it already has that prefix.
+
+
+        Threading headers are derived from the original message: `In-Reply-To` is set to its
+
+        RFC Message-ID, and `References` contains the original References values plus that
+
+        Message-ID, de-duplicated and limited to the most recent 20 values.'
+      parameters:
+      - name: inbox_id
+        in: path
+        required: true
+        description: Email inbox UUID.
+        schema:
+          type: string
+          format: uuid
+      - name: message_id
+        in: path
+        required: true
+        description: Inbound email message UUID.
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplyEmailInboxMessageRequest'
+            examples:
+              plainText:
+                value:
+                  text: Thanks for the update.
+              html:
+                value:
+                  html: <p>Thanks for the update.</p>
+      responses:
+        '202':
+          description: Reply accepted by the standard email send pipeline.
+          headers:
+            X-Telnyx-Reputation-Warning:
+              description: Present with `warn` when the accepted send uses a sender domain in the reputation warn band; delivery proceeds with reduced sending limits.
+              schema:
+                type: string
+                enum:
+                - warn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailMessageResponse'
+              example:
+                data:
+                  record_type: email_message
+                  id: 44444444-4444-4444-4444-444444444444
+                  status: queued
+                  from:
+                    email: agent@inbox.example.test
+                  to:
+                  - email: reply@example.com
+                  cc: []
+                  bcc: []
+                  reply_to: null
+                  subject: 'Re: Project update'
+                  tags: []
+                  metadata: {}
+                  template_id: null
+                  template_variables: {}
+                  attachments: []
+                  events: []
+                  created_at: '2026-07-15T12:35:00Z'
+        '400':
+          $ref: '#/components/responses/email_BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/email_ForbiddenResponse'
+        '404':
+          description: The inbox, source message, or sending domain was not found (10001).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              examples:
+                inboxNotFound:
+                  value:
+                    errors:
+                    - code: '10001'
+                      title: Not Found
+                      detail: The requested email_inbox was not found
+                messageNotFound:
+                  value:
+                    errors:
+                    - code: '10001'
+                      title: Not Found
+                      detail: The requested email_message was not found
+        '422':
+          description: Reply validation failed (10015), or all recipients are suppressed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              example:
+                errors:
+                - code: '10015'
+                  title: Validation Failed
+                  detail: text or html must contain a body for reply actions
+                  source:
+                    pointer: /data/attributes/text
+        '429':
+          $ref: '#/components/responses/EmailSendTooManyRequestsResponse'
+        '503':
+          description: Inbox message actions or the email domain service are temporarily unavailable (10016).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              example:
+                errors:
+                - code: '10016'
+                  title: Service Unavailable
+                  detail: Inbox message actions are temporarily unavailable. Please try again later.
+  /email_inboxes/{inbox_id}/messages/{message_id}/actions/reply_all:
+    post:
+      tags:
+      - Email Inboxes
+      operationId: ReplyAllToEmailInboxMessage
+      summary: Reply all to an inbox message
+      description: 'Sends from the inbox address through the standard email send pipeline. The To list starts
+
+        with the original `Reply-To` (or `From`) and includes original To recipients; the Cc list
+
+        includes original Cc recipients. The inbox address is excluded, and recipients are
+
+        de-duplicated case-insensitively across To and Cc. Bcc is always empty. The subject is
+
+        prefixed with `Re:` unless it already has that prefix.
+
+
+        Threading headers are derived from the original message: `In-Reply-To` is set to its
+
+        RFC Message-ID, and `References` contains the original References values plus that
+
+        Message-ID, de-duplicated and limited to the most recent 20 values.'
+      parameters:
+      - name: inbox_id
+        in: path
+        required: true
+        description: Email inbox UUID.
+        schema:
+          type: string
+          format: uuid
+      - name: message_id
+        in: path
+        required: true
+        description: Inbound email message UUID.
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplyEmailInboxMessageRequest'
+            examples:
+              plainText:
+                value:
+                  text: Everyone, please review.
+              html:
+                value:
+                  html: <p>Everyone, please review.</p>
+      responses:
+        '202':
+          description: Reply-all message accepted by the standard email send pipeline.
+          headers:
+            X-Telnyx-Reputation-Warning:
+              description: Present with `warn` when the accepted send uses a sender domain in the reputation warn band; delivery proceeds with reduced sending limits.
+              schema:
+                type: string
+                enum:
+                - warn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailMessageResponse'
+              example:
+                data:
+                  record_type: email_message
+                  id: 44444444-4444-4444-4444-444444444444
+                  status: queued
+                  from:
+                    email: agent@inbox.example.test
+                  to:
+                  - email: reply@example.com
+                  - email: other@example.com
+                  cc: []
+                  bcc: []
+                  reply_to: null
+                  subject: 'Re: Project update'
+                  tags: []
+                  metadata: {}
+                  template_id: null
+                  template_variables: {}
+                  attachments: []
+                  events: []
+                  created_at: '2026-07-15T12:35:00Z'
+                suppressed:
+                - to: observer@example.com
+                  reason: hard_bounce
+                  scope: account
+                  override_allowed: false
+        '400':
+          $ref: '#/components/responses/email_BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/email_ForbiddenResponse'
+        '404':
+          description: The inbox, source message, or sending domain was not found (10001).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              examples:
+                inboxNotFound:
+                  value:
+                    errors:
+                    - code: '10001'
+                      title: Not Found
+                      detail: The requested email_inbox was not found
+                messageNotFound:
+                  value:
+                    errors:
+                    - code: '10001'
+                      title: Not Found
+                      detail: The requested email_message was not found
+        '422':
+          description: Reply-all validation failed (10015), or all recipients are suppressed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              example:
+                errors:
+                - code: '10015'
+                  title: Validation Failed
+                  detail: text or html must contain a body for reply actions
+                  source:
+                    pointer: /data/attributes/text
+        '429':
+          $ref: '#/components/responses/EmailSendTooManyRequestsResponse'
+        '503':
+          description: Inbox message actions or the email domain service are temporarily unavailable (10016).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              example:
+                errors:
+                - code: '10016'
+                  title: Service Unavailable
+                  detail: Inbox message actions are temporarily unavailable. Please try again later.
+  /email_inboxes/{inbox_id}/messages/{message_id}/labels:
+    delete:
+      tags:
+      - Email Inboxes
+      operationId: RemoveEmailInboxMessageLabels
+      summary: Remove labels from an inbox message
+      description: 'Removes one or more labels from a message. Idempotent — removing a
+
+        label the message does not carry is a no-op and still returns 200.
+
+        Removal is case-sensitive.'
+      parameters:
+      - $ref: '#/components/parameters/InboxIdPathParam'
+      - $ref: '#/components/parameters/MessageIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabelMutationRequest'
+            example:
+              labels:
+              - spam
+      responses:
+        '200':
+          $ref: '#/components/responses/InboundMessageLabelResponse'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+        '503':
+          $ref: '#/components/responses/LabelServiceUnavailableResponse'
+    post:
+      tags:
+      - Email Inboxes
+      operationId: AddEmailInboxMessageLabels
+      summary: Add labels to an inbox message
+      description: 'Adds one or more mutable labels to a message. Labels carry agent
+
+        workflow state such as `spam`, `needs_review`, or `processed`.
+
+
+        Labels are **not** the same as the send-time `tags` on outbound
+
+        messages: `tags` are immutable and propagate to Email Detail Records
+
+        and Mission Control for billing attribution, while labels are mailbox
+
+        state that never reaches the reporting contract.
+
+
+        The operation is an idempotent set union — adding a label the message
+
+        already carries is a no-op and still returns 200. Labels are
+
+        case-sensitive, and message labels are independent of thread labels.'
+      parameters:
+      - $ref: '#/components/parameters/InboxIdPathParam'
+      - $ref: '#/components/parameters/MessageIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabelMutationRequest'
+            example:
+              labels:
+              - spam
+              - urgent
+      responses:
+        '200':
+          $ref: '#/components/responses/InboundMessageLabelResponse'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+        '503':
+          $ref: '#/components/responses/LabelServiceUnavailableResponse'
+  /email_inboxes/{inbox_id}/threads:
+    get:
+      tags:
+      - Email Inboxes
+      operationId: ListEmailInboxThreads
+      summary: List threads in an inbox
+      description: Lists thread summaries newest first using stable cursor pagination.
+      parameters:
+      - name: inbox_id
+        in: path
+        required: true
+        description: Email inbox UUID.
+        schema:
+          type: string
+          format: uuid
+      - name: page[size]
+        in: query
+        required: false
+        description: Number of results to return. Defaults to 25; maximum is 100.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+      - name: page[after]
+        in: query
+        required: false
+        description: Opaque cursor returned by the previous page.
+        schema:
+          type: string
+      - name: filter[label]
+        in: query
+        required: false
+        description: Returns only threads carrying this label. Thread labels are independent of the labels on the thread's messages.
+        schema:
+          type: string
+          maxLength: 255
+      responses:
+        '200':
+          description: Paginated inbox threads.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboundThreadListResponse'
+              example:
+                data:
+                - id: 33333333-3333-3333-3333-333333333333
+                  record_type: email_thread
+                  inbox_id: 11111111-1111-1111-1111-111111111111
+                  subject: Project update
+                  preview: null
+                  message_count: 2
+                  unread_count: 1
+                  last_message_id: 55555555-5555-5555-5555-555555555555
+                  last_message_at: '2026-07-15T12:30:00Z'
+                  created_at: '2026-07-14T10:00:00Z'
+                  updated_at: '2026-07-15T12:30:00Z'
+                  labels:
+                  - needs_review
+                meta:
+                  page_size: 25
+                  page_cursor: MjAyNi0wNy0xNVQxMjozMDowMFp8MzMzMzMzMzMtMzMzMy0zMzMzLTMzMzMtMzMzMzMzMzMzMzMz
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+        '503':
+          description: Inbound thread storage is temporarily unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              example:
+                errors:
+                - code: '10016'
+                  title: Service Unavailable
+                  detail: Inbox threads are temporarily unavailable. Please try again later.
+  /email_inboxes/{inbox_id}/threads/{thread_id}:
+    get:
+      tags:
+      - Email Inboxes
+      operationId: GetEmailInboxThread
+      summary: Get a thread and a page of its messages
+      description: Returns a bounded page of inbound and outbound thread messages interleaved in chronological order using stable cursor pagination.
+      parameters:
+      - name: inbox_id
+        in: path
+        required: true
+        description: Email inbox UUID.
+        schema:
+          type: string
+          format: uuid
+      - name: thread_id
+        in: path
+        required: true
+        description: Email thread UUID.
+        schema:
+          type: string
+          format: uuid
+      - name: page[size]
+        in: query
+        required: false
+        description: Number of thread messages to return. Defaults to 25; maximum is 100.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+      - name: page[after]
+        in: query
+        required: false
+        description: Opaque message cursor returned by the previous thread-detail page.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Thread summary and chronological messages.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InboundThreadDetail'
+                  meta:
+                    $ref: '#/components/schemas/email_PaginationMeta'
+                required:
+                - data
+                - meta
+              example:
+                data:
+                  id: 33333333-3333-3333-3333-333333333333
+                  record_type: email_thread
+                  inbox_id: 11111111-1111-1111-1111-111111111111
+                  subject: Project update
+                  preview: null
+                  message_count: 2
+                  unread_count: 1
+                  last_message_id: 55555555-5555-5555-5555-555555555555
+                  last_message_at: '2026-07-15T12:30:00Z'
+                  created_at: '2026-07-14T10:00:00Z'
+                  updated_at: '2026-07-15T12:30:00Z'
+                  labels:
+                  - needs_review
+                  messages:
+                  - id: 55555555-5555-5555-5555-555555555555
+                    record_type: email_message
+                    direction: inbound
+                    status: received
+                    inbox_id: 11111111-1111-1111-1111-111111111111
+                    thread_id: 33333333-3333-3333-3333-333333333333
+                    message_id: <message@example.com>
+                    in_reply_to: <earlier@example.com>
+                    references:
+                    - <earlier@example.com>
+                    from:
+                      email: alice@example.com
+                      name: Alice
+                    to:
+                    - email: agent@inbox.example.test
+                    cc: []
+                    bcc: []
+                    reply_to: []
+                    subject: Project update
+                    text_body_url: null
+                    html_body_url: null
+                    reply_text: Thanks, I will send it today.
+                    has_quoted_text: true
+                    headers: {}
+                    inline_files: []
+                    attachments: []
+                    labels: []
+                    read_at: null
+                    received_at: '2026-07-15T12:30:00Z'
+                    sent_at: null
+                    created_at: '2026-07-15T12:30:00Z'
+                    updated_at: '2026-07-15T12:30:00Z'
+                meta:
+                  page_size: 25
+                  page_cursor: MjAyNi0wNy0xNVQxMjozMDowMFp8NTU1NTU1NTUtNTU1NS01NTU1LTU1NTUtNTU1NTU1NTU1NTU1
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+        '503':
+          description: Inbound thread storage is temporarily unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              example:
+                errors:
+                - code: '10016'
+                  title: Service Unavailable
+                  detail: Inbox threads are temporarily unavailable. Please try again later.
+  /email_inboxes/{inbox_id}/threads/{thread_id}/labels:
+    delete:
+      tags:
+      - Email Inboxes
+      operationId: RemoveEmailInboxThreadLabels
+      summary: Remove labels from an inbox thread
+      description: 'Removes one or more labels from a thread. Idempotent — removing a label
+
+        the thread does not carry is a no-op and still returns 200.'
+      parameters:
+      - $ref: '#/components/parameters/InboxIdPathParam'
+      - $ref: '#/components/parameters/ThreadIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabelMutationRequest'
+            example:
+              labels:
+              - needs_review
+      responses:
+        '200':
+          $ref: '#/components/responses/InboundThreadLabelResponse'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+        '503':
+          $ref: '#/components/responses/LabelServiceUnavailableResponse'
+    post:
+      tags:
+      - Email Inboxes
+      operationId: AddEmailInboxThreadLabels
+      summary: Add labels to an inbox thread
+      description: 'Adds one or more mutable labels to a thread, letting an agent mark a
+
+        whole conversation (for example `needs_review`) without labelling each
+
+        message individually.
+
+
+        Thread labels are independent of message labels: labelling a thread
+
+        does not label its messages, and labelling a message does not label its
+
+        thread. Idempotent and case-sensitive.'
+      parameters:
+      - $ref: '#/components/parameters/InboxIdPathParam'
+      - $ref: '#/components/parameters/ThreadIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabelMutationRequest'
+            example:
+              labels:
+              - needs_review
+      responses:
+        '200':
+          $ref: '#/components/responses/InboundThreadLabelResponse'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+        '503':
+          $ref: '#/components/responses/LabelServiceUnavailableResponse'
+components:
+  schemas:
+    email_PaginationMeta:
+      type: object
+      properties:
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        page_cursor:
+          type: string
+          description: Cursor for the next page, when more results are available.
+      required:
+      - page_size
+    InboundThread:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        record_type:
+          type: string
+          enum:
+          - email_thread
+        inbox_id:
+          type: string
+          format: uuid
+        subject:
+          type: string
+          nullable: true
+        preview:
+          type: string
+          nullable: true
+          maxLength: 200
+        message_count:
+          type: integer
+          minimum: 1
+          description: Total inbound and outbound messages in the thread.
+        unread_count:
+          type: integer
+          minimum: 0
+          description: Unread inbound messages; outbound messages never increment this count.
+        last_message_id:
+          type: string
+          format: uuid
+        last_message_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        labels:
+          type: array
+          description: Mutable thread labels used for agent workflow state. Independent of the labels on the thread's messages, and distinct from the send-time `tags` on outbound messages.
+          items:
+            type: string
+            maxLength: 255
+          maxItems: 50
+      required:
+      - id
+      - record_type
+      - inbox_id
+      - subject
+      - preview
+      - message_count
+      - unread_count
+      - last_message_id
+      - last_message_at
+      - created_at
+      - updated_at
+      - labels
+    EmailMessageResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailMessage'
+        suppressed:
+          type: array
+          description: Recipients removed by suppression checks when at least one recipient remains and the message is accepted.
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
+      required:
+      - data
+    ErrorObject:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Telnyx error code. Send admission errors include account daily quota 10011 and sender-domain ramp code domain_graduation_limit_exceeded. Edge idempotency errors use 10027 or 10036. Fallback 404/500 responses from the framework may use string status codes ('404', '500') instead.
+          enum:
+          - '10001'
+          - '10006'
+          - '10007'
+          - '10011'
+          - '10015'
+          - '10016'
+          - '10019'
+          - domain_graduation_limit_exceeded
+          - recipient_suppressed
+          - reputation_suspended
+          - '404'
+          - '500'
+          - '10027'
+          - '10036'
+        title:
+          type: string
+        detail:
+          description: Human-readable error detail. Changeset responses may return a structured object.
+          oneOf:
+          - type: string
+          - type: object
+            additionalProperties: true
+        source:
+          type: object
+          additionalProperties: true
+          nullable: true
+        meta:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: Additional metadata. Present on 401 errors with a documentation URL.
+      required:
+      - code
+      - title
+      - detail
+    ReputationSuspendedError:
+      type: object
+      description: Non-standard error envelope returned when the sending domain's reputation band is 'poor'. Uses string code `reputation_suspended` instead of a numeric code.
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: object
+            required:
+            - code
+            - title
+            - detail
+            properties:
+              code:
+                type: string
+                enum:
+                - reputation_suspended
+              title:
+                type: string
+                example: Sending Suspended
+              detail:
+                type: string
+    EmailEventType:
+      type: string
+      description: Bare stored event names returned by message history. In addition to the normal send and delivery lifecycle, polling can expose suppression, scan, and quarantine lifecycle rows. Sharp canonical names gw_reject, injection_timeout, and expired distinguish gateway rejection, ambiguous injection timeout, and MTA expiration. The failed and bounced names remain valid for system/admin failures and hard bounces respectively. Existing stored rows retain their original names.
+      enum:
+      - queued
+      - deferred
+      - scheduled
+      - cancelled
+      - sandbox
+      - sending
+      - sent
+      - failed
+      - delivered
+      - bounced
+      - complained
+      - suppressed
+      - rejected
+      - opened
+      - clicked
+      - unsubscribed
+      - daily_limit_exceeded
+      - scan_deferred
+      - quarantined
+      - quarantine_released
+      - quarantine_release_dispatched
+      - quarantine_rejected
+      - quarantine_expired
+      - gw_reject
+      - injection_timeout
+      - expired
+    InboundEmailAddress:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+      required:
+      - email
+    InboxFilters:
+      type: object
+      properties:
+        record_type:
+          type: string
+          enum:
+          - email_inbox_filters
+        allowlist:
+          $ref: '#/components/schemas/InboxFilterEntryList'
+        blocklist:
+          $ref: '#/components/schemas/InboxFilterEntryList'
+      required:
+      - record_type
+      - allowlist
+      - blocklist
+    InboxFiltersResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/InboxFilters'
+      required:
+      - data
+    EmbeddedMessageEvent:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/EmailEventType'
+        occurred_at:
+          type: string
+          format: date-time
+        payload:
+          type: object
+          additionalProperties: true
+      required:
+      - type
+      - occurred_at
+      description: An event embedded in a message response. The dedicated per-message events endpoint additionally returns event_type and canonical_event_type.
+    ForwardEmailInboxMessageRequest:
+      type: object
+      properties:
+        to:
+          $ref: '#/components/schemas/RequiredInboxActionRecipientInput'
+        cc:
+          $ref: '#/components/schemas/InboxActionRecipientInput'
+        bcc:
+          $ref: '#/components/schemas/InboxActionRecipientInput'
+        text:
+          type: string
+          description: Optional plain-text note prepended to the generated forwarded-message block. Blank values are treated as omitted.
+        html:
+          type: string
+          description: Optional HTML note prepended to the generated forwarded-message block. Blank values are treated as omitted.
+      required:
+      - to
+    InboundMessageResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/InboundMessage'
+      required:
+      - data
+    InboundThreadDetail:
+      allOf:
+      - $ref: '#/components/schemas/InboundThread'
+      - type: object
+        properties:
+          messages:
+            type: array
+            items:
+              $ref: '#/components/schemas/ThreadMessage'
+        required:
+        - messages
+    ThreadMessage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        record_type:
+          type: string
+          enum:
+          - email_message
+        direction:
+          type: string
+          enum:
+          - inbound
+          - outbound
+        status:
+          type: string
+          description: Received for inbound messages; the current send status for outbound messages.
+        inbox_id:
+          type: string
+          format: uuid
+        thread_id:
+          type: string
+          format: uuid
+        message_id:
+          type: string
+          nullable: true
+          description: RFC Message-ID header. Null is possible for legacy outbound messages.
+        in_reply_to:
+          type: string
+          nullable: true
+        references:
+          type: array
+          description: Ordered RFC Message-ID values from the References header.
+          items:
+            type: string
+        from:
+          $ref: '#/components/schemas/InboundEmailAddress'
+        to:
+          type: array
+          items:
+            $ref: '#/components/schemas/InboundEmailAddress'
+        cc:
+          type: array
+          items:
+            $ref: '#/components/schemas/InboundEmailAddress'
+        bcc:
+          type: array
+          items:
+            $ref: '#/components/schemas/InboundEmailAddress'
+        reply_to:
+          type: array
+          items:
+            $ref: '#/components/schemas/InboundEmailAddress'
+        subject:
+          type: string
+          nullable: true
+        text_body_url:
+          type: string
+          format: uri
+          nullable: true
+          description: URL for an offloaded plain-text body. Null means the body is not offloaded to a URL; an inline plain-text body may still exist but is not returned on list reads. `reply_text` and `has_quoted_text` are persisted during ingest before any body offload.
+        html_body_url:
+          type: string
+          format: uri
+          nullable: true
+          description: URL for an offloaded HTML body. Null means the body is not offloaded to a URL; an inline HTML body may still exist but is not returned on list reads. Reply extraction uses only the plain-text body during ingest.
+        reply_text:
+          type: string
+          nullable: true
+          description: Conservatively extracted new-reply content persisted from the plain-text body during ingest. Null means no plain-text extraction input was available or extraction was skipped or failed; HTML bodies are not parsed.
+        has_quoted_text:
+          type: boolean
+          description: Whether conservative plain-text extraction detected a quoted tail. False does not prove that the source contains no quoted content.
+        headers:
+          type: object
+          additionalProperties: true
+        inline_files:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        attachments:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        labels:
+          type: array
+          description: 'Mutable message labels used for agent workflow state (for example `spam`, `needs_review`, `processed`). Distinct from the immutable send-time `tags` on outbound messages: labels are never propagated to Email Detail Records or Mission Control reporting. Always empty for outbound messages. Labels on a message are independent of the labels on its thread.'
+          items:
+            type: string
+            maxLength: 255
+          maxItems: 50
+        read_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Time the inbound message was marked read. Null means unread.
+        received_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Receipt time for inbound messages; null for outbound messages.
+        sent_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Creation/send-acceptance time for outbound messages; null for inbound messages.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - record_type
+      - direction
+      - status
+      - inbox_id
+      - thread_id
+      - message_id
+      - in_reply_to
+      - references
+      - from
+      - to
+      - cc
+      - bcc
+      - reply_to
+      - subject
+      - text_body_url
+      - html_body_url
+      - reply_text
+      - has_quoted_text
+      - headers
+      - inline_files
+      - attachments
+      - labels
+      - read_at
+      - received_at
+      - sent_at
+      - created_at
+      - updated_at
+    InboxActionEmailAddressInput:
+      description: Email address accepted by inbox message actions, as a string or an object with `email` and optional `name`.
+      oneOf:
+      - type: string
+        minLength: 3
+        pattern: ^[^\s@]+@[^\s@]+\.[^\s@]+$
+      - type: object
+        properties:
+          email:
+            type: string
+            minLength: 3
+            pattern: ^[^\s@]+@[^\s@]+\.[^\s@]+$
+          name:
+            type: string
+        required:
+        - email
+    UpdateInboundMessageRequest:
+      type: object
+      properties:
+        read_at:
+          description: Set to `true` for server time, an ISO 8601 timestamp for an explicit read time, or `null` to mark unread.
+          oneOf:
+          - type: boolean
+            enum:
+            - true
+          - type: string
+            format: date-time
+          - type: string
+            nullable: true
+            enum:
+            - null
+      required:
+      - read_at
+    DomainGraduationLimitExceededError:
+      type: object
+      description: Error envelope returned when a newly sending custom domain on shared egress would exceed its current daily graduation ceiling. The send is rejected before message creation.
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: object
+            required:
+            - code
+            - title
+            - detail
+            properties:
+              code:
+                type: string
+                enum:
+                - domain_graduation_limit_exceeded
+              title:
+                type: string
+                example: Too Many Requests
+              detail:
+                type: string
+                example: Daily send limit of 250 recipients for this sender domain exceeded. The limit resets at midnight UTC.
+              meta:
+                type: object
+                description: Bounded retry guidance. Each field is omitted when unknown.
+                additionalProperties: false
+                properties:
+                  retry_after_seconds:
+                    type: integer
+                    minimum: 1
+                    description: Seconds until the next UTC-midnight reset.
+                  remaining_today:
+                    type: integer
+                    minimum: 0
+                    description: Recipient headroom remaining for the sender-domain identity before this rejected request.
+    DailySendLimitError:
+      type: object
+      description: Error envelope returned when the account's daily recipient quota is exhausted before message creation.
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: object
+            required:
+            - code
+            - title
+            - detail
+            properties:
+              code:
+                type: string
+                enum:
+                - '10011'
+              title:
+                type: string
+                example: Too Many Requests
+              detail:
+                type: string
+                example: Daily send limit of 1000 recipients exceeded. The limit resets at midnight UTC.
+    InboxFilterEntry:
+      type: string
+      description: 'An exact sender address (`user@example.com`) or domain wildcard
+
+        (`@example.com`). Values are trimmed and normalized to lowercase.
+
+        '
+      example: '@example.com'
+    InboundThreadListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/InboundThread'
+        meta:
+          $ref: '#/components/schemas/email_PaginationMeta'
+      required:
+      - data
+      - meta
+    LabelMutationRequest:
+      type: object
+      description: Labels to add or remove. Both operations are idempotent set operations, so a retried request converges instead of failing.
+      properties:
+        labels:
+          type: array
+          description: One or more labels. Each label is a freeform, case-sensitive string of at most 255 characters; a message or thread may carry at most 50 labels. The `telnyx:` prefix is a reserved system namespace and is rejected on customer writes.
+          items:
+            type: string
+            minLength: 1
+            maxLength: 255
+          minItems: 1
+          maxItems: 50
+      required:
+      - labels
+    AttachmentResponse:
+      type: object
+      description: EDR-aligned attachment metadata. The base64 `content` is never returned.
+      properties:
+        url:
+          type: string
+          format: uri
+          nullable: true
+          description: Telnyx-hosted public URL for the attachment content.
+        sha256:
+          type: string
+          nullable: true
+          description: SHA-256 hex digest of the attachment content.
+        size_bytes:
+          type: integer
+          nullable: true
+          description: Attachment size in bytes.
+        filename:
+          type: string
+        content_type:
+          type: string
+        disposition:
+          type: string
+          default: attachment
+          description: MIME disposition (e.g. `attachment` or `inline`). Runtime passes through the stored value without enforcing an enum.
+        content_id:
+          type: string
+          nullable: true
+          description: MIME Content-ID for inline references.
+      required:
+      - url
+      - sha256
+      - size_bytes
+      - filename
+      - content_type
+      - disposition
+      - content_id
+    EmailInboxResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailInbox'
+      required:
+      - data
+    email_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorObject'
+        suppressed:
+          type: array
+          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
+      required:
+      - errors
+    InboxActionRecipientInput:
+      description: One recipient or a recipient array. Each recipient may be an email string or an object with `email` and optional `name`.
+      oneOf:
+      - $ref: '#/components/schemas/InboxActionEmailAddressInput'
+      - type: array
+        items:
+          $ref: '#/components/schemas/InboxActionEmailAddressInput'
+    EmailAddress:
+      type: object
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+      required:
+      - email
+    EmailInboxPaginationMeta:
+      type: object
+      properties:
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 250
+        page_cursor:
+          type: string
+          description: Cursor for the next inbox page, when more results are available.
+      required:
+      - page_size
+    CreateEmailInboxRequest:
+      type: object
+      description: Both fields are optional. Omitting `username` generates one; omitting `domain_id` uses the account's shared inbound subdomain. Omitting both creates an instant inbox with a generated username.
+      properties:
+        username:
+          type: string
+          description: Inbox local part. Trimmed and lowercased before validation; the normalized value must be 1-64 characters, start and end with a letter or digit, and contain only letters, digits, dots, hyphens, and underscores. Generated when omitted.
+        domain_id:
+          type: string
+          format: uuid
+          description: Account-owned, inbound-enabled domain UUID. The account's shared inbound subdomain is allocated when omitted.
+    SuppressedRecipient:
+      type: object
+      properties:
+        to:
+          type: string
+          format: email
+          description: Suppressed recipient email address.
+        reason:
+          type: string
+          description: Suppression reason returned by the recipient suppression service.
+        scope:
+          type: string
+          description: Scope at which the suppression applies.
+        override_allowed:
+          type: boolean
+          description: Whether an authorized send may override this suppression.
+      required:
+      - to
+      - reason
+      - scope
+      - override_allowed
+    MutateInboxFiltersRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - allowlist
+          - blocklist
+          description: The list to change.
+        entries:
+          $ref: '#/components/schemas/InboxFilterEntryList'
+      required:
+      - type
+      - entries
+    EmailInboxListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailInbox'
+        meta:
+          $ref: '#/components/schemas/EmailInboxPaginationMeta'
+      required:
+      - data
+      - meta
+    InboundMessageListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/InboundMessage'
+        meta:
+          $ref: '#/components/schemas/email_PaginationMeta'
+      required:
+      - data
+      - meta
+    ReplaceInboxFiltersRequest:
+      type: object
+      description: 'The complete filter configuration. An omitted list is replaced with an
+
+        empty list. Unknown keys are ignored by the controller.
+
+        '
+      properties:
+        allowlist:
+          $ref: '#/components/schemas/InboxFilterEntryList'
+        blocklist:
+          $ref: '#/components/schemas/InboxFilterEntryList'
+    InboundMessage:
+      allOf:
+      - $ref: '#/components/schemas/ThreadMessage'
+      - type: object
+        properties:
+          direction:
+            type: string
+            enum:
+            - inbound
+          status:
+            type: string
+            enum:
+            - received
+    EmailInbox:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        record_type:
+          type: string
+          enum:
+          - email_inbox
+        address:
+          type: string
+          format: email
+        status:
+          type: string
+          enum:
+          - active
+          - paused
+        domain_id:
+          type: string
+          format: uuid
+        domain:
+          type: string
+          description: Domain name used by the inbox address.
+        settings:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - record_type
+      - address
+      - status
+      - domain_id
+      - domain
+      - settings
+      - created_at
+      - updated_at
+    EmailMessage:
+      type: object
+      properties:
+        record_type:
+          type: string
+          enum:
+          - email_message
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/EmailMessageStatus'
+        from:
+          $ref: '#/components/schemas/EmailAddress'
+        to:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailAddress'
+        cc:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailAddress'
+        bcc:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailAddress'
+        reply_to:
+          type: string
+          nullable: true
+        subject:
+          type: string
+        template_id:
+          type: string
+          format: uuid
+          nullable: true
+        template_variables:
+          type: object
+          additionalProperties: true
+          default: {}
+        tags:
+          type: array
+          default: []
+          items:
+            type: string
+          description: Customer-supplied tags stored with the message.
+        metadata:
+          type: object
+          additionalProperties: true
+          default: {}
+          description: Customer-supplied metadata stored with the message.
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentResponse'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmbeddedMessageEvent'
+        created_at:
+          type: string
+          format: date-time
+        scheduled_at:
+          type: string
+          format: date-time
+          description: Present when a scheduled_at value was stored. Persists even after the scheduled send has been processed or cancelled.
+        inline_css:
+          type: boolean
+          description: Present when true in the immediate create response. Not persisted; absent on subsequent GET requests.
+        sandbox:
+          type: boolean
+          description: Present when sandbox mode was used.
+        recipient_statuses:
+          type: object
+          description: 'Per-status recipient counts for the message. Present only for outbound messages
+
+            with recipient rows. Keys are recipient statuses, values are counts.
+
+            Example: `{"delivered": 998, "bounced": 2}`.
+
+            '
+          additionalProperties:
+            type: integer
+          example:
+            delivered: 998
+            bounced: 2
+        suppressed:
+          type: array
+          description: Recipients excluded from delivery by suppression checks, with reasons. On batch items, present when that item had suppressed recipients; all other recipients of the item still receive the message. For single sends this information appears at the top level of the response instead (see EmailMessageResponse.suppressed).
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
+      required:
+      - record_type
+      - id
+      - status
+      - from
+      - to
+      - cc
+      - bcc
+      - subject
+      - reply_to
+      - template_id
+      - template_variables
+      - tags
+      - metadata
+      - attachments
+      - events
+      - created_at
+    RequiredInboxActionRecipientInput:
+      description: One recipient or a non-empty recipient array. Each recipient may be an email string or an object with `email` and optional `name`.
+      oneOf:
+      - $ref: '#/components/schemas/InboxActionEmailAddressInput'
+      - type: array
+        minItems: 1
+        items:
+          $ref: '#/components/schemas/InboxActionEmailAddressInput'
+    ReplyEmailInboxMessageRequest:
+      type: object
+      description: At least one of `text` or `html` must contain a non-whitespace body. Recipients are derived from the source message; caller-supplied `to`, `cc`, or `bcc` values are ignored.
+      properties:
+        text:
+          type: string
+          minLength: 1
+          pattern: \S
+          description: Plain-text reply body.
+        html:
+          type: string
+          minLength: 1
+          pattern: \S
+          description: HTML reply body.
+      anyOf:
+      - required:
+        - text
+      - required:
+        - html
+    EmailMessageStatus:
+      type: string
+      description: Current status of an email message. Lifecycle statuses (queued, scheduled, etc.) are set on creation. Delivery statuses (delivered, bounced, etc.) are updated by delivery event consumers.
+      enum:
+      - queued
+      - scheduled
+      - cancelled
+      - sandbox
+      - sending
+      - sent
+      - failed
+      - deferred
+      - delivered
+      - bounced
+      - complained
+      - rejected
+      - opened
+      - clicked
+      - unsubscribed
+    InboxFilterEntryList:
+      type: array
+      maxItems: 500
+      items:
+        $ref: '#/components/schemas/InboxFilterEntry'
+  responses:
+    email_BadRequestResponse:
+      description: Bad Request / Validation Failed (10015).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10015'
+              title: Bad Request
+              detail: email is required
+    LabelServiceUnavailableResponse:
+      description: Inbound label storage is temporarily unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10016'
+              title: Service Unavailable
+              detail: Inbox labels are temporarily unavailable. Please try again later.
+    EmailSendTooManyRequestsResponse:
+      description: Send rejected before message creation because the account daily recipient quota was exhausted (10011), the sender-domain graduation ceiling was exceeded (domain_graduation_limit_exceeded), or domain reputation is poor (reputation_suspended).
+      headers:
+        Retry-After:
+          description: Seconds until the next UTC-midnight reset. Present only for domain_graduation_limit_exceeded; omitted for 10011 and reputation_suspended.
+          schema:
+            type: integer
+            minimum: 1
+          example: 3600
+      content:
+        application/json:
+          schema:
+            oneOf:
+            - $ref: '#/components/schemas/DailySendLimitError'
+            - $ref: '#/components/schemas/DomainGraduationLimitExceededError'
+            - $ref: '#/components/schemas/ReputationSuspendedError'
+          examples:
+            accountDailyLimit:
+              summary: Account daily recipient quota exhausted
+              value:
+                errors:
+                - code: '10011'
+                  title: Too Many Requests
+                  detail: Daily send limit of 1000 recipients exceeded. The limit resets at midnight UTC.
+            senderDomainGraduation:
+              summary: Sender-domain graduation ceiling exceeded
+              value:
+                errors:
+                - code: domain_graduation_limit_exceeded
+                  title: Too Many Requests
+                  detail: Daily send limit of 250 recipients for this sender domain exceeded. The limit resets at midnight UTC.
+                  meta:
+                    retry_after_seconds: 3600
+                    remaining_today: 0
+            reputationSuspended:
+              summary: Domain reputation is poor
+              value:
+                errors:
+                - code: reputation_suspended
+                  title: Sending Suspended
+                  detail: Sender domain reputation is too low. Sending has been suspended. Please contact support to resolve deliverability issues.
+    email_ServiceUnavailableResponse:
+      description: Service unavailable (10016), including an unavailable upstream dependency or unavailable Edge idempotency protection for a keyed request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10016'
+              title: Service Unavailable
+              detail: The email domain service is temporarily unavailable. Please try again later.
+    email_NotFoundResponse:
+      description: Resource not found (10001).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10001'
+              title: Not Found
+              detail: The requested resource was not found
+    email_UnauthorizedResponse:
+      description: Not authorized (10006).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10006'
+              title: Not authorized
+              detail: Invalid API key
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10006
+    ValidationErrorResponse:
+      description: Validation Failed (10015) or changeset validation error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10015'
+              title: Validation Failed
+              detail: subject can't be blank
+              source:
+                pointer: /data/attributes/subject
+    InboxFiltersResponse:
+      description: The inbox's current sender allowlist and blocklist.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InboxFiltersResponse'
+          example:
+            data:
+              record_type: email_inbox_filters
+              allowlist:
+              - trusted@example.com
+              - '@partner.example'
+              blocklist:
+              - '@spam.example'
+    email_ForbiddenResponse:
+      description: Forbidden (10007), such as domain not verified, suspended, degraded, or missing DKIM.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10007'
+              title: Forbidden
+              detail: Domain is not verified. Complete DNS setup before sending email.
+    InboundMessageLabelResponse:
+      description: The updated message, including its current label set.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InboundMessageResponse'
+          example:
+            data:
+              id: 55555555-5555-5555-5555-555555555555
+              record_type: email_message
+              direction: inbound
+              status: received
+              inbox_id: 11111111-1111-1111-1111-111111111111
+              thread_id: 33333333-3333-3333-3333-333333333333
+              message_id: <message@example.com>
+              in_reply_to: <earlier@example.com>
+              references:
+              - <earlier@example.com>
+              from:
+                email: alice@example.com
+                name: Alice
+              to:
+              - email: agent@inbox.example.test
+              cc: []
+              bcc: []
+              reply_to: []
+              subject: Project update
+              text_body_url: null
+              html_body_url: null
+              reply_text: Thanks, I will send it today.
+              has_quoted_text: true
+              headers: {}
+              inline_files: []
+              attachments: []
+              labels:
+              - spam
+              - urgent
+              read_at: null
+              received_at: '2026-07-15T12:30:00Z'
+              sent_at: null
+              created_at: '2026-07-15T12:30:00Z'
+              updated_at: '2026-07-15T12:30:00Z'
+    InboundThreadLabelResponse:
+      description: The thread identity and its current label set.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  record_type:
+                    type: string
+                    enum:
+                    - email_thread
+                  inbox_id:
+                    type: string
+                    format: uuid
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                      maxLength: 255
+                    maxItems: 50
+                required:
+                - id
+                - record_type
+                - labels
+            required:
+            - data
+          example:
+            data:
+              id: 33333333-3333-3333-3333-333333333333
+              record_type: email_thread
+              inbox_id: 11111111-1111-1111-1111-111111111111
+              labels:
+              - needs_review
+  parameters:
+    MessageIdPathParam:
+      name: message_id
+      in: path
+      required: true
+      description: Inbound message UUID.
+      schema:
+        type: string
+        format: uuid
+    InboxIdPathParam:
+      name: inbox_id
+      in: path
+      required: true
+      description: Email inbox UUID.
+      schema:
+        type: string
+        format: uuid
+    ThreadIdPathParam:
+      name: thread_id
+      in: path
+      required: true
+      description: Thread UUID.
+      schema:
+        type: string
+        format: uuid
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

@@ -1,0 +1,610 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx sql databases API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: sql databases
+  description: Manage SQL databases and run SQL against them
+paths:
+  /storage/sqldbs:
+    get:
+      description: Lists the SQL databases for the authenticated user's organization. Results use page-based pagination (`page[number]`/`page[size]`) and can be filtered and sorted.
+      tags:
+      - sql databases
+      summary: List SQL databases
+      operationId: ListSqlDatabases
+      parameters:
+      - description: The page number to load.
+        name: page[number]
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - description: The size of the page. Values above 250 are treated as 250.
+        name: page[size]
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 250
+          default: 20
+      - description: Filter by exact name match.
+        name: filter[name]
+        in: query
+        schema:
+          type: string
+      - description: Filter by provisioning status.
+        name: filter[status]
+        in: query
+        schema:
+          type: string
+          enum:
+          - pending
+          - provision_ok
+          - provision_failed
+          - deleting
+          - delete_failed
+      - description: Sort field; prefix with `-` for descending order.
+        name: sort
+        in: query
+        schema:
+          type: string
+          enum:
+          - name
+          - -name
+          - status
+          - -status
+          - created_at
+          - -created_at
+          default: -created_at
+      responses:
+        '200':
+          description: SQL databases retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SqlDatabaseListResponseWrapper'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '422':
+          description: Validation error — an unsupported `sort` or `filter` value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+    post:
+      description: 'Creates a new SQL database. Provisioning is asynchronous: the database is returned with status `pending` and becomes usable once it reaches `provision_ok`.'
+      tags:
+      - sql databases
+      summary: Create a SQL database
+      operationId: CreateSqlDatabase
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSqlDatabaseRequest'
+        description: SQL database creation request
+        required: true
+      responses:
+        '201':
+          description: SQL database created successfully (status `pending`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SqlDatabaseResponseWrapper'
+        '400':
+          description: Bad request — the request body is malformed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '409':
+          description: Conflict — a database with this name already exists for your organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '422':
+          description: Validation error — `name` is missing or not a valid database name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /storage/sqldbs/{id}:
+    delete:
+      description: Deletes a SQL database and all of the data it holds. Deletion is asynchronous and returns `202` with an empty body — the record is not removed synchronously. Poll `GET /storage/sqldbs/{id}`, which returns `404` once the database has been purged; there is no durable `deleted` state. A database still bound by a function is refused with `409` unless `force=true`.
+      tags:
+      - sql databases
+      summary: Delete a SQL database
+      operationId: DeleteSqlDatabase
+      parameters:
+      - description: SQL database ID
+        name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - description: Delete the database even when functions still bind it. Their bindings stop resolving.
+        name: force
+        in: query
+        schema:
+          type: boolean
+          default: false
+      responses:
+        '202':
+          description: Accepted — deletion runs asynchronously. The body is empty; poll `GET /storage/sqldbs/{id}` until it returns `404`.
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '404':
+          description: SQL database not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '409':
+          description: Conflict — the database is already being deleted, or is still bound by one or more functions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '422':
+          description: Validation error — `id` is not a valid identifier
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '503':
+          description: Cannot verify whether the database is still in use; retry, or pass `force=true`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+    get:
+      description: Retrieves a SQL database by its ID, including its provisioning status.
+      tags:
+      - sql databases
+      summary: Get a SQL database
+      operationId: GetSqlDatabase
+      parameters:
+      - description: SQL database ID
+        name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: SQL database retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SqlDatabaseResponseWrapper'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '404':
+          description: SQL database not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '422':
+          description: Validation error — `id` is not a valid identifier
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /storage/sqldbs/{id}/actions/query:
+    post:
+      description: Runs SQL against the database and returns the resulting rows — empty for statements that return none, such as DDL. Bind positional `?` placeholders with `params` rather than interpolating values into the SQL string.
+      tags:
+      - sql databases
+      summary: Run SQL against a SQL database
+      operationId: QuerySqlDatabase
+      parameters:
+      - description: SQL database ID
+        name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SqlDatabaseQueryRequest'
+        description: The SQL to run, and any positional bind parameters
+        required: true
+      responses:
+        '200':
+          description: The SQL result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SqlDatabaseQueryResponseWrapper'
+        '400':
+          description: Bad request — the request body is malformed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '404':
+          description: SQL database not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '409':
+          description: Conflict — the database is not ready yet. This is transient; retry once it reaches `provision_ok`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '413':
+          description: The SQL body exceeds the maximum size (8 MiB)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '422':
+          description: 'Validation error — an invalid `id`, empty `sql`, an unsupported bind parameter, the wrong number of bind parameters for the placeholders in `sql`, or a SQL error raised by the database. Also returned for a script over roughly 4 MiB, whose detail ends in `stream too large`: that transport ceiling is reached before the 8 MiB `413`, so ~4 MiB is the size to plan against'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+components:
+  schemas:
+    SqlDatabaseQueryResultMeta:
+      type: object
+      properties:
+        duration:
+          type: number
+          description: Wall-clock duration of the statement, in milliseconds.
+          example: 1.2
+        rows_read:
+          type: integer
+          example: 3
+        rows_written:
+          type: integer
+          example: 0
+        last_row_id:
+          type: integer
+          description: Rowid of the last inserted row, when applicable.
+          example: 0
+        changes:
+          type: integer
+          description: Number of rows added, changed, or removed by the statement.
+          example: 0
+    SqlDatabaseQueryResult:
+      type: object
+      properties:
+        results:
+          type: array
+          description: The result rows, each a map of column name to value. Empty for statements that return no rows.
+          items:
+            type: object
+            additionalProperties: true
+        success:
+          type: boolean
+          example: true
+        count:
+          type: integer
+          description: Number of rows returned.
+          example: 1
+        duration:
+          type: number
+          description: Wall-clock duration of the request, in milliseconds.
+          example: 2.5
+        meta:
+          $ref: '#/components/schemas/SqlDatabaseQueryResultMeta'
+    GenericErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/edge-compute_Error'
+    ErrorSource:
+      type: object
+      properties:
+        parameter:
+          type: string
+          example: id
+        pointer:
+          type: string
+          example: /id
+    edge-compute_PaginationMeta:
+      type: object
+      properties:
+        page_number:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 20
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 52
+    CreateSqlDatabaseRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Database name. Lowercase letters, numbers, and hyphens only; must start and end with a letter or number.
+          pattern: ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$
+          minLength: 1
+          maxLength: 255
+          example: my-database
+      required:
+      - name
+    SqlDatabaseQueryResponseWrapper:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SqlDatabaseQueryResult'
+    SqlDatabaseListResponseWrapper:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SqlDatabase'
+        meta:
+          $ref: '#/components/schemas/edge-compute_PaginationMeta'
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    edge-compute_Error:
+      type: object
+      properties:
+        code:
+          type: string
+          example: '10005'
+        detail:
+          type: string
+          example: The requested function does not exist or you don't have access to it
+        meta:
+          $ref: '#/components/schemas/ErrorMeta'
+        source:
+          $ref: '#/components/schemas/ErrorSource'
+        title:
+          type: string
+          example: Function not found
+    SqlDatabaseQueryRequest:
+      type: object
+      properties:
+        sql:
+          type: string
+          description: The SQL to run. Use positional `?` placeholders and supply the values in `params` rather than interpolating them into this string.
+          example: SELECT * FROM users WHERE name = ?
+        params:
+          type: array
+          description: Positional bind parameters, in placeholder order. Each value is a string, a number, a boolean, or null; booleans are cast to `1`/`0`. The count must match the number of `?` placeholders exactly — a mismatch is rejected with 422 rather than binding null for the ones you left out. (Not enforced for multi-statement scripts or named parameters, where the placeholder count is not the number bound.)
+          items:
+            type:
+            - string
+            - number
+            - boolean
+            - 'null'
+          example:
+          - alice
+      required:
+      - sql
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
+    ErrorMeta:
+      type: object
+      properties:
+        url:
+          type: string
+          example: https://docs.telnyx.com/api/errors/10005
+    SqlDatabaseResponseWrapper:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SqlDatabase'
+    SqlDatabase:
+      type: object
+      properties:
+        record_type:
+          type: string
+          example: storage_sqldb
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        name:
+          type: string
+          example: my-database
+        status:
+          type: string
+          description: Provisioning status. A database is usable once `status` is `provision_ok`. Once deletion completes, the database no longer appears in the API.
+          enum:
+          - pending
+          - provision_ok
+          - provision_failed
+          - deleting
+          - delete_failed
+          example: provision_ok
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-06-18T14:48:17Z'
+        updated_at:
+          type: string
+          format: date-time
+          example: '2026-06-18T14:48:17Z'
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

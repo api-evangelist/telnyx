@@ -1,11 +1,13 @@
 openapi: 3.2.0
 info:
-  contact:
-    email: support@telnyx.com
-  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
   title: Telnyx Profiles API
   version: 2.0.0
+  contact:
+    email: support@telnyx.com
   x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Profiles across 2 of this provider''s published API definitions: telnyx-openapi.yml, telnyx-openapi.json. Each path carries the servers of the definition it was published in.'
 servers:
 - description: Version 2.0.0 of the Telnyx API
   url: https://api.telnyx.com/v2
@@ -73,6 +75,9 @@ paths:
       - Profiles
       x-endpoint-cost: medium
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /messaging_profiles/{id}:
     delete:
       operationId: DeleteMessagingProfile
@@ -120,6 +125,9 @@ paths:
       tags:
       - Profiles
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /messaging_profiles/{id}/phone_numbers:
     get:
       operationId: ListProfilePhoneNumbers
@@ -136,6 +144,9 @@ paths:
       - Profiles
       x-group-parameters: 'true'
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /messaging_profiles/{id}/short_codes:
     get:
       operationId: ListProfileShortCodes
@@ -152,8 +163,654 @@ paths:
       - Profiles
       x-group-parameters: 'true'
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
+  /ai/memory/namespaces/{namespace}/profiles:
+    get:
+      summary: List a namespace's profiles
+      operationId: ListMemoryProfiles
+      tags:
+      - Profiles
+      description: Profiles are never created, only written to, so this lists the ones that hold a memory. A profile whose first ingest is still running is not here yet. Ordered by memory count, largest first, so a profile written to while the listing is paged can move between pages and be repeated or missed.
+      parameters:
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Namespace
+      - name: page[number]
+        in: query
+        required: false
+        description: 'The page to return, counting from 1. Bounded in depth: (page[number] - 1) * page[size] may be at most 10000.'
+        schema:
+          type: integer
+          maximum: 10001
+          minimum: 1
+          default: 1
+          title: Number
+      - name: page[size]
+        in: query
+        required: false
+        description: How many results a page holds.
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 20
+          title: Size
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileListResponse'
+              example:
+                data:
+                - profile_id: caller:+13128675309
+                  memory_count: 12
+                meta:
+                  page_number: 1
+                  page_size: 20
+                  total_pages: 1
+                  total_results: 1
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: '10009'
+                  title: Authentication failed
+                  detail: Could not find any usable credentials in the request.
+                  source:
+                    pointer: /
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+        '404':
+          description: The namespace does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: namespace_not_found
+                  detail: no such namespace
+        '422':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: invalid_request
+                  detail: 'limit is no longer supported: page with page[number] and page[size] instead'
+        '502':
+          description: Upstream error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: upstream_error
+                  detail: the memory dataplane is unavailable
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /ai/memory/namespaces/{namespace}/profiles/{profile_id}:
+    delete:
+      summary: Forget a profile's memories
+      operationId: ForgetProfile
+      tags:
+      - Profiles
+      description: Delete everything held about one profile. A 2xx means none of its memories are left, and its summary goes with them. There is no undo.
+      parameters:
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          description: The namespace. `default` exists for every organization.
+        description: The namespace. `default` exists for every organization.
+      - name: profile_id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: 'The profile: your identifier for the user, caller or agent this memory is about.'
+      responses:
+        '200':
+          description: The profile's memories are gone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForgetResponse'
+              example:
+                data:
+                  profile_id: caller:+13128675309
+                  memories_deleted: 12
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: '10009'
+                  title: Authentication failed
+                  detail: Could not find any usable credentials in the request.
+                  source:
+                    pointer: /
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+        '404':
+          description: The namespace does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: namespace_not_found
+                  detail: no such namespace
+        '502':
+          description: Upstream error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: upstream_error
+                  detail: the memory dataplane is unavailable
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /ai/memory/namespaces/{namespace}/profiles/{profile_id}/memories:
+    get:
+      summary: List a profile's memories, most recent first
+      operationId: ListMemories
+      tags:
+      - Profiles
+      description: 'Everything stored under one profile, unranked -- ask `recall` for the memories that answer a question. A profile that holds nothing is an empty page rather than a 404: profiles exist by being written to. Each memory names the `source_id` it was extracted from, or null for a memory derived from other memories -- which can read almost the same as the fact it restates. A `source_id` narrows the listing to the memories extracted from that source, and a `session_id` to those extracted from the session, which is the same thing named another way; pass one or the other. Neither is everything the source led to: a memory derived from several sources belongs to no single one and appears only in the unfiltered listing. A memory written while the listing is paged shifts the pages after it, so an entry can be repeated or missed at a page boundary.'
+      parameters:
+      - name: profile_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Profile Id
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Namespace
+      - name: session_id
+        in: query
+        required: false
+        description: An ingested session, by the `session_id` it was ingested with. Narrows the request to the source that session was stored as.
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          title: Session Id
+      - name: source_id
+        in: query
+        required: false
+        description: Narrows the listing to the memories extracted from one source, a remembered fact as well as a session. Pass this or `session_id`, not both.
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          title: Source Id
+      - name: page[number]
+        in: query
+        required: false
+        description: 'The page to return, counting from 1. Bounded in depth: (page[number] - 1) * page[size] may be at most 10000.'
+        schema:
+          type: integer
+          maximum: 10001
+          minimum: 1
+          default: 1
+          title: Number
+      - name: page[size]
+        in: query
+        required: false
+        description: How many results a page holds.
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 20
+          title: Size
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryListResponse'
+              example:
+                data:
+                - id: mem_01HZY4
+                  text: Invoices go to 220 W Chicago Ave.
+                  recorded_at: '2026-08-26T21:14:11Z'
+                  source_id: b1e6c0a2-4f3d-4a2e-9c7b-8e1f2a3b4c5d
+                meta:
+                  page_number: 1
+                  page_size: 20
+                  total_pages: 22
+                  total_results: 431
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: '10009'
+                  title: Authentication failed
+                  detail: Could not find any usable credentials in the request.
+                  source:
+                    pointer: /
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+        '404':
+          description: The namespace does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: namespace_not_found
+                  detail: no such namespace
+        '422':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: invalid_request
+                  detail: pass source_id or session_id, not both
+        '502':
+          description: Upstream error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: upstream_error
+                  detail: the memory dataplane is unavailable
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /ai/memory/namespaces/{namespace}/profiles/{profile_id}/memories/{memory_id}:
+    get:
+      summary: Read one memory, and what it came from
+      operationId: GetMemory
+      tags:
+      - Profiles
+      description: 'One memory by its id, as `recall` and the listing return it, together with what it came from. A fact names its `source_id`: read it with `GET .../sources/{source_id}` to see what was stored. A memory derived from other memories names them in `derived_from` instead; read each of those to reach its source.'
+      parameters:
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Namespace
+          description: The namespace. `default` exists for every organization.
+        description: The namespace. `default` exists for every organization.
+      - name: profile_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Profile Id
+          description: 'The profile: your identifier for the user, caller or agent this memory is about.'
+        description: 'The profile: your identifier for the user, caller or agent this memory is about.'
+      - name: memory_id
+        in: path
+        required: true
+        description: A memory's id, as `recall` and the listing return it.
+        schema:
+          type: string
+          title: Memory Id
+          description: A memory's id, as `recall` and the listing return it.
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryResponse'
+              example:
+                data:
+                  id: mem_01HZY4
+                  text: Invoices go to 220 W Chicago Ave.
+                  recorded_at: '2026-08-26T21:14:11Z'
+                  source_id: b1e6c0a2-4f3d-4a2e-9c7b-8e1f2a3b4c5d
+                  derived_from: null
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: '10009'
+                  title: Authentication failed
+                  detail: Could not find any usable credentials in the request.
+                  source:
+                    pointer: /
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+        '404':
+          description: The memory does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: memory_not_found
+                  detail: no such memory
+        '422':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: invalid_request
+                  detail: memory id must be a UUID
+        '502':
+          description: Upstream error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: upstream_error
+                  detail: the memory dataplane is unavailable
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
+    messaging_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/messaging_Error'
+          type: array
+    MessagingFeatureSet:
+      description: 'The set of features available for a specific messaging use case (SMS or MMS). Features
+
+        can vary depending on the characteristics the phone number, as well as its current
+
+        product configuration.
+
+        '
+      example:
+        domestic_two_way: true
+        international_inbound: false
+        international_outbound: true
+      properties:
+        domestic_two_way:
+          description: Send messages to and receive messages from numbers in the same country.
+          type: boolean
+        international_inbound:
+          description: Receive messages from numbers in other countries.
+          type: boolean
+        international_outbound:
+          description: Send messages to numbers in other countries.
+          type: boolean
+      required:
+      - domestic_two_way
+      - international_inbound
+      - international_outbound
+      type:
+      - object
+      - 'null'
+    NumberHealthMetrics:
+      description: 'High level health metrics about the number and it''s messaging sending patterns.
+
+        '
+      example:
+        inbound_outbound_ratio: 1
+        message_count: 10
+        spam_ratio: 10
+        success_ratio: 2
+      properties:
+        inbound_outbound_ratio:
+          description: The ratio of messages received to the number of messages sent.
+          format: float
+          type: number
+        message_count:
+          description: The number of messages analyzed for the health metrics.
+          type: integer
+        spam_ratio:
+          description: The ratio of messages blocked for spam to the number of messages attempted.
+          format: float
+          type: number
+        success_ratio:
+          description: The ratio of messages sucessfully delivered to the number of messages attempted.
+          format: float
+          type: number
+      required:
+      - message_count
+      - inbound_outbound_ratio
+      - success_ratio
+      - spam_ratio
+      type: object
+    CreateMessagingProfileRequest:
+      example:
+        enabled: true
+        name: My name
+        number_pool_settings:
+          geomatch: false
+          long_code_weight: 1
+          skip_unhealthy: true
+          sticky_sender: false
+          toll_free_weight: 10
+        url_shortener_settings:
+          domain: example.ex
+          prefix: ''
+          replace_blacklist_only: true
+          send_webhooks: false
+        webhook_api_version: '2'
+        webhook_failover_url: https://backup.example.com/hooks
+        webhook_url: https://www.example.com/hooks
+        whitelisted_destinations:
+        - US
+      properties:
+        ai_assistant_id:
+          description: The AI assistant ID to associate with this messaging profile.
+          maxLength: 64
+          type:
+          - string
+          - 'null'
+        alpha_sender:
+          description: The alphanumeric sender ID to use when sending to destinations that require an alphanumeric sender ID.
+          pattern: ^[A-Za-z0-9 ]{1,11}$
+          type:
+          - string
+          - 'null'
+        daily_spend_limit:
+          description: The maximum amount of money (in USD) that can be spent by this profile before midnight UTC.
+          pattern: ^[0-9]+(?:\.[0-9]+)?$
+          type: string
+        daily_spend_limit_enabled:
+          description: Whether to enforce the value configured by `daily_spend_limit`.
+          type: boolean
+        enabled:
+          default: true
+          description: Specifies whether the messaging profile is enabled or not.
+          type: boolean
+        health_webhook_url:
+          description: A URL to receive health check webhooks for numbers in this profile.
+          format: url
+          type:
+          - string
+          - 'null'
+        mms_fall_back_to_sms:
+          default: false
+          description: enables SMS fallback for MMS messages.
+          type: boolean
+        mms_transcoding:
+          default: false
+          description: enables automated resizing of MMS media.
+          type: boolean
+        mobile_only:
+          default: false
+          description: Send messages only to mobile phone numbers.
+          type: boolean
+        name:
+          description: A user friendly name for the messaging profile.
+          type: string
+        number_pool_settings:
+          $ref: '#/components/schemas/NumberPoolSettings'
+        resource_group_id:
+          description: The resource group ID to associate with this messaging profile.
+          maxLength: 64
+          type:
+          - string
+          - 'null'
+        smart_encoding:
+          default: false
+          description: Enables automatic character encoding optimization for SMS messages. When enabled, the system automatically selects the most efficient encoding (GSM-7 or UCS-2) based on message content to maximize character limits and minimize costs.
+          type: boolean
+        url_shortener_settings:
+          $ref: '#/components/schemas/UrlShortenerSettings'
+        webhook_api_version:
+          default: '2'
+          description: Determines which webhook format will be used, Telnyx API v1, v2, or a legacy 2010-04-01 format.
+          enum:
+          - '1'
+          - '2'
+          - '2010-04-01'
+          type: string
+        webhook_failover_url:
+          default: ''
+          description: The failover URL where webhooks related to this messaging profile will be sent if sending to the primary URL fails.
+          format: url
+          type:
+          - string
+          - 'null'
+        webhook_url:
+          default: ''
+          description: The URL where webhooks related to this messaging profile will be sent.
+          format: url
+          type:
+          - string
+          - 'null'
+        whitelisted_destinations:
+          description: Destinations to which the messaging profile is allowed to send. The elements in the list must be valid ISO 3166-1 alpha-2 country codes. If set to `["*"]` all destinations will be allowed.
+          items:
+            description: ISO 3166-1 alpha-2 country code.
+            pattern: ^[A-Z]{2}$
+            type: string
+          type: array
+      required:
+      - name
+      - whitelisted_destinations
+      type: object
+    messaging_PaginationMeta:
+      properties:
+        page_number:
+          example: 2
+          type: integer
+        page_size:
+          example: 25
+          type: integer
+        total_pages:
+          example: 3
+          type: integer
+        total_results:
+          example: 55
+          type: integer
+      required:
+      - total_pages
+      - total_results
+      - page_size
+      - page_number
+      type: object
+    ShortCode:
+      example:
+        country_code: US
+        created_at: '2019-01-23T18:10:02.574Z'
+        id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        messaging_profile_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        record_type: short_code
+        short_code: '12345'
+        tags:
+        - test_customer
+        updated_at: '2019-01-23T18:10:02.574Z'
+      properties:
+        country_code:
+          description: ISO 3166-1 alpha-2 country code.
+          example: US
+          pattern: ^[A-Z]{2}$
+          readOnly: true
+          type: string
+        created_at:
+          description: ISO 8601 formatted date indicating when the resource was created.
+          format: date-time
+          readOnly: true
+          type: string
+        id:
+          description: Identifies the type of resource.
+          format: uuid
+          readOnly: true
+          type: string
+        messaging_profile_id:
+          description: Unique identifier for a messaging profile.
+          type:
+          - string
+          - 'null'
+        record_type:
+          description: Identifies the type of the resource.
+          enum:
+          - short_code
+          example: short_code
+          readOnly: true
+          type: string
+        short_code:
+          description: Short digit sequence used to address messages.
+          readOnly: true
+          type: string
+        tags:
+          items:
+            type: string
+          type:
+          - array
+        updated_at:
+          description: ISO 8601 formatted date indicating when the resource was updated.
+          format: date-time
+          readOnly: true
+          type: string
+      required:
+      - messaging_profile_id
+      type: object
     MessagingProfile:
       example:
         created_at: '2019-01-23T18:10:02.574Z'
@@ -305,6 +962,56 @@ components:
             type: string
           type: array
       type: object
+    UrlShortenerSettings:
+      description: 'The URL shortener feature allows automatic replacement of URLs that were generated using
+
+        a public URL shortener service. Some examples include bit.do, bit.ly, goo.gl, ht.ly,
+
+        is.gd, ow.ly, rebrand.ly, t.co, tiny.cc, and tinyurl.com. Such URLs are replaced with
+
+        with links generated by Telnyx. The use of custom links can improve branding and message
+
+        deliverability.
+
+
+        To disable this feature, set the object field to `null`.
+
+        '
+      example:
+        domain: example.ex
+        prefix: ''
+        replace_blacklist_only: true
+        send_webhooks: false
+      properties:
+        domain:
+          description: 'One of the domains provided by the Telnyx URL shortener service.
+
+            '
+          example: acct.fyi
+          type: string
+        prefix:
+          description: 'Optional prefix that can be used to identify your brand, and will appear in the Telnyx generated URLs after the domain name.
+
+            '
+          example: ''
+          type: string
+        replace_blacklist_only:
+          description: 'Use the link replacement tool only for links that are specifically blacklisted by Telnyx.
+
+            '
+          example: true
+          type: boolean
+        send_webhooks:
+          description: 'Receive webhooks for when your replaced links are clicked. Webhooks are sent to the webhooks on the messaging profile.
+
+            '
+          example: false
+          type: boolean
+      required:
+      - domain
+      type:
+      - object
+      - 'null'
     UpdateMessagingProfileRequest:
       example:
         enabled: true
@@ -420,164 +1127,111 @@ components:
             type: string
           type: array
       type: object
-    UrlShortenerSettings:
-      description: 'The URL shortener feature allows automatic replacement of URLs that were generated using
+    NumberPoolSettings:
+      description: 'Number Pool allows you to send messages from a pool of numbers of different types, assigning
 
-        a public URL shortener service. Some examples include bit.do, bit.ly, goo.gl, ht.ly,
+        weights to each type. The pool consists of all the long code and toll free numbers
 
-        is.gd, ow.ly, rebrand.ly, t.co, tiny.cc, and tinyurl.com. Such URLs are replaced with
-
-        with links generated by Telnyx. The use of custom links can improve branding and message
-
-        deliverability.
+        assigned to the messaging profile.
 
 
         To disable this feature, set the object field to `null`.
 
         '
       example:
-        domain: example.ex
-        prefix: ''
-        replace_blacklist_only: true
-        send_webhooks: false
+        geomatch: false
+        long_code_weight: 1
+        skip_unhealthy: true
+        sticky_sender: false
+        toll_free_weight: 10
       properties:
-        domain:
-          description: 'One of the domains provided by the Telnyx URL shortener service.
+        geomatch:
+          default: false
+          description: 'If set to true, Number Pool will try to choose a sending number with the same area code as the destination
+
+            number. If there are no such numbers available, a nunber with a different area code will be chosen. Currently
+
+            only NANP numbers are supported.
 
             '
-          example: acct.fyi
-          type: string
-        prefix:
-          description: 'Optional prefix that can be used to identify your brand, and will appear in the Telnyx generated URLs after the domain name.
+          type: boolean
+        long_code_weight:
+          description: 'Defines the probability weight for a Long Code number to be selected when sending a message.
+
+            The higher the weight the higher the probability. The sum of the weights for all number types
+
+            does not necessarily need to add to 100.  Weight must be a non-negative number, and when equal
+
+            to zero it will remove the number type from the pool.
 
             '
-          example: ''
-          type: string
-        replace_blacklist_only:
-          description: 'Use the link replacement tool only for links that are specifically blacklisted by Telnyx.
+          example: 1
+          type: number
+        skip_unhealthy:
+          description: 'If set to true all unhealthy numbers will be automatically excluded from the pool.
+
+            Health metrics per number are calculated on a regular basis, taking into account the deliverability
+
+            rate and the amount of messages marked as spam by upstream carriers.
+
+            Numbers with a deliverability rate below 25% or spam ratio over 75% will be considered unhealthy.
 
             '
           example: true
           type: boolean
-        send_webhooks:
-          description: 'Receive webhooks for when your replaced links are clicked. Webhooks are sent to the webhooks on the messaging profile.
+        sticky_sender:
+          default: false
+          description: 'If set to true, Number Pool will try to choose the same sending number for all messages to a particular
+
+            recipient. If the sending number becomes unhealthy and `skip_unhealthy` is set to true, a new
+
+            number will be chosen.
 
             '
-          example: false
           type: boolean
+        toll_free_weight:
+          description: 'Defines the probability weight for a Toll Free number to be selected when sending a message.
+
+            The higher the weight the higher the probability. The sum of the weights for all number types
+
+            does not necessarily need to add to 100. Weight must be a non-negative number, and when equal
+
+            to zero it will remove the number type from the pool.
+
+            '
+          example: 10
+          type: number
       required:
-      - domain
+      - toll_free_weight
+      - long_code_weight
+      - skip_unhealthy
       type:
       - object
       - 'null'
-    NumberHealthMetrics:
-      description: 'High level health metrics about the number and it''s messaging sending patterns.
-
-        '
-      example:
-        inbound_outbound_ratio: 1
-        message_count: 10
-        spam_ratio: 10
-        success_ratio: 2
+    messaging_Error:
       properties:
-        inbound_outbound_ratio:
-          description: The ratio of messages received to the number of messages sent.
-          format: float
-          type: number
-        message_count:
-          description: The number of messages analyzed for the health metrics.
-          type: integer
-        spam_ratio:
-          description: The ratio of messages blocked for spam to the number of messages attempted.
-          format: float
-          type: number
-        success_ratio:
-          description: The ratio of messages sucessfully delivered to the number of messages attempted.
-          format: float
-          type: number
-      required:
-      - message_count
-      - inbound_outbound_ratio
-      - success_ratio
-      - spam_ratio
-      type: object
-    ShortCode:
-      example:
-        country_code: US
-        created_at: '2019-01-23T18:10:02.574Z'
-        id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
-        messaging_profile_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
-        record_type: short_code
-        short_code: '12345'
-        tags:
-        - test_customer
-        updated_at: '2019-01-23T18:10:02.574Z'
-      properties:
-        country_code:
-          description: ISO 3166-1 alpha-2 country code.
-          example: US
-          pattern: ^[A-Z]{2}$
-          readOnly: true
+        code:
           type: string
-        created_at:
-          description: ISO 8601 formatted date indicating when the resource was created.
-          format: date-time
-          readOnly: true
+          x-format: integer
+        detail:
           type: string
-        id:
-          description: Identifies the type of resource.
-          format: uuid
-          readOnly: true
-          type: string
-        messaging_profile_id:
-          description: Unique identifier for a messaging profile.
-          type:
-          - string
-          - 'null'
-        record_type:
-          description: Identifies the type of the resource.
-          enum:
-          - short_code
-          example: short_code
-          readOnly: true
-          type: string
-        short_code:
-          description: Short digit sequence used to address messages.
-          readOnly: true
-          type: string
-        tags:
-          items:
-            type: string
-          type:
-          - array
-        updated_at:
-          description: ISO 8601 formatted date indicating when the resource was updated.
-          format: date-time
-          readOnly: true
+        meta:
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              format: json-pointer
+              type: string
+          type: object
+        title:
           type: string
       required:
-      - messaging_profile_id
-      type: object
-    messaging_PaginationMeta:
-      properties:
-        page_number:
-          example: 2
-          type: integer
-        page_size:
-          example: 25
-          type: integer
-        total_pages:
-          example: 3
-          type: integer
-        total_results:
-          example: 55
-          type: integer
-      required:
-      - total_pages
-      - total_results
-      - page_size
-      - page_number
-      type: object
+      - code
+      - title
     PhoneNumberWithMessagingSettings:
       example:
         country_code: US
@@ -687,288 +1341,749 @@ components:
           readOnly: true
           type: string
       type: object
-    messaging_Errors:
+    ProfileListResponse:
       properties:
-        errors:
+        data:
           items:
-            $ref: '#/components/schemas/messaging_Error'
+            $ref: '#/components/schemas/Profile'
           type: array
-    MessagingFeatureSet:
-      description: 'The set of features available for a specific messaging use case (SMS or MMS). Features
-
-        can vary depending on the characteristics the phone number, as well as its current
-
-        product configuration.
-
-        '
-      example:
-        domestic_two_way: true
-        international_inbound: false
-        international_outbound: true
-      properties:
-        domestic_two_way:
-          description: Send messages to and receive messages from numbers in the same country.
-          type: boolean
-        international_inbound:
-          description: Receive messages from numbers in other countries.
-          type: boolean
-        international_outbound:
-          description: Send messages to numbers in other countries.
-          type: boolean
+          title: Data
+        meta:
+          $ref: '#/components/schemas/PageMeta'
+      type: object
       required:
-      - domestic_two_way
-      - international_inbound
-      - international_outbound
-      type:
-      - object
-      - 'null'
-    messaging_Error:
+      - data
+      - meta
+      title: ProfileListResponse
+    messaging_Error_0b38e7044b:
+      required:
+      - code
+      - title
       properties:
         code:
           type: string
           x-format: integer
+        title:
+          type: string
         detail:
           type: string
-        meta:
-          type: object
         source:
+          type: object
           properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
             parameter:
               description: Indicates which query parameter caused the error.
               type: string
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              format: json-pointer
-              type: string
+        meta:
           type: object
+    MemoryListResponse:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/ListedMemory'
+          type: array
+          title: Data
+        meta:
+          $ref: '#/components/schemas/PageMeta'
+      type: object
+      required:
+      - data
+      - meta
+      title: MemoryListResponse
+    Profile:
+      properties:
+        profile_id:
+          type: string
+          title: Profile Id
+        memory_count:
+          type: integer
+          title: Memory Count
+          description: Memories stored under this profile, including the consolidated ones that paraphrase others. Listings are ordered by it.
+      type: object
+      required:
+      - profile_id
+      - memory_count
+      title: Profile
+    messaging_UpdateMessagingProfileRequest:
+      type: object
+      properties:
+        record_type:
+          description: Identifies the type of the resource.
+          type: string
+          enum:
+          - messaging_profile
+          readOnly: true
+        id:
+          description: Identifies the type of resource.
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          description: A user friendly name for the messaging profile.
+          type: string
+        enabled:
+          description: Specifies whether the messaging profile is enabled or not.
+          type: boolean
+        webhook_url:
+          description: The URL where webhooks related to this messaging profile will be sent.
+          type:
+          - string
+          - 'null'
+          format: url
+        webhook_failover_url:
+          description: The failover URL where webhooks related to this messaging profile will be sent if sending to the primary URL fails.
+          type:
+          - string
+          - 'null'
+          format: url
+        webhook_api_version:
+          description: Determines which webhook format will be used, Telnyx API v1, v2, or a legacy 2010-04-01 format.
+          type: string
+          enum:
+          - '1'
+          - '2'
+          - '2010-04-01'
+        whitelisted_destinations:
+          description: 'Destinations to which the messaging profile is allowed to send. The elements in the list must be valid ISO 3166-1 alpha-2 country codes. If set to `["*"]`, all destinations will be allowed.
+
+
+            This field is required if the messaging profile doesn''t have it defined yet.'
+          type: array
+          items:
+            description: ISO 3166-1 alpha-2 country code.
+            type: string
+            pattern: ^[A-Z]{2}$
+        created_at:
+          description: ISO 8601 formatted date indicating when the resource was created.
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          description: ISO 8601 formatted date indicating when the resource was updated.
+          type: string
+          format: date-time
+          readOnly: true
+        v1_secret:
+          description: Secret used to authenticate with v1 endpoints.
+          type: string
+        number_pool_settings:
+          $ref: '#/components/schemas/NumberPoolSettings'
+        url_shortener_settings:
+          $ref: '#/components/schemas/UrlShortenerSettings'
+        alpha_sender:
+          description: The alphanumeric sender ID to use when sending to destinations that require an alphanumeric sender ID.
+          type:
+          - string
+          - 'null'
+          pattern: ^[A-Za-z0-9 ]{1,11}$
+        daily_spend_limit:
+          description: The maximum amount of money (in USD) that can be spent by this profile before midnight UTC.
+          type: string
+          pattern: ^[0-9]+(?:\.[0-9]+)?$
+        daily_spend_limit_enabled:
+          description: Whether to enforce the value configured by `daily_spend_limit`.
+          type: boolean
+        mms_fall_back_to_sms:
+          description: enables SMS fallback for MMS messages.
+          type: boolean
+          default: false
+        mms_transcoding:
+          description: enables automated resizing of MMS media.
+          type: boolean
+          default: false
+        mobile_only:
+          description: Send messages only to mobile phone numbers.
+          type: boolean
+          default: false
+        smart_encoding:
+          description: Enables automatic character encoding optimization for SMS messages. When enabled, the system automatically selects the most efficient encoding (GSM-7 or UCS-2) based on message content to maximize character limits and minimize costs.
+          type: boolean
+          default: false
+        features:
+          $ref: '#/components/schemas/MessagingProfileFeatures'
+        ai_assistant_id:
+          description: The ID of the AI assistant associated with this messaging profile.
+          type:
+          - string
+          - 'null'
+          example: ai_assistant-a80a9d4a-728c-4593-852c-2e93ad890000
+        redaction_enabled:
+          description: Set to true to enable message content redaction on this profile, or false to disable it. Ignored if the organization is not on the redaction allowlist. See the [Message Redaction guide](/docs/messaging/messages/message-redaction) for what is redacted.
+          type: boolean
+          default: false
+        redaction_level:
+          description: 'The redaction level to apply when redaction is enabled. 1: redact message records and reporting only. 2 (default): also redact inbound webhook payloads. See the [Message Redaction guide](/docs/messaging/messages/message-redaction).'
+          type: integer
+          default: 2
+      example:
+        name: Updated Profile for Messages
+        webhook_url: https://www.example.com/hooks
+        webhook_failover_url: https://backup.example.com/hooks
+        enabled: true
+        webhook_api_version: '2'
+        whitelisted_destinations:
+        - US
+        number_pool_settings:
+          toll_free_weight: 10
+          long_code_weight: 2
+          skip_unhealthy: false
+          sticky_sender: true
+          geomatch: false
+        url_shortener_settings:
+          domain: example.ex
+          prefix: cmpny
+          replace_blacklist_only: true
+          send_webhooks: false
+        v1_secret: rP1VamejkU2v0qIUxntqLW2c
+    ListedMemory:
+      properties:
+        id:
+          type: string
+          title: Id
+        text:
+          type: string
+          title: Text
+        recorded_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Recorded At
+        source_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Source Id
+          description: The source this memory was extracted from. Set for a fact, which comes from exactly one source; null for a memory derived from other memories. Read it with `GET .../sources/{source_id}`. A source deleted a moment ago can still be named here, and then answers 404.
+      type: object
+      required:
+      - id
+      - text
+      - source_id
+      title: ListedMemory
+    MessagingProfileFeatures:
+      type:
+      - object
+      - 'null'
+      description: Telnyx product features the messaging customer can enable on the messaging profile. Keys map to individual feature flags; unknown keys are accepted and preserved for forward compatibility with rolling deployments.
+      additionalProperties: true
+      properties:
+        ai_opt_out_detection_enabled:
+          type: boolean
+          description: Enables AI detection of inbound opt-out messages that do not follow the standard STOP/UNSTOP/HELP opt-out keyword pattern. When enabled, the messaging platform applies an AI model to identify non-standard opt-out requests (e.g. natural-language phrases) and treats them as opt-outs.
+      example:
+        ai_opt_out_detection_enabled: true
+    TelnyxError:
+      type: object
+      properties:
+        code:
+          type: string
         title:
           type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              type: string
+        meta:
+          type: object
+          properties:
+            url:
+              type: string
+    TracedMemory:
+      properties:
+        id:
+          type: string
+          title: Id
+        text:
+          type: string
+          title: Text
+        recorded_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Recorded At
+        source_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Source Id
+          description: The source this memory was extracted from. Set for a fact, which comes from exactly one source; null for a memory derived from other memories. Read it with `GET .../sources/{source_id}`. A source deleted a moment ago can still be named here, and then answers 404.
+        derived_from:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Derived From
+          description: The ids of the memories this one was derived from. Read each with `GET .../memories/{memory_id}` to reach its `source_id`. Set for a derived memory; null for a fact.
+      type: object
       required:
-      - code
-      - title
-    CreateMessagingProfileRequest:
+      - id
+      - text
+      - source_id
+      - derived_from
+      title: TracedMemory
+    ShortCode_2:
+      type: object
+      required:
+      - messaging_profile_id
       example:
-        enabled: true
-        name: My name
+        record_type: short_code
+        id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        short_code: '12345'
+        country_code: US
+        messaging_profile_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        tags:
+        - test_customer
+        created_at: '2019-01-23T18:10:02.574Z'
+        updated_at: '2019-01-23T18:10:02.574Z'
+      properties:
+        record_type:
+          type: string
+          example: short_code
+          enum:
+          - short_code
+          description: Identifies the type of the resource.
+          readOnly: true
+        id:
+          type: string
+          format: uuid
+          description: Identifies the type of resource.
+          readOnly: true
+        short_code:
+          type: string
+          description: Short digit sequence used to address messages.
+          readOnly: true
+        country_code:
+          type: string
+          description: ISO 3166-1 alpha-2 country code.
+          pattern: ^[A-Z]{2}$
+          example: US
+          readOnly: true
+        messaging_profile_id:
+          type:
+          - string
+          - 'null'
+          description: Unique identifier for a messaging profile.
+        tags:
+          type:
+          - array
+          description: Tags associated with the resource.
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was created.
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was updated.
+          readOnly: true
+    messaging_CreateMessagingProfileRequest:
+      type: object
+      required:
+      - name
+      - whitelisted_destinations
+      properties:
+        name:
+          description: A user friendly name for the messaging profile.
+          type: string
+        whitelisted_destinations:
+          description: Destinations to which the messaging profile is allowed to send. The elements in the list must be valid ISO 3166-1 alpha-2 country codes. If set to `["*"]` all destinations will be allowed.
+          type: array
+          items:
+            description: ISO 3166-1 alpha-2 country code.
+            type: string
+            pattern: ^[A-Z]{2}$
+        enabled:
+          description: Specifies whether the messaging profile is enabled or not.
+          type: boolean
+          default: true
+        webhook_url:
+          description: The URL where webhooks related to this messaging profile will be sent.
+          type:
+          - string
+          - 'null'
+          format: url
+          default: ''
+        webhook_failover_url:
+          description: The failover URL where webhooks related to this messaging profile will be sent if sending to the primary URL fails.
+          type:
+          - string
+          - 'null'
+          format: url
+          default: ''
+        webhook_api_version:
+          description: Determines which webhook format will be used, Telnyx API v1, v2, or a legacy 2010-04-01 format.
+          type: string
+          enum:
+          - '1'
+          - '2'
+          - '2010-04-01'
+          default: '2'
         number_pool_settings:
-          geomatch: false
+          $ref: '#/components/schemas/NumberPoolSettings'
+        url_shortener_settings:
+          $ref: '#/components/schemas/UrlShortenerSettings'
+        alpha_sender:
+          description: The alphanumeric sender ID to use when sending to destinations that require an alphanumeric sender ID.
+          type:
+          - string
+          - 'null'
+          pattern: ^[A-Za-z0-9 ]{1,11}$
+        daily_spend_limit:
+          description: The maximum amount of money (in USD) that can be spent by this profile before midnight UTC.
+          type: string
+          pattern: ^[0-9]+(?:\.[0-9]+)?$
+        daily_spend_limit_enabled:
+          description: Whether to enforce the value configured by `daily_spend_limit`.
+          type: boolean
+        mms_fall_back_to_sms:
+          description: enables SMS fallback for MMS messages.
+          type: boolean
+          default: false
+        mms_transcoding:
+          description: enables automated resizing of MMS media.
+          type: boolean
+          default: false
+        mobile_only:
+          description: Send messages only to mobile phone numbers.
+          type: boolean
+          default: false
+        smart_encoding:
+          description: Enables automatic character encoding optimization for SMS messages. When enabled, the system automatically selects the most efficient encoding (GSM-7 or UCS-2) based on message content to maximize character limits and minimize costs.
+          type: boolean
+          default: false
+        features:
+          $ref: '#/components/schemas/MessagingProfileFeatures'
+        resource_group_id:
+          type:
+          - string
+          - 'null'
+          maxLength: 64
+          description: The resource group ID to associate with this messaging profile.
+        health_webhook_url:
+          type:
+          - string
+          - 'null'
+          format: url
+          description: A URL to receive health check webhooks for numbers in this profile.
+        ai_assistant_id:
+          type:
+          - string
+          - 'null'
+          maxLength: 64
+          description: The AI assistant ID to associate with this messaging profile.
+          example: ai_assistant-a80a9d4a-728c-4593-852c-2e93ad890000
+      example:
+        name: My name
+        enabled: true
+        webhook_url: https://www.example.com/hooks
+        webhook_failover_url: https://backup.example.com/hooks
+        webhook_api_version: '2'
+        number_pool_settings:
+          toll_free_weight: 10
           long_code_weight: 1
           skip_unhealthy: true
           sticky_sender: false
-          toll_free_weight: 10
+          geomatch: false
         url_shortener_settings:
           domain: example.ex
           prefix: ''
           replace_blacklist_only: true
           send_webhooks: false
-        webhook_api_version: '2'
-        webhook_failover_url: https://backup.example.com/hooks
-        webhook_url: https://www.example.com/hooks
         whitelisted_destinations:
         - US
+    messaging_MessagingProfile:
+      type: object
       properties:
-        ai_assistant_id:
-          description: The AI assistant ID to associate with this messaging profile.
-          maxLength: 64
-          type:
-          - string
-          - 'null'
-        alpha_sender:
-          description: The alphanumeric sender ID to use when sending to destinations that require an alphanumeric sender ID.
-          pattern: ^[A-Za-z0-9 ]{1,11}$
-          type:
-          - string
-          - 'null'
-        daily_spend_limit:
-          description: The maximum amount of money (in USD) that can be spent by this profile before midnight UTC.
-          pattern: ^[0-9]+(?:\.[0-9]+)?$
+        record_type:
+          description: Identifies the type of the resource.
           type: string
-        daily_spend_limit_enabled:
-          description: Whether to enforce the value configured by `daily_spend_limit`.
-          type: boolean
-        enabled:
-          default: true
-          description: Specifies whether the messaging profile is enabled or not.
-          type: boolean
-        health_webhook_url:
-          description: A URL to receive health check webhooks for numbers in this profile.
-          format: url
-          type:
-          - string
-          - 'null'
+          enum:
+          - messaging_profile
+          readOnly: true
+        id:
+          description: Identifies the type of resource.
+          type: string
+          format: uuid
+          readOnly: true
         mms_fall_back_to_sms:
-          default: false
           description: enables SMS fallback for MMS messages.
           type: boolean
-        mms_transcoding:
           default: false
+        mms_transcoding:
           description: enables automated resizing of MMS media.
           type: boolean
-        mobile_only:
           default: false
-          description: Send messages only to mobile phone numbers.
-          type: boolean
         name:
           description: A user friendly name for the messaging profile.
           type: string
-        number_pool_settings:
-          $ref: '#/components/schemas/NumberPoolSettings'
-        resource_group_id:
-          description: The resource group ID to associate with this messaging profile.
-          maxLength: 64
+        enabled:
+          description: Specifies whether the messaging profile is enabled or not.
+          type: boolean
+        webhook_url:
+          description: The URL where webhooks related to this messaging profile will be sent.
           type:
           - string
           - 'null'
-        smart_encoding:
-          default: false
-          description: Enables automatic character encoding optimization for SMS messages. When enabled, the system automatically selects the most efficient encoding (GSM-7 or UCS-2) based on message content to maximize character limits and minimize costs.
-          type: boolean
-        url_shortener_settings:
-          $ref: '#/components/schemas/UrlShortenerSettings'
+          format: url
+        webhook_failover_url:
+          description: The failover URL where webhooks related to this messaging profile will be sent if sending to the primary URL fails.
+          type:
+          - string
+          - 'null'
+          format: url
         webhook_api_version:
-          default: '2'
           description: Determines which webhook format will be used, Telnyx API v1, v2, or a legacy 2010-04-01 format.
+          type: string
           enum:
           - '1'
           - '2'
           - '2010-04-01'
-          type: string
-        webhook_failover_url:
-          default: ''
-          description: The failover URL where webhooks related to this messaging profile will be sent if sending to the primary URL fails.
-          format: url
+        health_webhook_url:
+          description: 'DEPRECATED: health check url service checking'
           type:
           - string
           - 'null'
-        webhook_url:
-          default: ''
-          description: The URL where webhooks related to this messaging profile will be sent.
           format: url
-          type:
-          - string
-          - 'null'
         whitelisted_destinations:
-          description: Destinations to which the messaging profile is allowed to send. The elements in the list must be valid ISO 3166-1 alpha-2 country codes. If set to `["*"]` all destinations will be allowed.
+          description: Destinations to which the messaging profile is allowed to send. The elements in the list must be valid ISO 3166-1 alpha-2 country codes. If set to `["*"]`, all destinations will be allowed.
+          type: array
           items:
             description: ISO 3166-1 alpha-2 country code.
-            pattern: ^[A-Z]{2}$
             type: string
-          type: array
-      required:
-      - name
-      - whitelisted_destinations
-      type: object
-    NumberPoolSettings:
-      description: 'Number Pool allows you to send messages from a pool of numbers of different types, assigning
-
-        weights to each type. The pool consists of all the long code and toll free numbers
-
-        assigned to the messaging profile.
-
-
-        To disable this feature, set the object field to `null`.
-
-        '
+            pattern: ^[A-Z]{2}$
+        created_at:
+          description: ISO 8601 formatted date indicating when the resource was created.
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          description: ISO 8601 formatted date indicating when the resource was updated.
+          type: string
+          format: date-time
+          readOnly: true
+        v1_secret:
+          description: Secret used to authenticate with v1 endpoints.
+          type: string
+        number_pool_settings:
+          $ref: '#/components/schemas/NumberPoolSettings'
+        url_shortener_settings:
+          $ref: '#/components/schemas/UrlShortenerSettings'
+        alpha_sender:
+          description: The alphanumeric sender ID to use when sending to destinations that require an alphanumeric sender ID.
+          type:
+          - string
+          - 'null'
+          pattern: ^[A-Za-z0-9 ]{1,11}$
+        daily_spend_limit:
+          description: The maximum amount of money (in USD) that can be spent by this profile before midnight UTC.
+          type: string
+          pattern: ^[0-9]+(?:\.[0-9]+)?$
+        daily_spend_limit_enabled:
+          description: Whether to enforce the value configured by `daily_spend_limit`.
+          type: boolean
+        redaction_enabled:
+          description: Indicates whether message content redaction is enabled for this profile. When enabled, message text, MMS media, and the counterparty phone number are redacted in message records and reporting. Requires organization activation — contact support to enable. The field is only present in responses for organizations with redaction access.
+          type: boolean
+          default: false
+        redaction_level:
+          description: 'Determines how much information is redacted for privacy or compliance purposes. Level 1: message records and reporting are redacted, but inbound webhook payloads are not. Level 2 (default): message records, reporting, and inbound webhook payloads are all redacted.'
+          type: integer
+          default: 2
+        mobile_only:
+          description: Send messages only to mobile phone numbers.
+          type: boolean
+          default: false
+        smart_encoding:
+          description: Enables automatic character encoding optimization for SMS messages. When enabled, the system automatically selects the most efficient encoding (GSM-7 or UCS-2) based on message content to maximize character limits and minimize costs.
+          type: boolean
+          default: false
+        features:
+          $ref: '#/components/schemas/MessagingProfileFeatures'
+        organization_id:
+          type: string
+          description: The organization that owns this messaging profile.
+        ai_assistant_id:
+          type:
+          - string
+          - 'null'
+          description: The AI assistant ID associated with this messaging profile.
+          example: ai_assistant-a80a9d4a-728c-4593-852c-2e93ad890000
+        resource_group_id:
+          type:
+          - string
+          - 'null'
+          description: The resource group ID associated with this messaging profile.
       example:
-        geomatch: false
-        long_code_weight: 1
-        skip_unhealthy: true
-        sticky_sender: false
-        toll_free_weight: 10
+        record_type: messaging_profile
+        id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        name: Profile for Messages
+        webhook_url: https://www.example.com/hooks
+        webhook_failover_url: https://backup.example.com/hooks
+        enabled: true
+        webhook_api_version: '2'
+        whitelisted_destinations:
+        - US
+        created_at: '2019-01-23T18:10:02.574Z'
+        updated_at: '2019-01-23T18:10:02.574Z'
+        number_pool_settings:
+          toll_free_weight: 10
+          long_code_weight: 2
+          skip_unhealthy: false
+          sticky_sender: true
+          geomatch: false
+        url_shortener_settings:
+          domain: example.ex
+          prefix: cmpny
+          replace_blacklist_only: true
+          send_webhooks: false
+        v1_secret: rP1VamejkU2v0qIUxntqLW2c
+        health_webhook_url: null
+        mms_fall_back_to_sms: false
+        mms_transcoding: false
+        daily_spend_limit: '100.00'
+        daily_spend_limit_enabled: false
+        redaction_enabled: false
+        redaction_level: 2
+        mobile_only: false
+        features:
+          ai_opt_out_detection_enabled: true
+    MemoryResponse:
       properties:
-        geomatch:
-          default: false
-          description: 'If set to true, Number Pool will try to choose a sending number with the same area code as the destination
-
-            number. If there are no such numbers available, a nunber with a different area code will be chosen. Currently
-
-            only NANP numbers are supported.
-
-            '
-          type: boolean
-        long_code_weight:
-          description: 'Defines the probability weight for a Long Code number to be selected when sending a message.
-
-            The higher the weight the higher the probability. The sum of the weights for all number types
-
-            does not necessarily need to add to 100.  Weight must be a non-negative number, and when equal
-
-            to zero it will remove the number type from the pool.
-
-            '
-          example: 1
-          type: number
-        skip_unhealthy:
-          description: 'If set to true all unhealthy numbers will be automatically excluded from the pool.
-
-            Health metrics per number are calculated on a regular basis, taking into account the deliverability
-
-            rate and the amount of messages marked as spam by upstream carriers.
-
-            Numbers with a deliverability rate below 25% or spam ratio over 75% will be considered unhealthy.
-
-            '
-          example: true
-          type: boolean
-        sticky_sender:
-          default: false
-          description: 'If set to true, Number Pool will try to choose the same sending number for all messages to a particular
-
-            recipient. If the sending number becomes unhealthy and `skip_unhealthy` is set to true, a new
-
-            number will be chosen.
-
-            '
-          type: boolean
-        toll_free_weight:
-          description: 'Defines the probability weight for a Toll Free number to be selected when sending a message.
-
-            The higher the weight the higher the probability. The sum of the weights for all number types
-
-            does not necessarily need to add to 100. Weight must be a non-negative number, and when equal
-
-            to zero it will remove the number type from the pool.
-
-            '
-          example: 10
-          type: number
+        data:
+          $ref: '#/components/schemas/TracedMemory'
+      type: object
       required:
-      - toll_free_weight
-      - long_code_weight
-      - skip_unhealthy
-      type:
-      - object
-      - 'null'
-  parameters:
-    PageConsolidated:
-      description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
-      explode: true
-      in: query
-      name: page
-      schema:
-        properties:
-          number:
-            default: 1
-            description: The page number to load
-            minimum: 1
-            type: integer
-          size:
-            default: 20
-            description: The size of the page
-            maximum: 250
-            minimum: 1
-            type: integer
-        type: object
-      style: deepObject
-    MessagingProfileId:
-      description: The id of the messaging profile to retrieve
-      in: path
-      name: id
-      required: true
-      schema:
-        format: uuid
-        type: string
+      - data
+      title: MemoryResponse
+    messaging_Errors_0b38e7044b:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/messaging_Error_0b38e7044b'
+    ForgottenProfile:
+      properties:
+        profile_id:
+          type: string
+          title: Profile Id
+        memories_deleted:
+          type: integer
+          title: Memories Deleted
+          description: 'Memories the profile held and no longer does, counted before and after. A report rather than an audit: memory moves in the background between the two counts. The status carries the outcome.'
+      type: object
+      required:
+      - profile_id
+      - memories_deleted
+      title: ForgottenProfile
+    TelnyxErrors:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/TelnyxError'
+    ForgetResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/ForgottenProfile'
+      type: object
+      required:
+      - data
+      title: ForgetResponse
+    PageMeta:
+      properties:
+        page_number:
+          type: integer
+          title: Page Number
+          description: The page returned, counting from 1.
+        page_size:
+          type: integer
+          title: Page Size
+          description: How many results a page holds.
+        total_pages:
+          type: integer
+          title: Total Pages
+          description: 'Pages that can be requested; 0 when nothing matched. Page until `page_number` reaches it rather than until a page comes back short: a page can hold fewer than `page_size` results without being the last. Capped at the deepest page served, so on a very large listing it covers fewer results than `total_results`.'
+        total_results:
+          type: integer
+          title: Total Results
+          description: Results the request matched, including any past the deepest page.
+      type: object
+      required:
+      - page_number
+      - page_size
+      - total_pages
+      - total_results
+      title: PageMeta
+      description: 'Where a listing''s page sits in the whole.
+
+
+        A page is a snapshot: the counts it reports and the order it is drawn in
+
+        both move as writes land, so paging through a busy namespace can repeat or
+
+        miss an entry at a page boundary.'
+    messaging_PaginationMeta_0b38e7044b:
+      type: object
+      required:
+      - total_pages
+      - total_results
+      - page_size
+      - page_number
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 55
+        page_number:
+          type: integer
+          example: 2
+        page_size:
+          type: integer
+          example: 25
   responses:
+    messaging_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors'
+      description: Unexpected error
+    MessagingProfileResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/MessagingProfile'
+            title: Messaging Profile Response
+            type: object
+      description: Successful response with details about a messaging profile.
+    ListMessagingProfilePhoneNumbersResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PhoneNumberWithMessagingSettings'
+                type: array
+              meta:
+                $ref: '#/components/schemas/messaging_PaginationMeta'
+            title: List Messaging Profile Phone Numbers Response
+            type: object
+      description: Successful response with a list of messaging profile phone numbers.
     ListMessagingProfileShortCodesResponse:
       content:
         application/json:
@@ -997,36 +2112,49 @@ components:
             title: List Messaging Profiles Response
             type: object
       description: Successful response with a list of messaging profiles.
-    MessagingProfileResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/MessagingProfile'
-            title: Messaging Profile Response
-            type: object
-      description: Successful response with details about a messaging profile.
-    ListMessagingProfilePhoneNumbersResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/PhoneNumberWithMessagingSettings'
-                type: array
-              meta:
-                $ref: '#/components/schemas/messaging_PaginationMeta'
-            title: List Messaging Profile Phone Numbers Response
-            type: object
-      description: Successful response with a list of messaging profile phone numbers.
-    messaging_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/messaging_Errors'
+    messaging_GenericErrorResponse_0b38e7044b:
       description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors_0b38e7044b'
+          example:
+            errors:
+            - code: string
+              title: string
+              detail: string
+              source:
+                pointer: /data/attributes/phone_number
+                parameter: string
+  parameters:
+    MessagingProfileId:
+      description: The id of the messaging profile to retrieve
+      in: path
+      name: id
+      required: true
+      schema:
+        format: uuid
+        type: string
+    PageConsolidated:
+      description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
+      explode: true
+      in: query
+      name: page
+      schema:
+        properties:
+          number:
+            default: 1
+            description: The page number to load
+            minimum: 1
+            type: integer
+          size:
+            default: 20
+            description: The size of the page
+            maximum: 250
+            minimum: 1
+            type: integer
+        type: object
+      style: deepObject
   securitySchemes:
     bearerAuth:
       scheme: bearer
@@ -1061,3 +2189,40 @@ components:
       bearerFormat: JWT
       scheme: bearer
       type: http
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-refined-from:
+- telnyx-openapi.yml
+- telnyx-openapi.json

@@ -1,11 +1,13 @@
 openapi: 3.2.0
 info:
-  contact:
-    email: support@telnyx.com
-  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
   title: Telnyx Fine Tuning API
   version: 2.0.0
+  contact:
+    email: support@telnyx.com
   x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Fine Tuning across 2 of this provider''s published API definitions: telnyx-openapi.yml, telnyx-openapi.json. Each path carries the servers of the definition it was published in.'
 servers:
 - description: Version 2.0.0 of the Telnyx API
   url: https://api.telnyx.com/v2
@@ -62,6 +64,9 @@ paths:
       tags:
       - Fine Tuning
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /ai/fine_tuning/jobs/{job_id}:
     get:
       description: Retrieve a fine tuning job by `job_id`.
@@ -90,6 +95,9 @@ paths:
       tags:
       - Fine Tuning
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /ai/fine_tuning/jobs/{job_id}/cancel:
     post:
       description: Cancel a fine tuning job.
@@ -118,8 +126,68 @@ paths:
       tags:
       - Fine Tuning
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
 components:
   schemas:
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
+    FineTuningJobsListData:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/FineTuningJob'
+          type: array
+      required:
+      - data
+      title: FineTuningJobListData
+      type: object
+    CreateFineTuningJobRequest:
+      properties:
+        hyperparameters:
+          description: The hyperparameters used for the fine-tuning job.
+          properties:
+            n_epochs:
+              default: 3
+              description: The number of epochs to train the model for. An epoch refers to one full cycle through the training dataset. 'auto' decides the optimal number of epochs based on the size of the dataset. If setting the number manually, we support any number between 1 and 50 epochs.
+              maximum: 10
+              minimum: 1
+              type: integer
+          type: object
+        model:
+          description: The base model that is being fine-tuned.
+          type: string
+        suffix:
+          description: Optional suffix to append to the fine tuned model's name.
+          type: string
+        training_file:
+          description: The storage bucket or object used for training.
+          type: string
+      required:
+      - model
+      - training_file
+      title: CreateFineTuningJobRequest
+      type: object
     FineTuningJob:
       description: The `fine_tuning.job` object represents a fine-tuning job that has been created through the API.
       properties:
@@ -181,42 +249,6 @@ components:
       - training_file
       title: FineTuningJob
       type: object
-    CreateFineTuningJobRequest:
-      properties:
-        hyperparameters:
-          description: The hyperparameters used for the fine-tuning job.
-          properties:
-            n_epochs:
-              default: 3
-              description: The number of epochs to train the model for. An epoch refers to one full cycle through the training dataset. 'auto' decides the optimal number of epochs based on the size of the dataset. If setting the number manually, we support any number between 1 and 50 epochs.
-              maximum: 10
-              minimum: 1
-              type: integer
-          type: object
-        model:
-          description: The base model that is being fine-tuned.
-          type: string
-        suffix:
-          description: Optional suffix to append to the fine tuned model's name.
-          type: string
-        training_file:
-          description: The storage bucket or object used for training.
-          type: string
-      required:
-      - model
-      - training_file
-      title: CreateFineTuningJobRequest
-      type: object
-    FineTuningJobsListData:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/FineTuningJob'
-          type: array
-      required:
-      - data
-      title: FineTuningJobListData
-      type: object
     HTTPValidationError:
       properties:
         detail:
@@ -226,27 +258,22 @@ components:
           type: array
       title: HTTPValidationError
       type: object
-    ValidationError:
+    HTTPValidationError_2:
       properties:
-        loc:
+        detail:
           items:
-            anyOf:
-            - type: string
-            - type: integer
-          title: Location
+            $ref: '#/components/schemas/ValidationError'
           type: array
-        msg:
-          title: Message
-          type: string
-        type:
-          title: Error Type
-          type: string
-      required:
-      - loc
-      - msg
-      - type
-      title: ValidationError
+          title: Detail
       type: object
+      title: HTTPValidationError
+      example:
+        detail:
+        - loc:
+          - body
+          - name
+          msg: Field required
+          type: missing
   securitySchemes:
     bearerAuth:
       scheme: bearer
@@ -281,3 +308,40 @@ components:
       bearerFormat: JWT
       scheme: bearer
       type: http
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-refined-from:
+- telnyx-openapi.yml
+- telnyx-openapi.json

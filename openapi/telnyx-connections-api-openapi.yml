@@ -1,11 +1,13 @@
 openapi: 3.2.0
 info:
-  contact:
-    email: support@telnyx.com
-  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
   title: Telnyx Connections API
   version: 2.0.0
+  contact:
+    email: support@telnyx.com
   x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Connections across 2 of this provider''s published API definitions: telnyx-openapi.yml, telnyx-openapi.json. Each path carries the servers of the definition it was published in.'
 servers:
 - description: Version 2.0.0 of the Telnyx API
   url: https://api.telnyx.com/v2
@@ -38,6 +40,9 @@ paths:
       x-endpoint-cost: medium
       x-group-parameters: 'true'
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /connections/{id}:
     get:
       description: Retrieves the high-level details of an existing connection. To retrieve specific authentication information, use the endpoint for the specific connection type.
@@ -64,66 +69,54 @@ paths:
       tags:
       - Connections
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
+  /connections/count:
+    get:
+      description: Returns the number of connections associated with the authenticated user, grouped by connection type, together with the connection limits that apply to the user. Forward-only connections are excluded from the counts.
+      summary: Count connections
+      operationId: CountConnections
+      tags:
+      - Connections
+      responses:
+        '200':
+          description: Successful response with connection counts and limits.
+          content:
+            application/json:
+              schema:
+                type: object
+                title: Connections Count Response
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ConnectionsCount'
+              example:
+                data:
+                  record_type: connections_count
+                  counts:
+                    ip_connections: 12
+                    credential_connections: 5
+                    uac_connections: 0
+                    fqdn_connections: 3
+                    call_control_applications: 2
+                    texml_applications: 1
+                    third_party_provider_connections: 0
+                    external_connections: 1
+                    fax_connections: 0
+                    mobile_voice_connections: 0
+                    microsoft_teams_sbc_connections: 0
+                    zoom_sbc_connections: 0
+                    operator_connect_connections: 0
+                  limits:
+                    global_limit: 10000
+        '401':
+          $ref: '#/components/responses/UnauthenticatedResponse_2'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
 components:
-  parameters:
-    connections_PageConsolidated:
-      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
-      explode: true
-      in: query
-      name: page
-      schema:
-        properties:
-          number:
-            default: 1
-            description: The page number to load
-            minimum: 1
-            type: integer
-          size:
-            default: 250
-            description: The size of the page
-            maximum: 250
-            minimum: 1
-            type: integer
-        type: object
-      style: deepObject
-    connections_FilterConsolidated:
-      description: 'Consolidated filter parameter (deepObject style). Originally: filter[connection_name], filter[fqdn], filter[outbound_voice_profile_id], filter[outbound.outbound_voice_profile_id]'
-      explode: true
-      in: query
-      name: filter
-      schema:
-        properties:
-          connection_name:
-            description: Filter by connection_name using nested operations
-            properties:
-              contains:
-                default: null
-                description: If present, connections with <code>connection_name</code> containing the given value will be returned. Matching is not case-sensitive. Requires at least three characters.
-                type: string
-            type: object
-          fqdn:
-            default: null
-            description: If present, connections with an `fqdn` that equals the given value will be returned. Matching is case-sensitive, and the full string must match.
-            type: string
-          outbound_voice_profile_id:
-            description: Identifies the associated outbound voice profile.
-            example: '1293384261075731499'
-            type: string
-            x-format: int64
-        type: object
-      style: deepObject
-    connections_SortConnection:
-      description: "Specifies the sort order for results. By default sorting direction is ascending. To have the results sorted in descending order add the <code> -</code> prefix.<br/><br/>\nThat is: <ul>\n  <li>\n    <code>connection_name</code>: sorts the result by the\n    <code>connection_name</code> field in ascending order.\n  </li>\n\n  <li>\n    <code>-connection_name</code>: sorts the result by the\n    <code>connection_name</code> field in descending order.\n  </li>\n</ul> <br/> If not given, results are sorted by <code>created_at</code> in descending order."
-      in: query
-      name: sort
-      schema:
-        default: created_at
-        enum:
-        - created_at
-        - connection_name
-        - active
-        example: connection_name
-        type: string
   schemas:
     connections_PaginationMeta:
       properties:
@@ -234,6 +227,12 @@ components:
       example: Amsterdam, Netherlands
       title: Anchorsite Override
       type: string
+    connections_OutboundVoiceProfileId:
+      description: Identifies the associated outbound voice profile.
+      example: '1293384261075731499'
+      title: Outbound Voice Profile ID
+      type: string
+      x-format: int64
     ErrorResponse:
       properties:
         errors:
@@ -259,13 +258,216 @@ components:
             type: object
           type: array
       type: object
-    connections_OutboundVoiceProfileId:
-      description: Identifies the associated outbound voice profile.
-      example: '1293384261075731499'
-      title: Outbound Voice Profile ID
-      type: string
-      x-format: int64
+    ConnectionsCount:
+      title: Connections Count
+      type: object
+      required:
+      - record_type
+      - counts
+      - limits
+      properties:
+        record_type:
+          type: string
+          description: Identifies the type of the resource.
+          example: connections_count
+        counts:
+          type: object
+          description: Counts of the authenticated user's connections, grouped by connection type. Forward-only connections are excluded.
+          required:
+          - ip_connections
+          - credential_connections
+          - uac_connections
+          - fqdn_connections
+          - call_control_applications
+          - texml_applications
+          - third_party_provider_connections
+          - external_connections
+          - fax_connections
+          - mobile_voice_connections
+          - microsoft_teams_sbc_connections
+          - zoom_sbc_connections
+          - operator_connect_connections
+          properties:
+            ip_connections:
+              type: integer
+              description: Number of IP connections.
+            credential_connections:
+              type: integer
+              description: Number of credential connections.
+            uac_connections:
+              type: integer
+              description: Number of UAC connections.
+            fqdn_connections:
+              type: integer
+              description: Number of FQDN connections.
+            call_control_applications:
+              type: integer
+              description: Number of Call Control applications.
+            texml_applications:
+              type: integer
+              description: Number of TeXML applications.
+            third_party_provider_connections:
+              type: integer
+              description: Number of third-party provider connections.
+            external_connections:
+              type: integer
+              description: Number of external connections.
+            fax_connections:
+              type: integer
+              description: Number of Fax applications.
+            mobile_voice_connections:
+              type: integer
+              description: Number of mobile voice (IMS) connections.
+            microsoft_teams_sbc_connections:
+              type: integer
+              description: Number of Microsoft Teams SBC (direct routing) connections.
+            zoom_sbc_connections:
+              type: integer
+              description: Number of Zoom SBC connections.
+            operator_connect_connections:
+              type: integer
+              description: Number of Microsoft Operator Connect connections.
+        limits:
+          type: object
+          description: Connection limits that apply to the user. Contains a single global_limit when a global connection limit applies, or per-type limits (standard_limit, texml_limit and uac_limit) when the user has per-type connection count capabilities.
+          oneOf:
+          - title: Global Connection Limit
+            type: object
+            additionalProperties: false
+            required:
+            - global_limit
+            properties:
+              global_limit:
+                type: integer
+                description: Maximum total number of connections allowed, when a global limit applies.
+                example: 10000
+          - title: Per-type Connection Limits
+            type: object
+            additionalProperties: false
+            required:
+            - standard_limit
+            - texml_limit
+            - uac_limit
+            properties:
+              standard_limit:
+                type: integer
+                description: Maximum number of standard connections allowed, when per-type limits apply.
+              texml_limit:
+                type: integer
+                description: Maximum number of TeXML applications allowed, when per-type limits apply.
+              uac_limit:
+                type: integer
+                description: Maximum number of UAC connections allowed, when per-type limits apply.
+    connections_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              detail:
+                type: string
+              meta:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+              title:
+                type: string
+              source:
+                type: object
+                properties:
+                  pointer:
+                    type: string
+    call-scripting_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              detail:
+                type: string
+              meta:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+              title:
+                type: string
+              source:
+                type: object
+                properties:
+                  pointer:
+                    type: string
   responses:
+    connections_NotFoundResponse:
+      content:
+        application/json:
+          examples:
+            notFound:
+              value:
+                errors:
+                - code: '10005'
+                  detail: The requested resource or URL could not be found.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10005
+                  source:
+                    pointer: /
+                  title: Resource not found
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+      description: The requested resource doesn't exist.
+    ConnectionResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/Connection'
+            title: Connection Response
+            type: object
+      description: Successful response with details about a connection.
+    connections_UnauthorizedResponse:
+      content:
+        application/json:
+          examples:
+            notAuthorized:
+              value:
+                errors:
+                - code: '10010'
+                  detail: You are not authorized to access the requested resource.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10010
+                  source:
+                    pointer: /
+                  title: Not authorized
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+      description: The user doesn't have the required permissions to perform the requested action.
+    UnauthenticatedResponse:
+      content:
+        application/json:
+          examples:
+            Authentication Failed:
+              value:
+                errors:
+                - code: '10009'
+                  detail: Could not understand the provided credentials.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+                  title: Authentication failed
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+      description: Unauthorized
     ListConnectionsResponse:
       content:
         application/json:
@@ -297,65 +499,131 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
       description: Bad request, the request was unacceptable, often due to missing a required parameter.
-    UnauthenticatedResponse:
+    connections_NotFoundResponse_2:
+      description: The requested resource doesn't exist.
       content:
         application/json:
-          examples:
-            Authentication Failed:
-              value:
-                errors:
-                - code: '10009'
-                  detail: Could not understand the provided credentials.
-                  meta:
-                    url: https://developers.telnyx.com/docs/overview/errors/10009
-                  title: Authentication failed
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
-      description: Unauthorized
-    connections_NotFoundResponse:
-      content:
-        application/json:
+            $ref: '#/components/schemas/connections_ErrorResponse'
           examples:
             notFound:
               value:
                 errors:
                 - code: '10005'
+                  title: Resource not found
                   detail: The requested resource or URL could not be found.
                   meta:
                     url: https://developers.telnyx.com/docs/overview/errors/10005
                   source:
                     pointer: /
-                  title: Resource not found
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-      description: The requested resource doesn't exist.
-    connections_UnauthorizedResponse:
+    connections_UnauthorizedResponse_2:
+      description: The user doesn't have the required permissions to perform the requested action.
       content:
         application/json:
+          schema:
+            $ref: '#/components/schemas/connections_ErrorResponse'
           examples:
             notAuthorized:
               value:
                 errors:
                 - code: '10010'
+                  title: Not authorized
                   detail: You are not authorized to access the requested resource.
                   meta:
                     url: https://developers.telnyx.com/docs/overview/errors/10010
                   source:
                     pointer: /
-                  title: Not authorized
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-      description: The user doesn't have the required permissions to perform the requested action.
-    ConnectionResponse:
+    UnauthenticatedResponse_2:
+      description: Unauthorized
       content:
         application/json:
           schema:
+            $ref: '#/components/schemas/call-scripting_ErrorResponse'
+          examples:
+            Authentication Failed:
+              value:
+                errors:
+                - code: '10009'
+                  title: Authentication failed
+                  detail: Could not understand the provided credentials.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+    connections_BadRequestResponse_2:
+      description: Bad request, the request was unacceptable, often due to missing a required parameter.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/connections_ErrorResponse'
+          examples:
+            missingParameter:
+              value:
+                errors:
+                - code: '10015'
+                  title: Bad Request
+                  detail: The request failed because it was not well-formed.
+                  source:
+                    pointer: /
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10015
+  parameters:
+    connections_FilterConsolidated:
+      description: 'Consolidated filter parameter (deepObject style). Originally: filter[connection_name], filter[fqdn], filter[outbound_voice_profile_id], filter[outbound.outbound_voice_profile_id]'
+      explode: true
+      in: query
+      name: filter
+      schema:
+        properties:
+          connection_name:
+            description: Filter by connection_name using nested operations
             properties:
-              data:
-                $ref: '#/components/schemas/Connection'
-            title: Connection Response
+              contains:
+                default: null
+                description: If present, connections with <code>connection_name</code> containing the given value will be returned. Matching is not case-sensitive. Requires at least three characters.
+                type: string
             type: object
-      description: Successful response with details about a connection.
+          fqdn:
+            default: null
+            description: If present, connections with an `fqdn` that equals the given value will be returned. Matching is case-sensitive, and the full string must match.
+            type: string
+          outbound_voice_profile_id:
+            description: Identifies the associated outbound voice profile.
+            example: '1293384261075731499'
+            type: string
+            x-format: int64
+        type: object
+      style: deepObject
+    connections_SortConnection:
+      description: "Specifies the sort order for results. By default sorting direction is ascending. To have the results sorted in descending order add the <code> -</code> prefix.<br/><br/>\nThat is: <ul>\n  <li>\n    <code>connection_name</code>: sorts the result by the\n    <code>connection_name</code> field in ascending order.\n  </li>\n\n  <li>\n    <code>-connection_name</code>: sorts the result by the\n    <code>connection_name</code> field in descending order.\n  </li>\n</ul> <br/> If not given, results are sorted by <code>created_at</code> in descending order."
+      in: query
+      name: sort
+      schema:
+        default: created_at
+        enum:
+        - created_at
+        - connection_name
+        - active
+        example: connection_name
+        type: string
+    connections_PageConsolidated:
+      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
+      explode: true
+      in: query
+      name: page
+      schema:
+        properties:
+          number:
+            default: 1
+            description: The page number to load
+            minimum: 1
+            type: integer
+          size:
+            default: 250
+            description: The size of the page
+            maximum: 250
+            minimum: 1
+            type: integer
+        type: object
+      style: deepObject
   securitySchemes:
     bearerAuth:
       scheme: bearer
@@ -390,3 +658,40 @@ components:
       bearerFormat: JWT
       scheme: bearer
       type: http
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-refined-from:
+- telnyx-openapi.yml
+- telnyx-openapi.json

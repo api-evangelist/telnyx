@@ -1,11 +1,13 @@
 openapi: 3.2.0
 info:
-  contact:
-    email: support@telnyx.com
-  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
   title: Telnyx Hosted Numbers API
   version: 2.0.0
+  contact:
+    email: support@telnyx.com
   x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Hosted Numbers across 2 of this provider''s published API definitions: telnyx-openapi.yml, telnyx-openapi.json. Each path carries the servers of the definition it was published in.'
 servers:
 - description: Version 2.0.0 of the Telnyx API
   url: https://api.telnyx.com/v2
@@ -47,6 +49,9 @@ paths:
       tags:
       - Hosted Numbers
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /messaging_hosted_number_orders/eligibility_numbers_check:
     post:
       operationId: CheckEligibilityNumbers
@@ -80,6 +85,9 @@ paths:
       tags:
       - Hosted Numbers
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /messaging_hosted_number_orders/{id}:
     delete:
       description: Delete a messaging hosted number order and all associated phone numbers.
@@ -118,6 +126,9 @@ paths:
       tags:
       - Hosted Numbers
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /messaging_hosted_number_orders/{id}/actions/file_upload:
     post:
       operationId: UploadMessagingHostedNumberOrderFile
@@ -148,6 +159,9 @@ paths:
       tags:
       - Hosted Numbers
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /messaging_hosted_number_orders/{id}/validation_codes:
     post:
       description: Validate the verification codes sent to the numbers of the hosted order. The verification codes must be created in the verification codes endpoint.
@@ -174,6 +188,9 @@ paths:
       tags:
       - Hosted Numbers
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /messaging_hosted_number_orders/{id}/verification_codes:
     post:
       description: Create verification codes to validate numbers of the hosted order. The verification codes will be sent to the numbers of the hosted order.
@@ -204,6 +221,9 @@ paths:
       tags:
       - Hosted Numbers
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /messaging_hosted_numbers/{id}:
     delete:
       operationId: DeleteMessagingHostedNumber
@@ -223,42 +243,125 @@ paths:
       tags:
       - Hosted Numbers
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
 components:
   schemas:
-    HostedNumber:
-      example:
-        id: bf6307bd-884d-4c1f-b6ea-c62b8c495d3c
-        phone_number: '+18665550001'
-        record_type: messaging_hosted_number
-        status: successful
+    EligibilityNumberResponse:
       properties:
-        id:
-          description: Identifies the type of resource.
-          format: uuid
-          readOnly: true
+        detail:
+          description: Detailed information about the eligibility status.
+          type: string
+        eligible:
+          description: Whether the phone number is eligible for hosted messaging.
+          type: boolean
+        eligible_status:
+          description: The eligibility status of the phone number.
+          enum:
+          - NUMBER_CAN_NOT_BE_REPEATED
+          - NUMBER_CAN_NOT_BE_VALIDATED
+          - NUMBER_CAN_NOT_BE_WIRELESS
+          - NUMBER_CAN_NOT_BE_ACTIVE_IN_YOUR_ACCOUNT
+          - NUMBER_CAN_NOT_HOSTED_WITH_A_TELNYX_SUBSCRIBER
+          - NUMBER_CAN_NOT_BE_IN_TELNYX
+          - NUMBER_IS_NOT_A_US_NUMBER
+          - NUMBER_IS_NOT_A_VALID_ROUTING_NUMBER
+          - NUMBER_IS_NOT_IN_E164_FORMAT
+          - BILLING_ACCOUNT_CHECK_FAILED
+          - BILLING_ACCOUNT_IS_ABOLISHED
+          - ELIGIBLE
           type: string
         phone_number:
-          description: The messaging hosted phone number (+E.164 format)
+          description: The phone number in e164 format.
           type: string
-          x-format: +E.164
-        record_type:
-          example: messaging_hosted_number
+      type: object
+    messaging_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/messaging_Error'
+          type: array
+    CreateMessagingHostedNumberOrderRequest:
+      example:
+        messaging_profile_id: dc8f39ac-953d-4520-b93b-786ae87db0da
+        phone_numbers:
+        - '+18665550001'
+        - '+18665550002'
+      properties:
+        messaging_profile_id:
+          description: Automatically associate the number with this messaging profile ID when the order is complete.
           type: string
-        status:
-          enum:
-          - deleted
-          - failed
-          - failed_activation
-          - failed_carrier_rejected
-          - failed_ineligible_carrier
-          - failed_number_already_hosted
-          - failed_number_not_found
-          - failed_ownership_verification
-          - failed_timeout
-          - pending
-          - provisioning
-          - successful
+        phone_numbers:
+          description: Phone numbers to be used for hosted messaging.
+          items:
+            type: string
+            x-format: +E.164
+          type: array
+      type: object
+    ValidationCodesRequest:
+      properties:
+        verification_codes:
+          items:
+            properties:
+              code:
+                type: string
+              phone_number:
+                type: string
+                x-format: +E.164
+            required:
+            - phone_number
+            - code
+            type: object
+          type: array
+      required:
+      - verification_codes
+      type: object
+    ValidationCodes:
+      properties:
+        order_id:
+          format: uuid
           type: string
+        phone_numbers:
+          items:
+            properties:
+              phone_number:
+                type: string
+                x-format: +E.164
+              status:
+                enum:
+                - verified
+                - rejected
+                - already_verified
+                type: string
+            required:
+            - phone_number
+            - status
+            type: object
+          type: array
+      required:
+      - phone_numbers
+      - order_id
+      type: object
+    messaging_PaginationMeta:
+      properties:
+        page_number:
+          example: 2
+          type: integer
+        page_size:
+          example: 25
+          type: integer
+        total_pages:
+          example: 3
+          type: integer
+        total_results:
+          example: 55
+          type: integer
+      required:
+      - total_pages
+      - total_results
+      - page_size
+      - page_number
       type: object
     MessagingHostedNumberOrder:
       example:
@@ -311,6 +414,18 @@ components:
           - successful
           type: string
       type: object
+    EligibilityNumbersRequest:
+      properties:
+        phone_numbers:
+          description: List of phone numbers to check eligibility
+          items:
+            description: Phone number to check eligibility
+            type: string
+            x-format: +E.164
+          type: array
+      required:
+      - phone_numbers
+      type: object
     CreatedVerificationCodesResponse:
       properties:
         data:
@@ -342,70 +457,6 @@ components:
       required:
       - data
       type: object
-    ValidationCodes:
-      properties:
-        order_id:
-          format: uuid
-          type: string
-        phone_numbers:
-          items:
-            properties:
-              phone_number:
-                type: string
-                x-format: +E.164
-              status:
-                enum:
-                - verified
-                - rejected
-                - already_verified
-                type: string
-            required:
-            - phone_number
-            - status
-            type: object
-          type: array
-      required:
-      - phone_numbers
-      - order_id
-      type: object
-    ValidationCodesRequest:
-      properties:
-        verification_codes:
-          items:
-            properties:
-              code:
-                type: string
-              phone_number:
-                type: string
-                x-format: +E.164
-            required:
-            - phone_number
-            - code
-            type: object
-          type: array
-      required:
-      - verification_codes
-      type: object
-    messaging_PaginationMeta:
-      properties:
-        page_number:
-          example: 2
-          type: integer
-        page_size:
-          example: 25
-          type: integer
-        total_pages:
-          example: 3
-          type: integer
-        total_results:
-          example: 55
-          type: integer
-      required:
-      - total_pages
-      - total_results
-      - page_size
-      - page_number
-      type: object
     EligibilityNumbersResponse:
       properties:
         phone_numbers:
@@ -414,40 +465,41 @@ components:
             $ref: '#/components/schemas/EligibilityNumberResponse'
           type: array
       type: object
-    EligibilityNumberResponse:
+    HostedNumber:
+      example:
+        id: bf6307bd-884d-4c1f-b6ea-c62b8c495d3c
+        phone_number: '+18665550001'
+        record_type: messaging_hosted_number
+        status: successful
       properties:
-        detail:
-          description: Detailed information about the eligibility status.
-          type: string
-        eligible:
-          description: Whether the phone number is eligible for hosted messaging.
-          type: boolean
-        eligible_status:
-          description: The eligibility status of the phone number.
-          enum:
-          - NUMBER_CAN_NOT_BE_REPEATED
-          - NUMBER_CAN_NOT_BE_VALIDATED
-          - NUMBER_CAN_NOT_BE_WIRELESS
-          - NUMBER_CAN_NOT_BE_ACTIVE_IN_YOUR_ACCOUNT
-          - NUMBER_CAN_NOT_HOSTED_WITH_A_TELNYX_SUBSCRIBER
-          - NUMBER_CAN_NOT_BE_IN_TELNYX
-          - NUMBER_IS_NOT_A_US_NUMBER
-          - NUMBER_IS_NOT_A_VALID_ROUTING_NUMBER
-          - NUMBER_IS_NOT_IN_E164_FORMAT
-          - BILLING_ACCOUNT_CHECK_FAILED
-          - BILLING_ACCOUNT_IS_ABOLISHED
-          - ELIGIBLE
+        id:
+          description: Identifies the type of resource.
+          format: uuid
+          readOnly: true
           type: string
         phone_number:
-          description: The phone number in e164 format.
+          description: The messaging hosted phone number (+E.164 format)
+          type: string
+          x-format: +E.164
+        record_type:
+          example: messaging_hosted_number
+          type: string
+        status:
+          enum:
+          - deleted
+          - failed
+          - failed_activation
+          - failed_carrier_rejected
+          - failed_ineligible_carrier
+          - failed_number_already_hosted
+          - failed_number_not_found
+          - failed_ownership_verification
+          - failed_timeout
+          - pending
+          - provisioning
+          - successful
           type: string
       type: object
-    messaging_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/messaging_Error'
-          type: array
     VerificationCodesRequest:
       properties:
         phone_numbers:
@@ -502,60 +554,57 @@ components:
       required:
       - code
       - title
-    CreateMessagingHostedNumberOrderRequest:
-      example:
-        messaging_profile_id: dc8f39ac-953d-4520-b93b-786ae87db0da
-        phone_numbers:
-        - '+18665550001'
-        - '+18665550002'
-      properties:
-        messaging_profile_id:
-          description: Automatically associate the number with this messaging profile ID when the order is complete.
-          type: string
-        phone_numbers:
-          description: Phone numbers to be used for hosted messaging.
-          items:
-            type: string
-            x-format: +E.164
-          type: array
-      type: object
-    EligibilityNumbersRequest:
-      properties:
-        phone_numbers:
-          description: List of phone numbers to check eligibility
-          items:
-            description: Phone number to check eligibility
-            type: string
-            x-format: +E.164
-          type: array
+    messaging_Error_0b38e7044b:
       required:
-      - phone_numbers
+      - code
+      - title
+      properties:
+        code:
+          type: string
+          x-format: integer
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+    messaging_PaginationMeta_0b38e7044b:
       type: object
+      required:
+      - total_pages
+      - total_results
+      - page_size
+      - page_number
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 55
+        page_number:
+          type: integer
+          example: 2
+        page_size:
+          type: integer
+          example: 25
+    messaging_Errors_0b38e7044b:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/messaging_Error_0b38e7044b'
   responses:
-    MessagingHostedNumberOrderResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/MessagingHostedNumberOrder'
-            title: Retrieve Messaging Hosted Number Order Response
-            type: object
-      description: Successful response with details about a messaging hosted number order.
-    ListMessagingHostedNumberOrdersResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/MessagingHostedNumberOrder'
-                type: array
-              meta:
-                $ref: '#/components/schemas/messaging_PaginationMeta'
-            title: List Messaging Hosted Number Order Response
-            type: object
-      description: Successful response with a list of messaging hosted number orders.
     messaging_GenericErrorResponse:
       content:
         application/json:
@@ -572,6 +621,44 @@ components:
             title: Retrieve Messaging Hosted Number Response
             type: object
       description: Successful response with the phone numbers and their respective status of the validation codes.
+    ListMessagingHostedNumberOrdersResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/MessagingHostedNumberOrder'
+                type: array
+              meta:
+                $ref: '#/components/schemas/messaging_PaginationMeta'
+            title: List Messaging Hosted Number Order Response
+            type: object
+      description: Successful response with a list of messaging hosted number orders.
+    MessagingHostedNumberOrderResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/MessagingHostedNumberOrder'
+            title: Retrieve Messaging Hosted Number Order Response
+            type: object
+      description: Successful response with details about a messaging hosted number order.
+    messaging_GenericErrorResponse_0b38e7044b:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors_0b38e7044b'
+          example:
+            errors:
+            - code: string
+              title: string
+              detail: string
+              source:
+                pointer: /data/attributes/phone_number
+                parameter: string
   parameters:
     PageConsolidated:
       description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
@@ -627,3 +714,40 @@ components:
       bearerFormat: JWT
       scheme: bearer
       type: http
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-refined-from:
+- telnyx-openapi.yml
+- telnyx-openapi.json

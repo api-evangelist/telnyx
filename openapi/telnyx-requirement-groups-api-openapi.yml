@@ -1,11 +1,13 @@
 openapi: 3.2.0
 info:
-  contact:
-    email: support@telnyx.com
-  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
   title: Telnyx Requirement Groups API
   version: 2.0.0
+  contact:
+    email: support@telnyx.com
   x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Requirement Groups across 2 of this provider''s published API definitions: telnyx-openapi.yml, telnyx-openapi.json. Each path carries the servers of the definition it was published in.'
 servers:
 - description: Version 2.0.0 of the Telnyx API
   url: https://api.telnyx.com/v2
@@ -63,6 +65,9 @@ paths:
       tags:
       - Requirement Groups
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /requirement_groups:
     get:
       operationId: GetRequirementGroups
@@ -190,6 +195,9 @@ paths:
       tags:
       - Requirement Groups
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /requirement_groups/{id}:
     delete:
       operationId: DeleteRequirementGroup
@@ -305,6 +313,9 @@ paths:
       tags:
       - Requirement Groups
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /requirement_groups/{id}/submit_for_approval:
     post:
       operationId: SubmitRequirementGroup
@@ -336,6 +347,9 @@ paths:
       tags:
       - Requirement Groups
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /sub_number_orders/{id}/requirement_group:
     post:
       operationId: updateSubNumberOrderRequirementGroup
@@ -383,48 +397,204 @@ paths:
       tags:
       - Requirement Groups
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
+  /external_requirements/{regulatory_requirement_id}/sub_number_orders/{sub_number_order_id}:
+    get:
+      summary: Get action requirement details for a sub number order
+      description: Returns the input fields an action requirement needs and the current requirement action for a sub number order. Action requirements are fulfilled by an external step rather than by uploading documents. Australia mobile ID verification is currently the only action requirement. Once a verification link has been generated, it is returned in `requirement_action.value`.
+      operationId: getExternalRequirement
+      tags:
+      - Requirement Groups
+      parameters:
+      - name: regulatory_requirement_id
+        in: path
+        required: true
+        description: The ID of the regulatory (action) requirement. For Australia mobile ID verification this is `b7c72fb8-fa08-4529-aaf6-b9117d3f3698`.
+        schema:
+          type: string
+          format: uuid
+      - name: sub_number_order_id
+        in: path
+        required: true
+        description: The ID of the sub number order the requirement belongs to.
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Action requirement details retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      regulatory_requirement_id:
+                        type: string
+                        format: uuid
+                      fields_required:
+                        type: array
+                        description: The fields the end user must provide to fulfill this requirement.
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                              description: The field name to send inside the `requirement` object on the POST.
+                              example: first_name
+                            type:
+                              type: string
+                              example: string
+                            description:
+                              type: string
+                              example: First Name
+                            value:
+                              type:
+                              - string
+                              - 'null'
+                              description: The value already stored for this field, or null if not yet provided.
+                      requirement_action:
+                        type: object
+                        properties:
+                          type:
+                            type: string
+                            description: The type of action the end user must complete.
+                          value:
+                            type:
+                            - string
+                            - 'null'
+                            description: The action value. For ID verification this is the verification link URL, or null until it has been generated.
+              example:
+                data:
+                  regulatory_requirement_id: a5b8f1d2-3c4e-4f6a-8b9c-0d1e2f3a4b5c
+                  fields_required:
+                  - name: first_name
+                    type: string
+                    description: First Name
+                    value: null
+                  - name: last_name
+                    type: string
+                    description: Last Name
+                    value: null
+                  requirement_action:
+                    type: id_verification
+                    value: null
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+    post:
+      summary: Fulfill an action requirement for a sub number order
+      description: Submits the end user's details to the external verification provider and returns the requirement action. Australia mobile ID verification is currently the only action requirement. It generates a unique Onfido verification link, returned in `requirement_action.value`, which you share with the end user. The end user's `first_name` and `last_name` must be nested inside a `requirement` object; sending them at the top level is rejected.
+      operationId: createExternalRequirement
+      tags:
+      - Requirement Groups
+      parameters:
+      - name: regulatory_requirement_id
+        in: path
+        required: true
+        description: The ID of the regulatory (action) requirement. For Australia mobile ID verification this is `b7c72fb8-fa08-4529-aaf6-b9117d3f3698`.
+        schema:
+          type: string
+          format: uuid
+      - name: sub_number_order_id
+        in: path
+        required: true
+        description: The ID of the sub number order the requirement belongs to.
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - requirement
+              properties:
+                requirement:
+                  type: object
+                  description: The end user's identity details for the action requirement. Australia mobile ID verification is currently the only action requirement. It requires `first_name` and `last_name`, the same fields the corresponding GET lists in `fields_required`.
+                  required:
+                  - first_name
+                  - last_name
+                  properties:
+                    first_name:
+                      type: string
+                      description: The end user's first name.
+                    last_name:
+                      type: string
+                      description: The end user's last name.
+            example:
+              requirement:
+                first_name: Jane
+                last_name: Doe
+      responses:
+        '200':
+          description: Action requirement submitted successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      sub_order_id:
+                        type: string
+                        format: uuid
+                      regulatory_requirement_id:
+                        type: string
+                        format: uuid
+                      requirement_action:
+                        type: object
+                        properties:
+                          type:
+                            type: string
+                          value:
+                            type:
+                            - string
+                            - 'null'
+                            description: For Australia mobile ID verification, the unique Onfido verification link to share with the end user.
+              example:
+                data:
+                  sub_order_id: 5f8e6b1a-2d3c-4e5f-9a0b-1c2d3e4f5a6b
+                  regulatory_requirement_id: a5b8f1d2-3c4e-4f6a-8b9c-0d1e2f3a4b5c
+                  requirement_action:
+                    type: id_verification
+                    value: https://verify.onfido.com/v/8f3c2a1b-9d4e-4f6a-8b9c-0d1e2f3a4b5c
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse_73c9788e53'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse_73c9788e53'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
 components:
-  responses:
-    numbers_UnprocessableEntity:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/numbers_Errors'
-      description: Unprocessable entity. Check the 'detail' field in response for details.
-    numbers_BadRequestResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/numbers_Errors'
-      description: Bad request, the request was unacceptable, often due to missing a required parameter.
-    numbers_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/numbers_Errors'
-      description: Unexpected error
-    numbers_NotFoundResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/numbers_Errors'
-      description: The requested resource doesn't exist.
-    numbers_UnauthorizedResponse:
-      content:
-        application/json:
-          examples:
-            Authentication Failed:
-              value:
-                errors:
-                - code: '10009'
-                  detail: Could not understand the provided credentials.
-                  meta:
-                    url: https://developers.telnyx.com/docs/overview/errors/10009
-                  title: Authentication failed
-          schema:
-            $ref: '#/components/schemas/numbers_Errors'
-      description: Unauthorized
   schemas:
+    RegulatoryRequirement:
+      properties:
+        field_type:
+          type: string
+        record_type:
+          type: string
+        requirement_id:
+          format: uuid
+          type: string
+      type: object
     NumberOrderPhoneNumberRequirementGroupResponse:
       properties:
         bundle_id:
@@ -492,6 +662,40 @@ components:
           format: uuid
           type: string
       type: object
+    RequirementGroup:
+      properties:
+        action:
+          type: string
+        country_code:
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        customer_reference:
+          type: string
+        id:
+          type: string
+        phone_number_type:
+          type: string
+        record_type:
+          example: requirement_group
+          type: string
+        regulatory_requirements:
+          items:
+            $ref: '#/components/schemas/UserRequirement'
+          type: array
+        status:
+          enum:
+          - approved
+          - unapproved
+          - pending-approval
+          - declined
+          - expired
+          type: string
+        updated_at:
+          format: date-time
+          type: string
+      type: object
     UserRequirement:
       properties:
         created_at:
@@ -516,6 +720,42 @@ components:
           type: string
         updated_at:
           format: date-time
+          type: string
+      type: object
+    numbers_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/numbers_Error'
+          type: array
+      type: object
+    numbers_Error:
+      properties:
+        code:
+          example: '10007'
+          type: string
+        detail:
+          example: An unexpected error occured.
+          type: string
+        meta:
+          properties:
+            url:
+              description: URL with additional information on the error.
+              example: https://developers.telnyx.com/docs/overview/errors/10015
+              type: string
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              example: /base
+              type: string
+          type: object
+        title:
+          example: Unexpected error
           type: string
       type: object
     SubNumberOrderRequirementGroupResponse:
@@ -593,86 +833,6 @@ components:
               type: string
           type: object
       type: object
-    RegulatoryRequirement:
-      properties:
-        field_type:
-          type: string
-        record_type:
-          type: string
-        requirement_id:
-          format: uuid
-          type: string
-      type: object
-    RequirementGroup:
-      properties:
-        action:
-          type: string
-        country_code:
-          type: string
-        created_at:
-          format: date-time
-          type: string
-        customer_reference:
-          type: string
-        id:
-          type: string
-        phone_number_type:
-          type: string
-        record_type:
-          example: requirement_group
-          type: string
-        regulatory_requirements:
-          items:
-            $ref: '#/components/schemas/UserRequirement'
-          type: array
-        status:
-          enum:
-          - approved
-          - unapproved
-          - pending-approval
-          - declined
-          - expired
-          type: string
-        updated_at:
-          format: date-time
-          type: string
-      type: object
-    numbers_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/numbers_Error'
-          type: array
-      type: object
-    numbers_Error:
-      properties:
-        code:
-          example: '10007'
-          type: string
-        detail:
-          example: An unexpected error occured.
-          type: string
-        meta:
-          properties:
-            url:
-              description: URL with additional information on the error.
-              example: https://developers.telnyx.com/docs/overview/errors/10015
-              type: string
-          type: object
-        source:
-          properties:
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              example: /base
-              type: string
-          type: object
-        title:
-          example: Unexpected error
-          type: string
-      type: object
     SubNumberOrderPhoneNumber:
       properties:
         bundle_id:
@@ -712,6 +872,118 @@ components:
         status:
           type: string
       type: object
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
+  responses:
+    numbers_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Unexpected error
+    numbers_BadRequestResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Bad request, the request was unacceptable, often due to missing a required parameter.
+    numbers_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+    numbers_NotFoundResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: The requested resource doesn't exist.
+    numbers_UnauthorizedResponse:
+      content:
+        application/json:
+          examples:
+            Authentication Failed:
+              value:
+                errors:
+                - code: '10009'
+                  detail: Could not understand the provided credentials.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+                  title: Authentication failed
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Unauthorized
+    numbers_BadRequestResponse_73c9788e53:
+      description: Bad request, the request was unacceptable, often due to missing a required parameter.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    numbers_UnauthorizedResponse_73c9788e53:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          examples:
+            Authentication Failed:
+              value:
+                errors:
+                - code: '10009'
+                  title: Authentication failed
+                  detail: Could not understand the provided credentials.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+    GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    numbers_UnprocessableEntity_73c9788e53:
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    numbers_NotFoundResponse_73c9788e53:
+      description: The requested resource doesn't exist.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
   securitySchemes:
     bearerAuth:
       scheme: bearer
@@ -746,3 +1018,40 @@ components:
       bearerFormat: JWT
       scheme: bearer
       type: http
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-refined-from:
+- telnyx-openapi.yml
+- telnyx-openapi.json

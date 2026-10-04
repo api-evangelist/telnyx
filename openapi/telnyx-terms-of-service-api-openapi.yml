@@ -1,11 +1,13 @@
 openapi: 3.2.0
 info:
-  contact:
-    email: support@telnyx.com
-  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
   title: Telnyx Terms of Service API
   version: 2.0.0
+  contact:
+    email: support@telnyx.com
   x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Terms of Service across 2 of this provider''s published API definitions: telnyx-openapi.yml, telnyx-openapi.json. Each path carries the servers of the definition it was published in.'
 servers:
 - description: Version 2.0.0 of the Telnyx API
   url: https://api.telnyx.com/v2
@@ -36,7 +38,272 @@ paths:
       tags:
       - Terms of Service
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
+  /terms_of_service/agreements:
+    get:
+      summary: List the calling user's Terms of Service agreements
+      description: 'Returns the Terms of Service agreements the authenticated user has on file. Each entry records the version agreed to and when. Most users only have one agreement per product, but if the ToS is updated and the user re-agrees a new entry is added.
+
+
+        Results are paginated with the standard `page[number]` / `page[size]` parameters; the response uses the standard `{data, meta}` JSON:API envelope.
+
+
+        By default this returns agreements for **all** products the user has agreed to. Pass the `product_type` query parameter to scope the result to a single product.'
+      operationId: listTermsOfServiceAgreements
+      tags:
+      - Terms of Service
+      parameters:
+      - name: product_type
+        in: query
+        required: false
+        description: Optional filter. Omit to list the user's agreements for **every** product (branded_calling and number_reputation); pass a value to return only that product's agreements.
+        schema:
+          $ref: '#/components/schemas/TosProductType'
+        example: branded_calling
+      - $ref: '#/components/parameters/BcPageNumber'
+      - $ref: '#/components/parameters/BcPageSize'
+      responses:
+        '200':
+          description: Paginated list of agreements.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TosAgreementList'
+        default:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        4XX:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /terms_of_service/agreements/{agreement_id}:
+    get:
+      summary: Get a Terms of Service agreement by id
+      description: Retrieve a single ToS agreement record. Returns `404` if the agreement does not exist or does not belong to the authenticated user.
+      operationId: getTermsOfServiceAgreement
+      tags:
+      - Terms of Service
+      parameters:
+      - name: agreement_id
+        in: path
+        description: Unique identifier of the agreement.
+        required: true
+        schema:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+      responses:
+        '200':
+          description: Agreement.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TosAgreementWrapped'
+        default:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        4XX:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /terms_of_service/branded_calling/agree:
+    post:
+      summary: Agree to the Branded Calling Terms of Service
+      description: 'Records the authenticated user''s agreement to the current Branded Calling ToS. No body required. Idempotent - re-calling after agreement is a no-op and returns the existing agreement.
+
+
+        This is a prerequisite for activating Branded Calling on any enterprise (`POST /enterprises/{id}/branded_calling`); without an agreement, activation returns `403`.'
+      operationId: agreeToBrandedCallingTos
+      tags:
+      - Terms of Service
+      responses:
+        '201':
+          description: Agreement recorded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TosAgreementWrapped'
+        default:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        4XX:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /terms_of_service/info:
+    get:
+      summary: Get Terms of Service information
+      description: Returns the available Terms of Service agreements (product, current version, terms URL, effective date). Omit `product_type` to return all products; pass it to scope to one.
+      operationId: getTermsOfServiceInfo
+      tags:
+      - Terms of Service
+      parameters:
+      - name: product_type
+        in: query
+        required: false
+        description: Optional product filter. Omit to return info for all products.
+        schema:
+          $ref: '#/components/schemas/TosProductType'
+        example: branded_calling
+      responses:
+        '200':
+          description: Terms of Service information.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TermsOfServiceInfo'
+        '401':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        default:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /terms_of_service/status:
+    get:
+      summary: Get the calling user's Terms of Service status
+      description: 'Returns whether the authenticated user has agreed to the current Terms of Service for the product given by `product_type`. Used during onboarding to decide whether to prompt the user with the ToS dialog before continuing.
+
+
+        `agreement_required: true` means the user has not yet agreed (or has agreed to an outdated version) and must agree before using that product''s endpoints.'
+      operationId: getTermsOfServiceStatus
+      tags:
+      - Terms of Service
+      parameters:
+      - name: product_type
+        in: query
+        required: false
+        description: Which product's ToS to check. Defaults to `branded_calling`.
+        schema:
+          $ref: '#/components/schemas/TosProductType'
+      responses:
+        '200':
+          description: Status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TosStatusWrapped'
+        default:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        4XX:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
 components:
+  responses:
+    Unauthorized:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/branded-calling_ErrorResponse'
+      description: Unauthorized — missing or invalid API key
+    UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/branded-calling_ErrorResponse'
+      description: Unprocessable entity — request structure is valid but contains semantic errors
+    BadRequestTelnyx:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/branded-calling_ErrorResponse'
+      description: Bad request
+    branded-calling_GenericErrorResponse:
+      description: An error occurred. The response carries the standard Telnyx error envelope.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/branded-calling_Errors'
+          examples:
+            validation_error:
+              summary: 422 - request body failed validation
+              value:
+                errors:
+                - code: '10005'
+                  title: Invalid parameters
+                  detail: field required
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10005
+                  source:
+                    pointer: /body/legal_name
+            bad_request:
+              summary: 400 - request rejected by a state guard
+              description: Returned when the request itself is well-formed but the resource is in a state that disallows this action (e.g. updating a DIR while it is being vetted, or deleting an enterprise that still has DIRs in vetting).
+              value:
+                errors:
+                - code: '10015'
+                  title: Bad Request
+                  detail: Cannot update DIR in 'verified' status
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10015
+            not_found:
+              summary: 404 - resource does not exist or is not yours
+              value:
+                errors:
+                - code: '10009'
+                  title: Resource not found
+                  detail: Enterprise not found.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+            conflict:
+              summary: 409 - request conflicts with current resource state
+              value:
+                errors:
+                - code: '10021'
+                  title: Resource in use
+                  detail: DIR has 1 active infringement claim(s). Resolve the claim before making this change.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10021
+    number-reputation_GenericErrorResponse:
+      description: An error occurred. The response carries the standard Telnyx error envelope.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/number-reputation_Errors'
+          examples:
+            validation_error:
+              summary: 422 - request body failed validation
+              value:
+                errors:
+                - code: '10005'
+                  title: Invalid parameters
+                  detail: field required
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10005
+                  source:
+                    pointer: /body/legal_name
+            bad_request:
+              summary: 400 - request rejected by a state guard
+              description: Returned when the request itself is well-formed but the resource is in a state that disallows this action (e.g. updating a DIR while it is being vetted, or deleting an enterprise that still has DIRs in vetting).
+              value:
+                errors:
+                - code: '10015'
+                  title: Bad Request
+                  detail: Cannot update DIR in 'verified' status
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10015
+            not_found:
+              summary: 404 - resource does not exist or is not yours
+              value:
+                errors:
+                - code: '10009'
+                  title: Resource not found
+                  detail: Enterprise not found.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+            conflict:
+              summary: 409 - request conflicts with current resource state
+              value:
+                errors:
+                - code: '10021'
+                  title: Resource in use
+                  detail: DIR has 1 active infringement claim(s). Resolve the claim before making this change.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10021
   schemas:
     branded-calling_ErrorResponse:
       properties:
@@ -78,25 +345,319 @@ components:
       - code
       - title
       type: object
-  responses:
-    UnprocessableEntity:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/branded-calling_ErrorResponse'
-      description: Unprocessable entity — request structure is valid but contains semantic errors
-    BadRequestTelnyx:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/branded-calling_ErrorResponse'
-      description: Bad request
-    Unauthorized:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/branded-calling_ErrorResponse'
-      description: Unauthorized — missing or invalid API key
+    TosAgreement:
+      type: object
+      description: A recorded user agreement to a product's Terms of Service. The `user_id` is intentionally NOT echoed back on this public surface - the caller already knows their own identity.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The unique identifier of this recorded agreement.
+          example: 550e8400-e29b-41d4-a716-446655440000
+          readOnly: true
+        terms_version:
+          type: string
+          description: The version of the terms you accepted.
+          example: v1.0.0
+        version:
+          type: string
+          description: Convenience alias of `terms_version`. Both keys are present on every response.
+          example: v1.0.0
+          readOnly: true
+        product_type:
+          $ref: '#/components/schemas/TosProductType'
+        agreed_at:
+          type: string
+          format: date-time
+          description: When you accepted this version of the terms.
+          example: '2025-07-10T10:30:00Z'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          description: When this agreement record was created.
+          example: '2025-07-10T10:30:00Z'
+          readOnly: true
+    branded-calling_Errors:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/branded-calling_Error'
+          description: List of one or more error entries. Order is not significant.
+      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
+    TosStatusWrapped:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/TosStatus'
+    TosStatus:
+      type: object
+      description: Whether the calling user has agreed to a product's current Terms of Service. The `user_id` is intentionally omitted on this public surface.
+      required:
+      - product_type
+      - current_terms_version
+      - has_agreed
+      - agreement_required
+      properties:
+        product_type:
+          $ref: '#/components/schemas/TosProductType'
+        current_terms_version:
+          type: string
+          description: Latest published version of the ToS for this product.
+          example: v1.1.0
+        has_agreed:
+          type: boolean
+          description: '`true` if the user has agreed to the latest version.'
+          example: false
+        agreed_version:
+          type: string
+          nullable: true
+          description: Version the user previously agreed to (may be older than `current_terms_version`). `null` if the user has never agreed.
+          example: v1.0.0
+        agreed_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When you accepted the terms, or null if you have not.
+          example: '2025-07-10T10:30:00Z'
+        agreement_required:
+          type: boolean
+          description: '`true` when the user must agree to the latest version before using the product. Equivalent to `!has_agreed`.'
+          example: true
+    TosAgreementWrapped:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/TosAgreement'
+    TosAgreementList:
+      type: object
+      description: Paginated list of Terms of Service agreements for the calling user.
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TosAgreement'
+        meta:
+          $ref: '#/components/schemas/branded-calling_PaginationMeta'
+    branded-calling_PaginationMeta:
+      type: object
+      required:
+      - total_pages
+      - total_results
+      - page_number
+      - page_size
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+          description: Total number of pages available given the current `page_size`.
+        total_results:
+          type: integer
+          example: 42
+          description: Total number of items across all pages (excludes soft-deleted rows).
+        page_number:
+          type: integer
+          example: 1
+          description: 1-based index of this page. Echoes the `page[number]` query parameter (default `1`).
+        page_size:
+          type: integer
+          example: 20
+          description: Number of items returned in this page's `data` array. Capped at 250.
+      description: JSON:API pagination metadata returned with every paginated list response. Page numbering is 1-based. `page_size` reports the number of items actually returned in `data` for this page; the requested size is taken from the `page[size]` query parameter.
+    number-reputation_Errors:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/number-reputation_Error'
+          description: List of one or more error entries. Order is not significant.
+      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
+    TermsOfServiceInfoItem:
+      type: object
+      properties:
+        product_type:
+          $ref: '#/components/schemas/TosProductType'
+        current_version:
+          type: string
+          description: The latest published version of these terms.
+          example: v1.0.0
+        terms_url:
+          type: string
+          description: A link to the full terms text.
+          example: https://telnyx.com/terms/reputation-services
+        effective_date:
+          type: string
+          format: date
+          description: The date this version took effect.
+          example: '2025-07-10'
+        description:
+          type: string
+          description: A short summary of the product these terms cover.
+          example: Terms and Conditions for Telnyx Number Reputation service
+    number-reputation_Error:
+      type: object
+      required:
+      - code
+      - title
+      - detail
+      - meta
+      properties:
+        code:
+          type: string
+          example: '10005'
+          description: Stable numeric Telnyx error catalog id. See `meta.url` for the full catalog entry.
+        title:
+          type: string
+          example: Invalid parameters
+          description: Short human-readable category, e.g. `Bad Request`, `Duplicate resource`, `Not Found`, `Forbidden`. Treat as advisory only - the stable identifier is `code`.
+        detail:
+          type: string
+          example: field required
+          description: Context-specific message describing what went wrong on this particular request. May embed offending values; do not rely on it for programmatic matching - branch on `code`.
+        meta:
+          type: object
+          required:
+          - url
+          properties:
+            url:
+              type: string
+              format: uri
+              example: https://developers.telnyx.com/docs/overview/errors/10005
+            pending_check_ids:
+              type: array
+              items:
+                type: string
+                format: uuid
+              description: Set on `422 vetting_checks_incomplete` responses from `/admin/dir/{id}/approve` and `/admin/phone-number-batches/approve`. Lists the still-pending vetting check ids.
+            pending_check_codes:
+              type: array
+              items:
+                type: string
+              description: Codes of the pending vetting checks (e.g. `loa_signature_valid`).
+            pending_check_labels:
+              type: array
+              items:
+                type: string
+              description: Human-readable labels of the pending vetting checks.
+          description: Carries `url` linking to the Telnyx error catalog entry for this `code`. Useful for forwarding the user to documentation.
+        source:
+          type: object
+          description: Optional pointer at the offending field of the request.
+          properties:
+            pointer:
+              type: string
+              example: /body/legal_name
+            parameter:
+              type: string
+              example: page[size]
+      description: A single entry in the canonical Telnyx error envelope. `code` is the stable Telnyx error catalog id; the human-readable explanation lives at `meta.url`. `detail` is a context-specific message; `source.pointer` (when present) names the offending field of the request.
+    TermsOfServiceInfo:
+      type: object
+      properties:
+        agreements:
+          type: array
+          items:
+            $ref: '#/components/schemas/TermsOfServiceInfoItem'
+    TosProductType:
+      type: string
+      enum:
+      - branded_calling
+      - number_reputation
+      description: Telnyx product the Terms of Service apply to.
+      example: branded_calling
+    branded-calling_Error:
+      type: object
+      required:
+      - code
+      - title
+      - detail
+      - meta
+      properties:
+        code:
+          type: string
+          example: '10005'
+          description: Stable numeric Telnyx error catalog id. See `meta.url` for the full catalog entry.
+        title:
+          type: string
+          example: Invalid parameters
+          description: Short human-readable category, e.g. `Bad Request`, `Duplicate resource`, `Not Found`, `Forbidden`. Treat as advisory only - the stable identifier is `code`.
+        detail:
+          type: string
+          example: field required
+          description: Context-specific message describing what went wrong on this particular request. May embed offending values; do not rely on it for programmatic matching - branch on `code`.
+        meta:
+          type: object
+          required:
+          - url
+          properties:
+            url:
+              type: string
+              format: uri
+              example: https://developers.telnyx.com/docs/overview/errors/10005
+            pending_check_ids:
+              type: array
+              items:
+                type: string
+                format: uuid
+              description: Set on `422 vetting_checks_incomplete` responses from `/admin/dir/{id}/approve` and `/admin/phone-number-batches/approve`. Lists the still-pending vetting check ids.
+            pending_check_codes:
+              type: array
+              items:
+                type: string
+              description: Codes of the pending vetting checks (e.g. `loa_signature_valid`).
+            pending_check_labels:
+              type: array
+              items:
+                type: string
+              description: Human-readable labels of the pending vetting checks.
+          description: Carries `url` linking to the Telnyx error catalog entry for this `code`. Useful for forwarding the user to documentation.
+        source:
+          type: object
+          description: Optional pointer at the offending field of the request.
+          properties:
+            pointer:
+              type: string
+              example: /body/legal_name
+            parameter:
+              type: string
+              example: page[size]
+      description: A single entry in the canonical Telnyx error envelope. `code` is the stable Telnyx error catalog id; the human-readable explanation lives at `meta.url`. `detail` is a context-specific message; `source.pointer` (when present) names the offending field of the request.
+  parameters:
+    BcPageNumber:
+      name: page[number]
+      in: query
+      description: 1-based page number. Out-of-range values return an empty page with correct meta.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+        example: 1
+    BcPageSize:
+      name: page[size]
+      in: query
+      description: Items per page. Maximum 250; values above are clamped to 250.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 250
+        default: 20
+        example: 20
   securitySchemes:
     bearerAuth:
       scheme: bearer
@@ -131,3 +692,40 @@ components:
       bearerFormat: JWT
       scheme: bearer
       type: http
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-refined-from:
+- telnyx-openapi.yml
+- telnyx-openapi.json

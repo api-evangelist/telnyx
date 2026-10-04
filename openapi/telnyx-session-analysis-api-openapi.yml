@@ -1,11 +1,13 @@
 openapi: 3.2.0
 info:
-  contact:
-    email: support@telnyx.com
-  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
   title: Telnyx Session Analysis API
   version: 2.0.0
+  contact:
+    email: support@telnyx.com
   x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Session Analysis across 2 of this provider''s published API definitions: telnyx-openapi.yml, telnyx-openapi.json. Each path carries the servers of the definition it was published in.'
 servers:
 - description: Version 2.0.0 of the Telnyx API
   url: https://api.telnyx.com/v2
@@ -42,6 +44,9 @@ paths:
       tags:
       - Session Analysis
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /session_analysis/metadata/{record_type}:
     get:
       description: Returns detailed metadata for a specific record type, including relationships and examples.
@@ -76,6 +81,9 @@ paths:
       tags:
       - Session Analysis
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /session_analysis/{record_type}/{event_id}:
     get:
       description: Retrieves a full session analysis tree for a given event, including costs, child events, and product linkages.
@@ -187,8 +195,89 @@ paths:
       tags:
       - Session Analysis
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
 components:
   schemas:
+    SessionAnalysisResponse:
+      properties:
+        cost:
+          $ref: '#/components/schemas/CostSummary'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+        root:
+          $ref: '#/components/schemas/EventNode'
+        session_id:
+          description: Identifier for the analyzed session.
+          type: string
+      required:
+      - session_id
+      - cost
+      - root
+      - meta
+      type: object
+    EventNode:
+      properties:
+        children:
+          description: Child events in the session tree.
+          items:
+            $ref: '#/components/schemas/EventNode'
+          type: array
+        cost:
+          $ref: '#/components/schemas/CostInfo'
+        event_name:
+          description: Name of the event type.
+          type: string
+        id:
+          description: Event identifier.
+          type: string
+        links:
+          $ref: '#/components/schemas/Links'
+        product:
+          description: Product that generated this event.
+          type: string
+        record:
+          additionalProperties: true
+          description: The underlying detail record data. Contents vary by record type.
+          type: object
+        relationship:
+          description: Relationship to the parent node, null for root.
+          oneOf:
+          - $ref: '#/components/schemas/RelationshipInfo'
+          - type: 'null'
+      required:
+      - id
+      - product
+      - event_name
+      - cost
+      - links
+      - record
+      - children
+      type: object
+    MetadataInfo:
+      properties:
+        last_updated:
+          format: date-time
+          type: string
+        total_record_types:
+          type: integer
+      required:
+      - total_record_types
+      - last_updated
+      type: object
+    FieldMapping:
+      properties:
+        local_field:
+          description: Field name on the child record.
+          type: string
+        parent_field:
+          description: Field name on the parent record.
+          type: string
+      required:
+      - local_field
+      - parent_field
+      type: object
     CostSummary:
       properties:
         currency:
@@ -201,7 +290,33 @@ components:
       - total
       - currency
       type: object
-    RecordTypeInfo:
+    CostInfo:
+      properties:
+        cumulative_cost:
+          description: Cumulative cost including all descendants.
+          type: string
+        currency:
+          description: ISO 4217 currency code.
+          type: string
+        event_cost:
+          description: Cost of this individual event.
+          type: string
+      required:
+      - event_cost
+      - cumulative_cost
+      - currency
+      type: object
+    MetadataFieldMapping:
+      properties:
+        local_field:
+          type: string
+        parent_field:
+          type: string
+      required:
+      - local_field
+      - parent_field
+      type: object
+    RecordTypeMetadataResponse:
       properties:
         aliases:
           items:
@@ -211,10 +326,14 @@ components:
           items:
             $ref: '#/components/schemas/ChildRelationshipInfo'
           type: array
-        description:
-          type: string
         event:
           type: string
+        examples:
+          additionalProperties: true
+          description: Example queries and responses for this record type.
+          type: object
+        meta:
+          $ref: '#/components/schemas/RelationshipMetadata'
         parent_relationships:
           items:
             $ref: '#/components/schemas/ParentRelationshipInfo'
@@ -228,77 +347,47 @@ components:
       - aliases
       - product
       - event
-      - description
       - child_relationships
       - parent_relationships
+      - examples
+      - meta
       type: object
-    QueryParameterInfo:
+    SessionAnalysisErrorResponse:
       properties:
-        default:
-          type: string
-        description:
-          type: string
-        enum_values:
+        errors:
           items:
-            type: string
-          type:
-          - array
-          - 'null'
-        max:
-          type:
-          - integer
-          - 'null'
-        min:
-          type:
-          - integer
-          - 'null'
-        type:
-          type: string
-      required:
-      - type
-      - default
-      - description
-      type: object
-    RelationshipInfo:
-      properties:
-        parent_id:
-          description: Identifier of the parent event.
-          type: string
-        type:
-          description: Relationship type identifier.
-          type: string
-        via:
-          $ref: '#/components/schemas/FieldMapping'
-      required:
-      - type
-      - via
-      - parent_id
-      type: object
-    ResponseMeta:
-      properties:
-        event_count:
-          description: Total number of events in the session tree.
-          type: integer
-        products:
-          description: List of distinct products involved in the session.
-          items:
-            type: string
+            $ref: '#/components/schemas/SessionAnalysisError'
           type: array
       required:
-      - event_count
-      - products
+      - errors
       type: object
-    FieldMapping:
+    ParentRelationshipInfo:
       properties:
-        local_field:
-          description: Field name on the child record.
+        cost_rollup:
+          type: boolean
+        description:
           type: string
-        parent_field:
-          description: Field name on the parent record.
+        parent_event:
           type: string
+        parent_product:
+          type: string
+        parent_record_type:
+          type: string
+        relationship_type:
+          type: string
+        traversal_enabled:
+          type: boolean
+        via:
+          $ref: '#/components/schemas/MetadataFieldMapping'
       required:
-      - local_field
-      - parent_field
+      - relationship_type
+      - via
+      - cost_rollup
+      - traversal_enabled
+      - description
+      - parent_product
+      - parent_event
+      - parent_record_type
       type: object
     ChildRelationshipInfo:
       properties:
@@ -344,53 +433,19 @@ components:
       - total_parents
       - max_recommended_depth
       type: object
-    RecordTypeMetadataResponse:
+    ResponseMeta:
       properties:
-        aliases:
+        event_count:
+          description: Total number of events in the session tree.
+          type: integer
+        products:
+          description: List of distinct products involved in the session.
           items:
             type: string
           type: array
-        child_relationships:
-          items:
-            $ref: '#/components/schemas/ChildRelationshipInfo'
-          type: array
-        event:
-          type: string
-        examples:
-          additionalProperties: true
-          description: Example queries and responses for this record type.
-          type: object
-        meta:
-          $ref: '#/components/schemas/RelationshipMetadata'
-        parent_relationships:
-          items:
-            $ref: '#/components/schemas/ParentRelationshipInfo'
-          type: array
-        product:
-          type: string
-        record_type:
-          type: string
       required:
-      - record_type
-      - aliases
-      - product
-      - event
-      - child_relationships
-      - parent_relationships
-      - examples
-      - meta
-      type: object
-    SessionAnalysisError:
-      properties:
-        code:
-          type: string
-        detail:
-          type: string
-        message:
-          type: string
-      required:
-      - code
-      - message
+      - event_count
+      - products
       type: object
     MetadataOverviewResponse:
       properties:
@@ -410,31 +465,17 @@ components:
       - query_parameters
       - meta
       type: object
-    SessionAnalysisErrorResponse:
+    SessionAnalysisError:
       properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/SessionAnalysisError'
-          type: array
-      required:
-      - errors
-      type: object
-    SessionAnalysisResponse:
-      properties:
-        cost:
-          $ref: '#/components/schemas/CostSummary'
-        meta:
-          $ref: '#/components/schemas/ResponseMeta'
-        root:
-          $ref: '#/components/schemas/EventNode'
-        session_id:
-          description: Identifier for the analyzed session.
+        code:
+          type: string
+        detail:
+          type: string
+        message:
           type: string
       required:
-      - session_id
-      - cost
-      - root
-      - meta
+      - code
+      - message
       type: object
     Links:
       properties:
@@ -448,72 +489,81 @@ components:
       - self
       - records
       type: object
-    MetadataFieldMapping:
+    QueryParameterInfo:
       properties:
-        local_field:
+        default:
           type: string
-        parent_field:
+        description:
           type: string
-      required:
-      - local_field
-      - parent_field
-      type: object
-    MetadataInfo:
-      properties:
-        last_updated:
-          format: date-time
-          type: string
-        total_record_types:
-          type: integer
-      required:
-      - total_record_types
-      - last_updated
-      type: object
-    CostInfo:
-      properties:
-        cumulative_cost:
-          description: Cumulative cost including all descendants.
-          type: string
-        currency:
-          description: ISO 4217 currency code.
-          type: string
-        event_cost:
-          description: Cost of this individual event.
-          type: string
-      required:
-      - event_cost
-      - cumulative_cost
-      - currency
-      type: object
-    EventNode:
-      properties:
-        children:
-          description: Child events in the session tree.
+        enum_values:
           items:
-            $ref: '#/components/schemas/EventNode'
+            type: string
+          type:
+          - array
+          - 'null'
+        max:
+          type:
+          - integer
+          - 'null'
+        min:
+          type:
+          - integer
+          - 'null'
+        type:
+          type: string
+      required:
+      - type
+      - default
+      - description
+      type: object
+    RecordTypeInfo:
+      properties:
+        aliases:
+          items:
+            type: string
           type: array
-        cost:
-          $ref: '#/components/schemas/CostInfo'
-        event_name:
-          description: Name of the event type.
+        child_relationships:
+          items:
+            $ref: '#/components/schemas/ChildRelationshipInfo'
+          type: array
+        description:
           type: string
-        id:
-          description: Event identifier.
+        event:
           type: string
-        links:
-          $ref: '#/components/schemas/Links'
+        parent_relationships:
+          items:
+            $ref: '#/components/schemas/ParentRelationshipInfo'
+          type: array
         product:
-          description: Product that generated this event.
           type: string
-        record:
-          additionalProperties: true
-          description: The underlying detail record data. Contents vary by record type.
-          type: object
-        relationship:
-          description: Relationship to the parent node, null for root.
-          oneOf:
-          - $ref: '#/components/schemas/RelationshipInfo'
-          - type: 'null'
+        record_type:
+          type: string
+      required:
+      - record_type
+      - aliases
+      - product
+      - event
+      - description
+      - child_relationships
+      - parent_relationships
+      type: object
+    RelationshipInfo:
+      properties:
+        parent_id:
+          description: Identifier of the parent event.
+          type: string
+        type:
+          description: Relationship type identifier.
+          type: string
+        via:
+          $ref: '#/components/schemas/FieldMapping'
+      required:
+      - type
+      - via
+      - parent_id
+      type: object
+    EventNode_2:
+      type: object
       required:
       - id
       - product
@@ -522,35 +572,37 @@ components:
       - links
       - record
       - children
-      type: object
-    ParentRelationshipInfo:
       properties:
-        cost_rollup:
-          type: boolean
-        description:
+        id:
           type: string
-        parent_event:
+          description: Event identifier.
+        product:
           type: string
-        parent_product:
+          description: Product that generated this event.
+        event_name:
           type: string
-        parent_record_type:
-          type: string
-        relationship_type:
-          type: string
-        traversal_enabled:
-          type: boolean
-        via:
-          $ref: '#/components/schemas/MetadataFieldMapping'
-      required:
-      - relationship_type
-      - via
-      - cost_rollup
-      - traversal_enabled
-      - description
-      - parent_product
-      - parent_event
-      - parent_record_type
-      type: object
+          description: Name of the event type.
+        relationship:
+          oneOf:
+          - $ref: '#/components/schemas/RelationshipInfo'
+          - type: 'null'
+          description: Relationship to the parent node, null for root.
+        cost:
+          $ref: '#/components/schemas/CostInfo'
+        links:
+          $ref: '#/components/schemas/Links'
+        record:
+          type: object
+          description: The underlying detail record data. Contents vary by record type.
+          additionalProperties: true
+        children:
+          type: array
+          items:
+            type: object
+            title: EventNode
+            description: 'Recursive reference to EventNode. Nesting is elided here so every $ref chain stays finite for function-calling tooling; see #/components/schemas/EventNode for the full structure.'
+            additionalProperties: true
+          description: Child events in the session tree.
   securitySchemes:
     bearerAuth:
       scheme: bearer
@@ -585,3 +637,40 @@ components:
       bearerFormat: JWT
       scheme: bearer
       type: http
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-refined-from:
+- telnyx-openapi.yml
+- telnyx-openapi.json

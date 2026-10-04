@@ -1,0 +1,330 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Contents API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Contents
+  description: Page content retrieval for URLs.
+paths:
+  /web_search/contents:
+    post:
+      summary: Retrieve page contents
+      description: 'Retrieves clean HTML or Markdown content from a list of URLs. Supports up to 20 URLs per request (public API limit). Specify which formats to return: `html`, `markdown`, `metadata`.'
+      operationId: CreateWebSearchContents
+      tags:
+      - Contents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentsRequest'
+            example:
+              urls:
+              - https://en.wikipedia.org/wiki/Artificial_intelligence
+              formats:
+              - markdown
+              - metadata
+              crawl_timeout: 10
+              max_age: null
+      responses:
+        '200':
+          description: Successful content retrieval response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ContentsResponse'
+              example:
+                data:
+                  results:
+                  - url: https://en.wikipedia.org/wiki/Artificial_intelligence
+                    title: Artificial intelligence - Wikipedia
+                    markdown: '# Artificial intelligence
+
+
+                      Artificial intelligence (AI) is...'
+                    metadata:
+                      site_name: Wikipedia
+                      favicon_url: https://cdn.telnyx.com/favicon?domain=en.wikipedia.org&size=128
+        '400':
+          $ref: '#/components/responses/web-search_BadRequest'
+        '401':
+          $ref: '#/components/responses/web-search_Unauthorized'
+        '500':
+          $ref: '#/components/responses/web-search_InternalServerError'
+        '502':
+          $ref: '#/components/responses/web-search_ProviderError'
+        '504':
+          $ref: '#/components/responses/ProviderTimeout'
+components:
+  responses:
+    ProviderTimeout:
+      description: The upstream search provider timed out.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/WebSearchError'
+          example:
+            error:
+              message: Provider request timed out
+    web-search_InternalServerError:
+      description: Internal server error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/WebSearchError'
+          example:
+            error:
+              message: Internal server error
+    web-search_BadRequest:
+      description: Invalid request — validation error or invalid parameters.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/WebSearchError'
+          example:
+            error:
+              message: Validation error
+              details: {}
+    web-search_ProviderError:
+      description: The upstream search provider returned an error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/WebSearchError'
+          example:
+            error:
+              message: Provider request failed
+    web-search_Unauthorized:
+      description: 'Unauthorized — missing or invalid API key.
+
+
+        The API Gateway returns this response before the request reaches the backend service. The error format follows the standard Telnyx JSON:API error envelope with `errors[]`, not the backend-level `WebSearchError` shape.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GatewayError'
+          example:
+            errors:
+            - code: '10009'
+              title: Authentication failed
+              detail: Could not find any usable credentials in the request.
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10009
+  schemas:
+    GatewayError:
+      type: object
+      description: Standard Telnyx JSON:API error envelope returned by the API Gateway for authentication failures (401).
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            required:
+            - code
+            - title
+            properties:
+              code:
+                type: string
+                description: Telnyx error code.
+              title:
+                type: string
+                description: Error title.
+              detail:
+                type: string
+                description: Human-readable error detail.
+              source:
+                type: object
+                properties:
+                  pointer:
+                    type: string
+              meta:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+    ContentsRequest:
+      type: object
+      required:
+      - urls
+      properties:
+        urls:
+          type: array
+          items:
+            type: string
+            format: uri
+          minItems: 1
+          maxItems: 20
+          description: List of URLs to retrieve content from (max 20 for public API).
+          example:
+          - https://en.wikipedia.org/wiki/Artificial_intelligence
+        formats:
+          type: array
+          items:
+            type: string
+            enum:
+            - html
+            - markdown
+            - metadata
+          maxItems: 3
+          description: 'Content formats to return. If omitted, `html` and `metadata` are returned by default. Retrieval is best-effort per URL: a format field appears only when that content could be produced, and a freshly crawled page may also include `html` even when not requested.'
+          example:
+          - markdown
+          - metadata
+        crawl_timeout:
+          type: integer
+          minimum: 1
+          maximum: 60
+          description: Timeout for crawling each URL, in seconds (1-60).
+          example: 10
+        max_age:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          description: Maximum age of cached content in seconds. `null` means no limit.
+          example: null
+    WebSearchError:
+      type: object
+      properties:
+        error:
+          type: object
+          required:
+          - message
+          properties:
+            message:
+              type: string
+              description: Human-readable error message.
+            details:
+              type: object
+              additionalProperties: true
+              description: Additional error details (e.g. validation field errors).
+    ContentResult:
+      type: object
+      required:
+      - url
+      properties:
+        url:
+          type: string
+          format: uri
+          description: The source URL.
+        title:
+          type: string
+          description: Page title (if available).
+        html:
+          type: string
+          description: Cleaned HTML content (if `html` format requested; may also be present on freshly crawled pages).
+        markdown:
+          type: string
+          description: Markdown content (if `markdown` format requested).
+        metadata:
+          type: object
+          properties:
+            site_name:
+              type: string
+              description: Site name. Often empty.
+            favicon_url:
+              type: string
+              format: uri
+              description: Favicon URL (if available).
+          additionalProperties: true
+          description: Page metadata (if `metadata` format requested).
+    ContentsResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContentResult'
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

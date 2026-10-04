@@ -1,0 +1,516 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Phone Number Batches API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Phone Number Batches
+  description: Phone numbers are submitted to Telnyx for vetting in batches. Batches group all numbers added in a single request under the same Letter of Authorization.
+paths:
+  /dir/{dir_id}/phone_number_batches:
+    get:
+      summary: List phone-number batches for a DIR
+      description: List the phone-number batches submitted under a DIR. The enterprise is resolved server-side from the DIR id.
+      operationId: listDirPhoneNumberBatchesSimplified
+      tags:
+      - Phone Number Batches
+      parameters:
+      - $ref: '#/components/parameters/DirId'
+      - $ref: '#/components/parameters/BcPageNumber'
+      - $ref: '#/components/parameters/BcPageSize'
+      - name: filter[status]
+        in: query
+        required: false
+        description: Restrict to batches whose aggregate status equals this value.
+        schema:
+          $ref: '#/components/schemas/PhoneNumberStatus'
+      responses:
+        '200':
+          description: Paginated list of batches.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhoneNumberBatchList'
+        default:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        4XX:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+  /dir/{dir_id}/phone_number_batches/{batch_id}:
+    get:
+      summary: Get a phone-number batch
+      description: Get a single phone-number batch by id. The enterprise is resolved server-side from the DIR id.
+      operationId: getDirPhoneNumberBatchSimplified
+      tags:
+      - Phone Number Batches
+      parameters:
+      - $ref: '#/components/parameters/DirId'
+      - name: batch_id
+        in: path
+        required: true
+        description: The batch id (lowercase UUID).
+        schema:
+          type: string
+          format: uuid
+          example: 0a4b1f5e-2f12-4c0c-9a98-9b3a7d8b8e62
+      responses:
+        '200':
+          description: Batch.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhoneNumberBatchWrapped'
+        default:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        4XX:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+components:
+  schemas:
+    PhoneNumberBatchWrapped:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/PhoneNumberBatch'
+    DirPhoneNumber:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 1f56eb76-4078-4af7-ad4d-564b027256ee
+          readOnly: true
+        dir_id:
+          type: string
+          format: uuid
+          example: 16635d38-75a6-4481-82e8-69af60e05011
+        enterprise_id:
+          type: string
+          format: uuid
+          example: 4a6192a4-573d-446d-b3ce-aff9117272a6
+        phone_number:
+          type: string
+          description: E.164 with leading `+`.
+          example: '+19493253498'
+        batch_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Id of the batch this number was vetted as part of.
+          example: 0a4b1f5e-2f12-4c0c-9a98-9b3a7d8b8e62
+        loa_document_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Id of the Letter of Authorization document attached to this number's batch.
+          example: null
+        status:
+          $ref: '#/components/schemas/PhoneNumberStatus'
+        rejection_reason:
+          $ref: '#/components/schemas/RejectionReason'
+          nullable: true
+          description: Populated when `status` is `unsuccessful` or `permanently_rejected`.
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-04-26T18:11:42.850928Z'
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          example: '2026-04-26T18:12:11.123456Z'
+          readOnly: true
+        verified_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2026-04-26T18:12:11.123456Z'
+          readOnly: true
+    RejectionReason:
+      type: object
+      properties:
+        code:
+          type: string
+          example: documentation_incomplete
+        title:
+          type: string
+          example: Documentation incomplete
+        detail:
+          type: string
+          example: Provided documents do not establish business identity.
+        message:
+          type: string
+          nullable: true
+          description: Customer-visible free-text comment from the Telnyx vetting team. Only the first entry of `rejection_reasons` carries this; the rest are `null`.
+          example: Please re-upload a clearer scan of the certificate.
+    branded-calling_PaginationMeta:
+      type: object
+      required:
+      - total_pages
+      - total_results
+      - page_number
+      - page_size
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+          description: Total number of pages available given the current `page_size`.
+        total_results:
+          type: integer
+          example: 42
+          description: Total number of items across all pages (excludes soft-deleted rows).
+        page_number:
+          type: integer
+          example: 1
+          description: 1-based index of this page. Echoes the `page[number]` query parameter (default `1`).
+        page_size:
+          type: integer
+          example: 20
+          description: Number of items returned in this page's `data` array. Capped at 250.
+      description: JSON:API pagination metadata returned with every paginated list response. Page numbering is 1-based. `page_size` reports the number of items actually returned in `data` for this page; the requested size is taken from the `page[size]` query parameter.
+    Document:
+      type: object
+      required:
+      - document_id
+      - document_type
+      properties:
+        document_id:
+          type: string
+          format: uuid
+          description: Id returned by the Telnyx Documents API after you upload the file (upload via `POST /v2/documents`; see https://developers.telnyx.com/api/documents).
+          example: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
+        document_type:
+          type: string
+          enum:
+          - letter_of_authorization
+          - business_registration
+          - articles_of_incorporation
+          - tax_document
+          - ein_letter
+          - trademark_registration
+          - website_ownership
+          - business_license
+          - professional_license
+          - government_id
+          - utility_bill
+          - bank_statement
+          - other
+          example: business_registration
+          description: Type of supporting document. Pick the closest match to what the file actually contains; `other` triggers manual vetting and may slow approval. The matching short_name reference list is at `GET /v2/dir/document_types`.
+        description:
+          type: string
+          maxLength: 255
+          description: An optional note describing this document, for example what it proves.
+          example: Certificate of incorporation.
+    PhoneNumberStatus:
+      type: string
+      enum:
+      - submitted
+      - in_review
+      - verified
+      - unsuccessful
+      - suspended
+      - expired
+      - permanently_rejected
+      description: 'Phone-number lifecycle status.
+
+        - `submitted` / `in_review` - Telnyx is reviewing the batch this number belongs to.
+
+        - `verified` - approved; the DIR''s display identity will be shown on outbound calls from this number.
+
+        - `unsuccessful` - Telnyx rejected this submission; the customer may re-add to retry.
+
+        - `suspended` - temporarily disabled (e.g. by an active infringement claim on the DIR).
+
+        - `expired` - verification expired; re-add to renew.
+
+        - `permanently_rejected` - terminal; cannot be re-added on this or any other DIR you own.'
+    branded-calling_Errors:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/branded-calling_Error'
+          description: List of one or more error entries. Order is not significant.
+      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
+    PhoneNumberBatchList:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PhoneNumberBatch'
+        meta:
+          $ref: '#/components/schemas/branded-calling_PaginationMeta'
+    branded-calling_Error:
+      type: object
+      required:
+      - code
+      - title
+      - detail
+      - meta
+      properties:
+        code:
+          type: string
+          example: '10005'
+          description: Stable numeric Telnyx error catalog id. See `meta.url` for the full catalog entry.
+        title:
+          type: string
+          example: Invalid parameters
+          description: Short human-readable category, e.g. `Bad Request`, `Duplicate resource`, `Not Found`, `Forbidden`. Treat as advisory only - the stable identifier is `code`.
+        detail:
+          type: string
+          example: field required
+          description: Context-specific message describing what went wrong on this particular request. May embed offending values; do not rely on it for programmatic matching - branch on `code`.
+        meta:
+          type: object
+          required:
+          - url
+          properties:
+            url:
+              type: string
+              format: uri
+              example: https://developers.telnyx.com/docs/overview/errors/10005
+            pending_check_ids:
+              type: array
+              items:
+                type: string
+                format: uuid
+              description: Set on `422 vetting_checks_incomplete` responses from `/admin/dir/{id}/approve` and `/admin/phone-number-batches/approve`. Lists the still-pending vetting check ids.
+            pending_check_codes:
+              type: array
+              items:
+                type: string
+              description: Codes of the pending vetting checks (e.g. `loa_signature_valid`).
+            pending_check_labels:
+              type: array
+              items:
+                type: string
+              description: Human-readable labels of the pending vetting checks.
+          description: Carries `url` linking to the Telnyx error catalog entry for this `code`. Useful for forwarding the user to documentation.
+        source:
+          type: object
+          description: Optional pointer at the offending field of the request.
+          properties:
+            pointer:
+              type: string
+              example: /body/legal_name
+            parameter:
+              type: string
+              example: page[size]
+      description: A single entry in the canonical Telnyx error envelope. `code` is the stable Telnyx error catalog id; the human-readable explanation lives at `meta.url`. `detail` is a context-specific message; `source.pointer` (when present) names the offending field of the request.
+    PhoneNumberBatch:
+      type: object
+      description: A phone-number batch groups all numbers added in a single bulk-add request. Telnyx vets the batch as a unit. The response embeds the full `phone_numbers` array so you can read per-number status without a separate call, plus a batch-level `status` summarising the unit's progress.
+      properties:
+        batch_id:
+          type: string
+          format: uuid
+          example: ba74cfc6-d32b-467a-9b08-86fd154c23f7
+          readOnly: true
+        dir_id:
+          type: string
+          format: uuid
+          example: 74e1d8ed-fbdb-45a7-bbb0-a09c1184eb3d
+        dir_display_name:
+          type: string
+          description: The DIR's display name at the time the batch was read.
+          example: Acme Plumbing
+          readOnly: true
+        enterprise_id:
+          type: string
+          format: uuid
+          example: 5c987b82-2e3b-442a-afbc-0ba3c515f561
+        status:
+          $ref: '#/components/schemas/PhoneNumberStatus'
+          description: Aggregate batch status. Mirrors the values used on individual phone numbers (`submitted`, `in_review`, `verified`, `unsuccessful`, `permanently_rejected`, etc.).
+        total_count:
+          type: integer
+          description: Number of phone numbers in this batch (length of `phone_numbers`).
+          example: 1
+          readOnly: true
+        submitted_at:
+          type: string
+          format: date-time
+          description: When the batch was created (and implicitly submitted for vetting).
+          example: '2026-04-26T18:14:37.065870Z'
+          readOnly: true
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+          description: Documents attached to this batch (e.g. a Letter of Authorization). Empty when none were supplied at add time.
+        phone_numbers:
+          type: array
+          items:
+            $ref: '#/components/schemas/DirPhoneNumber'
+          description: All phone numbers in this batch, with per-number status.
+  parameters:
+    DirId:
+      name: dir_id
+      in: path
+      description: The DIR id. Lowercase UUID.
+      required: true
+      schema:
+        type: string
+        format: uuid
+        example: 16635d38-75a6-4481-82e8-69af60e05011
+    BcPageNumber:
+      name: page[number]
+      in: query
+      description: 1-based page number. Out-of-range values return an empty page with correct meta.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+        example: 1
+    BcPageSize:
+      name: page[size]
+      in: query
+      description: Items per page. Maximum 250; values above are clamped to 250.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 250
+        default: 20
+        example: 20
+  responses:
+    branded-calling_GenericErrorResponse:
+      description: An error occurred. The response carries the standard Telnyx error envelope.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/branded-calling_Errors'
+          examples:
+            validation_error:
+              summary: 422 - request body failed validation
+              value:
+                errors:
+                - code: '10005'
+                  title: Invalid parameters
+                  detail: field required
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10005
+                  source:
+                    pointer: /body/legal_name
+            bad_request:
+              summary: 400 - request rejected by a state guard
+              description: Returned when the request itself is well-formed but the resource is in a state that disallows this action (e.g. updating a DIR while it is being vetted, or deleting an enterprise that still has DIRs in vetting).
+              value:
+                errors:
+                - code: '10015'
+                  title: Bad Request
+                  detail: Cannot update DIR in 'verified' status
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10015
+            not_found:
+              summary: 404 - resource does not exist or is not yours
+              value:
+                errors:
+                - code: '10009'
+                  title: Resource not found
+                  detail: Enterprise not found.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+            conflict:
+              summary: 409 - request conflicts with current resource state
+              value:
+                errors:
+                - code: '10021'
+                  title: Resource in use
+                  detail: DIR has 1 active infringement claim(s). Resolve the claim before making this change.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10021
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

@@ -1,11 +1,13 @@
 openapi: 3.2.0
 info:
-  contact:
-    email: support@telnyx.com
-  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
   title: Telnyx OAuth Clients API
   version: 2.0.0
+  contact:
+    email: support@telnyx.com
   x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged OAuth Clients across 2 of this provider''s published API definitions: telnyx-openapi.yml, telnyx-openapi.json. Each path carries the servers of the definition it was published in.'
 servers:
 - description: Version 2.0.0 of the Telnyx API
   url: https://api.telnyx.com/v2
@@ -140,6 +142,9 @@ paths:
       tags:
       - OAuth Clients
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /oauth_clients/{id}:
     delete:
       description: Delete an OAuth client
@@ -245,6 +250,322 @@ paths:
       tags:
       - OAuth Clients
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
+  /oauth/clients:
+    get:
+      operationId: getOauthClients
+      tags:
+      - OAuth Clients
+      summary: List OAuth clients
+      description: Retrieve a paginated list of OAuth clients for the authenticated user
+      parameters:
+      - name: page[size]
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        description: Number of results per page
+      - name: page[number]
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+        description: Page number
+      - name: filter[client_type]
+        in: query
+        schema:
+          type: string
+          enum:
+          - confidential
+          - public
+        description: Filter by client type
+      - name: filter[verified]
+        in: query
+        schema:
+          type: boolean
+        description: Filter by verification status
+      - name: filter[allowed_grant_types][contains]
+        in: query
+        schema:
+          type: string
+          enum:
+          - client_credentials
+          - authorization_code
+          - refresh_token
+        description: Filter by allowed grant type
+      - name: filter[name]
+        in: query
+        schema:
+          type: string
+        description: Filter by exact client name
+      - name: filter[name][contains]
+        in: query
+        schema:
+          type: string
+        description: Filter by client name containing text
+      - name: filter[client_id]
+        in: query
+        schema:
+          type: string
+        description: Filter by client ID
+      responses:
+        '200':
+          description: List of OAuth clients
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OAuthClient'
+                  meta:
+                    $ref: '#/components/schemas/oauth_PaginationMeta'
+              example:
+                data:
+                - record_type: oauth_client
+                  client_id: string
+                  name: string
+                  org_id: string
+                  user_id: string
+                  allowed_scopes:
+                  - string
+                  client_type: public
+                  require_pkce: false
+                  allowed_grant_types:
+                  - client_credentials
+                  redirect_uris:
+                  - https://example.com
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  updated_at: '2024-01-23T18:10:02.574Z'
+                meta:
+                  page_number: 0
+                  page_size: 0
+                  total_results: 0
+                  total_pages: 0
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/oauth_Error'
+      x-latency-category: responsive
+      x-operation-id-source: normalized
+      x-operation-id-original: ListOAuthClients
+    post:
+      operationId: postOauthClients
+      tags:
+      - OAuth Clients
+      summary: Create OAuth client
+      description: Creates a new OAuth client on your account for authenticating third-party integrations, and returns the created client.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OAuthClientCreateRequest'
+      responses:
+        '201':
+          description: OAuth client created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/OAuthClient'
+              example:
+                data:
+                  record_type: oauth_client
+                  client_id: string
+                  name: string
+                  org_id: string
+                  user_id: string
+                  allowed_scopes:
+                  - string
+                  client_type: public
+                  require_pkce: false
+                  allowed_grant_types:
+                  - client_credentials
+                  redirect_uris:
+                  - https://example.com
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  updated_at: '2024-01-23T18:10:02.574Z'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/oauth_Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/oauth_Error'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/oauth_Error'
+      x-latency-category: responsive
+      x-operation-id-source: normalized
+      x-operation-id-original: CreateOAuthClient
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /oauth/clients/{id}:
+    delete:
+      operationId: deleteOauthClientsById
+      tags:
+      - OAuth Clients
+      summary: Delete OAuth client
+      description: Permanently deletes the specified OAuth client from your account.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: OAuth client ID
+      responses:
+        '204':
+          description: OAuth client deleted successfully
+        '404':
+          description: OAuth client not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/oauth_Error'
+              example:
+                error: string
+                error_description: string
+      x-latency-category: responsive
+      x-operation-id-source: normalized
+      x-operation-id-original: DeleteOAuthClient
+    get:
+      operationId: getOauthClientsById
+      tags:
+      - OAuth Clients
+      summary: Get OAuth client
+      description: Returns the details of a single OAuth client on your account by its ID.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: OAuth client ID
+      responses:
+        '200':
+          description: OAuth client details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/OAuthClient'
+              example:
+                data:
+                  record_type: oauth_client
+                  client_id: string
+                  name: string
+                  org_id: string
+                  user_id: string
+                  allowed_scopes:
+                  - string
+                  client_type: public
+                  require_pkce: false
+                  allowed_grant_types:
+                  - client_credentials
+                  redirect_uris:
+                  - https://example.com
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  updated_at: '2024-01-23T18:10:02.574Z'
+        '404':
+          description: OAuth client not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/oauth_Error'
+      x-latency-category: responsive
+      x-operation-id-source: normalized
+      x-operation-id-original: GetOAuthClient
+    put:
+      operationId: putOauthClientsById
+      tags:
+      - OAuth Clients
+      summary: Update OAuth client
+      description: Updates the specified OAuth client's configuration and returns the updated client.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: OAuth client ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OAuthClientUpdateRequest'
+      responses:
+        '200':
+          description: OAuth client updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/OAuthClient'
+              example:
+                data:
+                  record_type: oauth_client
+                  client_id: string
+                  name: string
+                  org_id: string
+                  user_id: string
+                  allowed_scopes:
+                  - string
+                  client_type: public
+                  require_pkce: false
+                  allowed_grant_types:
+                  - client_credentials
+                  redirect_uris:
+                  - https://example.com
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  updated_at: '2024-01-23T18:10:02.574Z'
+        '404':
+          description: OAuth client not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/oauth_Error'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/oauth_Error'
+      x-latency-category: responsive
+      x-operation-id-source: normalized
+      x-operation-id-original: UpdateOAuthClient
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
     OAuthClientCreateRequest:
@@ -305,49 +626,20 @@ components:
       - client_type
       - allowed_grant_types
       type: object
-    OAuthClientUpdateRequest:
-      additionalProperties: false
+    oauth_PaginationMeta:
       properties:
-        allowed_grant_types:
-          description: List of allowed OAuth grant types
-          items:
-            enum:
-            - client_credentials
-            - authorization_code
-            - refresh_token
-            type: string
-          type: array
-        allowed_scopes:
-          description: List of allowed OAuth scopes
-          example:
-          - admin
-          items:
-            type: string
-          type: array
-        logo_uri:
-          description: URL of the client logo
-          format: uri
-          type: string
-        name:
-          description: The name of the OAuth client
-          type: string
-        policy_uri:
-          description: URL of the client's privacy policy
-          format: uri
-          type: string
-        redirect_uris:
-          description: List of redirect URIs
-          items:
-            format: uri
-            type: string
-          type: array
-        require_pkce:
-          description: Whether PKCE (Proof Key for Code Exchange) is required for this client
-          type: boolean
-        tos_uri:
-          description: URL of the client's terms of service
-          format: uri
-          type: string
+        page_number:
+          description: Current page number
+          type: integer
+        page_size:
+          description: Number of items per page
+          type: integer
+        total_pages:
+          description: Total number of pages
+          type: integer
+        total_results:
+          description: Total number of results
+          type: integer
       type: object
     OAuthClient:
       properties:
@@ -450,21 +742,76 @@ components:
       required:
       - error
       type: object
-    oauth_PaginationMeta:
+    OAuthClientUpdateRequest:
+      additionalProperties: false
+      properties:
+        allowed_grant_types:
+          description: List of allowed OAuth grant types
+          items:
+            enum:
+            - client_credentials
+            - authorization_code
+            - refresh_token
+            type: string
+          type: array
+        allowed_scopes:
+          description: List of allowed OAuth scopes
+          example:
+          - admin
+          items:
+            type: string
+          type: array
+        logo_uri:
+          description: URL of the client logo
+          format: uri
+          type: string
+        name:
+          description: The name of the OAuth client
+          type: string
+        policy_uri:
+          description: URL of the client's privacy policy
+          format: uri
+          type: string
+        redirect_uris:
+          description: List of redirect URIs
+          items:
+            format: uri
+            type: string
+          type: array
+        require_pkce:
+          description: Whether PKCE (Proof Key for Code Exchange) is required for this client
+          type: boolean
+        tos_uri:
+          description: URL of the client's terms of service
+          format: uri
+          type: string
+      type: object
+    oauth_oauth_Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error code
+        error_description:
+          type: string
+          description: Human-readable error description
+      required:
+      - error
+    oauth_oauth_PaginationMeta:
+      type: object
       properties:
         page_number:
+          type: integer
           description: Current page number
-          type: integer
         page_size:
+          type: integer
           description: Number of items per page
-          type: integer
-        total_pages:
-          description: Total number of pages
-          type: integer
         total_results:
-          description: Total number of results
           type: integer
-      type: object
+          description: Total number of results
+        total_pages:
+          type: integer
+          description: Total number of pages
   securitySchemes:
     bearerAuth:
       scheme: bearer
@@ -499,3 +846,40 @@ components:
       bearerFormat: JWT
       scheme: bearer
       type: http
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-refined-from:
+- telnyx-openapi.yml
+- telnyx-openapi.json

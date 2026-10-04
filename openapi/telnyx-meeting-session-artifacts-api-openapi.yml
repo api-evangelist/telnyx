@@ -1,0 +1,505 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Meeting Session Artifacts API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Meeting Session Artifacts
+  description: Create and retrieve asynchronous summaries and action-item artifacts.
+paths:
+  /meeting_sessions/{id}/artifacts:
+    get:
+      operationId: listMeetingSessionArtifacts
+      tags:
+      - Meeting Session Artifacts
+      summary: List meeting session artifacts
+      description: Returns a list of artifacts for a meeting session.
+      parameters:
+      - $ref: '#/components/parameters/MeetingSessionId'
+      responses:
+        '200':
+          description: Successful response with a list of meeting session artifacts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingSessionArtifactListResponse'
+        '401':
+          $ref: '#/components/responses/meeting-sessions_Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/meeting-sessions_NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/meeting-sessions_InternalServerError'
+        '503':
+          $ref: '#/components/responses/MeetingReadAuthUnavailable'
+    post:
+      operationId: createMeetingSessionArtifact
+      tags:
+      - Meeting Session Artifacts
+      summary: Create a meeting session artifact
+      description: 'Requests asynchronous generation of one artifact: `summary`, `action_items`, `decisions`, `topics`, `open_questions`, or `custom`. Each request produces one artifact. `custom` is answered from a `prompt` you supply, which is required for `custom` and rejected on the five named types. Generation requires transcript content and configured inference and currently reads at most the first 10,000 segments, so exceptionally long transcripts may produce incomplete artifacts or fail model limits. **Not idempotent, and every call is billed**: each request is a separate inference run, so a retry or a duplicate POST produces a second artifact and a second charge. Guard the call rather than relying on the service to collapse it. The automatic `summarize_on_end` attempt is billed on the same basis.'
+      parameters:
+      - $ref: '#/components/parameters/MeetingSessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMeetingSessionArtifactRequest'
+            example:
+              type: summary
+      responses:
+        '202':
+          description: Artifact creation accepted and is being processed asynchronously.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingSessionArtifactResponse'
+        '400':
+          $ref: '#/components/responses/meeting-sessions_BadRequest'
+        '401':
+          $ref: '#/components/responses/meeting-sessions_Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/meeting-sessions_NotFound'
+        '409':
+          $ref: '#/components/responses/meeting-sessions_Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/meeting-sessions_InternalServerError'
+        '503':
+          $ref: '#/components/responses/MeetingArtifactUnavailable'
+  /meeting_sessions/{id}/artifacts/{artifact_id}:
+    get:
+      operationId: retrieveMeetingSessionArtifact
+      tags:
+      - Meeting Session Artifacts
+      summary: Retrieve a meeting session artifact
+      description: Retrieves a single meeting session artifact by ID.
+      parameters:
+      - $ref: '#/components/parameters/MeetingSessionId'
+      - $ref: '#/components/parameters/ArtifactId'
+      responses:
+        '200':
+          description: Successful response with the meeting session artifact.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingSessionArtifactResponse'
+        '401':
+          $ref: '#/components/responses/meeting-sessions_Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/meeting-sessions_NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/meeting-sessions_InternalServerError'
+        '503':
+          $ref: '#/components/responses/MeetingReadAuthUnavailable'
+components:
+  responses:
+    meeting-sessions_BadRequest:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: invalid_request
+              message: request is invalid
+    PayloadTooLarge:
+      description: Payload Too Large
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: invalid_request
+              message: request body too large
+    MeetingArtifactUnavailable:
+      description: Artifact generation or authentication is not configured or temporarily unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: not_configured
+              message: artifact generation is not configured
+    TooManyRequests:
+      description: Authentication is temporarily overloaded. Retry after the number of seconds in `Retry-After`.
+      headers:
+        Retry-After:
+          required: true
+          description: Seconds to wait before retrying.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: auth_overloaded
+              message: authentication temporarily overloaded
+    meeting-sessions_NotFound:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: not_found
+              message: meeting session not found
+    meeting-sessions_Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: invalid_state
+              message: only scheduled sessions can be updated
+    meeting-sessions_InternalServerError:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: internal_error
+              message: internal server error
+    meeting-sessions_Unauthorized:
+      description: 'Unauthorized. On api.telnyx.com, authentication is enforced by the API gateway before the request reaches the Meeting service, so a missing or invalid API key returns the standard Telnyx error envelope (`{"errors": [{"code": "10009", ...}]}`) rather than the single-`error` shape below.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: unauthorized
+              message: invalid or missing credentials
+    MeetingReadAuthUnavailable:
+      description: Authentication is temporarily unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: auth_unavailable
+              message: authentication service unavailable
+    Forbidden:
+      description: The authenticated credential is not permitted to perform this operation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: forbidden
+              message: credential is not permitted
+  schemas:
+    ModelProvenance:
+      type: object
+      additionalProperties: false
+      required:
+      - model
+      - provider
+      properties:
+        model:
+          type: string
+        provider:
+          type: string
+    MeetingSessionArtifact:
+      type: object
+      required:
+      - id
+      - session_id
+      - type
+      - status
+      - content
+      - model_provenance
+      - failure_reason
+      - created_at
+      - updated_at
+      - prompt
+      properties:
+        id:
+          type: string
+        session_id:
+          type: string
+        type:
+          type: string
+          enum:
+          - summary
+          - action_items
+          - decisions
+          - topics
+          - open_questions
+          - custom
+        status:
+          type: string
+          enum:
+          - pending
+          - completed
+          - failed
+        content:
+          anyOf:
+          - $ref: '#/components/schemas/ArtifactContent'
+          - type: 'null'
+        model_provenance:
+          anyOf:
+          - $ref: '#/components/schemas/ModelProvenance'
+          - type: 'null'
+        failure_reason:
+          type:
+          - string
+          - 'null'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        prompt:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The prompt that produced this artifact, or null for a named type. Non-null only when `type` is `custom`; the five named types always return `null`.
+      examples:
+      - id: mtgart_550e8400-e29b-41d4-a716-446655440000
+        session_id: mtgsess_550e8400-e29b-41d4-a716-446655440001
+        type: action_items
+        status: pending
+        content: null
+        model_provenance: null
+        failure_reason: null
+        created_at: '2025-01-15T10:30:00Z'
+        updated_at: '2025-01-15T10:30:00Z'
+        prompt: null
+      - id: mtgart_550e8400-e29b-41d4-a716-446655440002
+        session_id: mtgsess_550e8400-e29b-41d4-a716-446655440001
+        type: summary
+        status: completed
+        content:
+          text: The team reviewed project goals and agreed on next steps.
+        model_provenance:
+          model: example-model
+          provider: example-provider
+        failure_reason: null
+        created_at: '2025-01-15T10:30:00Z'
+        updated_at: '2025-01-15T10:31:00Z'
+        prompt: null
+      additionalProperties: false
+    MeetingSessionArtifactListResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeetingSessionArtifact'
+    meeting-sessions_ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - error
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+          - code
+          - message
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+      examples:
+      - error:
+          code: invalid_request
+          message: webhook_url is disabled
+      - error:
+          code: not_found
+          message: meeting session not found
+      - error:
+          code: unsupported_capability
+          message: avatar video is not supported on platform 'unknown'
+      - error:
+          code: internal_error
+          message: internal server error
+    ArtifactContent:
+      type: object
+      additionalProperties: false
+      required:
+      - text
+      properties:
+        text:
+          type: string
+    MeetingSessionArtifactResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/MeetingSessionArtifact'
+    CreateMeetingSessionArtifactRequest:
+      title: CreateMeetingSessionArtifactRequest
+      description: 'One of two shapes: a named type on its own, or `custom` with the prompt it answers.'
+      oneOf:
+      - title: Named artifact
+        type: object
+        additionalProperties: false
+        required:
+        - type
+        properties:
+          type:
+            type: string
+            enum:
+            - summary
+            - action_items
+            - decisions
+            - topics
+            - open_questions
+            description: What to generate from the transcript. `custom` is answered from a `prompt` you supply; the five named types need none.
+      - title: Custom artifact
+        type: object
+        additionalProperties: false
+        required:
+        - type
+        - prompt
+        properties:
+          type:
+            type: string
+            const: custom
+            description: Answered from the `prompt` below rather than a fixed question.
+          prompt:
+            type: string
+            minLength: 1
+            maxLength: 4000
+            description: An open-ended request answered from the transcript. Required when `type` is `custom`, and rejected with 400 on any named type. Trimmed before storage and echoed back in artifact responses and the `artifact.completed` webhook.
+  parameters:
+    ArtifactId:
+      name: artifact_id
+      in: path
+      required: true
+      description: Unique identifier for a meeting session artifact.
+      schema:
+        type: string
+        examples:
+        - mtgart_b2c3d4e5-f6a7-8901-bcde-f23456789012
+    MeetingSessionId:
+      name: id
+      in: path
+      required: true
+      description: Unique identifier for the meeting session.
+      schema:
+        type: string
+        examples:
+        - mtgsess_a1b2c3d4-e5f6-7890-abcd-ef1234567890
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

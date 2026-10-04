@@ -1,0 +1,716 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx RCS Brands API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: RCS Brands
+  description: Manage the legal business entities that operate RCS agents.
+paths:
+  /rcs/brands:
+    get:
+      tags:
+      - RCS Brands
+      summary: List RCS brands
+      description: Lists RCS brands owned by the authenticated organization.
+      operationId: ListRcsBrands
+      responses:
+        '200':
+          description: RCS brands owned by the organization.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BrandResponse'
+        '401':
+          $ref: '#/components/responses/rcs-registration_Unauthorized'
+    post:
+      tags:
+      - RCS Brands
+      summary: Create an RCS brand
+      description: Creates an editable RCS brand draft. Creating the draft does not begin external review.
+      operationId: CreateRcsBrand
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BrandCreateRequest'
+      responses:
+        '201':
+          description: The brand draft was created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrandResponse'
+        '401':
+          $ref: '#/components/responses/rcs-registration_Unauthorized'
+        '409':
+          $ref: '#/components/responses/rcs-registration_Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '503':
+          $ref: '#/components/responses/DependencyUnavailable'
+  /rcs/brands/{id}:
+    get:
+      tags:
+      - RCS Brands
+      summary: Retrieve an RCS brand
+      description: Retrieves an RCS brand and its current lifecycle status.
+      operationId: RetrieveRcsBrand
+      parameters:
+      - $ref: '#/components/parameters/BrandId'
+      responses:
+        '200':
+          description: The requested RCS brand.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrandResponse'
+        '401':
+          $ref: '#/components/responses/rcs-registration_Unauthorized'
+        '404':
+          $ref: '#/components/responses/rcs-registration_NotFound'
+    patch:
+      tags:
+      - RCS Brands
+      summary: Update an RCS brand
+      description: Updates one or more fields on a brand while its status is `CREATED`. Submitted brands cannot be changed.
+      operationId: UpdateRcsBrand
+      parameters:
+      - $ref: '#/components/parameters/BrandId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BrandUpdateRequest'
+      responses:
+        '200':
+          description: The updated RCS brand.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrandResponse'
+        '401':
+          $ref: '#/components/responses/rcs-registration_Unauthorized'
+        '404':
+          $ref: '#/components/responses/rcs-registration_NotFound'
+        '409':
+          $ref: '#/components/responses/rcs-registration_Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '503':
+          $ref: '#/components/responses/DependencyUnavailable'
+  /rcs/brands/{id}/submit:
+    post:
+      tags:
+      - RCS Brands
+      summary: Submit an RCS brand
+      description: Starts asynchronous provider provisioning and external review for a brand. Repeating this request for an in-progress brand returns its current state without creating new work.
+      operationId: SubmitRcsBrand
+      parameters:
+      - $ref: '#/components/parameters/BrandId'
+      responses:
+        '202':
+          description: The brand submission was accepted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrandResponse'
+        '401':
+          $ref: '#/components/responses/rcs-registration_Unauthorized'
+        '404':
+          $ref: '#/components/responses/rcs-registration_NotFound'
+        '409':
+          $ref: '#/components/responses/rcs-registration_Conflict'
+components:
+  schemas:
+    HttpUrl:
+      type: string
+      format: uri
+      minLength: 1
+      pattern: ^[Hh][Tt][Tt][Pp][Ss]?://
+    BrandLegalEntityType:
+      type: string
+      enum:
+      - LIMITED_LIABILITY_COMPANY
+      - SOLE_PROPRIETORSHIP
+      - PARTNERSHIP
+      - CORPORATION
+      - S_CORPORATION
+    rcs-registration_ErrorResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+      additionalProperties: true
+      example:
+        detail: The requested RCS resource was not found.
+    BrandIdentifier:
+      oneOf:
+      - $ref: '#/components/schemas/EinBrandIdentifier'
+      - $ref: '#/components/schemas/StockSymbolBrandIdentifier'
+    BrandAddress:
+      type: object
+      additionalProperties: false
+      properties:
+        line_1:
+          type: string
+          minLength: 1
+          maxLength: 255
+        line_2:
+          type:
+          - string
+          - 'null'
+          minLength: 1
+          maxLength: 255
+        city:
+          type: string
+          minLength: 1
+          maxLength: 100
+        administrative_area:
+          type: string
+          minLength: 1
+          maxLength: 100
+        postal_code:
+          type: string
+          minLength: 1
+          maxLength: 32
+        country_code:
+          type: string
+          pattern: ^[A-Z]{2}$
+          description: The two-letter ISO 3166-1 country code.
+      required:
+      - line_1
+      - city
+      - administrative_area
+      - postal_code
+      - country_code
+    StockSymbolBrandIdentifier:
+      type: object
+      additionalProperties: false
+      properties:
+        identifier_type:
+          const: STOCK_SYMBOL
+        value:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^\S+:\S+$
+          description: A stock symbol using EXCHANGE:SYMBOL.
+      required:
+      - identifier_type
+      - value
+    CapabilitiesResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        brand_entity:
+          type: boolean
+        brand_verification:
+          type: boolean
+        submission_sections:
+          type: boolean
+        distinct_launch_phase:
+          type: boolean
+        per_carrier_approval:
+          type: boolean
+        templates:
+          type: boolean
+        campaigns:
+          type: boolean
+        vendor_webhooks:
+          type: boolean
+        invite_test_devices:
+          type: boolean
+      required:
+      - brand_entity
+      - brand_verification
+      - submission_sections
+      - distinct_launch_phase
+      - per_carrier_approval
+      - templates
+      - campaigns
+      - vendor_webhooks
+      - invite_test_devices
+    BrandState:
+      type: string
+      enum:
+      - CREATED
+      - CONFIGURED
+      - SUBMITTED
+      - REVIEWING
+      - VETTING
+      - VERIFIED
+      - REJECTED
+      - FAILED
+    BrandUpdateRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        legal_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        legal_entity_type:
+          $ref: '#/components/schemas/BrandLegalEntityType'
+        organization_type:
+          $ref: '#/components/schemas/BrandOrganizationType'
+        website_url:
+          $ref: '#/components/schemas/HttpUrl'
+        profile_id:
+          type: string
+          maxLength: 36
+        identifiers:
+          $ref: '#/components/schemas/BrandIdentifiers'
+        addresses:
+          type: object
+          minProperties: 1
+          additionalProperties:
+            $ref: '#/components/schemas/BrandAddress'
+        contacts:
+          $ref: '#/components/schemas/BrandContacts'
+      example:
+        display_name: Acme Communications
+    BrandOrganizationType:
+      type: string
+      enum:
+      - PRIVATE_PROFIT
+      - PUBLIC_PROFIT
+      - NON_PROFIT
+      - GOVERNMENT
+      - UNKNOWN
+    BrandIdentifiers:
+      type: object
+      minProperties: 1
+      properties:
+        ein:
+          $ref: '#/components/schemas/EinBrandIdentifier'
+        stock_symbol:
+          $ref: '#/components/schemas/StockSymbolBrandIdentifier'
+      additionalProperties:
+        $ref: '#/components/schemas/BrandIdentifier'
+      required:
+      - ein
+      description: Named business identifiers. Use the `ein` key for the required EIN and `stock_symbol` for a public-profit brand's stock symbol.
+    BrandContacts:
+      type: object
+      minProperties: 1
+      properties:
+        brand:
+          allOf:
+          - $ref: '#/components/schemas/BrandContact'
+          - properties:
+              contact_type:
+                const: BRAND
+      additionalProperties:
+        $ref: '#/components/schemas/BrandContact'
+      required:
+      - brand
+      description: Named business contacts. Use the `brand` key for the required BRAND contact.
+    BrandCreateRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        legal_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        legal_entity_type:
+          $ref: '#/components/schemas/BrandLegalEntityType'
+        organization_type:
+          $ref: '#/components/schemas/BrandOrganizationType'
+        website_url:
+          $ref: '#/components/schemas/HttpUrl'
+        profile_id:
+          type:
+          - string
+          - 'null'
+          maxLength: 36
+          description: A Messaging Profile owned by the authenticated organization. Agents inherit this value when they do not provide their own profile.
+        identifiers:
+          $ref: '#/components/schemas/BrandIdentifiers'
+        addresses:
+          type: object
+          minProperties: 1
+          additionalProperties:
+            $ref: '#/components/schemas/BrandAddress'
+        contacts:
+          $ref: '#/components/schemas/BrandContacts'
+      required:
+      - display_name
+      - legal_name
+      - legal_entity_type
+      - organization_type
+      - website_url
+      - identifiers
+      - addresses
+      - contacts
+      allOf:
+      - if:
+          properties:
+            organization_type:
+              const: PUBLIC_PROFIT
+          required:
+          - organization_type
+        then:
+          properties:
+            identifiers:
+              properties:
+                stock_symbol:
+                  $ref: '#/components/schemas/BrandIdentifier'
+              required:
+              - stock_symbol
+      example:
+        display_name: Acme
+        legal_name: Acme LLC
+        legal_entity_type: LIMITED_LIABILITY_COMPANY
+        organization_type: PRIVATE_PROFIT
+        website_url: https://www.example.com
+        profile_id: 40000000-0000-0000-0000-000000000001
+        identifiers:
+          ein:
+            identifier_type: EIN
+            value: 12-3456789
+        addresses:
+          primary:
+            line_1: 1 Main Street
+            city: Chicago
+            administrative_area: IL
+            postal_code: '60601'
+            country_code: US
+        contacts:
+          brand:
+            contact_type: BRAND
+            first_name: Jane
+            last_name: Doe
+            title: Messaging Operations Manager
+            email: jane@example.com
+            phone_number: '+13125550100'
+    ValidationErrorResponse:
+      type: object
+      properties:
+        detail:
+          type: array
+          items:
+            type: object
+            properties:
+              loc:
+                type: array
+                items:
+                  oneOf:
+                  - type: string
+                  - type: integer
+              msg:
+                type: string
+              type:
+                type: string
+            required:
+            - loc
+            - msg
+            - type
+      additionalProperties: true
+      example:
+        detail:
+        - loc:
+          - body
+          - display_name
+          msg: Field required
+          type: missing
+    EinBrandIdentifier:
+      type: object
+      additionalProperties: false
+      properties:
+        identifier_type:
+          const: EIN
+        value:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^(?:[0-9]{9}|[0-9]{2}-[0-9]{7})$
+          description: Nine digits, optionally formatted as NN-NNNNNNN.
+      required:
+      - identifier_type
+      - value
+    BrandContactType:
+      type: string
+      enum:
+      - BRAND
+      - PRIMARY
+      - OFFICER
+      - AGENT
+      - RESPONSIBLE_PARTY
+      - BILLING
+      - UNKNOWN
+    BrandResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        brand_id:
+          type: string
+          format: uuid
+        display_name:
+          type: string
+        legal_name:
+          type: string
+        legal_entity_type:
+          type: string
+        organization_type:
+          type: string
+        website_url:
+          $ref: '#/components/schemas/HttpUrl'
+        status:
+          $ref: '#/components/schemas/BrandState'
+        profile_id:
+          type:
+          - string
+          - 'null'
+        identifiers:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/BrandIdentifier'
+        addresses:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/BrandAddress'
+        contacts:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/BrandContact'
+        capabilities:
+          $ref: '#/components/schemas/CapabilitiesResponse'
+      required:
+      - brand_id
+      - display_name
+      - legal_name
+      - legal_entity_type
+      - organization_type
+      - website_url
+      - status
+      - profile_id
+      - identifiers
+      - addresses
+      - contacts
+      - capabilities
+      example:
+        brand_id: 11111111-1111-4111-8111-111111111111
+        display_name: Acme
+        legal_name: Acme LLC
+        legal_entity_type: LIMITED_LIABILITY_COMPANY
+        organization_type: PRIVATE_PROFIT
+        website_url: https://www.example.com
+        status: CREATED
+        profile_id: 40000000-0000-0000-0000-000000000001
+        identifiers:
+          ein:
+            identifier_type: EIN
+            value: 12-3456789
+        addresses:
+          primary:
+            line_1: 1 Main Street
+            city: Chicago
+            administrative_area: IL
+            postal_code: '60601'
+            country_code: US
+        contacts:
+          brand:
+            contact_type: BRAND
+            first_name: Jane
+            last_name: Doe
+            title: Messaging Operations Manager
+            email: jane@example.com
+            phone_number: '+13125550100'
+        capabilities:
+          brand_entity: true
+          brand_verification: true
+          submission_sections: true
+          distinct_launch_phase: false
+          per_carrier_approval: false
+          templates: false
+          campaigns: false
+          vendor_webhooks: false
+          invite_test_devices: false
+    BrandContact:
+      type: object
+      propertyNames:
+        enum:
+        - contact_type
+        - first_name
+        - last_name
+        - title
+        - email
+        - phone_number
+      properties:
+        contact_type:
+          $ref: '#/components/schemas/BrandContactType'
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        last_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        title:
+          type:
+          - string
+          - 'null'
+          minLength: 1
+          maxLength: 100
+        email:
+          type: string
+          minLength: 3
+          maxLength: 254
+          format: email
+          pattern: ^[^@\s]+@[^@\s]+\.[^@\s]+$
+        phone_number:
+          type: string
+          maxLength: 16
+          pattern: ^\+[1-9][0-9]{1,14}$
+      required:
+      - contact_type
+      - first_name
+      - last_name
+      - email
+      - phone_number
+  responses:
+    DependencyUnavailable:
+      description: A registration dependency is temporarily unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/rcs-registration_ErrorResponse'
+    rcs-registration_NotFound:
+      description: The resource does not exist, is not owned by the organization, or the provider does not support the requested capability.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/rcs-registration_ErrorResponse'
+    ValidationError:
+      description: The request body or parameters failed validation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+    rcs-registration_Conflict:
+      description: The operation is not allowed in the current lifecycle state or the idempotency key was used for a different request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/rcs-registration_ErrorResponse'
+    rcs-registration_Unauthorized:
+      description: The request is not authenticated.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/rcs-registration_ErrorResponse'
+  parameters:
+    BrandId:
+      name: id
+      in: path
+      required: true
+      description: The Telnyx-assigned brand identifier.
+      schema:
+        type: string
+        format: uuid
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

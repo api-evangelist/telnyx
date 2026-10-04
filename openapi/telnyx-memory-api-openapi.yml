@@ -1,0 +1,647 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Memory API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Memory
+  description: Write memories into a profile and recall them.
+paths:
+  /ai/memory/namespaces/{namespace}/profiles/{profile_id}/ingest:
+    post:
+      summary: Ingest a session's messages into a profile
+      operationId: IngestSession
+      tags:
+      - Memory
+      description: 'Store a session. Facts are extracted from whatever you send — the body is taken as any JSON value and stored whole, so a framework''s own transcript shape works unchanged. `messages` of `role`/`content` is the conventional shape, not a requirement. An empty object or a null body is refused. Carry a `session_id` to name the session: re-ingesting the same one replaces what it held. Omit it and a session is opened and returned. Extraction runs asynchronously — poll the returned operation.'
+      parameters:
+      - name: profile_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Profile Id
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Namespace
+      - name: session_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          description: 'Names the session. Re-ingesting the same session replaces what it held and keeps its `source_id`. Omit it to have one derived from the content and returned. No whitespace, control characters, or any of / \ # ? %.'
+          title: Session Id
+        description: 'Names the session. Re-ingesting the same session replaces what it held and keeps its `source_id`. Omit it to have one derived from the content and returned. No whitespace, control characters, or any of / \ # ? %.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IngestPayload'
+            examples:
+              session:
+                summary: A session you name
+                value:
+                  messages:
+                  - role: user
+                    content: Invoices go to 220 W Chicago Ave now.
+                  - role: assistant
+                    content: Got it.
+              new_session:
+                summary: A new session, opened for you
+                value:
+                  messages:
+                  - role: user
+                    content: I prefer email.
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestResponse'
+              example:
+                data:
+                  operation_id: op_01HZY4M7Q9
+                  profile_id: caller:+13128675309
+                  session_id: conv_8901
+                  source_id: b1e6c0a2-4f3d-4a2e-9c7b-8e1f2a3b4c5d
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: '10009'
+                  title: Authentication failed
+                  detail: Could not find any usable credentials in the request.
+                  source:
+                    pointer: /
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+        '404':
+          description: The namespace does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: namespace_not_found
+                  detail: no such namespace
+        '422':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: empty_payload
+                  detail: payload must carry something to remember
+        '502':
+          description: Upstream error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: upstream_error
+                  detail: the memory dataplane is unavailable
+  /ai/memory/namespaces/{namespace}/profiles/{profile_id}/recall:
+    post:
+      summary: Recall a profile's memories, ranked
+      operationId: RecallMemories
+      tags:
+      - Memory
+      parameters:
+      - name: profile_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Profile Id
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Namespace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecallRequest'
+            example:
+              query: where do invoices go?
+              top_k: 5
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecallResponse'
+              example:
+                data:
+                - id: mem_01HZY4
+                  text: Invoices go to 220 W Chicago Ave.
+                  recorded_at: '2026-08-26T21:14:11Z'
+                  score: 0.82
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: '10009'
+                  title: Authentication failed
+                  detail: Could not find any usable credentials in the request.
+                  source:
+                    pointer: /
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+        '404':
+          description: The namespace does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: namespace_not_found
+                  detail: no such namespace
+        '422':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: invalid_request
+                  detail: 'body.query: String should have at least 1 character'
+        '502':
+          description: Upstream error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: upstream_error
+                  detail: the memory dataplane is unavailable
+      description: Ranked memories for a question. Matching runs over the profile's memories and returns them in rank order with a relevance `score`; the score is null where the deployment's reranker is a passthrough, in which case order is the only signal. No model runs in this path — recall returns facts, it does not compose an answer.
+  /ai/memory/namespaces/{namespace}/profiles/{profile_id}/remember:
+    post:
+      summary: Remember one fact, stored as written
+      operationId: RememberFact
+      tags:
+      - Memory
+      description: 'For a fact the agent has already distilled: `text` is stored as given, with nothing extracted from it. Send a transcript to `ingest` instead. Remembering the same text again writes the same memory rather than a second copy of it, so a retry is safe. The write runs asynchronously -- poll the returned operation.'
+      parameters:
+      - name: profile_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Profile Id
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Namespace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RememberRequest'
+            example:
+              text: Prefers window seats and flies out of ORD
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RememberResponse'
+              example:
+                data:
+                  operation_id: op_01HZY4M7Q9
+                  profile_id: caller:+13128675309
+                  source_id: 9af23d17-2b6c-4d8e-a1f0-3c4b5d6e7f80
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: '10009'
+                  title: Authentication failed
+                  detail: Could not find any usable credentials in the request.
+                  source:
+                    pointer: /
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+        '404':
+          description: The namespace does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: namespace_not_found
+                  detail: no such namespace
+        '422':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: invalid_request
+                  detail: 'body.text: String should have at least 1 character'
+        '502':
+          description: Upstream error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: upstream_error
+                  detail: the memory dataplane is unavailable
+  /ai/memory/namespaces/{namespace}/profiles/{profile_id}/summary:
+    get:
+      summary: Get a profile's precomputed summary
+      operationId: GetProfileSummary
+      tags:
+      - Memory
+      description: 'The whole profile as one card, precomputed, with no query. Built for the start of a session, where there is no question to ask yet.
+
+
+        A summary is generated in the background. `is_stale` tells you newer memories have arrived since it was written; that is ordinary and the card is still usable.'
+      parameters:
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          description: The namespace. `default` exists for every organization.
+        description: The namespace. `default` exists for every organization.
+      - name: profile_id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: 'The profile: your identifier for the user, caller or agent this memory is about.'
+      responses:
+        '200':
+          description: The profile's summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SummaryResponse'
+              example:
+                data:
+                  profile_id: user-42
+                  text: '## Profile Summary
+
+
+                    - Prefers Slack over email.
+
+                    - Timezone: US Central.'
+                  generated_at: '2026-09-18T18:32:17.501833+00:00'
+                  is_stale: false
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: '10009'
+                  title: Authentication failed
+                  detail: Could not find any usable credentials in the request.
+                  source:
+                    pointer: /
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+        '404':
+          description: The namespace does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: namespace_not_found
+                  detail: no such namespace
+        '502':
+          description: Upstream error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: upstream_error
+                  detail: the memory dataplane is unavailable
+components:
+  schemas:
+    AcceptedMemory:
+      properties:
+        operation_id:
+          type: string
+          title: Operation Id
+        profile_id:
+          type: string
+          title: Profile Id
+        source_id:
+          type: string
+          title: Source Id
+          description: 'Identifies one source within its profile: an ingested session, or one remembered fact. Returned by `ingest` and `remember` when the write is accepted. Re-ingesting a session keeps its source id.'
+      type: object
+      required:
+      - operation_id
+      - profile_id
+      - source_id
+      title: AcceptedMemory
+    RecallRequest:
+      properties:
+        query:
+          type: string
+          maxLength: 4096
+          minLength: 1
+          title: Query
+        top_k:
+          anyOf:
+          - type: integer
+            maximum: 100
+            minimum: 1
+          - type: 'null'
+          title: Top K
+      type: object
+      required:
+      - query
+      title: RecallRequest
+    IngestPayload:
+      title: Payload
+      description: 'The session''s messages, in whatever shape your framework produces. Any JSON value but null is accepted and stored whole, as long as it holds something to remember: a body with no content anywhere in it -- `{}`, `[]`, `""`, `{"messages": []}` -- is a 422.'
+      anyOf:
+      - type: object
+        additionalProperties: true
+      - type:
+        - array
+        - string
+        - number
+        - boolean
+    SummaryResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/ProfileSummary'
+      type: object
+      required:
+      - data
+      title: SummaryResponse
+    IngestResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/AcceptedIngest'
+      type: object
+      required:
+      - data
+      title: IngestResponse
+    TelnyxErrors:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/TelnyxError'
+    ProfileSummary:
+      properties:
+        profile_id:
+          type: string
+          title: Profile Id
+        text:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Text
+          description: The precomputed summary, ready to place in an assistant's context at the start of a session.
+        generated_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Generated At
+          description: When the summary was last generated. Null while none is ready.
+        is_stale:
+          type: boolean
+          title: Is Stale
+          description: Whether newer memories have arrived since the summary was generated. The summary is regenerated in the background, so a true here is ordinary and the summary is still usable.
+      type: object
+      required:
+      - profile_id
+      - is_stale
+      title: ProfileSummary
+    RecallResponse:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/RecalledMemory'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: RecallResponse
+    RememberResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/AcceptedMemory'
+      type: object
+      required:
+      - data
+      title: RememberResponse
+    RecalledMemory:
+      properties:
+        id:
+          type: string
+          title: Id
+        text:
+          type: string
+          title: Text
+        recorded_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Recorded At
+        score:
+          anyOf:
+          - type: number
+            minimum: 0
+            maximum: 1
+          - type: 'null'
+          title: Score
+          description: Relevance, 0-1. Null where the deployment's reranker is a passthrough; results are in rank order either way.
+      type: object
+      required:
+      - id
+      - text
+      title: RecalledMemory
+    RememberRequest:
+      properties:
+        text:
+          type: string
+          minLength: 1
+          title: Text
+      type: object
+      required:
+      - text
+      title: RememberRequest
+    TelnyxError:
+      type: object
+      properties:
+        code:
+          type: string
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              type: string
+        meta:
+          type: object
+          properties:
+            url:
+              type: string
+    AcceptedIngest:
+      properties:
+        operation_id:
+          type: string
+          title: Operation Id
+        profile_id:
+          type: string
+          title: Profile Id
+        session_id:
+          type: string
+          title: Session Id
+        source_id:
+          type: string
+          title: Source Id
+          description: 'Identifies one source within its profile: an ingested session, or one remembered fact. Returned by `ingest` and `remember` when the write is accepted. Re-ingesting a session keeps its source id.'
+      type: object
+      required:
+      - operation_id
+      - profile_id
+      - session_id
+      - source_id
+      title: AcceptedIngest
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

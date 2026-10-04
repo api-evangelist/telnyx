@@ -1,11 +1,13 @@
 openapi: 3.2.0
 info:
-  contact:
-    email: support@telnyx.com
-  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
   title: Telnyx OTA updates API
   version: 2.0.0
+  contact:
+    email: support@telnyx.com
   x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged OTA updates across 2 of this provider''s published API definitions: telnyx-openapi.yml, telnyx-openapi.json. Each path carries the servers of the definition it was published in.'
 servers:
 - description: Version 2.0.0 of the Telnyx API
   url: https://api.telnyx.com/v2
@@ -32,6 +34,9 @@ paths:
       tags:
       - OTA Updates
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /ota_updates/{id}:
     get:
       description: This API returns the details of an Over the Air (OTA) update.
@@ -49,35 +54,84 @@ paths:
       tags:
       - OTA Updates
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
 components:
+  parameters:
+    wireless_PageConsolidated:
+      description: 'Consolidated pagination parameter (deepObject style). Originally: page[number], page[size]'
+      explode: true
+      in: query
+      name: page
+      schema:
+        properties:
+          number:
+            default: 1
+            description: The page number to load.
+            minimum: 1
+            type: integer
+          size:
+            default: 20
+            description: The size of the page.
+            maximum: 250
+            minimum: 1
+            type: integer
+        type: object
+    FilterOTAUpdatesConsolidated:
+      description: 'Consolidated filter parameter for OTA updates (deepObject style). Originally: filter[status], filter[sim_card_id], filter[type]'
+      explode: true
+      in: query
+      name: filter
+      schema:
+        properties:
+          sim_card_id:
+            description: The SIM card identification UUID.
+            type: string
+          status:
+            description: Filter by a specific status of the resource's lifecycle.
+            enum:
+            - in-progress
+            - completed
+            - failed
+            example: in-progress
+            type: string
+          type:
+            description: Filter by type.
+            enum:
+            - sim_card_network_preferences
+            example: sim_card_network_preferences
+            type: string
+        type: object
+    ResourceId:
+      description: Identifies the resource.
+      in: path
+      name: id
+      required: true
+      schema:
+        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+        format: uuid
+        type: string
+    wireless_PageConsolidated_c5290d5308:
+      name: page
+      in: query
+      explode: true
+      description: 'Consolidated pagination parameter (deepObject style). Originally: page[number], page[size]'
+      schema:
+        type: object
+        properties:
+          number:
+            type: integer
+            minimum: 1
+            default: 1
+            description: The page number to load.
+          size:
+            type: integer
+            minimum: 1
+            maximum: 250
+            default: 20
+            description: The size of the page.
   schemas:
-    MobileNetworkOperatorsPreferencesResponse:
-      description: A list of mobile network operators and the priority that should be applied when the SIM is connecting to the network.
-      items:
-        $ref: '#/components/schemas/MobileNetworkOperatorPreferencesResponse'
-      type: array
-    wireless_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/wireless_Error'
-          type: array
-      type: object
-    PaginationMeta:
-      properties:
-        page_number:
-          example: 2
-          type: integer
-        page_size:
-          example: 25
-          type: integer
-        total_pages:
-          example: 3
-          type: integer
-        total_results:
-          example: 55
-          type: integer
-      type: object
     wireless_Error:
       properties:
         code:
@@ -101,66 +155,6 @@ components:
       required:
       - code
       - title
-      type: object
-    MobileNetworkOperatorPreferencesResponse:
-      description: ''
-      properties:
-        mobile_network_operator_id:
-          description: The mobile network operator resource identification UUID.
-          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-          format: uuid
-          type: string
-        mobile_network_operator_name:
-          description: The mobile network operator resource name.
-          example: AT&T Mobility (USACG)
-          type: string
-        priority:
-          description: It determines what is the priority of a specific network operator that should be assumed by a SIM card when connecting to a network. The highest priority is 0, the second highest is 1 and so on.
-          example: 0
-          type: integer
-      type: object
-    SimplifiedOTAUpdate:
-      description: This object represents an Over the Air (OTA) update request. It allows tracking the current status of a operation that apply settings in a particular SIM card. <br/><br/>
-      properties:
-        created_at:
-          description: ISO 8601 formatted date-time indicating when the resource was created.
-          example: '2018-02-02T22:25:27.521Z'
-          readOnly: true
-          type: string
-        id:
-          description: Identifies the resource.
-          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-          format: uuid
-          readOnly: true
-          type: string
-        record_type:
-          example: ota_update
-          readOnly: true
-          type: string
-        sim_card_id:
-          description: The identification UUID of the related SIM card resource.
-          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-          format: uuid
-          type: string
-        status:
-          enum:
-          - in-progress
-          - completed
-          - failed
-          example: in-progress
-          type: string
-        type:
-          description: Represents the type of the operation requested. This will relate directly to the source of the request.
-          enum:
-          - sim_card_network_preferences
-          example: sim_card_network_preferences
-          type: string
-        updated_at:
-          description: ISO 8601 formatted date-time indicating when the resource was updated.
-          example: '2018-02-02T22:25:27.521Z'
-          readOnly: true
-          type: string
-      title: OTAUpdate
       type: object
     CompleteOTAUpdate:
       description: This object represents an Over the Air (OTA) update request. It allows tracking the current status of a operation that apply settings in a particular SIM card. <br/><br/>
@@ -224,13 +218,127 @@ components:
           type: string
       title: OTAUpdate
       type: object
+    MobileNetworkOperatorsPreferencesResponse:
+      description: A list of mobile network operators and the priority that should be applied when the SIM is connecting to the network.
+      items:
+        $ref: '#/components/schemas/MobileNetworkOperatorPreferencesResponse'
+      type: array
+    PaginationMeta:
+      properties:
+        page_number:
+          example: 2
+          type: integer
+        page_size:
+          example: 25
+          type: integer
+        total_pages:
+          example: 3
+          type: integer
+        total_results:
+          example: 55
+          type: integer
+      type: object
+    wireless_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/wireless_Error'
+          type: array
+      type: object
+    SimplifiedOTAUpdate:
+      description: This object represents an Over the Air (OTA) update request. It allows tracking the current status of a operation that apply settings in a particular SIM card. <br/><br/>
+      properties:
+        created_at:
+          description: ISO 8601 formatted date-time indicating when the resource was created.
+          example: '2018-02-02T22:25:27.521Z'
+          readOnly: true
+          type: string
+        id:
+          description: Identifies the resource.
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+          format: uuid
+          readOnly: true
+          type: string
+        record_type:
+          example: ota_update
+          readOnly: true
+          type: string
+        sim_card_id:
+          description: The identification UUID of the related SIM card resource.
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+          format: uuid
+          type: string
+        status:
+          enum:
+          - in-progress
+          - completed
+          - failed
+          example: in-progress
+          type: string
+        type:
+          description: Represents the type of the operation requested. This will relate directly to the source of the request.
+          enum:
+          - sim_card_network_preferences
+          example: sim_card_network_preferences
+          type: string
+        updated_at:
+          description: ISO 8601 formatted date-time indicating when the resource was updated.
+          example: '2018-02-02T22:25:27.521Z'
+          readOnly: true
+          type: string
+      title: OTAUpdate
+      type: object
+    MobileNetworkOperatorPreferencesResponse:
+      description: ''
+      properties:
+        mobile_network_operator_id:
+          description: The mobile network operator resource identification UUID.
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+          format: uuid
+          type: string
+        mobile_network_operator_name:
+          description: The mobile network operator resource name.
+          example: AT&T Mobility (USACG)
+          type: string
+        priority:
+          description: It determines what is the priority of a specific network operator that should be assumed by a SIM card when connecting to a network. The highest priority is 0, the second highest is 1 and so on.
+          example: 0
+          type: integer
+      type: object
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
   responses:
-    wireless_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/wireless_Errors'
-      description: Unexpected error
     SearchOTAUpdateResponse:
       content:
         application/json:
@@ -253,60 +361,26 @@ components:
                 $ref: '#/components/schemas/CompleteOTAUpdate'
             type: object
       description: Successful response
-  parameters:
-    FilterOTAUpdatesConsolidated:
-      description: 'Consolidated filter parameter for OTA updates (deepObject style). Originally: filter[status], filter[sim_card_id], filter[type]'
-      explode: true
-      in: query
-      name: filter
-      schema:
-        properties:
-          sim_card_id:
-            description: The SIM card identification UUID.
-            type: string
-          status:
-            description: Filter by a specific status of the resource's lifecycle.
-            enum:
-            - in-progress
-            - completed
-            - failed
-            example: in-progress
-            type: string
-          type:
-            description: Filter by type.
-            enum:
-            - sim_card_network_preferences
-            example: sim_card_network_preferences
-            type: string
-        type: object
-    wireless_PageConsolidated:
-      description: 'Consolidated pagination parameter (deepObject style). Originally: page[number], page[size]'
-      explode: true
-      in: query
-      name: page
-      schema:
-        properties:
-          number:
-            default: 1
-            description: The page number to load.
-            minimum: 1
-            type: integer
-          size:
-            default: 20
-            description: The size of the page.
-            maximum: 250
-            minimum: 1
-            type: integer
-        type: object
-    ResourceId:
-      description: Identifies the resource.
-      in: path
-      name: id
-      required: true
-      schema:
-        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-        format: uuid
-        type: string
+    wireless_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/wireless_Errors'
+      description: Unexpected error
+    wireless_GenericErrorResponse_c5290d5308:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          examples:
+            unexpectedError:
+              summary: Unexpected API error
+              value:
+                errors:
+                - code: '10007'
+                  title: Unexpected error
+                  detail: An unexpected error occured.
   securitySchemes:
     bearerAuth:
       scheme: bearer
@@ -341,3 +415,40 @@ components:
       bearerFormat: JWT
       scheme: bearer
       type: http
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-refined-from:
+- telnyx-openapi.yml
+- telnyx-openapi.json

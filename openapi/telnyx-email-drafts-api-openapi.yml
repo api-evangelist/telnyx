@@ -1,0 +1,1362 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Email Drafts API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Email Drafts
+  description: Create, list, retrieve, update, delete, and send unsent draft messages belonging to an agent inbox.
+paths:
+  /email_inboxes/{inbox_id}/drafts:
+    get:
+      tags:
+      - Email Drafts
+      operationId: ListEmailDrafts
+      summary: List drafts in an inbox
+      description: 'Lists drafts newest first using stable cursor pagination. All access is scoped
+
+        to the authenticated account and the given inbox.'
+      parameters:
+      - name: inbox_id
+        in: path
+        required: true
+        description: Email inbox UUID.
+        schema:
+          type: string
+          format: uuid
+      - name: filter[status]
+        in: query
+        required: false
+        description: Restrict results to drafts in this state.
+        schema:
+          type: string
+          enum:
+          - draft
+          - sending
+          - sent
+      - name: page[size]
+        in: query
+        required: false
+        description: Number of results to return. Defaults to 25; maximum is 100.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+      - name: page[after]
+        in: query
+        required: false
+        description: Opaque cursor returned by the previous page.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Paginated drafts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailDraftListResponse'
+              example:
+                data:
+                - record_type: email_draft
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  inbox_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  status: draft
+                  from: string
+                  from_name: string
+                  to:
+                  - email: string
+                    name: string
+                  cc:
+                  - email: string
+                    name: string
+                  bcc:
+                  - email: string
+                    name: string
+                  reply_to: string
+                  subject: string
+                  text_body: string
+                  html_body: string
+                  attachments: []
+                  labels:
+                  - string
+                  tags:
+                  - string
+                  reply_to_message_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  thread_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  sent_message_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  sent_at: '2024-01-23T18:10:02.574Z'
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  updated_at: '2024-01-23T18:10:02.574Z'
+                meta:
+                  page_size: 1
+                  page_cursor: string
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '503':
+          $ref: '#/components/responses/DraftUnavailableResponse'
+    post:
+      tags:
+      - Email Drafts
+      operationId: CreateEmailDraft
+      summary: Create a draft
+      description: 'Creates an unsent draft in the inbox. Every field is optional — a draft is a
+
+        work-in-progress and may be saved incomplete. Send-time requirements (sender,
+
+        subject, at least one recipient) are enforced when the draft is sent, not when
+
+        it is created.
+
+
+        Drafts are unbillable and emit no Email Detail Records until they are sent.'
+      parameters:
+      - name: inbox_id
+        in: path
+        required: true
+        description: Email inbox UUID.
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailDraftRequest'
+            example:
+              to:
+              - email: recipient@example.com
+                name: Recipient
+              subject: Quarterly update
+              text_body: Here is the update.
+              labels:
+              - important
+      responses:
+        '201':
+          description: The created draft.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailDraftResponse'
+              example:
+                data:
+                  record_type: email_draft
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  inbox_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  status: draft
+                  from: string
+                  from_name: string
+                  to:
+                  - email: string
+                    name: string
+                  cc:
+                  - email: string
+                    name: string
+                  bcc:
+                  - email: string
+                    name: string
+                  reply_to: string
+                  subject: string
+                  text_body: string
+                  html_body: string
+                  attachments: []
+                  labels:
+                  - string
+                  tags:
+                  - string
+                  reply_to_message_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  thread_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  sent_message_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  sent_at: '2024-01-23T18:10:02.574Z'
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  updated_at: '2024-01-23T18:10:02.574Z'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+        '503':
+          $ref: '#/components/responses/DraftUnavailableResponse'
+  /email_inboxes/{inbox_id}/drafts/{draft_id}:
+    delete:
+      tags:
+      - Email Drafts
+      operationId: DeleteEmailDraft
+      summary: Delete a draft
+      description: 'Permanently deletes an unsent draft. Drafts that are being sent or have been sent
+
+        cannot be deleted; sent drafts are retained for audit.'
+      parameters:
+      - $ref: '#/components/parameters/DraftInboxId'
+      - $ref: '#/components/parameters/DraftId'
+      responses:
+        '204':
+          description: The draft was deleted.
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '422':
+          description: The draft is being sent or has already been sent and is retained for audit.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              example:
+                errors:
+                - code: '10027'
+                  title: Unprocessable Entity
+                  detail: The server understood the syntax of the request but was unable to process the instructions.
+        '503':
+          $ref: '#/components/responses/DraftUnavailableResponse'
+    get:
+      tags:
+      - Email Drafts
+      operationId: GetEmailDraft
+      summary: Retrieve a draft
+      description: 'Returns a single draft. Drafts that have been sent remain retrievable, so the
+
+        exact content that was sent stays auditable.'
+      parameters:
+      - $ref: '#/components/parameters/DraftInboxId'
+      - $ref: '#/components/parameters/DraftId'
+      responses:
+        '200':
+          description: The requested draft.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailDraftResponse'
+              example:
+                data:
+                  record_type: email_draft
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  inbox_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  status: draft
+                  from: string
+                  from_name: string
+                  to:
+                  - email: string
+                    name: string
+                  cc:
+                  - email: string
+                    name: string
+                  bcc:
+                  - email: string
+                    name: string
+                  reply_to: string
+                  subject: string
+                  text_body: string
+                  html_body: string
+                  attachments: []
+                  labels:
+                  - string
+                  tags:
+                  - string
+                  reply_to_message_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  thread_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  sent_message_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  sent_at: '2024-01-23T18:10:02.574Z'
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  updated_at: '2024-01-23T18:10:02.574Z'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '503':
+          $ref: '#/components/responses/DraftUnavailableResponse'
+    patch:
+      tags:
+      - Email Drafts
+      operationId: PatchEmailDraft
+      summary: Update a draft (alias)
+      description: Identical to `PUT`; both apply a partial update to the supplied fields.
+      parameters:
+      - $ref: '#/components/parameters/DraftInboxId'
+      - $ref: '#/components/parameters/DraftId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailDraftRequest'
+            example:
+              subject: Quarterly update (revised)
+              text_body: Updated body.
+      responses:
+        '200':
+          description: The updated draft.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailDraftResponse'
+              example:
+                data:
+                  record_type: email_draft
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  inbox_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  status: draft
+                  from: string
+                  from_name: string
+                  to:
+                  - email: string
+                    name: string
+                  cc:
+                  - email: string
+                    name: string
+                  bcc:
+                  - email: string
+                    name: string
+                  reply_to: string
+                  subject: string
+                  text_body: string
+                  html_body: string
+                  attachments: []
+                  labels:
+                  - string
+                  tags:
+                  - string
+                  reply_to_message_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  thread_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  sent_message_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  sent_at: '2024-01-23T18:10:02.574Z'
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  updated_at: '2024-01-23T18:10:02.574Z'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+        '503':
+          $ref: '#/components/responses/DraftUnavailableResponse'
+    put:
+      tags:
+      - Email Drafts
+      operationId: UpdateEmailDraft
+      summary: Update a draft
+      description: 'Updates the supplied fields on a draft. `account_id` and `inbox_id` are
+
+        server-owned and ignored if present in the body, so a draft can never be moved
+
+        between accounts or inboxes.
+
+
+        A draft that is being sent or has already been sent is immutable and returns
+
+        422 — modifying it would race with delivery or rewrite the record of what was
+
+        actually sent.'
+      parameters:
+      - $ref: '#/components/parameters/DraftInboxId'
+      - $ref: '#/components/parameters/DraftId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailDraftRequest'
+            example:
+              subject: Quarterly update (revised)
+              text_body: Updated body.
+      responses:
+        '200':
+          description: The updated draft.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailDraftResponse'
+              example:
+                data:
+                  record_type: email_draft
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  inbox_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  status: draft
+                  from: string
+                  from_name: string
+                  to:
+                  - email: string
+                    name: string
+                  cc:
+                  - email: string
+                    name: string
+                  bcc:
+                  - email: string
+                    name: string
+                  reply_to: string
+                  subject: string
+                  text_body: string
+                  html_body: string
+                  attachments: []
+                  labels:
+                  - string
+                  tags:
+                  - string
+                  reply_to_message_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  thread_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  sent_message_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  sent_at: '2024-01-23T18:10:02.574Z'
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  updated_at: '2024-01-23T18:10:02.574Z'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+        '503':
+          $ref: '#/components/responses/DraftUnavailableResponse'
+  /email_inboxes/{inbox_id}/drafts/{draft_id}/send:
+    post:
+      tags:
+      - Email Drafts
+      operationId: SendEmailDraft
+      summary: Send a draft
+      description: 'Sends the draft through the standard send pipeline — the same domain resolution,
+
+        suppression, reputation, daily-quota, persistence and Detail Record behaviour as
+
+        `POST /v2/email_messages`. The response body is the created email message.
+
+
+        If the draft has no explicit `from_email`, the inbox address is used.
+
+
+        The draft is marked `sent` only after the send is accepted; a send rejected for
+
+        suppression, quota or reputation leaves the draft editable so it can be fixed and
+
+        retried. A draft that is already `sent` returns 422 rather than sending twice.'
+      parameters:
+      - $ref: '#/components/parameters/DraftInboxId'
+      - $ref: '#/components/parameters/DraftId'
+      responses:
+        '202':
+          description: The draft was accepted for delivery. Returns the created email message.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailMessageResponse'
+        '400':
+          description: The draft is missing fields required to send (sender, subject, or recipients).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              example:
+                errors:
+                - code: '10015'
+                  title: Bad Request
+                  detail: The request failed because it was not well-formed.
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '403':
+          description: The sender domain is not permitted to send.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '422':
+          description: The draft has already been sent, or failed send-time validation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              example:
+                errors:
+                - code: '10015'
+                  title: Validation Failed
+                  detail: this draft has already been sent
+                  source:
+                    pointer: /data/attributes/status
+        '429':
+          $ref: '#/components/responses/EmailSendTooManyRequestsResponse'
+        '503':
+          $ref: '#/components/responses/DraftUnavailableResponse'
+  /email_inboxes/{inbox_id}/messages/{message_id}/drafts:
+    post:
+      tags:
+      - Email Drafts
+      operationId: CreateEmailReplyDraft
+      summary: Create a reply draft
+      description: 'Creates an unsent reply draft for an inbound message. Unlike the
+
+        `/actions/reply` endpoint, which sends immediately, this stores a draft that can
+
+        be reviewed and edited before sending.
+
+
+        `reply_to_message_id` and `thread_id` are inherited from the parent message and
+
+        cannot be set by the caller. The recipient, `Re:` subject and
+
+        `In-Reply-To`/`References` headers are pre-filled from the parent using the same
+
+        rules as a live reply, so sending the draft threads identically. Supplying `to`
+
+        or `subject` explicitly overrides the pre-filled value.'
+      parameters:
+      - $ref: '#/components/parameters/DraftInboxId'
+      - name: message_id
+        in: path
+        required: true
+        description: Inbound message UUID to reply to.
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailDraftRequest'
+            example:
+              text_body: Thanks for the update — I will review today.
+      responses:
+        '201':
+          description: The created reply draft.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailDraftResponse'
+              example:
+                data:
+                  record_type: email_draft
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  inbox_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  status: draft
+                  from: string
+                  from_name: string
+                  to:
+                  - email: string
+                    name: string
+                  cc:
+                  - email: string
+                    name: string
+                  bcc:
+                  - email: string
+                    name: string
+                  reply_to: string
+                  subject: string
+                  text_body: string
+                  html_body: string
+                  attachments: []
+                  labels:
+                  - string
+                  tags:
+                  - string
+                  reply_to_message_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  thread_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  sent_message_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  sent_at: '2024-01-23T18:10:02.574Z'
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  updated_at: '2024-01-23T18:10:02.574Z'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+        '503':
+          $ref: '#/components/responses/DraftUnavailableResponse'
+components:
+  schemas:
+    email_PaginationMeta:
+      type: object
+      properties:
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        page_cursor:
+          type: string
+          description: Cursor for the next page, when more results are available.
+      required:
+      - page_size
+    EmailMessageResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailMessage'
+        suppressed:
+          type: array
+          description: Recipients removed by suppression checks when at least one recipient remains and the message is accepted.
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
+      required:
+      - data
+    ErrorObject:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Telnyx error code. Send admission errors include account daily quota 10011 and sender-domain ramp code domain_graduation_limit_exceeded. Edge idempotency errors use 10027 or 10036. Fallback 404/500 responses from the framework may use string status codes ('404', '500') instead.
+          enum:
+          - '10001'
+          - '10006'
+          - '10007'
+          - '10011'
+          - '10015'
+          - '10016'
+          - '10019'
+          - domain_graduation_limit_exceeded
+          - recipient_suppressed
+          - reputation_suspended
+          - '404'
+          - '500'
+          - '10027'
+          - '10036'
+        title:
+          type: string
+        detail:
+          description: Human-readable error detail. Changeset responses may return a structured object.
+          oneOf:
+          - type: string
+          - type: object
+            additionalProperties: true
+        source:
+          type: object
+          additionalProperties: true
+          nullable: true
+        meta:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: Additional metadata. Present on 401 errors with a documentation URL.
+      required:
+      - code
+      - title
+      - detail
+    EmailEventType:
+      type: string
+      description: Bare stored event names returned by message history. In addition to the normal send and delivery lifecycle, polling can expose suppression, scan, and quarantine lifecycle rows. Sharp canonical names gw_reject, injection_timeout, and expired distinguish gateway rejection, ambiguous injection timeout, and MTA expiration. The failed and bounced names remain valid for system/admin failures and hard bounces respectively. Existing stored rows retain their original names.
+      enum:
+      - queued
+      - deferred
+      - scheduled
+      - cancelled
+      - sandbox
+      - sending
+      - sent
+      - failed
+      - delivered
+      - bounced
+      - complained
+      - suppressed
+      - rejected
+      - opened
+      - clicked
+      - unsubscribed
+      - daily_limit_exceeded
+      - scan_deferred
+      - quarantined
+      - quarantine_released
+      - quarantine_release_dispatched
+      - quarantine_rejected
+      - quarantine_expired
+      - gw_reject
+      - injection_timeout
+      - expired
+    ReputationSuspendedError:
+      type: object
+      description: Non-standard error envelope returned when the sending domain's reputation band is 'poor'. Uses string code `reputation_suspended` instead of a numeric code.
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: object
+            required:
+            - code
+            - title
+            - detail
+            properties:
+              code:
+                type: string
+                enum:
+                - reputation_suspended
+              title:
+                type: string
+                example: Sending Suspended
+              detail:
+                type: string
+    EmbeddedMessageEvent:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/EmailEventType'
+        occurred_at:
+          type: string
+          format: date-time
+        payload:
+          type: object
+          additionalProperties: true
+      required:
+      - type
+      - occurred_at
+      description: An event embedded in a message response. The dedicated per-message events endpoint additionally returns event_type and canonical_event_type.
+    EmailDraft:
+      type: object
+      description: An unsent, mutable draft message belonging to an inbox.
+      properties:
+        record_type:
+          type: string
+          enum:
+          - email_draft
+        id:
+          type: string
+          format: uuid
+        inbox_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - draft
+          - sending
+          - sent
+          description: '`draft` until the draft is sent. A sent draft is retained for audit and
+
+            becomes immutable.
+
+            '
+        from:
+          type: string
+          nullable: true
+          description: Sender address. Defaults to the inbox address at send time when null.
+        from_name:
+          type: string
+          nullable: true
+        to:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailAddress'
+        cc:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailAddress'
+        bcc:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailAddress'
+        reply_to:
+          type: string
+          nullable: true
+        subject:
+          type: string
+          nullable: true
+        text_body:
+          type: string
+          nullable: true
+        html_body:
+          type: string
+          nullable: true
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: Custom headers. Reply drafts carry `In-Reply-To` and `References`.
+        attachments:
+          type: array
+          items:
+            type: object
+        labels:
+          type: array
+          items:
+            type: string
+          description: Mutable mailbox-state labels. Not propagated to Email Detail Records.
+        tags:
+          type: array
+          items:
+            type: string
+          description: Transport/reporting attribution tags, propagated to Email Detail Records at send time.
+        metadata:
+          type: object
+          description: Arbitrary customer-defined metadata.
+        reply_to_message_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Inbound message this draft replies to. Server-owned; set only on reply drafts.
+        thread_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Conversation thread inherited from the parent message.
+        sent_message_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: The email message created when this draft was sent.
+        sent_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+      - record_type
+      - id
+      - inbox_id
+      - status
+    DomainGraduationLimitExceededError:
+      type: object
+      description: Error envelope returned when a newly sending custom domain on shared egress would exceed its current daily graduation ceiling. The send is rejected before message creation.
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: object
+            required:
+            - code
+            - title
+            - detail
+            properties:
+              code:
+                type: string
+                enum:
+                - domain_graduation_limit_exceeded
+              title:
+                type: string
+                example: Too Many Requests
+              detail:
+                type: string
+                example: Daily send limit of 250 recipients for this sender domain exceeded. The limit resets at midnight UTC.
+              meta:
+                type: object
+                description: Bounded retry guidance. Each field is omitted when unknown.
+                additionalProperties: false
+                properties:
+                  retry_after_seconds:
+                    type: integer
+                    minimum: 1
+                    description: Seconds until the next UTC-midnight reset.
+                  remaining_today:
+                    type: integer
+                    minimum: 0
+                    description: Recipient headroom remaining for the sender-domain identity before this rejected request.
+    DailySendLimitError:
+      type: object
+      description: Error envelope returned when the account's daily recipient quota is exhausted before message creation.
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: object
+            required:
+            - code
+            - title
+            - detail
+            properties:
+              code:
+                type: string
+                enum:
+                - '10011'
+              title:
+                type: string
+                example: Too Many Requests
+              detail:
+                type: string
+                example: Daily send limit of 1000 recipients exceeded. The limit resets at midnight UTC.
+    AttachmentResponse:
+      type: object
+      description: EDR-aligned attachment metadata. The base64 `content` is never returned.
+      properties:
+        url:
+          type: string
+          format: uri
+          nullable: true
+          description: Telnyx-hosted public URL for the attachment content.
+        sha256:
+          type: string
+          nullable: true
+          description: SHA-256 hex digest of the attachment content.
+        size_bytes:
+          type: integer
+          nullable: true
+          description: Attachment size in bytes.
+        filename:
+          type: string
+        content_type:
+          type: string
+        disposition:
+          type: string
+          default: attachment
+          description: MIME disposition (e.g. `attachment` or `inline`). Runtime passes through the stored value without enforcing an enum.
+        content_id:
+          type: string
+          nullable: true
+          description: MIME Content-ID for inline references.
+      required:
+      - url
+      - sha256
+      - size_bytes
+      - filename
+      - content_type
+      - disposition
+      - content_id
+    email_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorObject'
+        suppressed:
+          type: array
+          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
+      required:
+      - errors
+    EmailAddress:
+      type: object
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+      required:
+      - email
+    EmailAddressInput:
+      oneOf:
+      - type: string
+      - $ref: '#/components/schemas/EmailAddress'
+    EmailDraftResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailDraft'
+      required:
+      - data
+    SuppressedRecipient:
+      type: object
+      properties:
+        to:
+          type: string
+          format: email
+          description: Suppressed recipient email address.
+        reason:
+          type: string
+          description: Suppression reason returned by the recipient suppression service.
+        scope:
+          type: string
+          description: Scope at which the suppression applies.
+        override_allowed:
+          type: boolean
+          description: Whether an authorized send may override this suppression.
+      required:
+      - to
+      - reason
+      - scope
+      - override_allowed
+    EmailDraftRequest:
+      type: object
+      description: 'All fields are optional — a draft may be saved incomplete. `account_id`,
+
+        `inbox_id`, `status`, `sent_at`, `sent_message_id`, `reply_to_message_id` and
+
+        `thread_id` are server-owned and ignored if supplied.
+
+        '
+      properties:
+        from_email:
+          type: string
+        from_name:
+          type: string
+        to:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailAddressInput'
+        cc:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailAddressInput'
+        bcc:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailAddressInput'
+        reply_to:
+          type: string
+        subject:
+          type: string
+          maxLength: 255
+        text_body:
+          type: string
+        html_body:
+          type: string
+        text:
+          type: string
+          description: Alias for `text_body`, matching the send endpoint.
+        html:
+          type: string
+          description: Alias for `html_body`, matching the send endpoint.
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+        attachments:
+          type: array
+          items:
+            type: object
+        labels:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+        metadata:
+          type: object
+    EmailMessageStatus:
+      type: string
+      description: Current status of an email message. Lifecycle statuses (queued, scheduled, etc.) are set on creation. Delivery statuses (delivered, bounced, etc.) are updated by delivery event consumers.
+      enum:
+      - queued
+      - scheduled
+      - cancelled
+      - sandbox
+      - sending
+      - sent
+      - failed
+      - deferred
+      - delivered
+      - bounced
+      - complained
+      - rejected
+      - opened
+      - clicked
+      - unsubscribed
+    EmailMessage:
+      type: object
+      properties:
+        record_type:
+          type: string
+          enum:
+          - email_message
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/EmailMessageStatus'
+        from:
+          $ref: '#/components/schemas/EmailAddress'
+        to:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailAddress'
+        cc:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailAddress'
+        bcc:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailAddress'
+        reply_to:
+          type: string
+          nullable: true
+        subject:
+          type: string
+        template_id:
+          type: string
+          format: uuid
+          nullable: true
+        template_variables:
+          type: object
+          additionalProperties: true
+          default: {}
+        tags:
+          type: array
+          default: []
+          items:
+            type: string
+          description: Customer-supplied tags stored with the message.
+        metadata:
+          type: object
+          additionalProperties: true
+          default: {}
+          description: Customer-supplied metadata stored with the message.
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentResponse'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmbeddedMessageEvent'
+        created_at:
+          type: string
+          format: date-time
+        scheduled_at:
+          type: string
+          format: date-time
+          description: Present when a scheduled_at value was stored. Persists even after the scheduled send has been processed or cancelled.
+        inline_css:
+          type: boolean
+          description: Present when true in the immediate create response. Not persisted; absent on subsequent GET requests.
+        sandbox:
+          type: boolean
+          description: Present when sandbox mode was used.
+        recipient_statuses:
+          type: object
+          description: 'Per-status recipient counts for the message. Present only for outbound messages
+
+            with recipient rows. Keys are recipient statuses, values are counts.
+
+            Example: `{"delivered": 998, "bounced": 2}`.
+
+            '
+          additionalProperties:
+            type: integer
+          example:
+            delivered: 998
+            bounced: 2
+        suppressed:
+          type: array
+          description: Recipients excluded from delivery by suppression checks, with reasons. On batch items, present when that item had suppressed recipients; all other recipients of the item still receive the message. For single sends this information appears at the top level of the response instead (see EmailMessageResponse.suppressed).
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
+      required:
+      - record_type
+      - id
+      - status
+      - from
+      - to
+      - cc
+      - bcc
+      - subject
+      - reply_to
+      - template_id
+      - template_variables
+      - tags
+      - metadata
+      - attachments
+      - events
+      - created_at
+    EmailDraftListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailDraft'
+        meta:
+          $ref: '#/components/schemas/email_PaginationMeta'
+      required:
+      - data
+      - meta
+  responses:
+    DraftUnavailableResponse:
+      description: Drafts or the email domain service are temporarily unavailable (10016).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10016'
+              title: Service Unavailable
+              detail: Drafts are temporarily unavailable. Please try again later.
+    EmailSendTooManyRequestsResponse:
+      description: Send rejected before message creation because the account daily recipient quota was exhausted (10011), the sender-domain graduation ceiling was exceeded (domain_graduation_limit_exceeded), or domain reputation is poor (reputation_suspended).
+      headers:
+        Retry-After:
+          description: Seconds until the next UTC-midnight reset. Present only for domain_graduation_limit_exceeded; omitted for 10011 and reputation_suspended.
+          schema:
+            type: integer
+            minimum: 1
+          example: 3600
+      content:
+        application/json:
+          schema:
+            oneOf:
+            - $ref: '#/components/schemas/DailySendLimitError'
+            - $ref: '#/components/schemas/DomainGraduationLimitExceededError'
+            - $ref: '#/components/schemas/ReputationSuspendedError'
+          examples:
+            accountDailyLimit:
+              summary: Account daily recipient quota exhausted
+              value:
+                errors:
+                - code: '10011'
+                  title: Too Many Requests
+                  detail: Daily send limit of 1000 recipients exceeded. The limit resets at midnight UTC.
+            senderDomainGraduation:
+              summary: Sender-domain graduation ceiling exceeded
+              value:
+                errors:
+                - code: domain_graduation_limit_exceeded
+                  title: Too Many Requests
+                  detail: Daily send limit of 250 recipients for this sender domain exceeded. The limit resets at midnight UTC.
+                  meta:
+                    retry_after_seconds: 3600
+                    remaining_today: 0
+            reputationSuspended:
+              summary: Domain reputation is poor
+              value:
+                errors:
+                - code: reputation_suspended
+                  title: Sending Suspended
+                  detail: Sender domain reputation is too low. Sending has been suspended. Please contact support to resolve deliverability issues.
+    email_NotFoundResponse:
+      description: Resource not found (10001).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10001'
+              title: Not Found
+              detail: The requested resource was not found
+    email_UnauthorizedResponse:
+      description: Not authorized (10006).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10006'
+              title: Not authorized
+              detail: Invalid API key
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10006
+    ValidationErrorResponse:
+      description: Validation Failed (10015) or changeset validation error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10015'
+              title: Validation Failed
+              detail: subject can't be blank
+              source:
+                pointer: /data/attributes/subject
+  parameters:
+    DraftId:
+      name: draft_id
+      in: path
+      required: true
+      description: Email draft UUID.
+      schema:
+        type: string
+        format: uuid
+    DraftInboxId:
+      name: inbox_id
+      in: path
+      required: true
+      description: Email inbox UUID.
+      schema:
+        type: string
+        format: uuid
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

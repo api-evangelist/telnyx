@@ -1,0 +1,558 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Email Domain DNS Records API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Email Domain DNS Records
+  description: DNS verification records for email domains
+paths:
+  /email_domains/{domain_id}/dns_records:
+    get:
+      tags:
+      - Email Domain DNS Records
+      summary: List DNS records for an email domain
+      operationId: listEmailDomainDnsRecords
+      parameters:
+      - $ref: '#/components/parameters/EmailDomainDomainId'
+      responses:
+        '200':
+          description: DNS records for the email domain
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DNSRecordListResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      description: Returns the DNS records Telnyx generated for domain ownership and DKIM verification, plus MX records when inbound delivery is enabled.
+  /email_domains/{domain_id}/verify:
+    post:
+      tags:
+      - Email Domain DNS Records
+      summary: Verify DNS records for an email domain
+      operationId: verifyEmailDomainDnsRecords
+      parameters:
+      - $ref: '#/components/parameters/EmailDomainDomainId'
+      responses:
+        '200':
+          description: Updated email domain with latest DNS verification results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailDomainResponse'
+        '403':
+          description: Forbidden — shared domains are read-only for non-owner accounts (error code 10008).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainsErrorResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      description: Checks the published DNS records against the records required for the email domain and returns the latest verification results.
+components:
+  responses:
+    ValidationFailed:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DomainsErrorResponse'
+          example:
+            errors:
+            - code: '10015'
+              title: Validation Failed
+              detail: domain is invalid
+              source:
+                pointer: /data/attributes/domain
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DomainsErrorResponse'
+          example:
+            errors:
+            - code: '500'
+              title: Internal Server Error
+              detail: An unexpected error occurred
+    email_NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DomainsErrorResponse'
+          example:
+            errors:
+            - code: '10001'
+              title: Not Found
+              detail: The requested email domain was not found
+  schemas:
+    DNSRecord:
+      type: object
+      required:
+      - id
+      - purpose
+      - record_type
+      - host
+      - value
+      - required
+      - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        purpose:
+          type: string
+          enum:
+          - ownership
+          - spf
+          - dkim
+          - dmarc
+          - mx
+        record_type:
+          type: string
+          enum:
+          - TXT
+          - MX
+        host:
+          type: string
+        value:
+          type: string
+        actual_value:
+          type: string
+          nullable: true
+        priority:
+          type: integer
+          nullable: true
+        required:
+          type: boolean
+        status:
+          type: string
+          enum:
+          - pending
+          - verified
+          - failed
+          - not_required
+      example:
+        id: 123e4567-e89b-12d3-a456-426614174001
+        purpose: ownership
+        record_type: TXT
+        host: _telnyx-email.example.com
+        value: telnyx-domain-verification=abc123
+        actual_value: null
+        priority: null
+        required: true
+        status: pending
+    DKIMStatus:
+      type: object
+      required:
+      - selector
+      - algorithm
+      - key_length
+      - active
+      - rotated_at
+      properties:
+        selector:
+          type: string
+          nullable: true
+        algorithm:
+          type: string
+          enum:
+          - rsa-sha256
+          - null
+          nullable: true
+        key_length:
+          type: integer
+          enum:
+          - 2048
+          - null
+          nullable: true
+        active:
+          type: boolean
+        rotated_at:
+          type: string
+          format: date-time
+          nullable: true
+    EmailDMARCPolicy:
+      type: object
+      description: DMARC policy for a sending domain. Drives the recommended _dmarc.<domain> TXT record. DMARC is advisory and never blocks sending. When omitted or null, the domain uses the advisory default (v=DMARC1; p=none; rua=mailto:dmarc@telnyx.com).
+      properties:
+        p:
+          type: string
+          enum:
+          - none
+          - quarantine
+          - reject
+          default: none
+          description: Policy applied to messages that fail alignment.
+        pct:
+          type: integer
+          minimum: 0
+          maximum: 100
+          default: 100
+          description: Percentage of messages the policy applies to. Omitted from the record when 100.
+        rua:
+          type: string
+          nullable: true
+          description: URI for aggregate reports. Defaults to the Telnyx address when absent; null omits it.
+        sp:
+          type: string
+          enum:
+          - none
+          - quarantine
+          - reject
+          nullable: true
+          description: Policy for subdomains. Omitted from the record when null.
+    InboundConfig:
+      type: object
+      required:
+      - enabled
+      - catch_all
+      - mx_required
+      properties:
+        enabled:
+          type: boolean
+        catch_all:
+          type: boolean
+        mx_required:
+          type: boolean
+    DNSRecordListResponse:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DNSRecord'
+    EmailDomain:
+      type: object
+      required:
+      - id
+      - record_type
+      - domain
+      - type
+      - status
+      - usable_for_sending
+      - usable_for_inbound
+      - verification
+      - dns_records
+      - dkim
+      - inbound
+      - dmarc_policy
+      - tracking
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        record_type:
+          type: string
+          enum:
+          - email_domain
+        domain:
+          type: string
+          example: example.com
+        type:
+          $ref: '#/components/schemas/EmailDomainType'
+          description: 'Domain type. `custom` domains are account-owned (BYOD). `shared` domains are Telnyx-managed, visible to and usable by ALL accounts for sending, but read-only: only the owning (system) account may modify, verify, or delete them; other accounts receive 403 (code 10008).'
+        status:
+          $ref: '#/components/schemas/EmailDomainStatus'
+        usable_for_sending:
+          type: boolean
+        usable_for_inbound:
+          type: boolean
+        verification:
+          $ref: '#/components/schemas/EmailDomainVerification'
+        dns_records:
+          type: array
+          items:
+            $ref: '#/components/schemas/DNSRecord'
+        dkim:
+          $ref: '#/components/schemas/DKIMStatus'
+        inbound:
+          $ref: '#/components/schemas/InboundConfig'
+        dmarc_policy:
+          type: object
+          allOf:
+          - $ref: '#/components/schemas/EmailDMARCPolicy'
+          nullable: true
+          description: 'Customer DMARC policy. null means use the advisory default (v=DMARC1; p=none; rua=mailto:dmarc@telnyx.com).
+
+            '
+        tracking:
+          $ref: '#/components/schemas/DomainsTrackingSettings'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        verified_at:
+          type: string
+          format: date-time
+          nullable: true
+        reputation:
+          type: object
+          description: Sender reputation for this domain (present on all domain responses).
+          properties:
+            band:
+              type: string
+              description: Reputation band, e.g. good/warn/poor.
+            breakdown:
+              type: object
+              additionalProperties: true
+            computed_at:
+              type: string
+              format: date-time
+              nullable: true
+      example:
+        id: 123e4567-e89b-12d3-a456-426614174000
+        record_type: email_domain
+        domain: example.com
+        type: custom
+        status: pending
+        usable_for_sending: false
+        usable_for_inbound: false
+        verification:
+          ownership: pending
+          spf: missing_optional
+          dkim: pending
+          dmarc: missing_optional
+          mx: not_required
+        dns_records: []
+        dkim:
+          selector: null
+          algorithm: null
+          key_length: null
+          active: false
+          rotated_at: null
+        inbound:
+          enabled: false
+          catch_all: false
+          mx_required: false
+        dmarc_policy:
+          p: none
+          pct: 100
+          rua: mailto:dmarc@telnyx.com
+        tracking:
+          open_tracking: false
+          click_tracking: false
+          unsubscribe_tracking: false
+        created_at: '2026-01-01T00:00:00Z'
+        updated_at: '2026-01-01T00:00:00Z'
+        verified_at: null
+    DomainsTrackingSettings:
+      type: object
+      properties:
+        open_tracking:
+          type: boolean
+          default: false
+          description: Inject a tracking pixel into HTML messages to record open events.
+        click_tracking:
+          type: boolean
+          default: false
+          description: Rewrite HTML links through a tracking redirect to record click events.
+        unsubscribe_tracking:
+          type: boolean
+          default: true
+          description: Add RFC 8058 List-Unsubscribe headers with a signed one-click unsubscribe URL. Enabled by default; Gmail/Yahoo bulk-sender rules require one-click unsubscribe support.
+    DomainsErrorResponse:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/email_Error'
+    EmailDomainVerification:
+      type: object
+      required:
+      - ownership
+      - spf
+      - dkim
+      - dmarc
+      - mx
+      properties:
+        ownership:
+          type: string
+          enum:
+          - pending
+          - verified
+          - not_required
+        spf:
+          type: string
+          enum:
+          - missing_optional
+          - verified
+          - failed
+          - not_required
+        dkim:
+          type: string
+          enum:
+          - pending
+          - verified
+          - failed
+        dmarc:
+          type: string
+          enum:
+          - missing_optional
+          - verified
+          - failed
+        mx:
+          type: string
+          enum:
+          - not_required
+          - pending
+          - verified
+          - failed
+    EmailDomainResponse:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailDomain'
+    email_Error:
+      type: object
+      required:
+      - code
+      - title
+      - detail
+      properties:
+        code:
+          type: string
+          enum:
+          - '10001'
+          - '10015'
+          - '500'
+          - '10007'
+          - '10008'
+          - '10020'
+          - '40901'
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              type: string
+    EmailDomainStatus:
+      type: string
+      enum:
+      - pending
+      - verifying
+      - verified
+      - failed
+      - degraded
+      - suspended
+    EmailDomainType:
+      type: string
+      enum:
+      - custom
+      - shared
+      - shared_inbound
+  parameters:
+    EmailDomainDomainId:
+      name: domain_id
+      in: path
+      required: true
+      description: Email domain UUID
+      schema:
+        type: string
+        format: uuid
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

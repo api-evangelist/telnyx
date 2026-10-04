@@ -1,11 +1,13 @@
 openapi: 3.2.0
 info:
-  contact:
-    email: support@telnyx.com
-  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
   title: Telnyx Regulatory Requirements API
   version: 2.0.0
+  contact:
+    email: support@telnyx.com
   x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Regulatory Requirements across 2 of this provider''s published API definitions: telnyx-openapi.yml, telnyx-openapi.json. Each path carries the servers of the definition it was published in.'
 servers:
 - description: Version 2.0.0 of the Telnyx API
   url: https://api.telnyx.com/v2
@@ -48,6 +50,9 @@ paths:
       tags:
       - Regulatory Requirements
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /regulatory_requirements:
     get:
       operationId: ListRegulatoryRequirements
@@ -105,6 +110,59 @@ paths:
       tags:
       - Regulatory Requirements
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
+  /phone_numbers/regulatory_requirements:
+    get:
+      summary: Retrieve regulatory requirements for a list of phone numbers
+      operationId: getPhoneNumbersRegulatoryRequirements
+      tags:
+      - Regulatory Requirements
+      parameters:
+      - name: filter
+        in: query
+        style: deepObject
+        explode: true
+        description: 'Consolidated filter parameter (deepObject style). Originally: filter[phone_number]'
+        schema:
+          type: object
+          properties:
+            phone_number:
+              type: string
+              example: +41215470622,+41215470633
+              description: Record type phone number/ phone numbers
+      responses:
+        '200':
+          description: An array of Regulatory Requirements Responses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RegulatoryRequirementsPhoneNumbers'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/numbers_GenericErrorResponse'
+      x-latency-category: responsive
+      description: Retrieve the regulatory requirements that apply to a list of phone numbers.
+      x-operation-id-source: normalized
+      x-operation-id-original: ListRegulatoryRequirementsPhoneNumbers
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
     RegulatoryRequirements:
@@ -174,6 +232,57 @@ components:
             type: object
           type: array
       type: object
+    PaginationMeta:
+      properties:
+        page_number:
+          example: 2
+          type: integer
+        page_size:
+          example: 25
+          type: integer
+        total_pages:
+          example: 3
+          type: integer
+        total_results:
+          example: 55
+          type: integer
+      type: object
+    numbers_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/numbers_Error'
+          type: array
+      type: object
+    numbers_Error:
+      properties:
+        code:
+          example: '10007'
+          type: string
+        detail:
+          example: An unexpected error occured.
+          type: string
+        meta:
+          properties:
+            url:
+              description: URL with additional information on the error.
+              example: https://developers.telnyx.com/docs/overview/errors/10015
+              type: string
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              example: /base
+              type: string
+          type: object
+        title:
+          example: Unexpected error
+          type: string
+      type: object
     RegulatoryRequirementsPhoneNumbers:
       properties:
         phone_number:
@@ -240,58 +349,52 @@ components:
             type: object
           type: array
       type: object
-    PaginationMeta:
-      properties:
-        page_number:
-          example: 2
-          type: integer
-        page_size:
-          example: 25
-          type: integer
-        total_pages:
-          example: 3
-          type: integer
-        total_results:
-          example: 55
-          type: integer
-      type: object
-    numbers_Errors:
+    Errors:
       properties:
         errors:
-          items:
-            $ref: '#/components/schemas/numbers_Error'
           type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
       type: object
-    numbers_Error:
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
       properties:
         code:
-          example: '10007'
+          type: integer
+          format: int32
+        title:
           type: string
         detail:
-          example: An unexpected error occured.
           type: string
-        meta:
-          properties:
-            url:
-              description: URL with additional information on the error.
-              example: https://developers.telnyx.com/docs/overview/errors/10015
-              type: string
-          type: object
         source:
+          type: object
           properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
             parameter:
               description: Indicates which query parameter caused the error.
               type: string
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              example: /base
-              type: string
+        meta:
           type: object
-        title:
-          example: Unexpected error
-          type: string
-      type: object
+          properties: {}
+          additionalProperties: true
   responses:
+    numbers_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Unexpected error
+    numbers_BadRequestResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Bad request, the request was unacceptable, often due to missing a required parameter.
     numbers_UnprocessableEntity:
       content:
         application/json:
@@ -311,12 +414,6 @@ components:
                 $ref: '#/components/schemas/PaginationMeta'
             type: object
       description: An array of Regulatory Requirements Responses
-    numbers_BadRequestResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/numbers_Errors'
-      description: Bad request, the request was unacceptable, often due to missing a required parameter.
     listRegulatoryRequirements:
       content:
         application/json:
@@ -328,12 +425,6 @@ components:
                 type: array
             type: object
       description: An array of Regulatory Requirements Responses
-    numbers_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/numbers_Errors'
-      description: Unexpected error
     numbers_NotFoundResponse:
       content:
         application/json:
@@ -355,6 +446,45 @@ components:
           schema:
             $ref: '#/components/schemas/numbers_Errors'
       description: Unauthorized
+    numbers_BadRequestResponse_73c9788e53:
+      description: Bad request, the request was unacceptable, often due to missing a required parameter.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    numbers_UnauthorizedResponse_73c9788e53:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          examples:
+            Authentication Failed:
+              value:
+                errors:
+                - code: '10009'
+                  title: Authentication failed
+                  detail: Could not understand the provided credentials.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+    GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    numbers_UnprocessableEntity_73c9788e53:
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    numbers_NotFoundResponse_73c9788e53:
+      description: The requested resource doesn't exist.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
   securitySchemes:
     bearerAuth:
       scheme: bearer
@@ -389,3 +519,40 @@ components:
       bearerFormat: JWT
       scheme: bearer
       type: http
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-refined-from:
+- telnyx-openapi.yml
+- telnyx-openapi.json

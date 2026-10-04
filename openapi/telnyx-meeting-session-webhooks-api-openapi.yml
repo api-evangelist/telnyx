@@ -1,0 +1,555 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Meeting Session Webhooks API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Meeting Session Webhooks
+  description: Outbound webhook deliveries for meeting session events.
+paths: {}
+webhooks:
+  artifactCompleted:
+    post:
+      summary: artifact.completed
+      description: 'Sent when an artifact finishes generating -- `summary`, `action_items`, `decisions`, `topics`, `open_questions` or `custom`. Deliveries are best effort and not guaranteed: up to 5 attempts with backoff that starts around 60 seconds and roughly doubles per retry, and a 10-second delivery timeout, so respond with a 2xx promptly. Retries can produce duplicates; deduplicate on envelope `id`.'
+      tags:
+      - Meeting Session Webhooks
+      parameters:
+      - name: X-Meeting-Bot-Signature
+        in: header
+        required: true
+        description: Signature header `t=<unix-seconds>,v1=<hex>`. Compute HMAC-SHA256 with the webhook secret over the timestamp ASCII bytes, a literal `.` byte, and the exact raw request-body bytes; hex-encode and compare `v1` in constant time. Reject timestamps outside your accepted skew. No bearer token is sent.
+        schema:
+          type: string
+        example: t=1784297100,v1=5e8f...a3c1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - id
+              - event
+              - version
+              - occurred_at
+              - data
+              properties:
+                id:
+                  type: string
+                  description: Unique event id; deduplicate deliveries on it.
+                  example: whdel_9f2c...
+                event:
+                  type: string
+                  description: Event type.
+                  enum:
+                  - artifact.completed
+                version:
+                  type: string
+                  description: Envelope version.
+                  example: '1'
+                occurred_at:
+                  type: string
+                  format: date-time
+                  description: When the event occurred.
+                data:
+                  type: object
+                  properties:
+                    session_id:
+                      type: string
+                      description: The meeting session this event belongs to.
+                      example: mtgsess_9b2f...
+                    artifact_id:
+                      type: string
+                      description: Id of the completed artifact.
+                      example: mtgart_4e7c...
+                    type:
+                      type: string
+                      enum:
+                      - summary
+                      - action_items
+                      - decisions
+                      - topics
+                      - open_questions
+                      - custom
+                      description: Type of the completed artifact.
+                    content:
+                      type: object
+                      properties:
+                        text:
+                          type: string
+                          description: Generated artifact text.
+                      description: Generated artifact content.
+                      additionalProperties: false
+                      required:
+                      - text
+                    model_provenance:
+                      type: object
+                      properties:
+                        model:
+                          type: string
+                        provider:
+                          type: string
+                      description: Model that generated the artifact.
+                      additionalProperties: false
+                      required:
+                      - model
+                      - provider
+                    prompt:
+                      anyOf:
+                      - type: string
+                      - type: 'null'
+                      description: The prompt that produced this artifact, or null for a named type. Non-null only when `type` is `custom`; the five named types always return `null`.
+                  description: Completed artifact, including its generated content.
+                  required:
+                  - session_id
+                  - artifact_id
+                  - type
+                  - content
+                  - model_provenance
+                  - prompt
+                  additionalProperties: false
+              additionalProperties: false
+            example:
+              id: whdel_9f2c...
+              event: artifact.completed
+              version: '1'
+              occurred_at: '2026-06-16T09:06:00Z'
+              data:
+                session_id: mtgsess_9b2f...
+                artifact_id: mtgart_4e7c...
+                type: summary
+                content:
+                  text: 'Decisions: hold pricing flat through Q3. Actions: Casey to send the summary.'
+                model_provenance:
+                  model: example-model
+                  provider: telnyx
+                prompt: null
+      responses:
+        '200':
+          description: Return any 2xx status promptly to acknowledge the delivery; non-2xx responses and timeouts are retried.
+      operationId: MeetingArtifactCompletedWebhook
+      security: []
+  artifactFailed:
+    post:
+      summary: artifact.failed
+      description: 'Sent when an artifact generation fails. Deliveries are best effort and not guaranteed: up to 5 attempts with backoff that starts around 60 seconds and roughly doubles per retry, and a 10-second delivery timeout, so respond with a 2xx promptly. Retries can produce duplicates; deduplicate on envelope `id`.'
+      tags:
+      - Meeting Session Webhooks
+      parameters:
+      - name: X-Meeting-Bot-Signature
+        in: header
+        required: true
+        description: Signature header `t=<unix-seconds>,v1=<hex>`. Compute HMAC-SHA256 with the webhook secret over the timestamp ASCII bytes, a literal `.` byte, and the exact raw request-body bytes; hex-encode and compare `v1` in constant time. Reject timestamps outside your accepted skew. No bearer token is sent.
+        schema:
+          type: string
+        example: t=1784297100,v1=5e8f...a3c1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - id
+              - event
+              - version
+              - occurred_at
+              - data
+              properties:
+                id:
+                  type: string
+                  description: Unique event id; deduplicate deliveries on it.
+                  example: whdel_9f2c...
+                event:
+                  type: string
+                  description: Event type.
+                  enum:
+                  - artifact.failed
+                version:
+                  type: string
+                  description: Envelope version.
+                  example: '1'
+                occurred_at:
+                  type: string
+                  format: date-time
+                  description: When the event occurred.
+                data:
+                  type: object
+                  properties:
+                    session_id:
+                      type: string
+                      description: The meeting session this event belongs to.
+                      example: mtgsess_9b2f...
+                    artifact_id:
+                      type: string
+                      description: Id of the failed artifact.
+                      example: mtgart_4e7c...
+                    type:
+                      type: string
+                      enum:
+                      - summary
+                      - action_items
+                      - decisions
+                      - topics
+                      - open_questions
+                      - custom
+                      description: Type of the failed artifact.
+                  description: Failed artifact reference and reason.
+                  additionalProperties: false
+                  required:
+                  - session_id
+                  - artifact_id
+                  - type
+              additionalProperties: false
+            example:
+              id: whdel_9f2c...
+              event: artifact.failed
+              version: '1'
+              occurred_at: '2026-06-16T09:06:00Z'
+              data:
+                session_id: mtgsess_9b2f...
+                artifact_id: mtgart_4e7c...
+                type: summary
+      responses:
+        '200':
+          description: Return any 2xx status promptly to acknowledge the delivery; non-2xx responses and timeouts are retried.
+      operationId: MeetingArtifactFailedWebhook
+      security: []
+  recordingAvailable:
+    post:
+      summary: recording.available
+      description: 'Sent when a recording is ready to download. The payload carries only `recording_types`, never URLs; fetch short-lived download URLs from `GET /meeting_sessions/{id}/recordings`. Deliveries are best effort and not guaranteed: up to 5 attempts with backoff that starts around 60 seconds and roughly doubles per retry, and a 10-second delivery timeout, so respond with a 2xx promptly. Retries can produce duplicates; deduplicate on envelope `id`.'
+      tags:
+      - Meeting Session Webhooks
+      parameters:
+      - name: X-Meeting-Bot-Signature
+        in: header
+        required: true
+        description: Signature header `t=<unix-seconds>,v1=<hex>`. Compute HMAC-SHA256 with the webhook secret over the timestamp ASCII bytes, a literal `.` byte, and the exact raw request-body bytes; hex-encode and compare `v1` in constant time. Reject timestamps outside your accepted skew. No bearer token is sent.
+        schema:
+          type: string
+        example: t=1784297100,v1=5e8f...a3c1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - id
+              - event
+              - version
+              - occurred_at
+              - data
+              properties:
+                id:
+                  type: string
+                  description: Unique event id; deduplicate deliveries on it.
+                  example: whdel_9f2c...
+                event:
+                  type: string
+                  description: Event type.
+                  enum:
+                  - recording.available
+                version:
+                  type: string
+                  description: Envelope version.
+                  example: '1'
+                occurred_at:
+                  type: string
+                  format: date-time
+                  description: When the event occurred.
+                data:
+                  type: object
+                  properties:
+                    session_id:
+                      type: string
+                      description: The meeting session this event belongs to.
+                      example: mtgsess_9b2f...
+                    recording_types:
+                      type: array
+                      items:
+                        type: string
+                      description: Available recording types.
+                      example:
+                      - video_mixed
+                  description: Available recording types.
+                  additionalProperties: false
+                  required:
+                  - session_id
+                  - recording_types
+              additionalProperties: false
+            example:
+              id: whdel_9f2c...
+              event: recording.available
+              version: '1'
+              occurred_at: '2026-06-16T09:05:20Z'
+              data:
+                session_id: mtgsess_9b2f...
+                recording_types:
+                - video_mixed
+      responses:
+        '200':
+          description: Return any 2xx status promptly to acknowledge the delivery; non-2xx responses and timeouts are retried.
+      operationId: MeetingRecordingAvailableWebhook
+      security: []
+  sessionStatusChanged:
+    post:
+      summary: session.status_changed
+      description: 'Sent when the session moves to a new lifecycle status. Deliveries are best effort and not guaranteed: up to 5 attempts with backoff that starts around 60 seconds and roughly doubles per retry, and a 10-second delivery timeout, so respond with a 2xx promptly. Retries can produce duplicates; deduplicate on envelope `id`.'
+      tags:
+      - Meeting Session Webhooks
+      parameters:
+      - name: X-Meeting-Bot-Signature
+        in: header
+        required: true
+        description: Signature header `t=<unix-seconds>,v1=<hex>`. Compute HMAC-SHA256 with the webhook secret over the timestamp ASCII bytes, a literal `.` byte, and the exact raw request-body bytes; hex-encode and compare `v1` in constant time. Reject timestamps outside your accepted skew. No bearer token is sent.
+        schema:
+          type: string
+        example: t=1784297100,v1=5e8f...a3c1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - id
+              - event
+              - version
+              - occurred_at
+              - data
+              properties:
+                id:
+                  type: string
+                  description: Unique event id; deduplicate deliveries on it.
+                  example: whdel_9f2c...
+                event:
+                  type: string
+                  description: Event type.
+                  enum:
+                  - session.status_changed
+                version:
+                  type: string
+                  description: Envelope version.
+                  example: '1'
+                occurred_at:
+                  type: string
+                  format: date-time
+                  description: When the event occurred.
+                data:
+                  type: object
+                  properties:
+                    session_id:
+                      type: string
+                      description: The meeting session this event belongs to.
+                      example: mtgsess_9b2f...
+                    status:
+                      type: string
+                      description: The new session status.
+                    status_detail:
+                      type:
+                      - string
+                      - 'null'
+                      description: Additional detail about the status (for example `timeout_exceeded_everyone_left` or `cancelled`), or null.
+                    recording:
+                      type: boolean
+                      description: Whether the session is recording at this lifecycle edge.
+                  description: Status transition details.
+                  additionalProperties: false
+                  required:
+                  - session_id
+                  - status
+                  - status_detail
+                  - recording
+              additionalProperties: false
+            example:
+              id: whdel_9f2c...
+              event: session.status_changed
+              version: '1'
+              occurred_at: '2026-06-16T09:00:05Z'
+              data:
+                session_id: mtgsess_9b2f...
+                status: active
+                status_detail: null
+                recording: true
+      responses:
+        '200':
+          description: Return any 2xx status promptly to acknowledge the delivery; non-2xx responses and timeouts are retried.
+      operationId: MeetingSessionStatusChangedWebhook
+      security: []
+  transcriptCompleted:
+    post:
+      summary: transcript.completed
+      description: 'Sent when the meeting transcript is finalized and ready to read. Individual `transcript.segment` messages are never delivered over webhooks; read segments via the transcript endpoint or the WebSocket stream. Deliveries are best effort and not guaranteed: up to 5 attempts with backoff that starts around 60 seconds and roughly doubles per retry, and a 10-second delivery timeout, so respond with a 2xx promptly. Retries can produce duplicates; deduplicate on envelope `id`.'
+      tags:
+      - Meeting Session Webhooks
+      parameters:
+      - name: X-Meeting-Bot-Signature
+        in: header
+        required: true
+        description: Signature header `t=<unix-seconds>,v1=<hex>`. Compute HMAC-SHA256 with the webhook secret over the timestamp ASCII bytes, a literal `.` byte, and the exact raw request-body bytes; hex-encode and compare `v1` in constant time. Reject timestamps outside your accepted skew. No bearer token is sent.
+        schema:
+          type: string
+        example: t=1784297100,v1=5e8f...a3c1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - id
+              - event
+              - version
+              - occurred_at
+              - data
+              properties:
+                id:
+                  type: string
+                  description: Unique event id; deduplicate deliveries on it.
+                  example: whdel_9f2c...
+                event:
+                  type: string
+                  description: Event type.
+                  enum:
+                  - transcript.completed
+                version:
+                  type: string
+                  description: Envelope version.
+                  example: '1'
+                occurred_at:
+                  type: string
+                  format: date-time
+                  description: When the event occurred.
+                data:
+                  type: object
+                  properties:
+                    session_id:
+                      type: string
+                      description: The meeting session this event belongs to.
+                      example: mtgsess_9b2f...
+                    segment_count:
+                      type: integer
+                      description: Number of transcript segments observed during finalization.
+                    last_seq:
+                      type:
+                      - integer
+                      - 'null'
+                      description: Last transcript segment sequence number, or null for an empty transcript.
+                    ended_at:
+                      type:
+                      - string
+                      - 'null'
+                      format: date-time
+                      description: Session end time, or null when unavailable.
+                  description: Finalized transcript details.
+                  additionalProperties: false
+                  required:
+                  - session_id
+                  - segment_count
+                  - last_seq
+                  - ended_at
+              additionalProperties: false
+            example:
+              id: whdel_9f2c...
+              event: transcript.completed
+              version: '1'
+              occurred_at: '2026-06-16T09:05:00Z'
+              data:
+                session_id: mtgsess_9b2f...
+                segment_count: 87
+                last_seq: 943
+                ended_at: '2026-06-16T09:04:41Z'
+      responses:
+        '200':
+          description: Return any 2xx status promptly to acknowledge the delivery; non-2xx responses and timeouts are retried.
+      operationId: MeetingTranscriptCompletedWebhook
+      security: []
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

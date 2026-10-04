@@ -1,0 +1,492 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Email Suppression Imports API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Email Suppression Imports
+  description: Async CSV import of competitor suppression lists.
+paths:
+  /email_blocks/import:
+    post:
+      tags:
+      - Email Suppression Imports
+      summary: Create an async CSV import job
+      description: 'Accepts `multipart/form-data` with a `file` field (the CSV) and an
+
+        optional `block_ttl_days` (integer >0, default 30). Validates:
+
+        - content ≤ 25 MiB, else `413`
+
+        - row count ≤ 250 000, else `413`
+
+        - header-only / all-blank / undetectable provider → `400`
+
+        Returns `202` with the import record (status `pending`); an Oban
+
+        worker (`EmailBlockImportWorker`, max_attempts 3) transitions
+
+        `pending → processing → completed | failed`.
+
+
+        Native Telnyx exports are detected by the stable first-12-column
+
+        header signature (`id` … `group_id`) and are restored with their
+
+        original `from`, `domain_id`, `group_id`, `source`, `status`,
+
+        `expires_at`, plus `bounce_category`, `dsn_code`, and `meta` when
+
+        present (`scope` is re-derived from `domain_id`/`from`; the
+
+        exported `scope` cell must be a valid enum value). Lifecycle
+
+        changes reconcile through the same create path as the API: a row
+
+        already in the requested state restores its mutable backup fields
+
+        without a new audit event, and a real transition (e.g. tombstone
+
+        → active) appends the matching lifecycle event. `block_ttl_days`
+
+        is not applied to native rows — their exported `expires_at` is
+
+        preserved verbatim.
+
+
+        Competitor and generic imports (SendGrid / Mailgun / SES /
+
+        generic) remain account-scoped (`from`, `domain_id`, `group_id`,
+
+        `scope` are not read) and `block_ttl_days` applies only to
+
+        imported `manual_block` rows; other reasons get `expires_at: nil`.
+
+        Provider is auto-detected from the CSV header
+
+        (`sendgrid` / `mailgun` / `ses` / `generic`).'
+      operationId: createEmailBlockImport
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateImportRequest'
+            example:
+              file: blocks.csv
+              block_ttl_days: 30
+      responses:
+        '202':
+          description: Import job accepted (status `pending`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailBlockImportResponse'
+              example:
+                data:
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  record_type: email_block_import
+                  status: pending
+                  total: 0
+                  provider: sendgrid
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  updated_at: '2024-01-23T18:10:02.574Z'
+                  completed_at: '2024-01-23T18:10:02.574Z'
+                  processed_rows: 0
+                  created_count: 0
+                  existing_count: 0
+                  skipped_count: 0
+                  error_count: 0
+                  failure_reason: string
+        '400':
+          $ref: '#/components/responses/ValidationErrorQuery'
+        '401':
+          $ref: '#/components/responses/email_Unauthorized'
+        '406':
+          $ref: '#/components/responses/FrameworkError'
+        '413':
+          description: 'Two distinct 413 paths. Content-level cap (decoded CSV > 25 MiB
+
+            or > 250 000 rows) returns `10015` with `source.pointer /file`.
+
+            The multipart parser raises `RequestTooLargeError` when the
+
+            encoded body exceeds 26 MiB — that''s a framework error rendered
+
+            with body `code: "413"` (matches the HTTP status).
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorList'
+              example:
+                errors:
+                - code: '10007'
+                  title: Unexpected error
+                  detail: An unexpected error occured.
+        '422':
+          $ref: '#/components/responses/ChangesetError'
+        '500':
+          description: Import-create fallback (`code 10019`, "Failed to create import").
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorList'
+              example:
+                errors:
+                - code: '10007'
+                  title: Unexpected error
+                  detail: An unexpected error occured.
+  /email_blocks/import/{id}:
+    parameters:
+    - $ref: '#/components/parameters/PathId'
+    get:
+      tags:
+      - Email Suppression Imports
+      summary: Poll an import job
+      description: 'Account-scoped fetch (cross-account → 404; malformed UUID → 404).
+
+        Nullable fields are omitted until terminal: `provider`/`completed_at`
+
+        when nil; `processed_rows`/`created_count`/`existing_count`/
+
+        `skipped_count`/`error_count` only when `status == completed`;
+
+        `errors` only when non-empty; `failure_reason` only on terminal
+
+        failure.'
+      operationId: showEmailBlockImport
+      responses:
+        '200':
+          description: The import record.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailBlockImportResponse'
+              example:
+                data:
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  record_type: email_block_import
+                  status: pending
+                  total: 0
+                  provider: sendgrid
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  updated_at: '2024-01-23T18:10:02.574Z'
+                  completed_at: '2024-01-23T18:10:02.574Z'
+                  processed_rows: 0
+                  created_count: 0
+                  existing_count: 0
+                  skipped_count: 0
+                  error_count: 0
+                  failure_reason: string
+        '401':
+          $ref: '#/components/responses/email_Unauthorized'
+        '404':
+          $ref: '#/components/responses/BlocksNotFound'
+        '406':
+          $ref: '#/components/responses/FrameworkError'
+components:
+  schemas:
+    CreateImportRequest:
+      type: object
+      required:
+      - file
+      properties:
+        file:
+          type: string
+          format: binary
+          description: The CSV file (Plug.Upload). Missing/non-upload → 400.
+        block_ttl_days:
+          type: integer
+          minimum: 1
+          default: 30
+          description: 'TTL for imported `manual_block` rows; other reasons get `expires_at: null`. Invalid/missing → falls back to 30.'
+    EmailBlockImport:
+      type: object
+      required:
+      - id
+      - record_type
+      - status
+      - total
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        record_type:
+          type: string
+          enum:
+          - email_block_import
+          description: View-only.
+        status:
+          type: string
+          enum:
+          - pending
+          - processing
+          - completed
+          - failed
+        total:
+          type: integer
+          description: Data-row count at upload.
+        provider:
+          type: string
+          enum:
+          - sendgrid
+          - mailgun
+          - ses
+          - generic
+          description: Omitted when nil.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          description: Omitted until terminal success.
+        processed_rows:
+          type: integer
+          description: Only when `status == completed`.
+        created_count:
+          type: integer
+          description: Only when `status == completed`.
+        existing_count:
+          type: integer
+          description: Only when `status == completed`.
+        skipped_count:
+          type: integer
+          description: Only when `status == completed`.
+        error_count:
+          type: integer
+          description: 'Rows that passed CSV parsing but failed suppression creation.
+
+            This is the creation-failure subset of `skipped_count`;
+
+            parser-rejected rows equal `skipped_count - error_count`.
+
+            Only when `status == completed`.
+
+            '
+        errors:
+          type: object
+          additionalProperties:
+            type: string
+          description: '`{row_number: reason}`; only rendered when non-empty.'
+        failure_reason:
+          type: string
+          description: Only on terminal failure.
+      description: 'Import job. Schema fields hidden: `account_id`, `csv_content`,
+
+        `block_ttl_days`. Nullable fields use the omit-nullable pattern.
+
+        '
+    BlocksErrorObject:
+      type: object
+      required:
+      - code
+      - title
+      - detail
+      properties:
+        code:
+          type: string
+          description: 'Error codes: `10001` (Not Found), `10007` (Unauthorized),
+
+            `10015` (Validation Failed), `10019` (Internal — import create
+
+            fallback), `40901` (Conflict), `500` (framework/catch-all).
+
+            '
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              type: string
+          description: '`/data/attributes/<field>` for changeset/Params; `/<field>` for query-param errors.'
+    ErrorList:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/BlocksErrorObject'
+    EmailBlockImportResponse:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailBlockImport'
+  responses:
+    ChangesetError:
+      description: Validation error (changeset or internal `Params`). One error object per field, `source.pointer /data/attributes/<field>`.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorList'
+          example:
+            errors:
+            - code: '10015'
+              title: Validation Failed
+              detail: can't be blank
+              source:
+                pointer: /data/attributes/to
+    BlocksNotFound:
+      description: Resource not found (cross-account lookups and malformed UUIDs also return 404 — no leak).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorList'
+          example:
+            errors:
+            - code: '10001'
+              title: Not Found
+              detail: The requested email block was not found
+    email_Unauthorized:
+      description: Missing or invalid gateway auth.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorList'
+          example:
+            errors:
+            - code: '10007'
+              title: Unauthorized
+              detail: Missing authentication
+    FrameworkError:
+      description: 'Framework-rendered error (e.g. 406 Not Acceptable, 405 Method Not
+
+        Allowed, 415 Unsupported Media Type). HTTP status matches the error
+
+        and the body `code` carries that same status (e.g. `"406"`, not a
+
+        hardcoded `"500"`). The explicit `500.json` clause still emits
+
+        `code: "500"` for genuine 500s.
+
+        '
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorList'
+          example:
+            errors:
+            - code: '406'
+              title: Not Acceptable
+              detail: Not Acceptable
+    ValidationErrorQuery:
+      description: Query-param validation error (`source.pointer /<field>`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorList'
+          example:
+            errors:
+            - code: '10015'
+              title: Validation Failed
+              detail: is invalid
+              source:
+                pointer: /filter[reason]
+  parameters:
+    PathId:
+      name: id
+      in: path
+      required: true
+      description: Resource UUID. Malformed UUIDs are treated as not-found (not 400).
+      schema:
+        type: string
+        format: uuid
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

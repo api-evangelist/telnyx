@@ -1,11 +1,13 @@
 openapi: 3.2.0
 info:
-  contact:
-    email: support@telnyx.com
-  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
   title: Telnyx Messaging URL Domains API
   version: 2.0.0
+  contact:
+    email: support@telnyx.com
   x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Messaging URL Domains across 2 of this provider''s published API definitions: telnyx-openapi.yml, telnyx-openapi.json. Each path carries the servers of the definition it was published in.'
 servers:
 - description: Version 2.0.0 of the Telnyx API
   url: https://api.telnyx.com/v2
@@ -30,29 +32,52 @@ paths:
       - Messaging URL Domains
       x-group-parameters: 'true'
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
 components:
-  parameters:
-    PageConsolidated:
-      description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
-      explode: true
-      in: query
-      name: page
-      schema:
-        properties:
-          number:
-            default: 1
-            description: The page number to load
-            minimum: 1
-            type: integer
-          size:
-            default: 20
-            description: The size of the page
-            maximum: 250
-            minimum: 1
-            type: integer
-        type: object
-      style: deepObject
+  responses:
+    messaging_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors'
+      description: Unexpected error
+    ListMessagingUrlDomains:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/MessagingUrlDomain'
+                type: array
+              meta:
+                $ref: '#/components/schemas/messaging_PaginationMeta'
+            title: List Messaging Profile Url Domains Response
+            type: object
+      description: Successful response with details about a messaging URL domain.
+    messaging_GenericErrorResponse_0b38e7044b:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors_0b38e7044b'
+          example:
+            errors:
+            - code: string
+              title: string
+              detail: string
+              source:
+                pointer: /data/attributes/phone_number
+                parameter: string
   schemas:
+    messaging_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/messaging_Error'
+          type: array
     MessagingUrlDomain:
       example:
         id: 464bd54e-a328-4b11-a131-28e6793cb6f2
@@ -113,33 +138,77 @@ components:
       - page_size
       - page_number
       type: object
-    messaging_Errors:
+    messaging_Error_0b38e7044b:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+          x-format: integer
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+    messaging_PaginationMeta_0b38e7044b:
+      type: object
+      required:
+      - total_pages
+      - total_results
+      - page_size
+      - page_number
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 55
+        page_number:
+          type: integer
+          example: 2
+        page_size:
+          type: integer
+          example: 25
+    messaging_Errors_0b38e7044b:
       properties:
         errors:
-          items:
-            $ref: '#/components/schemas/messaging_Error'
           type: array
-  responses:
-    messaging_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/messaging_Errors'
-      description: Unexpected error
-    ListMessagingUrlDomains:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/MessagingUrlDomain'
-                type: array
-              meta:
-                $ref: '#/components/schemas/messaging_PaginationMeta'
-            title: List Messaging Profile Url Domains Response
-            type: object
-      description: Successful response with details about a messaging URL domain.
+          items:
+            $ref: '#/components/schemas/messaging_Error_0b38e7044b'
+  parameters:
+    PageConsolidated:
+      description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
+      explode: true
+      in: query
+      name: page
+      schema:
+        properties:
+          number:
+            default: 1
+            description: The page number to load
+            minimum: 1
+            type: integer
+          size:
+            default: 20
+            description: The size of the page
+            maximum: 250
+            minimum: 1
+            type: integer
+        type: object
+      style: deepObject
   securitySchemes:
     bearerAuth:
       scheme: bearer
@@ -174,3 +243,40 @@ components:
       bearerFormat: JWT
       scheme: bearer
       type: http
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-refined-from:
+- telnyx-openapi.yml
+- telnyx-openapi.json

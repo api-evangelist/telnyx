@@ -1,0 +1,1907 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Email Messages API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Email Messages
+  description: Send and manage email messages. Legacy `/v2/emails` routes are aliases for these endpoints.
+paths:
+  /email_messages:
+    delete:
+      tags:
+      - Email Messages
+      operationId: DeleteEmailMessagesByAddress
+      summary: Delete email messages by address
+      description: 'Permanently deletes every email in the authenticated account sent from or to the
+
+        supplied address, including retained events whose parent message has expired.
+
+        Events and durable recipients are deleted immediately with each message. The
+
+        operation never searches or reports matches in another account. The legacy
+
+        `/v2/emails` DELETE route is a backward-compatible alias.'
+      parameters:
+      - name: address
+        in: query
+        required: true
+        description: Sender or recipient address to delete. Matching is trimmed and case-insensitive.
+        schema:
+          type: string
+          format: email
+      responses:
+        '204':
+          description: Matching account-scoped email data deleted successfully.
+        '400':
+          $ref: '#/components/responses/email_BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '500':
+          $ref: '#/components/responses/email_InternalServerErrorResponse'
+    get:
+      tags:
+      - Email Messages
+      operationId: ListEmailMessages
+      summary: List email messages
+      description: Lists messages sorted newest first by `created_at desc, id desc`. Tags and metadata filters compose with cursor pagination. The legacy `/v2/emails` GET route is a backward-compatible alias for this operation.
+      parameters:
+      - $ref: '#/components/parameters/email_PageSize'
+      - $ref: '#/components/parameters/PageCursor'
+      - name: filter[tags]
+        in: query
+        required: false
+        description: Comma-separated tags. Each segment is trimmed, and messages having at least one supplied tag are returned; matching is exact and case-sensitive after trimming. Because commas delimit values and surrounding whitespace is removed, this filter cannot represent stored tags containing literal commas or leading/trailing whitespace. An empty value omits the filter. Empty segments and non-string/nested query shapes return HTTP 400.
+        schema:
+          type: string
+        example: billing,transactional
+      - name: filter[metadata]
+        in: query
+        required: false
+        description: Metadata containment filter, supplied as a JSON object or comma-separated `key=value` pairs. All supplied key/value pairs must be contained in the message metadata. An empty value or empty JSON object omits the filter. Malformed values, valid non-object JSON, pairs without `=`, empty keys, and non-string/nested query shapes return HTTP 400.
+        schema:
+          type: string
+        examples:
+          jsonObject:
+            value: '{"campaign":"spring","region":"us"}'
+          keyValuePairs:
+            value: campaign=spring,region=us
+      responses:
+        '200':
+          description: Paginated list of email messages.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailMessageListResponse'
+        '400':
+          description: The tags or metadata filter is malformed or uses an unsupported query shape.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              examples:
+                invalidTagsFilter:
+                  value:
+                    errors:
+                    - code: '10015'
+                      title: Bad Request
+                      detail: filter[tags] must be a comma-separated list of non-empty tags
+                invalidMetadataFilter:
+                  value:
+                    errors:
+                    - code: '10015'
+                      title: Bad Request
+                      detail: filter[metadata] must be a JSON object or comma-separated key=value pairs
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+    post:
+      tags:
+      - Email Messages
+      operationId: CreateEmailMessage
+      summary: Create or send an email message
+      description: 'Queues, schedules, or sandbox-sends an email message. The legacy `/v2/emails` POST route
+
+        is a backward-compatible alias for this operation.
+
+
+        `subject` is required unless `template_id` is supplied. When using `template_id`, do not
+
+        also provide `subject`, `html_body`, or `text_body`; the template is rendered with
+
+        `template_variables`.
+
+
+        Note: template lookup failures (not found, wrong account) return 400, not 404.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEmailRequest'
+            examples:
+              simple:
+                value:
+                  from: sender@example.com
+                  to:
+                  - recipient@example.com
+                  subject: Hello from Telnyx
+                  text_body: This is a test email.
+              withAddressObjects:
+                value:
+                  from:
+                    email: sender@example.com
+                    name: Telnyx Notifications
+                  to:
+                  - email: recipient@example.com
+                    name: Ada Lovelace
+                  subject: Welcome
+                  html_body: <h1>Welcome!</h1>
+              withTemplate:
+                value:
+                  from: sender@example.com
+                  to:
+                  - recipient@example.com
+                  template_id: 7a7c1a2b-1111-4c72-8c21-2bbf3d40c123
+                  template_variables:
+                    first_name: Ada
+      responses:
+        '202':
+          description: Message queued, scheduled, or sandbox-created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailMessageResponse'
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+            X-Telnyx-Reputation-Warning:
+              description: Present with `warn` when the accepted send uses a sender domain in the reputation warn band; delivery proceeds with reduced sending limits.
+              schema:
+                type: string
+                enum:
+                - warn
+        '400':
+          description: Bad Request / Validation Failed (10015). Invalid, duplicate, empty, malformed, or overlong Idempotency-Key headers are rejected by Edge with HTTP 400 and error code 10015.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              example:
+                errors:
+                - code: '10015'
+                  title: Bad Request
+                  detail: email is required
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/email_ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflictResponse'
+        '413':
+          $ref: '#/components/responses/PayloadTooLargeResponse'
+        '422':
+          description: Validation failed (including an invalid or non-future `scheduled_at`/`send_at`), send-time template rendering failed (including a strict-variable failure naming the missing required variable), or all recipients suppressed (code `recipient_suppressed`, includes top-level `suppressed` array). Reusing an Idempotency-Key with a different request also returns 422 (10027).
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/email_ErrorResponse'
+                - $ref: '#/components/schemas/RenderErrorResponse'
+                - $ref: '#/components/schemas/RecipientSuppressedError'
+              example:
+                errors:
+                - code: '10027'
+                  title: Unprocessable Entity
+                  detail: The server understood the syntax of the request but was unable to process the instructions.
+        '429':
+          $ref: '#/components/responses/EmailSendTooManyRequestsResponse'
+        '503':
+          $ref: '#/components/responses/email_ServiceUnavailableResponse'
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+  /email_messages/batch:
+    post:
+      tags:
+      - Email Messages
+      operationId: CreateEmailMessageBatch
+      summary: Create a batch of email messages
+      description: Creates up to 1,000 email messages in a single request. Request-wide admission checks run first and can reject the whole batch before message creation. After those checks pass, each message is validated and sent independently; item-level failures do not affect other messages, and the processed batch returns 207 Multi-Status. Per-message failures include validation errors; when a template has `strict_variables` enabled, a missing required variable produces a per-item `unprocessable_entity` error naming that variable while the other messages continue.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEmailBatchRequest'
+            example:
+              sandbox_mode: false
+              messages:
+              - from: sender@example.com
+                to:
+                - recipient1@example.com
+                subject: Hello 1
+                text_body: Message 1
+              - from: sender@example.com
+                to:
+                - recipient2@example.com
+                subject: Hello 2
+                text_body: Message 2
+      responses:
+        '207':
+          description: Multi-Status — returned after request-wide admission checks pass and item processing runs. Each message is validated and sent independently; per-message failures do not affect other messages in the batch. An invalid or non-future `scheduled_at`/`send_at` is reported as a per-item `unprocessable_entity` error while the remaining items continue. When all messages succeed, `errors` is empty and every item is in `data`; otherwise `data` contains successes and `errors` contains failures. Request-wide gates can instead return 4xx or 5xx.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailBatchResponse'
+        '400':
+          description: Bad Request / Validation Failed (10015). Invalid, duplicate, empty, malformed, or overlong Idempotency-Key headers are rejected by Edge with HTTP 400 and error code 10015.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              example:
+                errors:
+                - code: '10015'
+                  title: Bad Request
+                  detail: email is required
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflictResponse'
+        '413':
+          $ref: '#/components/responses/PayloadTooLargeResponse'
+        '422':
+          description: The Idempotency-Key was already used for a different request (10027).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              example:
+                errors:
+                - code: '10027'
+                  title: Unprocessable Entity
+                  detail: The server understood the syntax of the request but was unable to process the instructions.
+        '429':
+          $ref: '#/components/responses/EmailSendTooManyRequestsResponse'
+        '503':
+          $ref: '#/components/responses/email_ServiceUnavailableResponse'
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+  /email_messages/{email_id}/events:
+    get:
+      tags:
+      - Email Messages
+      operationId: ListEmailMessageEvents
+      summary: List events for an email message
+      description: 'Lists events for a single message sorted oldest first by `occurred_at asc, id asc`.
+
+        The legacy `/v2/emails/{id}/events` GET route is a backward-compatible alias.
+
+
+        For compatibility, each event carries the legacy
+
+        customer-visible `event_type` (`email.`-prefixed), the additive
+
+        `canonical_event_type` (`email.`-prefixed), and the deprecated
+
+        `type` duplicate — whose value keeps the exact legacy format:
+
+        the bare stored event name, never `email.`-prefixed. Gateway
+
+        rejections render `email.failed` + canonical `email.gw_reject`; MTA
+
+        expirations render `email.bounced` + canonical `email.expired`;
+
+        every unchanged outcome carries identical `event_type` and
+
+        `canonical_event_type` values (and `type` keeps the stored name).'
+      parameters:
+      - name: email_id
+        in: path
+        required: true
+        description: Email message UUID.
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/email_PageSize'
+      - $ref: '#/components/parameters/PageCursor'
+      responses:
+        '200':
+          description: Paginated list of message events.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageEventListResponse'
+              example:
+                data:
+                - type: queued
+                  event_type: email.queued
+                  canonical_event_type: email.queued
+                  occurred_at: '2026-07-06T18:24:00.000Z'
+                - type: gw_reject
+                  event_type: email.failed
+                  canonical_event_type: email.gw_reject
+                  occurred_at: '2026-07-06T18:24:00.000Z'
+                meta:
+                  page_size: 50
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+  /email_messages/{email_id}/recipients:
+    get:
+      tags:
+      - Email Messages
+      operationId: ListEmailMessageRecipients
+      summary: List recipients for an email message
+      description: 'Lists per-recipient delivery states for a single message with cursor pagination.
+
+        Each recipient has an independent status, billable flag, and lifecycle timestamps.
+
+        BCC recipient addresses are redacted (returned as null) to protect BCC privacy.
+
+        Default page size is 25, maximum is 100.'
+      parameters:
+      - name: email_id
+        in: path
+        required: true
+        description: Email message UUID.
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/email_PageSize'
+      - $ref: '#/components/parameters/PageCursor'
+      - name: status
+        in: query
+        description: Filter recipients by status.
+        required: false
+        schema:
+          type: string
+          enum:
+          - queued
+          - sending
+          - sent
+          - deferred
+          - delivered
+          - bounced
+          - failed
+          - gw_reject
+          - cancelled
+          - injection_timeout
+          - expired
+      - name: kind
+        in: query
+        description: Filter recipients by address kind.
+        required: false
+        schema:
+          type: string
+          enum:
+          - to
+          - cc
+          - bcc
+      responses:
+        '200':
+          description: Paginated list of recipients.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailRecipientListResponse'
+              example:
+                data:
+                - record_type: email_recipient
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  message_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  address: example@telnyx.com
+                  kind: to
+                  status: queued
+                  billable: false
+                  sent_at: '2024-01-23T18:10:02.574Z'
+                  delivered_at: '2024-01-23T18:10:02.574Z'
+                  failed_at: '2024-01-23T18:10:02.574Z'
+                  smtp_code: 0
+                  smtp_response: string
+                meta:
+                  page_size: 1
+                  page_cursor: string
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+  /email_messages/{email_id}/recipients/{recipient_id}:
+    get:
+      tags:
+      - Email Messages
+      operationId: GetEmailMessageRecipient
+      summary: Get a single recipient's delivery state
+      description: 'Returns the current delivery state of a single recipient, including status,
+
+        billable flag, SMTP detail, and lifecycle timestamps.
+
+        BCC recipient addresses are redacted (returned as null).'
+      parameters:
+      - name: email_id
+        in: path
+        required: true
+        description: Email message UUID.
+        schema:
+          type: string
+          format: uuid
+      - name: recipient_id
+        in: path
+        required: true
+        description: Recipient UUID.
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Recipient delivery state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailRecipientResponse'
+              example:
+                data:
+                  record_type: email_recipient
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  message_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  address: example@telnyx.com
+                  kind: to
+                  status: queued
+                  billable: false
+                  sent_at: '2024-01-23T18:10:02.574Z'
+                  delivered_at: '2024-01-23T18:10:02.574Z'
+                  failed_at: '2024-01-23T18:10:02.574Z'
+                  smtp_code: 0
+                  smtp_response: string
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+  /email_messages/{email_id}/schedule:
+    delete:
+      tags:
+      - Email Messages
+      operationId: CancelScheduledEmailMessage
+      summary: Cancel a scheduled email message
+      description: Cancels a scheduled email and returns it with status `cancelled`. The legacy `/v2/emails/{id}/schedule` DELETE route is an alias.
+      parameters:
+      - name: email_id
+        in: path
+        required: true
+        description: Email message UUID.
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Scheduled email cancelled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailMessageResponse'
+        '400':
+          $ref: '#/components/responses/email_BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+    patch:
+      tags:
+      - Email Messages
+      operationId: RescheduleEmailMessage
+      summary: Reschedule a scheduled email message
+      description: Moves an existing scheduled email to a new future send time. Only the delivery time (`scheduled_at`) changes; the message ID, content, recipients, tags, and metadata remain unchanged. Returns `409 Conflict` if the message is no longer scheduled or its scheduled-send worker has already started processing it. This route emits no dedicated `rescheduled` event.
+      parameters:
+      - name: email_id
+        in: path
+        required: true
+        description: Email message UUID.
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        description: Provide a future delivery time. The timestamp in this example is illustrative; replace it with a value that is in the future when making a request.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RescheduleEmailMessageRequest'
+            example:
+              scheduled_at: '2099-08-07T14:30:00Z'
+      responses:
+        '200':
+          description: Scheduled email rescheduled. The response matches the single-message GET representation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailMessageDetailResponse'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '409':
+          description: The email is not scheduled or its scheduled-send worker is already processing it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+        '422':
+          description: '`scheduled_at` is missing, invalid ISO 8601, or not in the future.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              example:
+                errors:
+                - code: '10015'
+                  title: Validation Failed
+                  detail: scheduled_at must be in the future
+                  source:
+                    pointer: /data/attributes/scheduled_at
+  /email_messages/{id}:
+    delete:
+      tags:
+      - Email Messages
+      operationId: DeleteEmailMessage
+      summary: Delete an email message
+      description: 'Permanently deletes an account-scoped email message, its events, its durable
+
+        recipients, and unshared attachment objects. Returns 404 when the message does
+
+        not exist in the authenticated account. The legacy `/v2/emails/{id}` DELETE
+
+        route is a backward-compatible alias.'
+      parameters:
+      - $ref: '#/components/parameters/EmailMessageId'
+      responses:
+        '204':
+          description: Email data deleted successfully.
+        '400':
+          $ref: '#/components/responses/email_BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '500':
+          $ref: '#/components/responses/email_InternalServerErrorResponse'
+    get:
+      tags:
+      - Email Messages
+      operationId: GetEmailMessage
+      summary: Get an email message
+      description: The legacy `/v2/emails/{id}` GET route is a backward-compatible alias for this operation.
+      parameters:
+      - $ref: '#/components/parameters/EmailMessageId'
+      responses:
+        '200':
+          description: Email message details, including plain-text and HTML bodies.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailMessageDetailResponse'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+components:
+  schemas:
+    email_PaginationMeta:
+      type: object
+      properties:
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        page_cursor:
+          type: string
+          description: Cursor for the next page, when more results are available.
+      required:
+      - page_size
+    CreateEmailBatchItemRequest:
+      type: object
+      description: 'A single message in a batch create request. This schema mirrors
+
+        `CreateEmailRequest` EXCEPT it does not accept the reply/forward
+
+        threading parameters (`in_reply_to_message_id`, `reply_to_all`,
+
+        `forward_of_message_id`) — those are single-send-only in Phase 1
+
+        (MSG-1491) and are not yet implemented on the batch endpoint. Recipient
+
+        email addresses must be unique across `to`, `cc`, and `bcc` after
+
+        case-insensitive normalization. Duplicate recipients return `400`.'
+      properties:
+        from:
+          $ref: '#/components/schemas/EmailAddressInput'
+        from_name:
+          type: string
+          description: Optional display name for string `from`; overrides `from.name` when provided.
+        to:
+          $ref: '#/components/schemas/EmailAddressArrayInput'
+        cc:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailAddressInput'
+        bcc:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailAddressInput'
+        reply_to:
+          $ref: '#/components/schemas/EmailAddressInput'
+          description: Reply-to address. If provided as an object with a name, only the email is stored; the name is ignored.
+        subject:
+          type: string
+          description: Required unless `template_id` is supplied. When using a template, the template's subject is rendered; if the template has no subject or renders empty, the request returns 400.
+        html_body:
+          type: string
+          description: HTML email body. Returned only by `GET /email_messages/{id}`; omitted from create and list responses.
+        text_body:
+          type: string
+          description: Plain text email body. Returned only by `GET /email_messages/{id}`; omitted from create and list responses.
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: Custom email headers. Write-only; not returned in responses.
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentRequest'
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags for categorization and filtering. Stored on the message, returned on message responses, and propagated to Email Detail Records. Usable in `filter[tags]` when listing messages.
+        group_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Optional unsubscribe-group UUID used for group-scoped suppression checks and unsubscribe handling.
+        ignore_suppression:
+          type: boolean
+          default: false
+          description: 'When true, allows delivery to recipients whose suppressions explicitly
+
+            permit an override. Hard bounces, spam complaints, and invalid-address
+
+            suppressions cannot be overridden. Requires the `email:override` API scope.
+
+            '
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Custom metadata key/value pairs. Stored on the message, returned on message responses, and propagated to Email Detail Records. Usable in `filter[metadata]` when listing messages.
+        tracking_settings:
+          $ref: '#/components/schemas/TrackingSettings'
+        template_id:
+          type: string
+          format: uuid
+        template_variables:
+          type: object
+          default: {}
+          additionalProperties: true
+          description: Variables for Liquid template rendering. Non-object values may cause a 422 validation error on message creation, but are silently treated as an empty object for template rendering. When the template enables `strict_variables`, a missing required variable fails the request with 422 (single send) or a per-item `unprocessable_entity` error (batch) naming the variable; no message is persisted for the failed item.
+        scheduled_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Future ISO 8601 delivery time. Invalid or non-future timestamps are rejected. Single sends return HTTP 422; in batch sends the invalid item is reported in the 207 per-item errors while other items continue. `send_at` remains a deprecated request alias. A non-null `scheduled_at` takes precedence over `send_at`; when `scheduled_at` is omitted or null, `send_at` is used.
+        send_at:
+          type: string
+          format: date-time
+          deprecated: true
+          description: Deprecated alias for `scheduled_at`.
+        inline_css:
+          type: boolean
+          default: false
+        sandbox_mode:
+          type: boolean
+          default: false
+          description: 'Per-message sandbox flag. The batch-level `sandbox_mode` envelope value is authoritative: it overwrites every message''s `sandbox_mode` before processing, including the `false` default when the envelope omits the field. A per-item `sandbox_mode: true` inside a non-sandbox batch is therefore a real send. Set the envelope field to run any batch item in sandbox mode.'
+      required:
+      - from
+      - to
+    EmailMessageDetail:
+      allOf:
+      - $ref: '#/components/schemas/EmailMessage'
+      - type: object
+        properties:
+          text_body:
+            type: string
+            nullable: true
+            description: Plain-text body submitted for the message.
+          html_body:
+            type: string
+            nullable: true
+            description: HTML body submitted for the message.
+        required:
+        - text_body
+        - html_body
+    RecipientSuppressedError:
+      type: object
+      description: Non-standard error envelope returned when all recipients are suppressed and ignore_suppression was not set/allowed. Includes a top-level `suppressed` array alongside `errors`.
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+                enum:
+                - recipient_suppressed
+              title:
+                type: string
+              detail:
+                type: string
+        suppressed:
+          type: array
+          items:
+            type: object
+            properties:
+              to:
+                type: string
+                format: email
+              reason:
+                type: string
+              scope:
+                type: string
+              override_allowed:
+                type: boolean
+    EmailMessageResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailMessage'
+        suppressed:
+          type: array
+          description: Recipients removed by suppression checks when at least one recipient remains and the message is accepted.
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
+      required:
+      - data
+    ErrorObject:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Telnyx error code. Send admission errors include account daily quota 10011 and sender-domain ramp code domain_graduation_limit_exceeded. Edge idempotency errors use 10027 or 10036. Fallback 404/500 responses from the framework may use string status codes ('404', '500') instead.
+          enum:
+          - '10001'
+          - '10006'
+          - '10007'
+          - '10011'
+          - '10015'
+          - '10016'
+          - '10019'
+          - domain_graduation_limit_exceeded
+          - recipient_suppressed
+          - reputation_suspended
+          - '404'
+          - '500'
+          - '10027'
+          - '10036'
+        title:
+          type: string
+        detail:
+          description: Human-readable error detail. Changeset responses may return a structured object.
+          oneOf:
+          - type: string
+          - type: object
+            additionalProperties: true
+        source:
+          type: object
+          additionalProperties: true
+          nullable: true
+        meta:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: Additional metadata. Present on 401 errors with a documentation URL.
+      required:
+      - code
+      - title
+      - detail
+    EmailEventType:
+      type: string
+      description: Bare stored event names returned by message history. In addition to the normal send and delivery lifecycle, polling can expose suppression, scan, and quarantine lifecycle rows. Sharp canonical names gw_reject, injection_timeout, and expired distinguish gateway rejection, ambiguous injection timeout, and MTA expiration. The failed and bounced names remain valid for system/admin failures and hard bounces respectively. Existing stored rows retain their original names.
+      enum:
+      - queued
+      - deferred
+      - scheduled
+      - cancelled
+      - sandbox
+      - sending
+      - sent
+      - failed
+      - delivered
+      - bounced
+      - complained
+      - suppressed
+      - rejected
+      - opened
+      - clicked
+      - unsubscribed
+      - daily_limit_exceeded
+      - scan_deferred
+      - quarantined
+      - quarantine_released
+      - quarantine_release_dispatched
+      - quarantine_rejected
+      - quarantine_expired
+      - gw_reject
+      - injection_timeout
+      - expired
+    ReputationSuspendedError:
+      type: object
+      description: Non-standard error envelope returned when the sending domain's reputation band is 'poor'. Uses string code `reputation_suspended` instead of a numeric code.
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: object
+            required:
+            - code
+            - title
+            - detail
+            properties:
+              code:
+                type: string
+                enum:
+                - reputation_suspended
+              title:
+                type: string
+                example: Sending Suspended
+              detail:
+                type: string
+    EmbeddedMessageEvent:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/EmailEventType'
+        occurred_at:
+          type: string
+          format: date-time
+        payload:
+          type: object
+          additionalProperties: true
+      required:
+      - type
+      - occurred_at
+      description: An event embedded in a message response. The dedicated per-message events endpoint additionally returns event_type and canonical_event_type.
+    RenderErrorObject:
+      type: object
+      properties:
+        code:
+          type: string
+          enum:
+          - render_error
+        message:
+          type: string
+      required:
+      - code
+      - message
+    EmailMessageListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailMessage'
+        meta:
+          $ref: '#/components/schemas/email_PaginationMeta'
+      required:
+      - data
+      - meta
+    RenderErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RenderErrorObject'
+      required:
+      - errors
+    DomainGraduationLimitExceededError:
+      type: object
+      description: Error envelope returned when a newly sending custom domain on shared egress would exceed its current daily graduation ceiling. The send is rejected before message creation.
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: object
+            required:
+            - code
+            - title
+            - detail
+            properties:
+              code:
+                type: string
+                enum:
+                - domain_graduation_limit_exceeded
+              title:
+                type: string
+                example: Too Many Requests
+              detail:
+                type: string
+                example: Daily send limit of 250 recipients for this sender domain exceeded. The limit resets at midnight UTC.
+              meta:
+                type: object
+                description: Bounded retry guidance. Each field is omitted when unknown.
+                additionalProperties: false
+                properties:
+                  retry_after_seconds:
+                    type: integer
+                    minimum: 1
+                    description: Seconds until the next UTC-midnight reset.
+                  remaining_today:
+                    type: integer
+                    minimum: 0
+                    description: Recipient headroom remaining for the sender-domain identity before this rejected request.
+    RescheduleEmailMessageRequest:
+      type: object
+      description: Only the delivery time is mutable; any other request fields are ignored.
+      properties:
+        scheduled_at:
+          type: string
+          format: date-time
+          description: New ISO 8601 delivery time. Must be strictly in the future.
+      required:
+      - scheduled_at
+    DailySendLimitError:
+      type: object
+      description: Error envelope returned when the account's daily recipient quota is exhausted before message creation.
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: object
+            required:
+            - code
+            - title
+            - detail
+            properties:
+              code:
+                type: string
+                enum:
+                - '10011'
+              title:
+                type: string
+                example: Too Many Requests
+              detail:
+                type: string
+                example: Daily send limit of 1000 recipients exceeded. The limit resets at midnight UTC.
+    EmailBatchMeta:
+      type: object
+      properties:
+        total:
+          type: integer
+          minimum: 0
+        succeeded:
+          type: integer
+          minimum: 0
+        failed:
+          type: integer
+          minimum: 0
+      required:
+      - total
+      - succeeded
+      - failed
+    EmailMessageDetailResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailMessageDetail'
+      required:
+      - data
+    MessageEvent:
+      type: object
+      description: An event on the per-message events endpoint. The legacy event_type and additive canonical_event_type are email.-prefixed. The deprecated type preserves the bare stored event name for compatibility.
+      properties:
+        type:
+          allOf:
+          - $ref: '#/components/schemas/EmailEventType'
+          deprecated: true
+          description: Deprecated name field retained for compatibility. Its value is the bare stored event name, never email.-prefixed. Use event_type for the legacy rendering or canonical_event_type for the canonical name.
+        event_type:
+          type: string
+          pattern: ^email\.
+          example: email.delivered
+          description: Legacy customer-visible event name, prefixed with `email.`. Gateway rejections render `email.failed`; MTA expirations render `email.bounced`. Webhook subscription allowlists match the legacy name.
+        canonical_event_type:
+          type: string
+          pattern: ^email\.
+          example: email.delivered
+          description: Additive canonical outcome name, prefixed with `email.`. Gateway rejection is `email.gw_reject`, ambiguous injection timeout is `email.injection_timeout`, and MTA expiration is `email.expired`. Unchanged outcomes retain their names. Existing stored rows are translated only when recorded payload evidence proves the outcome; a legacy failed row is not guessed or sharpened.
+        occurred_at:
+          type: string
+          format: date-time
+        payload:
+          type: object
+          additionalProperties: true
+      required:
+      - type
+      - event_type
+      - canonical_event_type
+      - occurred_at
+    AttachmentResponse:
+      type: object
+      description: EDR-aligned attachment metadata. The base64 `content` is never returned.
+      properties:
+        url:
+          type: string
+          format: uri
+          nullable: true
+          description: Telnyx-hosted public URL for the attachment content.
+        sha256:
+          type: string
+          nullable: true
+          description: SHA-256 hex digest of the attachment content.
+        size_bytes:
+          type: integer
+          nullable: true
+          description: Attachment size in bytes.
+        filename:
+          type: string
+        content_type:
+          type: string
+        disposition:
+          type: string
+          default: attachment
+          description: MIME disposition (e.g. `attachment` or `inline`). Runtime passes through the stored value without enforcing an enum.
+        content_id:
+          type: string
+          nullable: true
+          description: MIME Content-ID for inline references.
+      required:
+      - url
+      - sha256
+      - size_bytes
+      - filename
+      - content_type
+      - disposition
+      - content_id
+    EmailRecipient:
+      type: object
+      properties:
+        record_type:
+          type: string
+          enum:
+          - email_recipient
+        id:
+          type: string
+          format: uuid
+          description: Recipient UUID.
+        message_id:
+          type: string
+          format: uuid
+          description: Parent email message UUID.
+        address:
+          type: string
+          format: email
+          nullable: true
+          description: Recipient email address. Null for BCC recipients (redacted for privacy).
+        kind:
+          type: string
+          enum:
+          - to
+          - cc
+          - bcc
+        status:
+          type: string
+          enum:
+          - queued
+          - sending
+          - sent
+          - deferred
+          - delivered
+          - bounced
+          - failed
+          - gw_reject
+          - cancelled
+          - injection_timeout
+          - expired
+          description: Current per-recipient delivery status.
+        billable:
+          type: boolean
+          description: Whether this recipient's delivery is billable (set on queue acceptance).
+        sent_at:
+          type: string
+          format: date-time
+          nullable: true
+        delivered_at:
+          type: string
+          format: date-time
+          nullable: true
+        failed_at:
+          type: string
+          format: date-time
+          nullable: true
+        smtp_code:
+          type: integer
+          nullable: true
+          description: SMTP response code when available (e.g. 550 for bounces).
+        smtp_response:
+          type: string
+          nullable: true
+          description: SMTP response message when available.
+      required:
+      - record_type
+      - id
+      - message_id
+      - address
+      - kind
+      - status
+      - billable
+    EmailBatchItemError:
+      type: object
+      properties:
+        index:
+          type: integer
+          minimum: 0
+          description: Zero-based index of the failed message in the request array.
+        code:
+          type: string
+          enum:
+          - bad_request
+          - not_found
+          - forbidden
+          - service_unavailable
+          - unprocessable_entity
+          - validation_error
+          - recipient_suppressed
+          - reputation_suspended
+          description: Batch item errors use `message` (not `detail`) for the human-readable text.
+        message:
+          type: string
+      required:
+      - index
+      - code
+      - message
+    email_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorObject'
+        suppressed:
+          type: array
+          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
+      required:
+      - errors
+    EmailAddress:
+      type: object
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+      required:
+      - email
+    EmailRecipientListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailRecipient'
+        meta:
+          type: object
+          properties:
+            page_size:
+              type: integer
+              minimum: 1
+              maximum: 100
+            page_cursor:
+              type: string
+              nullable: true
+              description: Cursor for the next page. Absent when there are no more results.
+          required:
+          - page_size
+      required:
+      - data
+      - meta
+    EmailAddressInput:
+      oneOf:
+      - type: string
+      - $ref: '#/components/schemas/EmailAddress'
+    EmailRecipientResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailRecipient'
+      required:
+      - data
+    CreateEmailRequest:
+      type: object
+      description: Recipient email addresses must be unique across `to`, `cc`, and `bcc` after case-insensitive normalization. Duplicate recipients return `400 Bad Request`.
+      properties:
+        from:
+          $ref: '#/components/schemas/EmailAddressInput'
+        from_name:
+          type: string
+          description: Optional display name for string `from`; overrides `from.name` when provided.
+        to:
+          $ref: '#/components/schemas/EmailAddressArrayInput'
+        cc:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailAddressInput'
+        bcc:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailAddressInput'
+        reply_to:
+          $ref: '#/components/schemas/EmailAddressInput'
+          description: Reply-to address. If provided as an object with a name, only the email is stored; the name is ignored.
+        subject:
+          type: string
+          description: Required unless `template_id` is supplied. When using a template, the template's subject is rendered; if the template has no subject or renders empty, the request returns 400.
+        html_body:
+          type: string
+          description: HTML email body. Returned only by `GET /email_messages/{id}`; omitted from create and list responses.
+        text_body:
+          type: string
+          description: Plain text email body. Returned only by `GET /email_messages/{id}`; omitted from create and list responses.
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: Custom email headers. Write-only; not returned in responses.
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentRequest'
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags for categorization and filtering. Stored on the message, returned on message responses, and propagated to Email Detail Records. Usable in `filter[tags]` when listing messages.
+        group_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Optional unsubscribe-group UUID used for group-scoped suppression checks and unsubscribe handling.
+        ignore_suppression:
+          type: boolean
+          default: false
+          description: 'When true, allows delivery to recipients whose suppressions explicitly
+
+            permit an override. Hard bounces, spam complaints, and invalid-address
+
+            suppressions cannot be overridden. Requires the `email:override` API scope.
+
+            '
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Custom metadata key/value pairs. Stored on the message, returned on message responses, and propagated to Email Detail Records. Usable in `filter[metadata]` when listing messages.
+        tracking_settings:
+          $ref: '#/components/schemas/TrackingSettings'
+        template_id:
+          type: string
+          format: uuid
+        template_variables:
+          type: object
+          default: {}
+          additionalProperties: true
+          description: Variables for Liquid template rendering. Non-object values may cause a 422 validation error on message creation, but are silently treated as an empty object for template rendering. When the template enables `strict_variables`, a missing required variable fails the request with 422 (single send) or a per-item `unprocessable_entity` error (batch) naming the variable; no message is persisted for the failed item.
+        scheduled_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Future ISO 8601 delivery time. Invalid or non-future timestamps are rejected. Single sends return HTTP 422; in batch sends the invalid item is reported in the 207 per-item errors while other items continue. `send_at` remains a deprecated request alias. A non-null `scheduled_at` takes precedence over `send_at`; when `scheduled_at` is omitted or null, `send_at` is used.
+        send_at:
+          type: string
+          format: date-time
+          deprecated: true
+          description: Deprecated alias for `scheduled_at`.
+        inline_css:
+          type: boolean
+          default: false
+        sandbox_mode:
+          type: boolean
+          default: false
+          description: 'Validates and accepts the message without injecting it into the MTA or outbound Kafka path. Nothing is delivered: sandbox records are non-billable, consume no daily-send-limit quota, and feed no delivery-reputation signals.
+
+
+            The reserved sandbox test-recipient domain is `test.telnyx.com`. In sandbox mode, these addresses produce deterministic recipient-scoped lifecycle events:
+
+
+            - `delivered@test.telnyx.com`: queued -> sending -> sent -> delivered
+
+            - `hard-bounce@test.telnyx.com`: queued -> sending -> sent -> bounced (permanent)
+
+            - `soft-bounce@test.telnyx.com`: queued -> sending -> sent -> bounced (transient)
+
+            - `complaint@test.telnyx.com`: queued -> sending -> sent -> complained
+
+            - `suppressed@test.telnyx.com`: queued -> suppressed
+
+            - `invalid@test.telnyx.com`: queued -> sending -> failed (invalid recipient)
+
+            - `dkim-fail@test.telnyx.com`: queued -> sending -> failed (DKIM unavailable)
+
+            - `rate-limit@test.telnyx.com`: queued -> sending -> failed (rate limit exceeded)
+
+
+            Matching is case-insensitive for both the local part and the domain and requires the exact domain `test.telnyx.com` — subdomains and other domains do not match. Mixed sandbox sends simulate only reserved test recipients; other recipients retain ordinary sandbox behavior (accepted, no delivery attempted). Hard-bounce and complaint outcomes also use the normal automatic-suppression pipeline. Non-sandbox sends to these addresses use the normal delivery path.'
+        in_reply_to_message_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: 'Telnyx message UUID of the message this send replies to. When provided,
+
+            the API sets RFC 5322 `In-Reply-To` and `References` headers on the
+
+            outbound MIME so the recipient''s mailbox (Gmail/Outlook) threads it
+
+            correctly. The parent is looked up under the caller''s account scope;
+
+            a UUID belonging to another account yields a non-enumerating 404.
+
+
+            Wire-only (Phase 1): the API sets the headers and does NOT resolve or
+
+            mutate `thread_id` on the server side. Messages sent without this
+
+            parameter are standalone (no threading headers injected).
+
+
+            Cannot be combined with `forward_of_message_id` (422).'
+        reply_to_all:
+          type: boolean
+          default: false
+          nullable: true
+          description: 'Indicates a reply-all intent. In Phase 1 (wire-only) this does not
+
+            change the threading headers — recipient selection is customer-
+
+            controlled (`to`/`cc`), and a thread is not defined by its audience.
+
+            When the referenced message has no thread context, reply-all
+
+            degrades to a plain reply (parent ID only in `References`). The
+
+            resolution engine (separate work) will expand the ancestor chain
+
+            at a later phase with no API change.
+
+
+            Only meaningful alongside `in_reply_to_message_id`.'
+        forward_of_message_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: 'Telnyx message UUID of the message this send forwards. Forwarded
+
+            messages start a NEW thread per RFC 5322 — NO `In-Reply-To` or
+
+            `References` headers are set on the outbound MIME. The id is
+
+            recorded in the message''s metadata for EDR provenance only.
+
+
+            The id is validated as a UUID but is NOT looked up against the
+
+            message store — existence is the caller''s responsibility (the
+
+            forward is pure metadata; it does not affect delivery). Cannot be
+
+            combined with `in_reply_to_message_id` (422).'
+      required:
+      - from
+      - to
+    SuppressedRecipient:
+      type: object
+      properties:
+        to:
+          type: string
+          format: email
+          description: Suppressed recipient email address.
+        reason:
+          type: string
+          description: Suppression reason returned by the recipient suppression service.
+        scope:
+          type: string
+          description: Scope at which the suppression applies.
+        override_allowed:
+          type: boolean
+          description: Whether an authorized send may override this suppression.
+      required:
+      - to
+      - reason
+      - scope
+      - override_allowed
+    AttachmentRequest:
+      type: object
+      properties:
+        filename:
+          type: string
+          description: Attachment filename. Defaults to "attachment" when omitted.
+        content_type:
+          type: string
+          description: MIME content type. Defaults to "application/octet-stream" when omitted.
+        content:
+          type: string
+          description: Attachment content, typically Base64-encoded. Defaults to empty string when omitted.
+        disposition:
+          type: string
+          default: attachment
+          description: MIME disposition (`attachment` or `inline`).
+        content_id:
+          type: string
+          nullable: true
+          description: MIME Content-ID used to reference an inline attachment.
+    MessageEventListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageEvent'
+        meta:
+          $ref: '#/components/schemas/email_PaginationMeta'
+      required:
+      - data
+      - meta
+    CreateEmailBatchRequest:
+      type: object
+      properties:
+        messages:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          description: Array of email messages to send. Up to 1,000 messages per batch request. Each message is validated and sent independently; per-message failures do not affect other messages in the batch.
+          items:
+            $ref: '#/components/schemas/CreateEmailBatchItemRequest'
+        sandbox_mode:
+          type: boolean
+          default: false
+          description: Applies sandbox mode to all messages in the batch and overrides any per-message `sandbox_mode` value — each message's effective `sandbox_mode` is exactly this envelope value. Reserved recipients at `test.telnyx.com` produce the deterministic event chains documented on CreateEmailRequest.sandbox_mode; no batch item is injected into the MTA or outbound Kafka path. Sandbox batch items are non-billable, consume no daily-send-limit quota, and feed no delivery-reputation signals.
+      required:
+      - messages
+    EmailAddressArrayInput:
+      type: array
+      minItems: 1
+      items:
+        $ref: '#/components/schemas/EmailAddressInput'
+    EmailMessageStatus:
+      type: string
+      description: Current status of an email message. Lifecycle statuses (queued, scheduled, etc.) are set on creation. Delivery statuses (delivered, bounced, etc.) are updated by delivery event consumers.
+      enum:
+      - queued
+      - scheduled
+      - cancelled
+      - sandbox
+      - sending
+      - sent
+      - failed
+      - deferred
+      - delivered
+      - bounced
+      - complained
+      - rejected
+      - opened
+      - clicked
+      - unsubscribed
+    TrackingSettings:
+      type: object
+      description: Per-send open and click tracking overrides. Omitted properties inherit the sender domain's tracking settings.
+      properties:
+        open_tracking:
+          type: boolean
+          description: Whether to inject an open-tracking pixel for this message.
+        click_tracking:
+          type: boolean
+          description: Whether to rewrite links for click tracking in this message.
+    EmailBatchResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailMessage'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailBatchItemError'
+        meta:
+          $ref: '#/components/schemas/EmailBatchMeta'
+      required:
+      - data
+      - errors
+      - meta
+    EmailMessage:
+      type: object
+      properties:
+        record_type:
+          type: string
+          enum:
+          - email_message
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/EmailMessageStatus'
+        from:
+          $ref: '#/components/schemas/EmailAddress'
+        to:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailAddress'
+        cc:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailAddress'
+        bcc:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailAddress'
+        reply_to:
+          type: string
+          nullable: true
+        subject:
+          type: string
+        template_id:
+          type: string
+          format: uuid
+          nullable: true
+        template_variables:
+          type: object
+          additionalProperties: true
+          default: {}
+        tags:
+          type: array
+          default: []
+          items:
+            type: string
+          description: Customer-supplied tags stored with the message.
+        metadata:
+          type: object
+          additionalProperties: true
+          default: {}
+          description: Customer-supplied metadata stored with the message.
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentResponse'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmbeddedMessageEvent'
+        created_at:
+          type: string
+          format: date-time
+        scheduled_at:
+          type: string
+          format: date-time
+          description: Present when a scheduled_at value was stored. Persists even after the scheduled send has been processed or cancelled.
+        inline_css:
+          type: boolean
+          description: Present when true in the immediate create response. Not persisted; absent on subsequent GET requests.
+        sandbox:
+          type: boolean
+          description: Present when sandbox mode was used.
+        recipient_statuses:
+          type: object
+          description: 'Per-status recipient counts for the message. Present only for outbound messages
+
+            with recipient rows. Keys are recipient statuses, values are counts.
+
+            Example: `{"delivered": 998, "bounced": 2}`.
+
+            '
+          additionalProperties:
+            type: integer
+          example:
+            delivered: 998
+            bounced: 2
+        suppressed:
+          type: array
+          description: Recipients excluded from delivery by suppression checks, with reasons. On batch items, present when that item had suppressed recipients; all other recipients of the item still receive the message. For single sends this information appears at the top level of the response instead (see EmailMessageResponse.suppressed).
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
+      required:
+      - record_type
+      - id
+      - status
+      - from
+      - to
+      - cc
+      - bcc
+      - subject
+      - reply_to
+      - template_id
+      - template_variables
+      - tags
+      - metadata
+      - attachments
+      - events
+      - created_at
+  responses:
+    email_BadRequestResponse:
+      description: Bad Request / Validation Failed (10015).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10015'
+              title: Bad Request
+              detail: email is required
+    IdempotencyConflictResponse:
+      description: A request with the same Idempotency-Key is still being processed (10036). Retry later with the same key and request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10036'
+              title: Resource is being processed
+              detail: A request with this Idempotency-Key is already being processed.
+              source:
+                pointer: /header/Idempotency-Key
+    email_InternalServerErrorResponse:
+      description: Internal server error (10019).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10019'
+              title: Internal Server Error
+              detail: Failed to create batch validation
+    email_ServiceUnavailableResponse:
+      description: Service unavailable (10016), including an unavailable upstream dependency or unavailable Edge idempotency protection for a keyed request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10016'
+              title: Service Unavailable
+              detail: The email domain service is temporarily unavailable. Please try again later.
+    EmailSendTooManyRequestsResponse:
+      description: Send rejected before message creation because the account daily recipient quota was exhausted (10011), the sender-domain graduation ceiling was exceeded (domain_graduation_limit_exceeded), or domain reputation is poor (reputation_suspended).
+      headers:
+        Retry-After:
+          description: Seconds until the next UTC-midnight reset. Present only for domain_graduation_limit_exceeded; omitted for 10011 and reputation_suspended.
+          schema:
+            type: integer
+            minimum: 1
+          example: 3600
+      content:
+        application/json:
+          schema:
+            oneOf:
+            - $ref: '#/components/schemas/DailySendLimitError'
+            - $ref: '#/components/schemas/DomainGraduationLimitExceededError'
+            - $ref: '#/components/schemas/ReputationSuspendedError'
+          examples:
+            accountDailyLimit:
+              summary: Account daily recipient quota exhausted
+              value:
+                errors:
+                - code: '10011'
+                  title: Too Many Requests
+                  detail: Daily send limit of 1000 recipients exceeded. The limit resets at midnight UTC.
+            senderDomainGraduation:
+              summary: Sender-domain graduation ceiling exceeded
+              value:
+                errors:
+                - code: domain_graduation_limit_exceeded
+                  title: Too Many Requests
+                  detail: Daily send limit of 250 recipients for this sender domain exceeded. The limit resets at midnight UTC.
+                  meta:
+                    retry_after_seconds: 3600
+                    remaining_today: 0
+            reputationSuspended:
+              summary: Domain reputation is poor
+              value:
+                errors:
+                - code: reputation_suspended
+                  title: Sending Suspended
+                  detail: Sender domain reputation is too low. Sending has been suspended. Please contact support to resolve deliverability issues.
+    email_NotFoundResponse:
+      description: Resource not found (10001).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10001'
+              title: Not Found
+              detail: The requested resource was not found
+    email_UnauthorizedResponse:
+      description: Not authorized (10006).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10006'
+              title: Not authorized
+              detail: Invalid API key
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10006
+    PayloadTooLargeResponse:
+      description: Request body exceeds the 8,000,000-byte limit for this endpoint.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10007'
+              title: Unexpected error
+              detail: An unexpected error occured.
+    email_ForbiddenResponse:
+      description: Forbidden (10007), such as domain not verified, suspended, degraded, or missing DKIM.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10007'
+              title: Forbidden
+              detail: Domain is not verified. Complete DNS setup before sending email.
+  parameters:
+    PageCursor:
+      name: page_cursor
+      in: query
+      description: Opaque URL-safe Base64 cursor returned by a previous list response.
+      required: false
+      schema:
+        type: string
+      example: eyJpbnNlcnRlZF9hdCI6IjIwMjQtMDEtMDEifQ
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Optional opaque, unquoted key for safely retrying the same logical request. Keys must contain 1 to 255 letters, numbers, hyphens, or underscores. Generate a unique UUID v4 for each operation and reuse it only when retrying that operation with the same request. Invalid headers—including duplicate, empty, malformed, or overlong values—return 400 with error code 10015. A request already in progress with the same key returns 409; reusing the key with a different request returns 422. Only successful responses are replayed, for up to 24 hours. Do not include sensitive data in the key.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+        pattern: ^[A-Za-z0-9_-]{1,255}$
+      example: 8e03978e-40d5-43e8-bc93-6894a57f9326
+    email_PageSize:
+      name: page_size
+      in: query
+      description: Number of results to return. Defaults to 25; maximum is 100. Invalid values are clamped to the valid range.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+    EmailMessageId:
+      name: id
+      in: path
+      required: true
+      description: Email message UUID.
+      schema:
+        type: string
+        format: uuid
+  headers:
+    IdempotentReplayed:
+      description: Present with value `true` when Edge replayed a stored successful response for the supplied Idempotency-Key. Omitted for first-time requests and error responses.
+      schema:
+        type: boolean
+        enum:
+        - true
+        example: true
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

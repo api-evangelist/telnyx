@@ -1,0 +1,431 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx X402 API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: X402
+paths:
+  /v1/chat/completions:
+    post:
+      operationId: x402_v1ChatCompletions
+      summary: Pay-per-call API via x402
+      description: OpenAI-compatible chat completions via Telnyx Inference — 13 open-weight models (MiniMax, Kimi, GLM, Llama, Qwen, Gemma) selected via body.model, from $0.002 to $0.150193 USDC per call. No API key, no signup, pay per request. Returns HTTP 402 with `payment-required` header; settle the x402 challenge to receive the response. No Telnyx API key required.
+      tags:
+      - X402
+      servers:
+      - url: https://x402.telnyx.com
+        description: x402 pay-per-call gateway
+      security: []
+      x-payment-info:
+        offers:
+        - intent: charge
+          method: x402
+          amount: '13850'
+          currency: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          description: '0.01385 USDC per call via x402 on Base. Gateway: https://x402.telnyx.com/v1/chat/completions'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - model
+              - messages
+              properties:
+                model:
+                  type: string
+                  description: Model slug — 13 open-weight models available (MiniMax, Kimi, GLM, Llama, Qwen, Gemma), e.g. "moonshotai/Kimi-K2.6". The 402 challenge quotes the per-model price.
+                messages:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                    - role
+                    - content
+                    properties:
+                      role:
+                        type: string
+                        enum:
+                        - system
+                        - user
+                        - assistant
+                        - tool
+                      content:
+                        type: string
+                max_tokens:
+                  type: integer
+                  minimum: 1
+                  description: Output token budget. Per-model caps apply and are quoted in the 402 challenge.
+      responses:
+        '200':
+          description: Successful completion (returned after payment settles).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/x402ChatCompletionResponse'
+        '402':
+          description: 'Payment Required — settle the x402 challenge described in the payment-required header. Gateway: https://x402.telnyx.com/v1/chat/completions. See `x-payment-info` for accepted payment offers.'
+          headers:
+            payment-required:
+              description: Base64-encoded x402v2 PaymentRequired envelope. Decode and settle the challenge per the x402 protocol.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/x402PaymentRequired'
+  /v1/audio/speech:
+    post:
+      operationId: x402_v1AudioSpeech
+      summary: Pay-per-call API via x402
+      description: Text-to-speech via Telnyx Inference (OpenAI-compatible /v1/audio/speech). 4,000+ voices across 9 providers, mp3 output, up to 3,000 characters. $0.000006 USDC per character metered ($0.002 minimum settle), or flat $0.018 exact per call. Returns HTTP 402 with `payment-required` header; settle the x402 challenge to receive the response. No Telnyx API key required.
+      tags:
+      - X402
+      servers:
+      - url: https://x402.telnyx.com
+        description: x402 pay-per-call gateway
+      security: []
+      x-payment-info:
+        offers:
+        - intent: charge
+          method: x402
+          amount: '18000'
+          currency: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          description: '0.018 USDC per call via x402 on Base. Gateway: https://x402.telnyx.com/v1/audio/speech'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - input
+              - voice
+              properties:
+                model:
+                  type: string
+                  description: Accepted for OpenAI SDK compatibility (e.g. "tts-1") but not forwarded — the voice id selects the engine.
+                input:
+                  type: string
+                  minLength: 1
+                  maxLength: 3000
+                  description: Text to synthesize. Upstream caps input at 3,000 characters.
+                voice:
+                  type: string
+                  description: OpenAI voice name (alloy, echo, …) or Telnyx voice id ("Provider.Model.VoiceId" — free catalog at GET /v1/audio/voices).
+                response_format:
+                  type: string
+                  enum:
+                  - mp3
+                  description: Output is always mp3.
+      responses:
+        '200':
+          description: MP3 audio (returned after payment settles).
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+        '402':
+          description: 'Payment Required — settle the x402 challenge described in the payment-required header. Gateway: https://x402.telnyx.com/v1/audio/speech. See `x-payment-info` for accepted payment offers.'
+          headers:
+            payment-required:
+              description: Base64-encoded x402v2 PaymentRequired envelope. Decode and settle the challenge per the x402 protocol.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/x402PaymentRequired'
+  /v1/audio/transcriptions:
+    post:
+      operationId: x402_v1AudioTranscriptions
+      summary: Pay-per-call API via x402
+      description: Speech-to-text via Telnyx Inference (OpenAI-compatible /v1/audio/transcriptions, multipart). Whisper large-v3-turbo, 100 languages, wav/mp3 up to 5 min / 12 MB. $0.003 USDC per minute metered per second ($0.002 minimum settle), or flat $0.015 exact per call. Returns HTTP 402 with `payment-required` header; settle the x402 challenge to receive the response. No Telnyx API key required.
+      tags:
+      - X402
+      servers:
+      - url: https://x402.telnyx.com
+        description: x402 pay-per-call gateway
+      security: []
+      x-payment-info:
+        offers:
+        - intent: charge
+          method: x402
+          amount: '15000'
+          currency: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          description: '0.015 USDC per call via x402 on Base. Gateway: https://x402.telnyx.com/v1/audio/transcriptions'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Audio file (wav/mp3), up to 5 minutes / 12 MB.
+                model:
+                  type: string
+                  enum:
+                  - whisper-1
+                  - whisper-large-v3-turbo
+                  - openai/whisper-large-v3-turbo
+                  description: All aliases of openai/whisper-large-v3-turbo.
+                response_format:
+                  type: string
+                  enum:
+                  - json
+                  - verbose_json
+                language:
+                  type: string
+                prompt:
+                  type: string
+                  maxLength: 1024
+                temperature:
+                  type: number
+                  minimum: 0
+                  maximum: 1
+      responses:
+        '200':
+          description: Transcription (returned after payment settles). `verbose_json` adds duration and segment timestamps.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - text
+                properties:
+                  text:
+                    type: string
+                  duration:
+                    type: number
+                    description: Audio duration in seconds (verbose_json only).
+                  segments:
+                    type: array
+                    items:
+                      type: object
+                    description: Segment timestamps (verbose_json only).
+        '402':
+          description: 'Payment Required — settle the x402 challenge described in the payment-required header. Gateway: https://x402.telnyx.com/v1/audio/transcriptions. See `x-payment-info` for accepted payment offers.'
+          headers:
+            payment-required:
+              description: Base64-encoded x402v2 PaymentRequired envelope. Decode and settle the challenge per the x402 protocol.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/x402PaymentRequired'
+components:
+  schemas:
+    x402PaymentRequired:
+      type: object
+      description: x402 v2 Payment Required envelope. Returned by the x402 facilitator gateway when payment is required to access this operation. The same envelope is returned as the response body and base64-encoded in the `payment-required` HTTP response header.
+      required:
+      - x402Version
+      - error
+      - accepts
+      properties:
+        x402Version:
+          type: integer
+          const: 2
+          description: x402 protocol version. Always 2.
+        error:
+          type: string
+          description: Human-readable error string (e.g. 'Payment required').
+        resource:
+          type: object
+          description: The paid resource the client attempted to access.
+          properties:
+            url:
+              type: string
+              format: uri
+            method:
+              type: string
+              enum:
+              - GET
+              - POST
+            description:
+              type: string
+            mimeType:
+              type: string
+        accepts:
+          type: array
+          description: Accepted payment methods, in preference order.
+          items:
+            type: object
+            required:
+            - scheme
+            - network
+            - amount
+            - asset
+            - payTo
+            properties:
+              scheme:
+                type: string
+              network:
+                type: string
+              amount:
+                type: string
+              asset:
+                type: string
+              payTo:
+                type: string
+              maxTimeoutSeconds:
+                type: integer
+              extra:
+                type: object
+                additionalProperties: true
+        extensions:
+          type: object
+          description: Vendor-defined extensions (e.g. catalog URLs, headers).
+          additionalProperties: true
+    x402ChatCompletionResponse:
+      type: object
+      description: OpenAI-compatible chat completion response. Returned by the x402 gateway after payment settles. Schema is the minimal subset of the OpenAI chat-completions response that downstream clients rely on.
+      required:
+      - id
+      - object
+      - choices
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the completion.
+        object:
+          type: string
+          const: chat.completion
+        choices:
+          type: array
+          description: Generated completion choices (typically one).
+          items:
+            type: object
+            required:
+            - index
+            - message
+            - finish_reason
+            properties:
+              index:
+                type: integer
+                minimum: 0
+              message:
+                type: object
+                required:
+                - role
+                - content
+                properties:
+                  role:
+                    type: string
+                    enum:
+                    - system
+                    - user
+                    - assistant
+                    - tool
+                  content:
+                    type: string
+              finish_reason:
+                type: string
+                description: Why generation stopped (e.g. 'stop', 'length', 'tool_calls').
+        usage:
+          type: object
+          description: Token usage for the request.
+          properties:
+            prompt_tokens:
+              type: integer
+              minimum: 0
+            completion_tokens:
+              type: integer
+              minimum: 0
+            total_tokens:
+              type: integer
+              minimum: 0
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

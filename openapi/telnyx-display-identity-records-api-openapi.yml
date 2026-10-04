@@ -1,0 +1,1297 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Display Identity Records API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Display Identity Records
+  description: A Display Identity Record (DIR) is the verified calling identity (display name, logo, call reasons) shown to recipients on outbound calls.
+paths:
+  /dir:
+    get:
+      summary: List all DIRs across your enterprises
+      description: 'Returns every DIR (Display Identity Record) you own, across all of your enterprises, as a single list. Pagination is JSON:API style (`page[number]`, `page[size]`, max 250). Supports `filter[]` query params: `filter[enterprise_id]`, `filter[status]`, `filter[display_name][contains]`, `filter[call_reason][contains]`, plus the renewal-window filters `filter[expiring_at][gte]` / `filter[expiring_at][lte]`. Sortable by `created_at`, `updated_at`, `display_name`, `status` (prefix `-` for descending; default `-created_at`).'
+      operationId: listAllDirs
+      tags:
+      - Display Identity Records
+      parameters:
+      - $ref: '#/components/parameters/BcPageNumber'
+      - $ref: '#/components/parameters/BcPageSize'
+      - name: sort
+        in: query
+        required: false
+        description: 'Sort field. Allowed values: `created_at`, `updated_at`, `display_name`, `status`. Prefix with `-` for descending. Default `-created_at`.'
+        schema:
+          type: string
+          default: -created_at
+          enum:
+          - created_at
+          - -created_at
+          - updated_at
+          - -updated_at
+          - display_name
+          - -display_name
+          - status
+          - -status
+      - name: filter[expiring_at][gte]
+        in: query
+        required: false
+        description: Return only DIRs whose `expiring_at` is at or after this ISO-8601 timestamp. Pairs with the `[lte]` variant to build renewal-window dashboards.
+        schema:
+          type: string
+          format: date-time
+      - name: filter[expiring_at][lte]
+        in: query
+        required: false
+        description: Return only DIRs whose `expiring_at` is at or before this ISO-8601 timestamp.
+        schema:
+          type: string
+          format: date-time
+      - name: filter[enterprise_id]
+        in: query
+        required: false
+        description: Filter by enterprise ID.
+        schema:
+          type: string
+          format: uuid
+      - name: filter[status]
+        in: query
+        required: false
+        description: Filter by DIR status.
+        schema:
+          $ref: '#/components/schemas/DirStatus'
+      - name: filter[display_name][contains]
+        in: query
+        required: false
+        description: Case-insensitive partial match on display name.
+        schema:
+          type: string
+      - name: filter[call_reason][contains]
+        in: query
+        required: false
+        description: Case-insensitive partial match on call reason.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Paginated list of DIRs across all your enterprises.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirList'
+        default:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        4XX:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+  /dir/{dir_id}:
+    delete:
+      summary: Request deletion of a DIR
+      description: 'Request deletion of a DIR. This does not remove the DIR on this call: it records the request, moves the DIR to `delete_requested`, and Telnyx completes the removal (de-registration and cleanup) shortly after. A verified DIR keeps serving its branded identity, and keeps billing, until the removal is executed. Failure modes: `400` if a child phone number is still attached or the DIR is `in_review` (wait for the review to finish), `409` if the DIR has an unresolved infringement claim, `404` if the DIR is not yours.'
+      operationId: deleteDirSimple
+      tags:
+      - Display Identity Records
+      parameters:
+      - $ref: '#/components/parameters/DirId'
+      responses:
+        '202':
+          description: Deletion requested. The DIR moves to `delete_requested` and is torn down shortly after.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirDeleteRequestAccepted'
+              example:
+                data:
+                  id: 16635d38-75a6-4481-82e8-69af60e05011
+                  status: delete_requested
+        default:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        4XX:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+    get:
+      summary: Get a DIR by id
+      description: Returns a single DIR by id. The enterprise is resolved server-side from the DIR id. Returns `404` if the DIR does not exist or is not yours.
+      operationId: getDirByIdSimple
+      tags:
+      - Display Identity Records
+      parameters:
+      - $ref: '#/components/parameters/DirId'
+      responses:
+        '200':
+          description: DIR.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirWrapped'
+        default:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        4XX:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+    patch:
+      summary: Update a DIR
+      description: 'Edit a DIR. DIRs in `draft`, `rejected`, `unsuccessful`, or `suspended` can be edited freely: PATCH is a pure edit, `status` is never changed, and you re-vet by calling `POST /v2/dir/{dir_id}/submit` explicitly. A `verified` DIR can also be edited in place: a PATCH that changes any value returns the DIR to `draft`; the currently approved identity keeps displaying, and the edited content goes live only after you re-submit and the DIR is approved again. A PATCH that changes nothing (an empty body or values identical to the current ones) leaves the DIR `verified`, so idempotent retries are safe. Changing only `bpo_authorizations` or `webhook_url` is the exception: the DIR stays `verified`. Each BPO authorization is reviewed on its own instead. DIRs in any other status (`submitted`, `in_review`, `expired`, `infringement_claimed`, `permanently_rejected`) cannot be edited.'
+      operationId: updateDirSimple
+      tags:
+      - Display Identity Records
+      parameters:
+      - $ref: '#/components/parameters/DirId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DirUpdateRequest'
+            example:
+              display_name: Acme Plumbing & Wellness
+              call_reasons:
+              - Appointment reminders
+              - Billing inquiries
+              - Lab results
+              logo_url: https://acmeplumbing.example.com/logo-v2-256.bmp
+      responses:
+        '200':
+          description: DIR updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirWrapped'
+        default:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        4XX:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+  /dir/{dir_id}/bpo_authorizations:
+    get:
+      tags:
+      - Display Identity Records
+      summary: List a DIR's authorized BPOs
+      operationId: listDirBpoAuthorizations
+      description: 'List the BPO (Business Process Outsourcer) accounts a Brand Owner has authorized on this DIR, together with the review state of each authorization.
+
+
+        Authorizations are supplied as the `bpo_authorizations` array when creating or updating a DIR, and each one is reviewed on its own. Only an `approved` authorization adds that BPO to this DIR''s authorized callers in the branded calling registry; `pending` and `rejected` authorizations do not. Each entry includes the `loa_document_id` you submitted: because `bpo_authorizations` replaces the whole list on every DIR update, send each entry you want to keep back with its `loa_document_id` unchanged, and it keeps its review state. A rejected entry carries a `rejection_reason`. Returns an empty list when the DIR has authorized no BPOs.'
+      parameters:
+      - $ref: '#/components/parameters/DirId'
+      - $ref: '#/components/parameters/BcPageNumber'
+      - $ref: '#/components/parameters/BcPageSize'
+      responses:
+        '200':
+          description: Paginated list of the DIR's BPO authorizations.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BpoAuthorizationList'
+        '404':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+  /dir/{dir_id}/bpo_loa:
+    post:
+      tags:
+      - Display Identity Records
+      summary: Render the BPO Authorization LOA for a DIR
+      operationId: renderDirBpoLoa
+      description: 'The Letter of Authorization in which a Brand Owner authorizes an approved BPO (Business Process Outsourcer) to place branded calls that display this DIR on the owner''s behalf. Both parties are read from the caller''s account: the Brand Owner is the enterprise that owns the DIR, and the BPO is `bpo_enterprise_id`. No business identity is accepted in the body.
+
+
+        When `signature` is omitted the PDF is returned unsigned so the Brand Owner can sign it externally and the BPO can upload it via the Documents API. When `signature` is present the PDF embeds the supplied image, printed name, and signed-at date.
+
+
+        Returns `application/pdf`.'
+      parameters:
+      - name: dir_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: The DIR id.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BpoAuthorizationLoaRenderRequest'
+      responses:
+        '200':
+          description: The rendered BPO Authorization LOA PDF.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        '404':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+  /dir/{dir_id}/loa:
+    post:
+      tags:
+      - Display Identity Records
+      summary: Render the Branded Calling LOA for a DIR
+      operationId: renderDirLoa
+      description: 'Generate a pre-filled Letter of Authorization (LOA) PDF for a DIR. Enterprise identity (legal name, DBA, address, contact, website, tax id) and the DIR display name are read server-side; the caller supplies the telephone numbers to authorize, an optional Authorized Agent block, and an optional drawn signature.
+
+
+        When `signature` is omitted the PDF is returned unsigned so the customer can sign it externally and upload it via the Documents API. When `signature` is present the PDF embeds the supplied image, printed name, and signed-at date.
+
+
+        Returns `application/pdf`.'
+      parameters:
+      - name: dir_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: The DIR id.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BrandLoaRenderRequest'
+      responses:
+        '200':
+          description: The rendered LOA PDF.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        '404':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+  /dir/{dir_id}/submit:
+    post:
+      summary: Submit a DIR for vetting
+      description: 'Submit a DIR for vetting. Sends the DIR back through the vetting cycle from any non-terminal status. When re-submitting from `suspended` or `expired`, the DIR''s previous Branded Calling registration is torn down transactionally and its phone numbers flip back to `submitted`. When re-submitting from `verified`, the existing registration stays live throughout the new vetting cycle.
+
+
+        Returns `400` from `submitted`/`in_review`/`permanently_rejected`. Returns `400` if the DIR''s business and financial references have not been submitted. Returns `409` if the DIR has an unresolved infringement claim.'
+      operationId: submitDirSimple
+      tags:
+      - Display Identity Records
+      parameters:
+      - $ref: '#/components/parameters/DirId'
+      responses:
+        '200':
+          description: DIR submitted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirWrapped'
+        default:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        4XX:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+  /enterprises/{enterprise_id}/dir:
+    get:
+      summary: List DIRs in an enterprise
+      description: 'Return the DIRs (Display Identity Records) belonging to a single enterprise. Pagination is JSON:API style (`page[number]`, `page[size]`, max 250). Supports `filter[]` query params: `filter[status]`, `filter[display_name][contains]`, `filter[call_reason][contains]`, plus the renewal-window filters `filter[expiring_at][gte]` / `filter[expiring_at][lte]` and the convenience `filter[expiring_within_days]` (mutually exclusive with the explicit gte/lte form). Sortable by `created_at`, `updated_at`, `display_name`, `status`, `submitted_at`, `verified_at`, `expiring_at` (prefix `-` for descending; default `-created_at`).'
+      operationId: listDirsForEnterprise
+      tags:
+      - Display Identity Records
+      parameters:
+      - $ref: '#/components/parameters/EnterpriseId'
+      - $ref: '#/components/parameters/BcPageNumber'
+      - $ref: '#/components/parameters/BcPageSize'
+      - name: sort
+        in: query
+        required: false
+        description: 'Sort field. Allowed: `created_at`, `updated_at`, `display_name`, `status`, `submitted_at`, `verified_at`, `expiring_at`. Prefix with `-` for descending. Default `-created_at`.'
+        schema:
+          type: string
+          default: -created_at
+          enum:
+          - created_at
+          - -created_at
+          - updated_at
+          - -updated_at
+          - display_name
+          - -display_name
+          - status
+          - -status
+          - submitted_at
+          - -submitted_at
+          - verified_at
+          - -verified_at
+          - expiring_at
+          - -expiring_at
+      - name: filter[expiring_at][gte]
+        in: query
+        required: false
+        description: Return only DIRs whose `expiring_at` is at or after this ISO-8601 timestamp.
+        schema:
+          type: string
+          format: date-time
+      - name: filter[expiring_at][lte]
+        in: query
+        required: false
+        description: Return only DIRs whose `expiring_at` is at or before this ISO-8601 timestamp.
+        schema:
+          type: string
+          format: date-time
+      - name: filter[expiring_within_days]
+        in: query
+        required: false
+        description: 'Convenience: returns DIRs whose `expiring_at` falls within the next N days (1–365). Equivalent to setting `filter[expiring_at][gte]=<now>` + `filter[expiring_at][lte]=<now+N>`. Mutually exclusive with the explicit `[gte]`/`[lte]` filters - combining returns 400.'
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 365
+      - name: filter[status]
+        in: query
+        required: false
+        description: Filter by DIR status.
+        schema:
+          $ref: '#/components/schemas/DirStatus'
+      - name: filter[display_name][contains]
+        in: query
+        required: false
+        description: Case-insensitive partial match on display name.
+        schema:
+          type: string
+      - name: filter[call_reason][contains]
+        in: query
+        required: false
+        description: Case-insensitive partial match on call reason.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Paginated list of DIRs.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirList'
+        default:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        4XX:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+    post:
+      summary: Create a Display Identity Record (DIR)
+      description: 'Create a new DIR under the given enterprise. The DIR starts in `draft` status; it must be submitted (`POST .../submit`) and approved by Telnyx before any phone number can be attached.
+
+
+        **Field rules**
+
+        - `display_name`: 1–35 characters, no emoji or whitespace-only strings; this is the name shown to recipients.
+
+        - `call_reasons`: 1–10 strings, each ≤64 characters; describe why your business calls customers (e.g. ''Appointment reminders'', ''Billing inquiries''). Validate the wording against `POST /call_reasons/validate`.
+
+        - `logo_url`: HTTPS URL (max 128 chars) to a 256×256 BMP (max 1 MB). The image is downloaded and hashed at submission time.
+
+        - `documents`: up to 20 entries; each `document_id` must be obtained by uploading the file via the Telnyx Documents API first. Within one DIR a `document_id` may only appear once.
+
+        - `certify_brand_is_accurate`, `certify_no_shaft_content`, `certify_ip_ownership` MUST all be `true`.
+
+
+        **Failure modes**
+
+        - `422` - validation error; `errors[].source.pointer` names the offending field.
+
+        - `403` - Branded Calling not activated on this enterprise (see `POST /enterprises/{id}/branded_calling`).
+
+        - `404` - enterprise does not exist or does not belong to your account.'
+      operationId: createDir
+      tags:
+      - Display Identity Records
+      parameters:
+      - $ref: '#/components/parameters/EnterpriseId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DirCreateRequest'
+            examples:
+              minimal:
+                summary: Minimal payload (no logo, no documents)
+                description: The smallest payload that creates a DIR. You can attach the logo and supporting documents later via PATCH; the DIR can also be submitted without a logo, but a verified DIR with no logo will not display caller artwork.
+                value:
+                  display_name: Acme Plumbing
+                  reselling: false
+                  certify_brand_is_accurate: true
+                  certify_no_shaft_content: true
+                  certify_ip_ownership: true
+                  authorizer_name: Sam Owner
+                  authorizer_email: sam@acmeplumbing.example.com
+                  call_reasons:
+                  - Appointment reminders
+                  - Billing inquiries
+              full:
+                summary: Full payload with logo and supporting document
+                description: Replace `logo_url` with a publicly-reachable HTTPS URL to your own 256×256 BMP. Replace `document_id` with the id returned by the Telnyx Documents API after you upload your supporting document.
+                value:
+                  display_name: Acme Plumbing
+                  reselling: false
+                  certify_brand_is_accurate: true
+                  certify_no_shaft_content: true
+                  certify_ip_ownership: true
+                  authorizer_name: Sam Owner
+                  authorizer_email: sam@acmeplumbing.example.com
+                  logo_url: https://acmeplumbing.example.com/logo-256.bmp
+                  call_reasons:
+                  - Appointment reminders
+                  - Billing inquiries
+                  documents:
+                  - document_id: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
+                    document_type: business_registration
+                    description: Certificate of incorporation.
+      responses:
+        '201':
+          description: DIR created in `draft` status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirWrapped'
+        default:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        4XX:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+components:
+  schemas:
+    SignaturePayload:
+      type: object
+      required:
+      - image_base64
+      properties:
+        image_base64:
+          type: string
+          minLength: 1
+          maxLength: 60000
+          description: PNG image, base64-encoded.
+        signer_name:
+          type: string
+          nullable: true
+          maxLength: 200
+          description: Optional. When absent the rendered PDF falls back to the enterprise contact's legal name.
+    DirDeleteRequestAccepted:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          type: object
+          required:
+          - id
+          - status
+          properties:
+            id:
+              type: string
+              format: uuid
+              description: Id of the DIR whose deletion was requested.
+              example: 16635d38-75a6-4481-82e8-69af60e05011
+            status:
+              type: string
+              enum:
+              - delete_requested
+              description: 'Always `delete_requested`: the DIR has been queued for removal, not yet removed.'
+              example: delete_requested
+    BpoAuthorizationInput:
+      type: object
+      description: 'One authorization to include when creating or updating a DIR: an approved BPO (Business Process Outsourcer) account plus the signed Letter of Authorization the Brand Owner granted it.'
+      required:
+      - bpo_enterprise_id
+      - loa_document_id
+      properties:
+        bpo_enterprise_id:
+          type: string
+          format: uuid
+          description: Enterprise id of an approved BPO (Business Process Outsourcer) account on your organization to authorize for this DIR.
+          example: 4a6192a4-573d-446d-b3ce-aff9117272a6
+        loa_document_id:
+          type: string
+          format: uuid
+          description: Id of the signed Letter of Authorization document (uploaded via the Telnyx Documents API) in which the Brand Owner authorizes this BPO.
+          example: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
+    BpoAuthorization:
+      type: object
+      description: A single authorization of a BPO (Business Process Outsourcer) account on a DIR.
+      required:
+      - record_type
+      - bpo_enterprise_id
+      - status
+      - loa_document_id
+      properties:
+        record_type:
+          type: string
+          enum:
+          - bpo_authorization
+          description: Always `bpo_authorization`.
+          example: bpo_authorization
+          readOnly: true
+        bpo_enterprise_id:
+          type: string
+          format: uuid
+          description: The authorized BPO account's enterprise id.
+          example: 4a6192a4-573d-446d-b3ce-aff9117272a6
+        status:
+          type: string
+          enum:
+          - pending
+          - approved
+          - rejected
+          description: Review state of this authorization. `pending` on create or when the Letter of Authorization is re-uploaded; an admin moves it to `approved` or `rejected`. Only an `approved` authorization adds the BPO to this DIR's authorized callers in the branded calling registry.
+          example: pending
+        loa_document_id:
+          type: string
+          format: uuid
+          description: Id of the signed Letter of Authorization document submitted for this BPO. Send it back unchanged in `bpo_authorizations` when updating the DIR to keep this authorization and its review state.
+          example: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
+        rejection_reason:
+          type: string
+          nullable: true
+          description: Why the authorization was rejected. `null` unless `status` is `rejected`.
+          example: Letter of Authorization is unsigned
+    CallReason:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 64
+          example: Appointment reminders
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-04-26T18:06:51.940749Z'
+          readOnly: true
+    BpoAuthorizationLoaRenderRequest:
+      type: object
+      required:
+      - bpo_enterprise_id
+      properties:
+        bpo_enterprise_id:
+          type: string
+          format: uuid
+          description: The approved BPO enterprise the Brand Owner is authorizing. Must be a BPO account on the caller's organization that has already been approved.
+          example: 4a6192a4-573d-446d-b3ce-aff9117272a6
+        signature:
+          allOf:
+          - $ref: '#/components/schemas/SignaturePayload'
+          description: Optional. When provided the rendered PDF embeds the signature image, printed name, and signed-at date. When absent the PDF is returned unsigned so the Brand Owner can sign externally and the BPO can upload it via the Documents API.
+    BrandLoaRenderRequest:
+      type: object
+      required:
+      - phone_numbers
+      properties:
+        phone_numbers:
+          type: array
+          minItems: 1
+          maxItems: 15
+          description: Telephone numbers to authorize on the DIR, in `+E164` format (`+` followed by 10-15 digits). Max 15 per request.
+          items:
+            type: string
+            pattern: ^\+[1-9][0-9]{9,14}$
+            example: '+13125550000'
+        agent:
+          allOf:
+          - $ref: '#/components/schemas/AgentInput'
+          description: Optional. The third-party reseller / partner managing the enterprise's phone numbers. Omit when working directly with Telnyx; the LOA marks the Authorized Agent block as N/A.
+        signature:
+          allOf:
+          - $ref: '#/components/schemas/SignaturePayload'
+          description: Optional. When provided the rendered PDF embeds the signature image, printed name, and signed-at date. When absent the PDF is returned unsigned so the customer can sign externally and upload it via the Documents API.
+    BpoAuthorizationList:
+      type: object
+      description: Paginated list of a DIR's BPO authorizations.
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/BpoAuthorization'
+        meta:
+          $ref: '#/components/schemas/branded-calling_PaginationMeta'
+    DirCreateRequest:
+      type: object
+      required:
+      - display_name
+      - certify_brand_is_accurate
+      - certify_no_shaft_content
+      - certify_ip_ownership
+      - authorizer_name
+      - authorizer_email
+      - call_reasons
+      properties:
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 35
+          description: Name shown to call recipients. No emoji; not whitespace-only.
+          example: Acme Plumbing
+        reselling:
+          type: boolean
+          description: Set to true if your organization places calls on behalf of other enterprises (BPO/reseller).
+          default: false
+          example: false
+        certify_brand_is_accurate:
+          type: boolean
+          description: Certification that the DIR information is accurate. Must be `true` for the DIR to be submitted for vetting.
+          example: true
+          enum:
+          - true
+        certify_no_shaft_content:
+          type: boolean
+          description: Must be `true`. Confirms this DIR is not used for SHAFT content (Sex, Hate, Alcohol, Firearms, Tobacco) where prohibited.
+          example: true
+          enum:
+          - true
+        certify_ip_ownership:
+          type: boolean
+          description: Must be `true`. Confirms ownership of any logos/trademarks shown.
+          example: true
+          enum:
+          - true
+        authorizer_name:
+          type: string
+          maxLength: 255
+          example: Sam Owner
+          description: Name of the person at your enterprise who is authorizing this DIR registration. Must be a real individual (used for audit and trademark-claim contests).
+        authorizer_email:
+          type: string
+          format: email
+          example: sam@acmeplumbing.example.com
+          description: Contact email of the authorizer. Telnyx may send verification or infringement-notice email here; use a monitored mailbox.
+        logo_url:
+          type: string
+          format: uri
+          maxLength: 128
+          description: Publicly accessible HTTPS URL (max 128 chars) to a 256x256 BMP logo (max 1 MB).
+          example: https://acmeplumbing.example.com/logo-256.bmp
+        call_reasons:
+          type: array
+          items:
+            type: string
+            maxLength: 64
+          minItems: 1
+          maxItems: 10
+          description: 1–10 reasons your business calls customers. Validate phrasing against `POST /call_reasons/validate`.
+          example:
+          - Appointment reminders
+          - Billing inquiries
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+          maxItems: 20
+          description: Supporting documents. Each `document_id` may appear at most once on a DIR.
+        webhook_url:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 2048
+          description: Optional `https://` URL that receives webhook notifications when this DIR's compliance review completes (rejection outcomes include structured rejection reasons). Maximum 2048 characters.
+          example: https://mapleridge.example.com/webhooks/branded-calling
+        bpo_authorizations:
+          type: array
+          items:
+            $ref: '#/components/schemas/BpoAuthorizationInput'
+          maxItems: 10
+          description: Optional. Approved BPO (Business Process Outsourcer) accounts on your organization authorized to place branded calls for this DIR, each with the signed Letter of Authorization the Brand Owner granted it. Each authorization starts `pending` and takes effect only after an admin reviews its Letter of Authorization. Omit or send an empty list to authorize no BPO on this DIR. Maximum 10.
+    Document:
+      type: object
+      required:
+      - document_id
+      - document_type
+      properties:
+        document_id:
+          type: string
+          format: uuid
+          description: Id returned by the Telnyx Documents API after you upload the file (upload via `POST /v2/documents`; see https://developers.telnyx.com/api/documents).
+          example: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
+        document_type:
+          type: string
+          enum:
+          - letter_of_authorization
+          - business_registration
+          - articles_of_incorporation
+          - tax_document
+          - ein_letter
+          - trademark_registration
+          - website_ownership
+          - business_license
+          - professional_license
+          - government_id
+          - utility_bill
+          - bank_statement
+          - other
+          example: business_registration
+          description: Type of supporting document. Pick the closest match to what the file actually contains; `other` triggers manual vetting and may slow approval. The matching short_name reference list is at `GET /v2/dir/document_types`.
+        description:
+          type: string
+          maxLength: 255
+          description: An optional note describing this document, for example what it proves.
+          example: Certificate of incorporation.
+    branded-calling_Errors:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/branded-calling_Error'
+          description: List of one or more error entries. Order is not significant.
+      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
+    AgentInput:
+      type: object
+      description: Third-party reseller / partner managing the enterprise's phone numbers. Omit when the enterprise works directly with Telnyx.
+      required:
+      - legal_name
+      - street_address
+      - city
+      - administrative_area
+      - postal_code
+      - country
+      - contact_name
+      - contact_title
+      - contact_email
+      - contact_phone
+      properties:
+        legal_name:
+          type: string
+          maxLength: 200
+          description: The legal name of the third-party partner or reseller managing these numbers on your behalf.
+        dba:
+          type: string
+          nullable: true
+          maxLength: 200
+          description: The trade name (Doing Business As) the partner operates under, if different from its legal name. Leave blank if it does not apply.
+        street_address:
+          type: string
+          maxLength: 255
+          description: The street address of the partner, including the building number and street name.
+        extended_address:
+          type: string
+          nullable: true
+          maxLength: 255
+          description: An optional second address line for the partner, such as a suite, unit, or floor. Leave blank if it does not apply.
+        city:
+          type: string
+          maxLength: 120
+          description: The city of the partner's address.
+        administrative_area:
+          type: string
+          maxLength: 120
+          description: The state or province of the partner's address, as its code, for example IL or ON.
+        postal_code:
+          type: string
+          maxLength: 30
+          description: The postal or ZIP code of the partner's address.
+        country:
+          type: string
+          minLength: 2
+          maxLength: 2
+          description: The two-letter country code of the partner's address, for example US.
+          example: US
+        contact_name:
+          type: string
+          maxLength: 200
+          description: The name of a contact person at the partner.
+        contact_title:
+          type: string
+          maxLength: 200
+          description: The job title of the contact person at the partner.
+        contact_email:
+          type: string
+          format: email
+          description: The email address of the contact person at the partner.
+        contact_phone:
+          type: string
+          maxLength: 30
+          description: The phone number of the contact person at the partner, in E.164 format, for example +13125550000.
+          example: '+13125550000'
+    Dir:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 16635d38-75a6-4481-82e8-69af60e05011
+          readOnly: true
+        enterprise_id:
+          type: string
+          format: uuid
+          example: 4a6192a4-573d-446d-b3ce-aff9117272a6
+        display_name:
+          type: string
+          example: Acme Plumbing
+        reselling:
+          type: boolean
+          example: false
+        certify_brand_is_accurate:
+          type: boolean
+          example: true
+        certify_no_shaft_content:
+          type: boolean
+          example: true
+        certify_ip_ownership:
+          type: boolean
+          example: true
+        authorizer_name:
+          type: string
+          nullable: true
+          example: Sam Owner
+        authorizer_email:
+          type: string
+          format: email
+          nullable: true
+          example: sam@acmeplumbing.example.com
+        logo_url:
+          type: string
+          format: uri
+          nullable: true
+          example: https://acmeplumbing.example.com/logo-256.bmp
+        call_reasons:
+          type: array
+          items:
+            $ref: '#/components/schemas/CallReason'
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+          nullable: true
+        status:
+          $ref: '#/components/schemas/DirStatus'
+        rejection_reasons:
+          type: array
+          items:
+            $ref: '#/components/schemas/RejectionReason'
+          nullable: true
+          description: Populated when `status` is `rejected`; cleared on `/submit` or successful approval.
+        rejected_at:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-04-26T18:06:51.940749Z'
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          example: '2026-04-26T18:09:24.785211Z'
+          readOnly: true
+        submitted_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2026-04-26T18:07:03.716411Z'
+          readOnly: true
+        verified_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2026-04-26T18:07:29.537926Z'
+          readOnly: true
+        expiring_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2027-04-26T18:07:29.537981Z'
+          readOnly: true
+        delete_requested_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When deletion was requested. Set once the DIR enters `delete_requested`; `null` otherwise.
+          example: '2026-04-27T09:12:44.201820Z'
+          readOnly: true
+        webhook_url:
+          type: string
+          format: uri
+          nullable: true
+          description: '`https://` URL that receives webhook notifications for this DIR''s compliance-review outcomes. `null` when not subscribed.'
+          example: https://acmehealthcare.example.com/webhooks/branded-calling
+    DirStatus:
+      type: string
+      enum:
+      - draft
+      - submitted
+      - in_review
+      - verified
+      - rejected
+      - unsuccessful
+      - suspended
+      - expired
+      - infringement_claimed
+      - permanently_rejected
+      - delete_requested
+      description: 'DIR lifecycle status.
+
+        - `draft` - newly created; editable; not yet submitted.
+
+        - `submitted` / `in_review` - Telnyx is reviewing.
+
+        - `verified` - approved; phone numbers may be attached.
+
+        - `rejected` - Telnyx rejected this submission; `rejection_reasons` is populated; customer can edit and resubmit.
+
+        - `unsuccessful` - system-side error during processing; customer can edit and resubmit.
+
+        - `suspended` - temporarily disabled (e.g. by an active infringement claim).
+
+        - `expired` - verification expired; customer must resubmit.
+
+        - `infringement_claimed` - a trademark/impersonation claim is open against this DIR.
+
+        - `permanently_rejected` - terminal; cannot be resubmitted.
+
+        - `delete_requested` - you have requested deletion; the DIR still exists and Telnyx is completing the removal (de-registration and cleanup). A verified DIR keeps serving its branded identity, and keeps billing, until the removal finishes.'
+    DirWrapped:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/Dir'
+    DirList:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Dir'
+        meta:
+          $ref: '#/components/schemas/branded-calling_PaginationMeta'
+    RejectionReason:
+      type: object
+      properties:
+        code:
+          type: string
+          example: documentation_incomplete
+        title:
+          type: string
+          example: Documentation incomplete
+        detail:
+          type: string
+          example: Provided documents do not establish business identity.
+        message:
+          type: string
+          nullable: true
+          description: Customer-visible free-text comment from the Telnyx vetting team. Only the first entry of `rejection_reasons` carries this; the rest are `null`.
+          example: Please re-upload a clearer scan of the certificate.
+    DirUpdateRequest:
+      type: object
+      description: All fields are optional; only those supplied are updated. Same per-field rules as `DirCreateRequest`.
+      properties:
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 35
+          description: Name shown to call recipients. 1–35 characters, no emoji, not whitespace-only.
+        reselling:
+          type: boolean
+          description: Set to true if your organization places calls on behalf of other enterprises (BPO/reseller). Updating this triggers re-vetting on next submit.
+        authorizer_name:
+          type: string
+          maxLength: 255
+          description: Name of the person at your enterprise authorizing this DIR. Must be a real individual.
+        authorizer_email:
+          type: string
+          format: email
+          description: Contact email of the authorizer. Telnyx may send verification or infringement notices here.
+        logo_url:
+          type: string
+          format: uri
+          maxLength: 128
+          description: Publicly accessible HTTPS URL (max 128 chars) to a 256x256 BMP logo (max 1 MB).
+        call_reasons:
+          type: array
+          items:
+            type: string
+            maxLength: 64
+          minItems: 1
+          maxItems: 10
+          description: 1–10 reasons your business calls customers. Validate phrasing against `POST /call_reasons/validate`.
+        certify_brand_is_accurate:
+          type: boolean
+          description: Certification that the DIR information is accurate. Must be `true` for the DIR to be submitted for vetting.
+          example: true
+        certify_no_shaft_content:
+          type: boolean
+          description: Certification that this DIR is not used for SHAFT content (Sex, Hate, Alcohol, Firearms, Tobacco) where prohibited. Must be `true` for the DIR to be submitted for vetting.
+          example: true
+        certify_ip_ownership:
+          type: boolean
+          description: Certification of ownership of any logos/trademarks shown. Must be `true` for the DIR to be submitted for vetting.
+          example: true
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+          maxItems: 20
+          description: 'Additional supporting documents to attach. Append-only: existing documents are never removed or replaced, and an empty or omitted list is a no-op. Each `document_id` may appear at most once on a DIR.'
+        webhook_url:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 2048
+          description: Optional `https://` URL that receives webhook notifications when this DIR's compliance review completes. Send `null` to clear. Changing only this field on a `verified` DIR does not re-vet it. Maximum 2048 characters.
+          example: https://mapleridge.example.com/webhooks/branded-calling
+        bpo_authorizations:
+          type: array
+          items:
+            $ref: '#/components/schemas/BpoAuthorizationInput'
+          maxItems: 10
+          description: 'Optional. Replace this DIR''s authorized BPO (Business Process Outsourcer) accounts with these, each with its signed Letter of Authorization. The supplied list replaces the current one: a BPO left out has its authorization removed, and a new BPO (or a changed Letter of Authorization) is created `pending` admin review. Send an empty list to clear all authorizations; omit the field to leave them unchanged. Editing this list does not re-vet the DIR. Maximum 10.'
+    branded-calling_PaginationMeta:
+      type: object
+      required:
+      - total_pages
+      - total_results
+      - page_number
+      - page_size
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+          description: Total number of pages available given the current `page_size`.
+        total_results:
+          type: integer
+          example: 42
+          description: Total number of items across all pages (excludes soft-deleted rows).
+        page_number:
+          type: integer
+          example: 1
+          description: 1-based index of this page. Echoes the `page[number]` query parameter (default `1`).
+        page_size:
+          type: integer
+          example: 20
+          description: Number of items returned in this page's `data` array. Capped at 250.
+      description: JSON:API pagination metadata returned with every paginated list response. Page numbering is 1-based. `page_size` reports the number of items actually returned in `data` for this page; the requested size is taken from the `page[size]` query parameter.
+    branded-calling_Error:
+      type: object
+      required:
+      - code
+      - title
+      - detail
+      - meta
+      properties:
+        code:
+          type: string
+          example: '10005'
+          description: Stable numeric Telnyx error catalog id. See `meta.url` for the full catalog entry.
+        title:
+          type: string
+          example: Invalid parameters
+          description: Short human-readable category, e.g. `Bad Request`, `Duplicate resource`, `Not Found`, `Forbidden`. Treat as advisory only - the stable identifier is `code`.
+        detail:
+          type: string
+          example: field required
+          description: Context-specific message describing what went wrong on this particular request. May embed offending values; do not rely on it for programmatic matching - branch on `code`.
+        meta:
+          type: object
+          required:
+          - url
+          properties:
+            url:
+              type: string
+              format: uri
+              example: https://developers.telnyx.com/docs/overview/errors/10005
+            pending_check_ids:
+              type: array
+              items:
+                type: string
+                format: uuid
+              description: Set on `422 vetting_checks_incomplete` responses from `/admin/dir/{id}/approve` and `/admin/phone-number-batches/approve`. Lists the still-pending vetting check ids.
+            pending_check_codes:
+              type: array
+              items:
+                type: string
+              description: Codes of the pending vetting checks (e.g. `loa_signature_valid`).
+            pending_check_labels:
+              type: array
+              items:
+                type: string
+              description: Human-readable labels of the pending vetting checks.
+          description: Carries `url` linking to the Telnyx error catalog entry for this `code`. Useful for forwarding the user to documentation.
+        source:
+          type: object
+          description: Optional pointer at the offending field of the request.
+          properties:
+            pointer:
+              type: string
+              example: /body/legal_name
+            parameter:
+              type: string
+              example: page[size]
+      description: A single entry in the canonical Telnyx error envelope. `code` is the stable Telnyx error catalog id; the human-readable explanation lives at `meta.url`. `detail` is a context-specific message; `source.pointer` (when present) names the offending field of the request.
+  parameters:
+    BcPageNumber:
+      name: page[number]
+      in: query
+      description: 1-based page number. Out-of-range values return an empty page with correct meta.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+        example: 1
+    BcPageSize:
+      name: page[size]
+      in: query
+      description: Items per page. Maximum 250; values above are clamped to 250.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 250
+        default: 20
+        example: 20
+    EnterpriseId:
+      name: enterprise_id
+      in: path
+      description: The enterprise id. Lowercase UUID.
+      required: true
+      schema:
+        type: string
+        format: uuid
+        example: 4a6192a4-573d-446d-b3ce-aff9117272a6
+    DirId:
+      name: dir_id
+      in: path
+      description: The DIR id. Lowercase UUID.
+      required: true
+      schema:
+        type: string
+        format: uuid
+        example: 16635d38-75a6-4481-82e8-69af60e05011
+  responses:
+    branded-calling_GenericErrorResponse:
+      description: An error occurred. The response carries the standard Telnyx error envelope.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/branded-calling_Errors'
+          examples:
+            validation_error:
+              summary: 422 - request body failed validation
+              value:
+                errors:
+                - code: '10005'
+                  title: Invalid parameters
+                  detail: field required
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10005
+                  source:
+                    pointer: /body/legal_name
+            bad_request:
+              summary: 400 - request rejected by a state guard
+              description: Returned when the request itself is well-formed but the resource is in a state that disallows this action (e.g. updating a DIR while it is being vetted, or deleting an enterprise that still has DIRs in vetting).
+              value:
+                errors:
+                - code: '10015'
+                  title: Bad Request
+                  detail: Cannot update DIR in 'verified' status
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10015
+            not_found:
+              summary: 404 - resource does not exist or is not yours
+              value:
+                errors:
+                - code: '10009'
+                  title: Resource not found
+                  detail: Enterprise not found.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+            conflict:
+              summary: 409 - request conflicts with current resource state
+              value:
+                errors:
+                - code: '10021'
+                  title: Resource in use
+                  detail: DIR has 1 active infringement claim(s). Resolve the claim before making this change.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10021
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

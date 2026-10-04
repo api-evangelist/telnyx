@@ -1,11 +1,13 @@
 openapi: 3.2.0
 info:
-  contact:
-    email: support@telnyx.com
-  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
   title: Telnyx Number Lookup API
   version: 2.0.0
+  contact:
+    email: support@telnyx.com
   x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Number Lookup across 2 of this provider''s published API definitions: telnyx-openapi.yml, telnyx-openapi.json. Each path carries the servers of the definition it was published in.'
 servers:
 - description: Version 2.0.0 of the Telnyx API
   url: https://api.telnyx.com/v2
@@ -33,49 +35,98 @@ paths:
       tags:
       - Number Lookup
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
 components:
+  responses:
+    number-lookup_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/number-lookup_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+    number-lookup_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/number-lookup_Errors'
+      description: Unexpected error
+    NumberLookupResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/NumberLookupRecord'
+            title: Number Lookup Response
+            type: object
+      description: Successful response
+    UnprocessableEntity:
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          example:
+            errors:
+            - code: '10027'
+              title: Unprocessable Entity
+              detail: The server understood the syntax of the request but was unable to process the instructions.
+    number-lookup_GenericErrorResponse_2:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          example:
+            errors:
+            - code: '10007'
+              title: Unexpected error
+              detail: An unexpected error occured.
   schemas:
-    Carrier:
+    CallerName:
       properties:
+        caller_name:
+          description: The name of the requested phone number's owner as per the CNAM database
+          example: TELNYX LLC
+          type: string
         error_code:
+          description: A caller-name lookup specific error code, expressed as a stringified 5-digit integer
+          example: '10001'
+          type: string
+      type: object
+    NumberLookupRecord:
+      properties:
+        caller_name:
+          $ref: '#/components/schemas/CallerName'
+        carrier:
+          $ref: '#/components/schemas/Carrier'
+        country_code:
+          description: Region code that matches the specific country calling code
+          example: US
+          type: string
+        fraud:
           description: Unused
           example: null
           type:
           - string
           - 'null'
-        mobile_country_code:
-          description: Region code that matches the specific country calling code if the requested phone number type is mobile
-          example: US
+        national_format:
+          description: Hyphen-separated national number, preceded by the national destination code (NDC), with a 0 prefix, if an NDC is found
+          example: (0312) 945-7420
           type: string
-        mobile_network_code:
-          description: National destination code (NDC), with a 0 prefix, if an NDC is found and the requested phone number type is mobile
-          example: 0866
+        phone_number:
+          description: E164-formatted phone number
+          example: '+13129457420'
           type: string
-        name:
-          description: SPID (Service Provider ID) name, if the requested phone number has been ported; otherwise, the name of carrier who owns the phone number block
-          example: Telnyx/4
+        portability:
+          $ref: '#/components/schemas/Portability'
+        record_type:
+          description: Identifies the type of record
+          example: number_lookup
           type: string
-        normalized_carrier:
-          description: If known to Telnyx and applicable, the primary network carrier.
-          example: AT&T
-          type: string
-        type:
-          description: A phone number type that identifies the type of service associated with the requested phone number
-          enum:
-          - fixed line
-          - mobile
-          - voip
-          - fixed line or mobile
-          - toll free
-          - premium rate
-          - shared cost
-          - personal number
-          - pager
-          - uan
-          - voicemail
-          - unknown
-          example: voip
-          type: string
+      title: NumberLookup
       type: object
     Portability:
       properties:
@@ -135,38 +186,6 @@ components:
           example: Illinois
           type: string
       type: object
-    NumberLookupRecord:
-      properties:
-        caller_name:
-          $ref: '#/components/schemas/CallerName'
-        carrier:
-          $ref: '#/components/schemas/Carrier'
-        country_code:
-          description: Region code that matches the specific country calling code
-          example: US
-          type: string
-        fraud:
-          description: Unused
-          example: null
-          type:
-          - string
-          - 'null'
-        national_format:
-          description: Hyphen-separated national number, preceded by the national destination code (NDC), with a 0 prefix, if an NDC is found
-          example: (0312) 945-7420
-          type: string
-        phone_number:
-          description: E164-formatted phone number
-          example: '+13129457420'
-          type: string
-        portability:
-          $ref: '#/components/schemas/Portability'
-        record_type:
-          description: Identifies the type of record
-          example: number_lookup
-          type: string
-      title: NumberLookup
-      type: object
     number-lookup_Error:
       properties:
         code:
@@ -191,6 +210,48 @@ components:
       - code
       - title
       type: object
+    Carrier:
+      properties:
+        error_code:
+          description: Unused
+          example: null
+          type:
+          - string
+          - 'null'
+        mobile_country_code:
+          description: Region code that matches the specific country calling code if the requested phone number type is mobile
+          example: US
+          type: string
+        mobile_network_code:
+          description: National destination code (NDC), with a 0 prefix, if an NDC is found and the requested phone number type is mobile
+          example: 0866
+          type: string
+        name:
+          description: SPID (Service Provider ID) name, if the requested phone number has been ported; otherwise, the name of carrier who owns the phone number block
+          example: Telnyx/4
+          type: string
+        normalized_carrier:
+          description: If known to Telnyx and applicable, the primary network carrier.
+          example: AT&T
+          type: string
+        type:
+          description: A phone number type that identifies the type of service associated with the requested phone number
+          enum:
+          - fixed line
+          - mobile
+          - voip
+          - fixed line or mobile
+          - toll free
+          - premium rate
+          - shared cost
+          - personal number
+          - pager
+          - uan
+          - voicemail
+          - unknown
+          example: voip
+          type: string
+      type: object
     number-lookup_Errors:
       properties:
         errors:
@@ -198,26 +259,40 @@ components:
             $ref: '#/components/schemas/number-lookup_Error'
           type: array
       type: object
-    CallerName:
+    Errors:
       properties:
-        caller_name:
-          description: The name of the requested phone number's owner as per the CNAM database
-          example: TELNYX LLC
-          type: string
-        error_code:
-          description: A caller-name lookup specific error code, expressed as a stringified 5-digit integer
-          example: '10001'
-          type: string
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
       type: object
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
   parameters:
-    number-lookup_PhoneNumber:
-      description: The phone number to be looked up
-      in: path
-      name: phone_number
-      required: true
-      schema:
-        example: '+18665552368'
-        type: string
     NumberLookupType:
       description: Specifies the type of number lookup to be performed
       in: query
@@ -228,29 +303,22 @@ components:
         - carrier
         - caller-name
         type: string
-  responses:
-    number-lookup_UnprocessableEntity:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/number-lookup_Errors'
-      description: Unprocessable entity. Check the 'detail' field in response for details.
-    number-lookup_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/number-lookup_Errors'
-      description: Unexpected error
-    NumberLookupResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/NumberLookupRecord'
-            title: Number Lookup Response
-            type: object
-      description: Successful response
+    number-lookup_PhoneNumber:
+      description: The phone number to be looked up
+      in: path
+      name: phone_number
+      required: true
+      schema:
+        example: '+18665552368'
+        type: string
+    PhoneNumber:
+      name: phone_number
+      description: The phone number to be looked up
+      in: path
+      required: true
+      schema:
+        type: string
+        example: '+18665552368'
   securitySchemes:
     bearerAuth:
       scheme: bearer
@@ -285,3 +353,40 @@ components:
       bearerFormat: JWT
       scheme: bearer
       type: http
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-refined-from:
+- telnyx-openapi.yml
+- telnyx-openapi.json

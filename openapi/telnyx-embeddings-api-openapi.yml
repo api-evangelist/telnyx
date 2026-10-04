@@ -1,11 +1,13 @@
 openapi: 3.2.0
 info:
-  contact:
-    email: support@telnyx.com
-  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
   title: Telnyx Embeddings API
   version: 2.0.0
+  contact:
+    email: support@telnyx.com
   x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Embeddings across 2 of this provider''s published API definitions: telnyx-openapi.yml, telnyx-openapi.json. Each path carries the servers of the definition it was published in.'
 servers:
 - description: Version 2.0.0 of the Telnyx API
   url: https://api.telnyx.com/v2
@@ -110,6 +112,9 @@ paths:
       tags:
       - Embeddings
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /ai/embeddings/buckets:
     get:
       description: Get all embedding buckets for a user.
@@ -131,6 +136,9 @@ paths:
       tags:
       - Embeddings
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /ai/embeddings/buckets/{bucket_name}:
     delete:
       description: Deletes an entire bucket's embeddings and disables the bucket for AI-use, returning it to normal storage pricing.
@@ -188,6 +196,9 @@ paths:
       tags:
       - Embeddings
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /ai/embeddings/similarity-search:
     post:
       description: 'Perform a similarity search on a Telnyx Storage Bucket, returning the most similar `num_docs` document chunks to the query.
@@ -229,6 +240,9 @@ paths:
       tags:
       - Embeddings
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /ai/embeddings/url:
     post:
       description: Embed website content from a specified URL, including child pages up to 5 levels deep within the same domain. The process crawls and loads content from the main URL and its linked pages into a Telnyx Cloud Storage bucket. As soon as each webpage is added to the bucket, its content is immediately processed for embeddings, that can be used for similarity search and clustering.
@@ -256,6 +270,9 @@ paths:
       tags:
       - Embeddings
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /ai/embeddings/{task_id}:
     get:
       description: 'Check the status of a current embedding task. Will be one of the following:
@@ -294,40 +311,35 @@ paths:
       tags:
       - Embeddings
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
 components:
   schemas:
-    EmbeddingBucketRequest:
+    TaskStatusResponse:
       properties:
-        bucket_name:
-          title: Bucket Name
-          type: string
-        document_chunk_overlap_size:
-          default: 512
-          title: Document Chunk Overlap Size
-          type: integer
-        document_chunk_size:
-          default: 1024
-          title: Document Chunk Size
-          type: integer
-        embedding_model:
-          allOf:
-          - $ref: '#/components/schemas/SupportedEmbeddingModels'
-          default: thenlper/gte-large
-        loader:
-          allOf:
-          - $ref: '#/components/schemas/SupportedEmbeddingLoaders'
-          default: default
+        data:
+          properties:
+            created_at:
+              title: Created At
+              type: string
+            finished_at:
+              title: Finished At
+              type: string
+            status:
+              $ref: '#/components/schemas/BackgroundTaskStatus'
+            task_id:
+              format: uuid
+              title: Task ID
+              type: string
+            task_name:
+              title: Task Name
+              type: string
+          type: object
       required:
-      - bucket_name
-      title: EmbeddingBucketRequest
+      - data
+      title: TaskStatusResponse
       type: object
-    SupportedEmbeddingModels:
-      description: Supported models to vectorize and embed documents.
-      enum:
-      - thenlper/gte-large
-      - intfloat/multilingual-e5-large
-      title: SupportedEmbeddingModels
-      type: string
     BackgroundTasksQueryResponse:
       properties:
         bucket:
@@ -360,69 +372,24 @@ components:
       - created_at
       title: BackgroundTasksQueryResponse
       type: object
-    NotFoundError:
-      properties:
-        code:
-          title: Telnyx error code
-          type: string
-        detail:
-          title: Error details
-          type: string
-        title:
-          title: Error title
-          type: string
-      required:
-      - detail
-      title: NotFoundError
-      type: object
-    EmbeddingsBucketFilesData:
+    BackgroundTasksQueryResponseData:
       properties:
         data:
           items:
-            $ref: '#/components/schemas/EmbeddingsBucketFiles'
+            $ref: '#/components/schemas/BackgroundTasksQueryResponse'
           title: Data
           type: array
       required:
       - data
-      title: EmbeddingsBucketFilesData
+      title: BackgroundTasksQueryResponseData
       type: object
-    EmbeddingSimilaritySearchDocument:
-      description: "Example document response from embedding service\n{\n  \"document_chunk\": \"your status? This is Vanessa Bloome...\",\n  \"distance\": 0.18607724,\n  \"metadata\": {\n    \"source\": \"https://us-central-1.telnyxstorage.com/scripts/bee_movie_script.txt\",\n    \"checksum\": \"343054dd19bab39bbf6761a3d20f1daa\",\n    \"embedding\": \"openai/text-embedding-ada-002\",\n    \"filename\": \"bee_movie_script.txt\",\n    \"certainty\": 0.9069613814353943,\n    \"loader_metadata\": {}\n  }\n}"
-      properties:
-        distance:
-          title: Distance
-          type: number
-        document_chunk:
-          title: Document Chunk
-          type: string
-        metadata:
-          $ref: '#/components/schemas/EmbeddingMetadata'
-      required:
-      - document_chunk
-      - distance
-      - metadata
-      title: EmbeddingSimilaritySearchDocument
-      type: object
-    EmbeddingSimilaritySearchResponse:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/EmbeddingSimilaritySearchDocument'
-          title: Data
-          type: array
-      required:
-      - data
-      title: EmbeddingSimilaritySearchResponse
-      type: object
-    BucketNotFoundError:
-      properties:
-        detail:
-          items:
-            $ref: '#/components/schemas/NotFoundError'
-          title: Detail
-          type: array
-      title: HTTPValidationError
-      type: object
+    SupportedEmbeddingModels:
+      description: Supported models to vectorize and embed documents.
+      enum:
+      - thenlper/gte-large
+      - intfloat/multilingual-e5-large
+      title: SupportedEmbeddingModels
+      type: string
     EmbeddingUrlRequest:
       properties:
         bucket_name:
@@ -437,47 +404,6 @@ components:
       - url
       - bucket_name
       title: EmbeddingUrlRequest
-      type: object
-    UserEmbeddedBucketsData:
-      properties:
-        data:
-          $ref: '#/components/schemas/UserEmbeddedBuckets'
-      required:
-      - data
-      title: UserEmbeddedBucketsData
-      type: object
-    SupportedEmbeddingLoaders:
-      description: Supported types of custom document loaders for embeddings.
-      enum:
-      - default
-      - intercom
-      title: SupportedEmbeddingLoaders
-      type: string
-    EmbeddingSimilaritySearchRequest:
-      properties:
-        bucket_name:
-          title: Bucket Name
-          type: string
-        num_of_docs:
-          default: 3
-          title: Num Of Docs
-          type: integer
-        query:
-          title: Query
-          type: string
-      required:
-      - bucket_name
-      - query
-      title: EmbeddingSimilaritySearchRequest
-      type: object
-    HTTPValidationError:
-      properties:
-        detail:
-          items:
-            $ref: '#/components/schemas/ValidationError'
-          title: Detail
-          type: array
-      title: HTTPValidationError
       type: object
     ValidationError:
       properties:
@@ -500,16 +426,43 @@ components:
       - type
       title: ValidationError
       type: object
-    BackgroundTasksQueryResponseData:
+    EmbeddingSimilaritySearchDocument:
+      description: "Example document response from embedding service\n{\n  \"document_chunk\": \"your status? This is Vanessa Bloome...\",\n  \"distance\": 0.18607724,\n  \"metadata\": {\n    \"source\": \"https://us-central-1.telnyxstorage.com/scripts/bee_movie_script.txt\",\n    \"checksum\": \"343054dd19bab39bbf6761a3d20f1daa\",\n    \"embedding\": \"openai/text-embedding-ada-002\",\n    \"filename\": \"bee_movie_script.txt\",\n    \"certainty\": 0.9069613814353943,\n    \"loader_metadata\": {}\n  }\n}"
+      properties:
+        distance:
+          title: Distance
+          type: number
+        document_chunk:
+          title: Document Chunk
+          type: string
+        metadata:
+          $ref: '#/components/schemas/EmbeddingMetadata'
+      required:
+      - document_chunk
+      - distance
+      - metadata
+      title: EmbeddingSimilaritySearchDocument
+      type: object
+    BackgroundTaskStatus:
+      description: Status of an embeddings task.
+      enum:
+      - queued
+      - processing
+      - success
+      - failure
+      - partial_success
+      title: BackgroundTaskStatus
+      type: string
+    EmbeddingSimilaritySearchResponse:
       properties:
         data:
           items:
-            $ref: '#/components/schemas/BackgroundTasksQueryResponse'
+            $ref: '#/components/schemas/EmbeddingSimilaritySearchDocument'
           title: Data
           type: array
       required:
       - data
-      title: BackgroundTasksQueryResponseData
+      title: EmbeddingSimilaritySearchResponse
       type: object
     EmbeddingResponse:
       properties:
@@ -542,34 +495,52 @@ components:
       - data
       title: EmbeddingResponse
       type: object
-    EmbeddingsBucketFiles:
+    EmbeddingSimilaritySearchRequest:
       properties:
-        created_at:
-          format: date-time
-          title: Created At
+        bucket_name:
+          title: Bucket Name
           type: string
-        error_reason:
-          title: Error Reason
-          type: string
-        filename:
-          title: Filename
-          type: string
-        last_embedded_at:
-          format: date-time
-          title: Last Embedded At
-          type: string
-        status:
-          title: Status
-          type: string
-        updated_at:
-          format: date-time
-          title: Updated At
+        num_of_docs:
+          default: 3
+          title: Num Of Docs
+          type: integer
+        query:
+          title: Query
           type: string
       required:
-      - filename
-      - status
-      - created_at
-      title: EmbeddingsBucketFiles
+      - bucket_name
+      - query
+      title: EmbeddingSimilaritySearchRequest
+      type: object
+    SupportedEmbeddingLoaders:
+      description: Supported types of custom document loaders for embeddings.
+      enum:
+      - default
+      - intercom
+      title: SupportedEmbeddingLoaders
+      type: string
+    NotFoundError:
+      properties:
+        code:
+          title: Telnyx error code
+          type: string
+        detail:
+          title: Error details
+          type: string
+        title:
+          title: Error title
+          type: string
+      required:
+      - detail
+      title: NotFoundError
+      type: object
+    UserEmbeddedBucketsData:
+      properties:
+        data:
+          $ref: '#/components/schemas/UserEmbeddedBuckets'
+      required:
+      - data
+      title: UserEmbeddedBucketsData
       type: object
     UserEmbeddedBuckets:
       properties:
@@ -582,39 +553,39 @@ components:
       - buckets
       title: UserEmbeddedBuckets
       type: object
-    BackgroundTaskStatus:
-      description: Status of an embeddings task.
-      enum:
-      - queued
-      - processing
-      - success
-      - failure
-      - partial_success
-      title: BackgroundTaskStatus
-      type: string
-    TaskStatusResponse:
+    EmbeddingBucketRequest:
       properties:
-        data:
-          properties:
-            created_at:
-              title: Created At
-              type: string
-            finished_at:
-              title: Finished At
-              type: string
-            status:
-              $ref: '#/components/schemas/BackgroundTaskStatus'
-            task_id:
-              format: uuid
-              title: Task ID
-              type: string
-            task_name:
-              title: Task Name
-              type: string
-          type: object
+        bucket_name:
+          title: Bucket Name
+          type: string
+        document_chunk_overlap_size:
+          default: 512
+          title: Document Chunk Overlap Size
+          type: integer
+        document_chunk_size:
+          default: 1024
+          title: Document Chunk Size
+          type: integer
+        embedding_model:
+          allOf:
+          - $ref: '#/components/schemas/SupportedEmbeddingModels'
+          default: thenlper/gte-large
+        loader:
+          allOf:
+          - $ref: '#/components/schemas/SupportedEmbeddingLoaders'
+          default: default
       required:
-      - data
-      title: TaskStatusResponse
+      - bucket_name
+      title: EmbeddingBucketRequest
+      type: object
+    BucketNotFoundError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/NotFoundError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
       type: object
     EmbeddingMetadata:
       properties:
@@ -644,6 +615,242 @@ components:
       - filename
       title: EmbeddingMetadata
       type: object
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    EmbeddingsBucketFilesData:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/EmbeddingsBucketFiles'
+          title: Data
+          type: array
+      required:
+      - data
+      title: EmbeddingsBucketFilesData
+      type: object
+    EmbeddingsBucketFiles:
+      properties:
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+        error_reason:
+          title: Error Reason
+          type: string
+        filename:
+          title: Filename
+          type: string
+        last_embedded_at:
+          format: date-time
+          title: Last Embedded At
+          type: string
+        status:
+          title: Status
+          type: string
+        updated_at:
+          format: date-time
+          title: Updated At
+          type: string
+      required:
+      - filename
+      - status
+      - created_at
+      title: EmbeddingsBucketFiles
+      type: object
+    inference-embedding_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/inference-embedding_ErrorObject'
+      required:
+      - errors
+    ErrorObject:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Telnyx error code. Send admission errors include account daily quota 10011 and sender-domain ramp code domain_graduation_limit_exceeded. Edge idempotency errors use 10027 or 10036. Fallback 404/500 responses from the framework may use string status codes ('404', '500') instead.
+          enum:
+          - '10001'
+          - '10006'
+          - '10007'
+          - '10011'
+          - '10015'
+          - '10016'
+          - '10019'
+          - domain_graduation_limit_exceeded
+          - recipient_suppressed
+          - reputation_suspended
+          - '404'
+          - '500'
+          - '10027'
+          - '10036'
+        title:
+          type: string
+        detail:
+          description: Human-readable error detail. Changeset responses may return a structured object.
+          oneOf:
+          - type: string
+          - type: object
+            additionalProperties: true
+        source:
+          type: object
+          additionalProperties: true
+          nullable: true
+        meta:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: Additional metadata. Present on 401 errors with a documentation URL.
+      required:
+      - code
+      - title
+      - detail
+    inference-embedding_ErrorObject:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Telnyx error code. Edge idempotency errors use 10015, 10027, or 10036; idempotency protection outages use 10016; replay-cap 413s surface 10007. Fallback 404/500 responses from the framework may use string status codes ('404', '500') instead.
+          enum:
+          - '10007'
+          - '10015'
+          - '10016'
+          - '10027'
+          - '10036'
+          - '404'
+          - '500'
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              type: string
+      required:
+      - code
+      - title
+    email_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorObject'
+        suppressed:
+          type: array
+          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
+      required:
+      - errors
+    SuppressedRecipient:
+      type: object
+      properties:
+        to:
+          type: string
+          format: email
+          description: Suppressed recipient email address.
+        reason:
+          type: string
+          description: Suppression reason returned by the recipient suppression service.
+        scope:
+          type: string
+          description: Scope at which the suppression applies.
+        override_allowed:
+          type: boolean
+          description: Whether an authorized send may override this suppression.
+      required:
+      - to
+      - reason
+      - scope
+      - override_allowed
+    EmbeddingBucketRequest_2:
+      properties:
+        bucket_name:
+          type: string
+          title: Bucket Name
+        document_chunk_size:
+          type: integer
+          title: Document Chunk Size
+          default: 1024
+        document_chunk_overlap_size:
+          type: integer
+          title: Document Chunk Overlap Size
+          default: 512
+        embedding_model:
+          allOf:
+          - $ref: '#/components/schemas/SupportedEmbeddingModels'
+          default: intfloat/multilingual-e5-large
+        loader:
+          allOf:
+          - $ref: '#/components/schemas/SupportedEmbeddingLoaders'
+          default: default
+      type: object
+      required:
+      - bucket_name
+      title: EmbeddingBucketRequest
+    HTTPValidationError_2:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+      example:
+        detail:
+        - loc:
+          - body
+          - name
+          msg: Field required
+          type: missing
+  responses:
+    IdempotencyConflictResponse:
+      description: A request with the same Idempotency-Key is still being processed (10036). Retry later with the same key and request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10036'
+              title: Resource is being processed
+              detail: A request with this Idempotency-Key is already being processed.
+              source:
+                pointer: /header/Idempotency-Key
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Optional opaque, unquoted key for safely retrying the same logical request. Keys must contain 1 to 255 letters, numbers, hyphens, or underscores. Generate a unique UUID v4 for each operation and reuse it only when retrying that operation with the same request. Invalid headers—including duplicate, empty, malformed, or overlong values—return 400 with error code 10015. A request already in progress with the same key returns 409; reusing the key with a different request returns 422. Only successful responses are replayed, for up to 24 hours. Do not include sensitive data in the key.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+        pattern: ^[A-Za-z0-9_-]{1,255}$
+      example: 8e03978e-40d5-43e8-bc93-6894a57f9326
+  headers:
+    IdempotentReplayed:
+      description: Present with value `true` when Edge replayed a stored successful response for the supplied Idempotency-Key. Omitted for first-time requests and error responses.
+      schema:
+        type: boolean
+        enum:
+        - true
+        example: true
   securitySchemes:
     bearerAuth:
       scheme: bearer
@@ -678,3 +885,40 @@ components:
       bearerFormat: JWT
       scheme: bearer
       type: http
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-refined-from:
+- telnyx-openapi.yml
+- telnyx-openapi.json

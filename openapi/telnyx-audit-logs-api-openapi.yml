@@ -1,11 +1,13 @@
 openapi: 3.2.0
 info:
-  contact:
-    email: support@telnyx.com
-  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
   title: Telnyx Audit Logs API
   version: 2.0.0
+  contact:
+    email: support@telnyx.com
   x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Audit Logs across 2 of this provider''s published API definitions: telnyx-openapi.yml, telnyx-openapi.json. Each path carries the servers of the definition it was published in.'
 servers:
 - description: Version 2.0.0 of the Telnyx API
   url: https://api.telnyx.com/v2
@@ -34,8 +36,47 @@ paths:
       tags:
       - Audit Logs
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
 components:
+  responses:
+    AuditLogsGenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuditLogsErrors'
+      description: Unexpected error.
+    AuditLogListResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuditLogList'
+      description: A list of audit log entries.
   schemas:
+    AuditLogsErrors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/audit-logs_Error'
+          type: array
+      type: object
+    audit-logs_PaginationMeta:
+      properties:
+        page_number:
+          example: 1
+          type: integer
+        page_size:
+          example: 10
+          type: integer
+        total_pages:
+          example: 3
+          type: integer
+        total_results:
+          example: 50
+          type: integer
+      title: Pagination Meta
+      type: object
     AuditLog:
       properties:
         alternate_resource_id:
@@ -98,6 +139,21 @@ components:
           type: string
       title: Audit Log Entry
       type: object
+    audit-logs_Error:
+      properties:
+        code:
+          description: Error code.
+          example: '10001'
+          type: string
+        detail:
+          description: Detailed information about the error.
+          example: The request requires user authentication.
+          type: string
+        title:
+          description: Short description of the error.
+          example: Unauthorized
+          type: string
+      type: object
     AuditLogList:
       properties:
         data:
@@ -107,13 +163,6 @@ components:
         meta:
           $ref: '#/components/schemas/audit-logs_PaginationMeta'
       title: Audit Log List
-      type: object
-    AuditLogsErrors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/audit-logs_Error'
-          type: array
       type: object
     AuditEventChanges:
       description: Details of the changes made to a resource.
@@ -148,68 +197,69 @@ components:
           example: 12345
       title: Audit Event Changes
       type: object
-    audit-logs_PaginationMeta:
-      properties:
-        page_number:
-          example: 1
-          type: integer
-        page_size:
-          example: 10
-          type: integer
-        total_pages:
-          example: 3
-          type: integer
-        total_results:
-          example: 50
-          type: integer
-      title: Pagination Meta
+    AuditLog_2:
       type: object
-    audit-logs_Error:
+      title: Audit Log Entry
       properties:
-        code:
-          description: Error code.
-          example: '10001'
+        id:
           type: string
-        detail:
-          description: Detailed information about the error.
-          example: The request requires user authentication.
+          format: uuid
+          description: Unique identifier for the audit log entry.
+          example: 550e8400-e29b-41d4-a716-446655440000
+        user_id:
           type: string
-        title:
-          description: Short description of the error.
-          example: Unauthorized
+          format: uuid
+          description: Unique identifier for the user who made the change.
+          example: 550e8400-e29b-41d4-a716-446655440001
+        record_type:
           type: string
-      type: object
-  responses:
-    AuditLogsGenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/AuditLogsErrors'
-      description: Unexpected error.
-    AuditLogListResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/AuditLogList'
-      description: A list of audit log entries.
+          description: The type of the resource being audited.
+          example: audit_event
+        resource_id:
+          type: string
+          description: Unique identifier for the resource that was changed.
+          example: 550e8400-e29b-41d4-a716-446655440002
+        alternate_resource_id:
+          type:
+          - string
+          - 'null'
+          description: An alternate identifier for a resource which may be considered unique enough to identify the resource but is not the primary identifier for the resource. For example, this field could be used to store the phone number value for a phone number when the primary database identifier is a separate distinct value.
+          example: '+14155551234'
+        change_made_by:
+          type: string
+          enum:
+          - telnyx
+          - account_manager
+          - account_owner
+          - organization_member
+          description: Indicates if the change was made by Telnyx on your behalf, the organization owner, a member of your organization, or in the case of managed accounts, the account manager.
+          example: organization_member
+        changes:
+          type:
+          - array
+          - 'null'
+          items:
+            $ref: '#/components/schemas/AuditEventChanges'
+          description: Details of the changes made to the resource.
+          example:
+          - field: field.name
+            to: old value
+            from: new value
+        organization_id:
+          type: string
+          format: uuid
+          description: Unique identifier for the organization that owns the resource.
+          example: 550e8400-e29b-41d4-a716-446655440003
+        change_type:
+          type: string
+          description: The type of change that occurred.
+          example: update
+        created_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the change occurred.
+          example: '2026-01-03T00:00:00Z'
   parameters:
-    audit-logs_PageConsolidated:
-      description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
-      explode: true
-      in: query
-      name: page
-      schema:
-        properties:
-          number:
-            description: Page number to load.
-            example: 1
-            type: integer
-          size:
-            description: Number of items per page.
-            example: 10
-            type: integer
-        type: object
-      style: deepObject
     audit-logs_FilterConsolidated:
       description: 'Consolidated filter parameter (deepObject style). Originally: filter[created_before], filter[created_after]'
       explode: true
@@ -240,6 +290,42 @@ components:
         - desc
         example: desc
         type: string
+    audit-logs_PageConsolidated:
+      description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
+      explode: true
+      in: query
+      name: page
+      schema:
+        properties:
+          number:
+            description: Page number to load.
+            example: 1
+            type: integer
+          size:
+            description: Number of items per page.
+            example: 10
+            type: integer
+        type: object
+      style: deepObject
+    audit-logs_FilterConsolidated_2:
+      name: filter
+      in: query
+      style: deepObject
+      explode: true
+      description: 'Consolidated filter parameter (deepObject style). Originally: filter[created_before], filter[created_after]'
+      schema:
+        type: object
+        properties:
+          created_before:
+            type: string
+            format: date-time
+            example: '2021-01-09T00:00:00Z'
+            description: Filter for audit events created before a specific date.
+          created_after:
+            type: string
+            format: date-time
+            example: '2021-01-09T00:00:00Z'
+            description: Filter for audit events created after a specific date.
   securitySchemes:
     bearerAuth:
       scheme: bearer
@@ -274,3 +360,40 @@ components:
       bearerFormat: JWT
       scheme: bearer
       type: http
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-refined-from:
+- telnyx-openapi.yml
+- telnyx-openapi.json

@@ -1,0 +1,1023 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx AI Collections API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: AI Collections
+  description: Create and manage logical collections of your Telnyx data, tune retrieval settings, manage sources, and run collection-scoped semantic search.
+paths:
+  /ai/collections:
+    get:
+      summary: List collections
+      description: Returns a paginated list of collections in your organization.
+      operationId: ListCollections
+      tags:
+      - AI Collections
+      parameters:
+      - $ref: '#/components/parameters/PageNumber'
+      - $ref: '#/components/parameters/collections_PageSize'
+      responses:
+        '200':
+          description: A paginated list of collections.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionListEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Create a collection
+      description: Creates a new collection scoped to your organization. Optionally attach sources and retrieval settings at creation time. If `slug` is omitted, one is derived from `name` and must be unique within your organization.
+      operationId: CreateCollection
+      tags:
+      - AI Collections
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCollectionRequest'
+      responses:
+        '201':
+          description: Collection created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          description: Validation error -- a `bucket` source without a `bucket_id` (`invalid_source_configuration`), an unknown `source_type` (`invalid_source_type`), an unsupported `retrieval_type` (`unsupported_retrieval_type`), or `top_k` out of range 1-50 (`invalid_top_k`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: invalid_source_configuration
+                  title: Invalid source configuration
+                  detail: The bucket_id field is required when source_type is bucket.
+                  meta:
+                    pointer: /sources/0/bucket_id
+  /ai/collections/slug/{slug}:
+    get:
+      summary: Get a collection by slug
+      description: Fetches a single collection by its `slug`.
+      operationId: GetCollectionBySlug
+      tags:
+      - AI Collections
+      parameters:
+      - $ref: '#/components/parameters/Slug'
+      responses:
+        '200':
+          description: The collection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /ai/collections/{uuid}:
+    delete:
+      summary: Delete a collection
+      description: Soft-deletes a collection. Its `slug` is freed and may be reused by a new collection.
+      operationId: DeleteCollection
+      tags:
+      - AI Collections
+      parameters:
+      - $ref: '#/components/parameters/Uuid'
+      responses:
+        '204':
+          description: Collection deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    get:
+      summary: Get a collection
+      description: Fetches a single collection by its `uuid`.
+      operationId: GetCollection
+      tags:
+      - AI Collections
+      parameters:
+      - $ref: '#/components/parameters/Uuid'
+      responses:
+        '200':
+          description: The collection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update a collection
+      description: Updates a collection's metadata (`name` and/or `description`). Sources and settings are managed through their own sub-resources.
+      operationId: UpdateCollection
+      tags:
+      - AI Collections
+      parameters:
+      - $ref: '#/components/parameters/Uuid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCollectionRequest'
+      responses:
+        '200':
+          description: The updated collection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /ai/collections/{uuid}/settings:
+    get:
+      summary: Get collection settings
+      description: Returns the retrieval settings for a collection.
+      operationId: GetCollectionSettings
+      tags:
+      - AI Collections
+      parameters:
+      - $ref: '#/components/parameters/Uuid'
+      responses:
+        '200':
+          description: The collection's retrieval settings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update collection settings
+      description: Partially updates the collection's retrieval settings.
+      operationId: UpdateCollectionSettings
+      tags:
+      - AI Collections
+      parameters:
+      - $ref: '#/components/parameters/Uuid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsRequest'
+      responses:
+        '200':
+          description: The updated settings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validation error -- unsupported `retrieval_type` (`unsupported_retrieval_type`) or `top_k` out of range 1-50 (`invalid_top_k`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: unsupported_retrieval_type
+                  title: Unsupported retrieval type
+                  detail: 'retrieval_type ''semantic'' is not supported. Supported types: ''hybrid'', ''vector''.'
+                  meta:
+                    pointer: /retrieval/retrieval_type
+    put:
+      summary: Replace collection settings
+      description: Replaces the collection's retrieval settings.
+      operationId: ReplaceCollectionSettings
+      tags:
+      - AI Collections
+      parameters:
+      - $ref: '#/components/parameters/Uuid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsRequest'
+      responses:
+        '200':
+          description: The updated settings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validation error -- unsupported `retrieval_type` (`unsupported_retrieval_type`) or `top_k` out of range 1-50 (`invalid_top_k`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: unsupported_retrieval_type
+                  title: Unsupported retrieval type
+                  detail: 'retrieval_type ''semantic'' is not supported. Supported types: ''hybrid'', ''vector''.'
+                  meta:
+                    pointer: /retrieval/retrieval_type
+  /ai/collections/{uuid}/sources:
+    get:
+      summary: List collection sources
+      description: Returns the sources attached to a collection.
+      operationId: ListCollectionSources
+      tags:
+      - AI Collections
+      parameters:
+      - $ref: '#/components/parameters/Uuid'
+      responses:
+        '200':
+          description: The collection's sources.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SourceListEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      summary: Add a collection source
+      description: Attaches a new content source to the specified collection and returns the created source. The source's content is ingested and embedded so it becomes searchable within the collection.
+      operationId: AddCollectionSource
+      tags:
+      - AI Collections
+      parameters:
+      - $ref: '#/components/parameters/Uuid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SourceRequest'
+      responses:
+        '201':
+          description: The created source.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SourceEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          description: Invalid source configuration -- `bucket` without a `bucket_id` (`invalid_source_configuration`) or an unknown `source_type` (`invalid_source_type`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: invalid_source_configuration
+                  title: Invalid source configuration
+                  detail: The bucket_id field is required when source_type is bucket.
+                  meta:
+                    pointer: /bucket_id
+    put:
+      summary: Replace collection sources
+      description: Replaces the collection's entire source set. The response `meta` reports which sources were added, retained, and removed.
+      operationId: ReplaceCollectionSources
+      tags:
+      - AI Collections
+      parameters:
+      - $ref: '#/components/parameters/Uuid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceSourcesRequest'
+      responses:
+        '200':
+          description: The reconciled source list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SourceReconcileEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          description: Invalid source configuration -- `bucket` without a `bucket_id` (`invalid_source_configuration`) or an unknown `source_type` (`invalid_source_type`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: invalid_source_configuration
+                  title: Invalid source configuration
+                  detail: The bucket_id field is required when source_type is bucket.
+                  meta:
+                    pointer: /bucket_id
+  /ai/collections/{uuid}/sources/{sourceId}:
+    delete:
+      summary: Remove a collection source
+      description: Removes a single source from a collection.
+      operationId: RemoveCollectionSource
+      tags:
+      - AI Collections
+      parameters:
+      - $ref: '#/components/parameters/Uuid'
+      - $ref: '#/components/parameters/SourceId'
+      responses:
+        '204':
+          description: Source removed.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /ai/knowledge/collections/{slug}/documents:
+    get:
+      summary: Search collection documents
+      description: 'Runs search over the documents in a collection, ranked by relevance to `query`. Searches currently run `vector` retrieval (semantic similarity). The collection''s `retrieval_type` setting is the forward-compatible selector: `hybrid` (vector similarity fused with keyword matching) can be set but cannot be searched yet, and `keyword` (lexical BM25 matching) is not accepted yet -- setting it returns 422 `unsupported_retrieval_type`. A per-request `retrieval_type` is accepted but ignored; `meta.retrieval_type` echoes the mode that actually ran. When `query` is omitted, returns a plain catalog listing of the collection''s documents.
+
+
+        **How it works:**
+
+        1. The `query` text is embedded into a 1024-dimensional vector using the multilingual-e5-large model.
+
+        2. The embedding is compared against the collection''s indexed document chunks using semantic similarity. When `hybrid` and `keyword` execution ship, those scores will be fused with, or replaced by, lexical BM25 matching.
+
+        3. Results are ranked by `score` (descending) and paginated via `page[number]` / `page[size]`.
+
+
+        **Authentication:** Requires a Telnyx API key via `Authorization: Bearer `. Results are automatically scoped to your organization and cannot be overridden.
+
+
+        **Filtering:** Use `filter[field][operator]=value` query parameters to narrow results before search. Supported operators: `eq` (default), `in`, `gte`, `gt`, `lte`, `lt`, `contains`. Metadata fields resolve to `metadata.`.
+
+
+        **Examples:**
+
+        - `GET /v2/ai/knowledge/collections/my-collection/documents?query=billing+issue&top_k=10`
+
+        - `GET /v2/ai/knowledge/collections/my-collection/documents?query=refund&sources=voice,message`
+
+        - `GET /v2/ai/knowledge/collections/my-collection/documents?query=outage&filter[record_created_at][gte]=2026-01-01T00:00:00Z`'
+      operationId: SearchCollectionDocuments
+      tags:
+      - AI Collections
+      parameters:
+      - $ref: '#/components/parameters/Slug'
+      - name: query
+        in: query
+        required: false
+        description: Natural-language search query. When provided, the text is matched against the collection's document chunks using the collection's `retrieval_type` (vector or hybrid). When omitted, documents are returned as a plain catalog listing.
+        schema:
+          type: string
+          minLength: 1
+          example: customer called about billing issue
+      - name: top_k
+        in: query
+        required: false
+        description: Maximum number of ranked results to consider. When omitted, the collection's configured `top_k` setting is used.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 50
+          example: 10
+      - name: sources
+        in: query
+        required: false
+        description: Comma-separated list of source types to restrict the search to. When omitted, all of the collection's sources are searched.
+        schema:
+          type: string
+          example: voice,message
+      - name: retrieval_type
+        in: query
+        required: false
+        description: Reserved; not yet functional. A value supplied here is accepted but ignored — it does not override the collection's configured strategy, and it is not echoed back. Searches run `vector` retrieval, and `meta.retrieval_type` reports the mode that actually ran. To change retrieval strategy, set it on the collection's settings subresource.
+        schema:
+          type: string
+          enum:
+          - vector
+          - hybrid
+          - keyword
+          example: vector
+      - name: filter
+        in: query
+        required: false
+        style: deepObject
+        explode: true
+        description: 'Field filters applied before ranking, using `filter[field][operator]=value`. Supported operators: `eq` (default), `in`, `gte`, `gt`, `lte`, `lt`, `contains`. Known fields: `record_type`, `record_id`, `user_id`, `record_created_at`, `ingested_at`; any other name resolves to a `metadata.<field>` filter. Example: `filter[record_id][eq]=rec_123`.'
+        schema:
+          type: object
+          additionalProperties: true
+      - $ref: '#/components/parameters/PageNumber'
+      - $ref: '#/components/parameters/collections_PageSize'
+      responses:
+        '200':
+          description: Ranked (or listed) collection documents.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionSearchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: The collection does not exist or is not searchable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10005'
+                  title: Resource not found
+                  detail: The requested resource or URL could not be found.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10005
+        '422':
+          description: The collection has no searchable sources.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10027'
+                  title: Unprocessable Entity
+                  detail: The server understood the syntax of the request but was unable to process the instructions.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10027
+components:
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          example:
+            errors:
+            - code: '10009'
+              title: Authentication failed
+              detail: The required authentication headers were either invalid or not included in the request.
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10009
+    Conflict:
+      description: The request conflicts with existing state (e.g. duplicate slug or duplicate source).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          example:
+            errors:
+            - code: collection_slug_taken
+              title: Collection slug already in use
+              detail: A collection with slug 'support-transcripts' already exists for this account.
+              meta:
+                pointer: /slug
+    NotFound:
+      description: The requested resource does not exist.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          example:
+            errors:
+            - code: collection_not_found
+              title: Collection not found
+              detail: No collection with uuid 'b3b1c8a2-9f4e-4d2a-9c1e-2f7a6d5b4c3a' exists for this account.
+    BadRequest:
+      description: The request was malformed or failed validation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          example:
+            errors:
+            - code: '10015'
+              title: Bad Request
+              detail: The request failed because it was not well-formed.
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10015
+  schemas:
+    CollectionDocumentRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        record_id:
+          type: string
+        record_type:
+          type: string
+          description: The source record kind this chunk came from (e.g. `voice`, `meeting_bot`, `message`).
+          example: voice
+        chunk_index:
+          type: integer
+        chunk_total:
+          type: integer
+        text:
+          type: string
+        score:
+          type: number
+          format: float
+          description: Relevance score (higher = more relevant) for ranked search. `0.0` for plain catalog listings (when `query` is omitted).
+        region:
+          type: string
+        user_id:
+          type: string
+        organization_id:
+          type: string
+        record_created_at:
+          type: string
+          format: date-time
+        ingested_at:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          additionalProperties: true
+    SettingsRequest:
+      type: object
+      properties:
+        retrieval:
+          $ref: '#/components/schemas/RetrievalSettings'
+    SettingsEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/RetrievalSettingsWrapper'
+    SourceType:
+      type: string
+      description: The type of Telnyx data attached as a source. `bucket` requires an additional `bucket_id`. Only `voice` is searchable today; `meeting_bot`, `message`, and `bucket` attach but are not yet searchable (Coming soon).
+      enum:
+      - voice
+      - meeting_bot
+      - message
+      - bucket
+      example: voice
+    SourceEnvelope:
+      type: object
+      description: Envelope containing a single collection source.
+      properties:
+        data:
+          $ref: '#/components/schemas/collections_Source'
+    collections_Source:
+      type: object
+      properties:
+        id:
+          type: string
+          example: source_8vkvtcksnawvbnxq48yv2l06wx
+        record_type:
+          type: string
+          description: Identifies the record type. Always `ai_collection_source`.
+          example: ai_collection_source
+        collection_id:
+          type: string
+          format: uuid
+          example: 6a09ccbd-8f9b-4c3a-9b0e-2f1d3c4b5a6e
+        source_type:
+          $ref: '#/components/schemas/SourceType'
+        bucket_id:
+          type: string
+          description: The Telnyx Storage bucket name. Present only for `bucket` sources.
+          example: policy-docs
+        status:
+          type: string
+          example: ready
+    RetrievalSettings:
+      type: object
+      description: How documents are retrieved when searching the collection.
+      properties:
+        top_k:
+          type: integer
+          description: Number of top results to retrieve (1–50).
+          minimum: 1
+          maximum: 50
+          default: 5
+          example: 5
+        retrieval_type:
+          type: string
+          description: 'Retrieval strategy. `vector` runs semantic similarity search; `hybrid` combines vector similarity with keyword matching; `keyword` runs lexical (BM25) matching. `keyword` is not accepted yet: setting it returns 422 `unsupported_retrieval_type`. A collection set to `hybrid` is accepted here but cannot be searched until hybrid execution ships.'
+          enum:
+          - vector
+          - hybrid
+          default: vector
+          example: vector
+    CollectionListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Collection'
+        meta:
+          $ref: '#/components/schemas/ListMeta'
+    CollectionEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Collection'
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    ReplaceSourcesRequest:
+      type: object
+      required:
+      - sources
+      properties:
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceRequest'
+    SourceReconcileEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/collections_Source'
+        meta:
+          $ref: '#/components/schemas/SourceReconcileMeta'
+    RetrievalSettingsWrapper:
+      type: object
+      properties:
+        record_type:
+          type: string
+          description: Identifies the record type. Always `ai_collection_settings`.
+          example: ai_collection_settings
+          readOnly: true
+        retrieval:
+          $ref: '#/components/schemas/RetrievalSettings'
+    SourceRequest:
+      type: object
+      required:
+      - source_type
+      properties:
+        source_type:
+          $ref: '#/components/schemas/SourceType'
+        bucket_id:
+          type: string
+          description: The Telnyx Storage bucket name. Required when `source_type` is `bucket`; ignored otherwise.
+          example: policy-docs
+      allOf:
+      - if:
+          properties:
+            source_type:
+              const: bucket
+          required:
+          - source_type
+        then:
+          properties:
+            bucket_id:
+              type: string
+          required:
+          - bucket_id
+    ListMeta:
+      type: object
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 42
+        page_number:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 20
+    SourceListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/collections_Source'
+    SourceReconcileMeta:
+      type: object
+      description: Reports which source IDs were added, retained, and removed by a replace operation.
+      properties:
+        added:
+          type: array
+          items:
+            type: string
+        retained:
+          type: array
+          items:
+            type: string
+        removed:
+          type: array
+          items:
+            type: string
+    Collection:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          example: 6a09ccbd-8f9b-4c3a-9b0e-2f1d3c4b5a6e
+        slug:
+          type: string
+          example: support-transcripts
+        record_type:
+          type: string
+          description: Identifies the record type. Always `ai_collection`.
+          example: ai_collection
+        name:
+          type: string
+          example: Support Transcripts
+        description:
+          type: string
+          example: All customer support voice transcripts.
+        status:
+          type: string
+          example: ready
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/collections_Source'
+        settings:
+          $ref: '#/components/schemas/RetrievalSettingsWrapper'
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-08-04T12:00:00Z'
+        updated_at:
+          type: string
+          format: date-time
+          example: '2026-08-04T12:00:00Z'
+    CollectionSearchMeta:
+      type: object
+      properties:
+        collection_slug:
+          type: string
+          example: support-transcripts
+        searched_sources:
+          type: array
+          items:
+            type: string
+          example:
+          - voice
+          - message
+        retrieval_type:
+          type: string
+          example: vector
+        top_k:
+          type: integer
+          example: 5
+        total_results:
+          type: integer
+          example: 42
+        total_pages:
+          type: integer
+          example: 3
+        page_number:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 20
+    UpdateCollectionRequest:
+      type: object
+      description: Metadata-only update. Provide either or both fields.
+      properties:
+        name:
+          type: string
+          example: Support Transcripts (2026)
+        description:
+          type: string
+          example: Updated description.
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
+    CreateCollectionRequest:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          description: Human-readable collection name.
+          example: Support Transcripts
+        description:
+          type: string
+          description: Optional description.
+          example: All customer support voice transcripts.
+        slug:
+          type: string
+          description: Optional slug (unique per organization). Derived from `name` when omitted.
+          example: support-transcripts
+        sources:
+          type: array
+          description: Optional sources to attach at creation time.
+          items:
+            $ref: '#/components/schemas/SourceRequest'
+        settings:
+          description: Optional retrieval settings.
+          allOf:
+          - $ref: '#/components/schemas/RetrievalSettingsWrapper'
+    CollectionSearchResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CollectionDocumentRecord'
+        meta:
+          $ref: '#/components/schemas/CollectionSearchMeta'
+  parameters:
+    Slug:
+      name: slug
+      in: path
+      required: true
+      description: The collection's slug (unique within your organization).
+      schema:
+        type: string
+        example: support-transcripts
+    Uuid:
+      name: uuid
+      in: path
+      required: true
+      description: The collection's unique identifier.
+      schema:
+        type: string
+        format: uuid
+        example: 6a09ccbd-8f9b-4c3a-9b0e-2f1d3c4b5a6e
+    collections_PageSize:
+      name: page[size]
+      in: query
+      required: false
+      description: Number of results per page. Defaults to 20.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+        example: 20
+    SourceId:
+      name: sourceId
+      in: path
+      required: true
+      description: The identifier of the source to remove.
+      schema:
+        type: string
+        example: '42'
+    PageNumber:
+      name: page[number]
+      in: query
+      required: false
+      description: Page number to return (1-based). Defaults to 1.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+        example: 1
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

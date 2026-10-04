@@ -1,11 +1,13 @@
 openapi: 3.2.0
 info:
-  contact:
-    email: support@telnyx.com
-  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
   title: Telnyx Enterprises API
   version: 2.0.0
+  contact:
+    email: support@telnyx.com
   x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Enterprises across 2 of this provider''s published API definitions: telnyx-openapi.yml, telnyx-openapi.json. Each path carries the servers of the definition it was published in.'
 servers:
 - description: Version 2.0.0 of the Telnyx API
   url: https://api.telnyx.com/v2
@@ -87,6 +89,9 @@ paths:
       tags:
       - Enterprises
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /enterprises/{enterprise_id}:
     delete:
       description: Delete an enterprise and all associated resources. This action is irreversible.
@@ -152,49 +157,59 @@ paths:
       tags:
       - Enterprises
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
+  /enterprises/{enterprise_id}/branded_calling:
+    post:
+      summary: Activate Branded Calling on an enterprise
+      description: 'Branded Calling must be activated on each enterprise. Activation is idempotent:
+
+        - First call: marks the enterprise as activated and begins onboarding it with the Branded Calling platform asynchronously. Returns `200` with `branded_calling_enabled: true`.
+
+        - Re-call after success: no-op, returns the same enterprise body.
+
+        - Re-call after a prior failure: re-queues onboarding, returns `200`.
+
+
+        Prerequisite: the calling user must have agreed to the Branded Calling Terms of Service (`POST /terms_of_service/branded_calling/agree`). Without that, this endpoint returns `403 terms_of_service_not_accepted`.
+
+
+        Failure modes:
+
+        - `400` - the account has no available credit. Add funds and retry.
+
+        - `400` - the enterprise is not in the United States. Branded Calling is currently available only to US enterprises.
+
+        - `403` - Branded Calling Terms of Service not accepted.
+
+        - `404` - enterprise does not exist or does not belong to your account.
+
+
+        **Pricing:** Activation itself is free, but the account must have available credit. Branded Calling fees are charged per DIR and per branded call. See https://telnyx.com/pricing/branded-calling for current pricing.'
+      operationId: activateBrandedCalling
+      tags:
+      - Enterprises
+      parameters:
+      - $ref: '#/components/parameters/EnterpriseId_2'
+      responses:
+        '200':
+          description: Branded Calling activated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnterprisePublicWrapped_2'
+        default:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        4XX:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    branded-calling_ErrorResponse:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/TelnyxError'
-          type: array
-      type: object
-    TelnyxError:
-      properties:
-        code:
-          description: Telnyx error code
-          example: '10015'
-          type: string
-        detail:
-          description: Human-readable error detail
-          example: User has already agreed to Terms of Service version v1.0.0
-          type: string
-        meta:
-          properties:
-            url:
-              description: Link to error documentation
-              format: uri
-              type: string
-          type: object
-        source:
-          description: Reference to the field that caused the error
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the field that caused the error
-              example: /body/organization_type
-              type: string
-          type: object
-        title:
-          description: Short error title
-          example: Bad Request
-          type: string
-      required:
-      - code
-      - title
-      type: object
-    EnterprisePublic:
+    EnterpriseUpdate:
+      description: All fields are optional. Only provided fields will be updated.
       properties:
         billing_address:
           $ref: '#/components/schemas/BillingAddress'
@@ -202,44 +217,31 @@ components:
           $ref: '#/components/schemas/BillingContact'
         corporate_registration_number:
           description: Corporate registration number
-          nullable: true
-          type: string
-        country_code:
-          description: ISO 3166-1 alpha-2 country code
-          example: US
-          type: string
-        created_at:
-          description: When the enterprise was created
-          format: date-time
+          maxLength: 100
           type: string
         customer_reference:
           description: Customer reference identifier
-          nullable: true
+          maxLength: 255
           type: string
         doing_business_as:
           description: DBA name
-          example: Acme
+          maxLength: 255
           type: string
         dun_bradstreet_number:
           description: D-U-N-S Number
-          nullable: true
+          maxLength: 20
           type: string
         fein:
-          description: Federal Employer Identification Number
-          nullable: true
-          type: string
-        id:
-          description: Unique identifier of the enterprise
-          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-          format: uuid
+          description: 'Federal Employer Identification Number. Format: XX-XXXXXXX or XXXXXXXXX'
+          maxLength: 20
           type: string
         industry:
           description: Industry classification
-          nullable: true
           type: string
         legal_name:
           description: Legal name of the enterprise
-          example: Acme Corp Inc.
+          maxLength: 64
+          minLength: 3
           type: string
         number_of_employees:
           description: Employee count range
@@ -251,7 +253,6 @@ components:
           - 501-2000
           - 2001-10000
           - 10001+
-          nullable: true
           type: string
         organization_contact:
           $ref: '#/components/schemas/OrganizationContact'
@@ -263,39 +264,72 @@ components:
           - partnership
           - nonprofit
           - other
-          nullable: true
           type: string
         organization_physical_address:
           $ref: '#/components/schemas/PhysicalAddress'
-        organization_type:
-          description: Type of organization
-          enum:
-          - commercial
-          - government
-          - non_profit
-          type: string
         primary_business_domain_sic_code:
           description: SIC Code
-          nullable: true
+          maxLength: 10
           type: string
         professional_license_number:
           description: Professional license number
-          nullable: true
-          type: string
-        role_type:
-          description: Role type in Branded Calling / Number Reputation services
-          enum:
-          - enterprise
-          - bpo
-          type: string
-        updated_at:
-          description: When the enterprise was last updated
-          format: date-time
+          maxLength: 100
           type: string
         website:
           description: Company website URL
-          nullable: true
+          maxLength: 255
           type: string
+      type: object
+    MetaInfo:
+      properties:
+        page_number:
+          description: Current page number
+          type: integer
+        page_size:
+          description: Items per page
+          type: integer
+        total_pages:
+          description: Total number of pages
+          type: integer
+        total_results:
+          description: Total number of results
+          type: integer
+      type: object
+    branded-calling_ErrorResponse:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/TelnyxError'
+          type: array
+      type: object
+    BillingContact:
+      properties:
+        email:
+          description: Contact's email address
+          example: billing@acme.com
+          format: email
+          maxLength: 255
+          type: string
+        first_name:
+          description: Contact's first name
+          example: John
+          maxLength: 255
+          type: string
+        last_name:
+          description: Contact's last name
+          example: Doe
+          maxLength: 255
+          type: string
+        phone_number:
+          description: Contact's phone number (10-15 digits)
+          example: '15551234568'
+          maxLength: 20
+          type: string
+      required:
+      - first_name
+      - last_name
+      - email
+      - phone_number
       type: object
     BillingAddress:
       properties:
@@ -336,6 +370,96 @@ components:
       - city
       - postal_code
       - street_address
+      type: object
+    PhysicalAddress:
+      properties:
+        administrative_area:
+          description: State or province
+          example: Illinois
+          maxLength: 100
+          type: string
+        city:
+          description: City name
+          example: Chicago
+          maxLength: 100
+          type: string
+        country:
+          description: Country name (e.g., United States)
+          example: United States
+          maxLength: 100
+          type: string
+        extended_address:
+          description: Additional address line (suite, apt, etc.)
+          example: Suite 400
+          maxLength: 255
+          nullable: true
+          type: string
+        postal_code:
+          description: ZIP or postal code
+          example: '60601'
+          maxLength: 20
+          type: string
+        street_address:
+          description: Street address
+          example: 123 Main St
+          maxLength: 255
+          type: string
+      required:
+      - country
+      - administrative_area
+      - city
+      - postal_code
+      - street_address
+      type: object
+    OrganizationContact:
+      description: 'Organization contact information. Note: the response returns this object with the phone field as ''phone'' (not ''phone_number'').'
+      properties:
+        email:
+          description: Contact's email address
+          example: jane.smith@acme.com
+          format: email
+          maxLength: 255
+          type: string
+        first_name:
+          description: Contact's first name
+          example: Jane
+          maxLength: 255
+          type: string
+        job_title:
+          description: Contact's job title (required)
+          example: VP of Engineering
+          maxLength: 255
+          type: string
+        last_name:
+          description: Contact's last name
+          example: Smith
+          maxLength: 255
+          type: string
+        phone:
+          description: Contact's phone number in E.164 format
+          example: '+16035551234'
+          maxLength: 20
+          type: string
+      required:
+      - first_name
+      - last_name
+      - email
+      - job_title
+      - phone
+      type: object
+    EnterprisePublicWrapped:
+      properties:
+        data:
+          $ref: '#/components/schemas/EnterprisePublic'
+      type: object
+    EnterpriseListPublic:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/EnterprisePublic'
+          type: array
+        meta:
+          $ref: '#/components/schemas/MetaInfo'
       type: object
     EnterpriseCreate:
       properties:
@@ -451,57 +575,7 @@ components:
       - organization_physical_address
       - billing_address
       type: object
-    MetaInfo:
-      properties:
-        page_number:
-          description: Current page number
-          type: integer
-        page_size:
-          description: Items per page
-          type: integer
-        total_pages:
-          description: Total number of pages
-          type: integer
-        total_results:
-          description: Total number of results
-          type: integer
-      type: object
-    EnterprisePublicWrapped:
-      properties:
-        data:
-          $ref: '#/components/schemas/EnterprisePublic'
-      type: object
-    BillingContact:
-      properties:
-        email:
-          description: Contact's email address
-          example: billing@acme.com
-          format: email
-          maxLength: 255
-          type: string
-        first_name:
-          description: Contact's first name
-          example: John
-          maxLength: 255
-          type: string
-        last_name:
-          description: Contact's last name
-          example: Doe
-          maxLength: 255
-          type: string
-        phone_number:
-          description: Contact's phone number (10-15 digits)
-          example: '15551234568'
-          maxLength: 20
-          type: string
-      required:
-      - first_name
-      - last_name
-      - email
-      - phone_number
-      type: object
-    EnterpriseUpdate:
-      description: All fields are optional. Only provided fields will be updated.
+    EnterprisePublic:
       properties:
         billing_address:
           $ref: '#/components/schemas/BillingAddress'
@@ -509,31 +583,44 @@ components:
           $ref: '#/components/schemas/BillingContact'
         corporate_registration_number:
           description: Corporate registration number
-          maxLength: 100
+          nullable: true
+          type: string
+        country_code:
+          description: ISO 3166-1 alpha-2 country code
+          example: US
+          type: string
+        created_at:
+          description: When the enterprise was created
+          format: date-time
           type: string
         customer_reference:
           description: Customer reference identifier
-          maxLength: 255
+          nullable: true
           type: string
         doing_business_as:
           description: DBA name
-          maxLength: 255
+          example: Acme
           type: string
         dun_bradstreet_number:
           description: D-U-N-S Number
-          maxLength: 20
+          nullable: true
           type: string
         fein:
-          description: 'Federal Employer Identification Number. Format: XX-XXXXXXX or XXXXXXXXX'
-          maxLength: 20
+          description: Federal Employer Identification Number
+          nullable: true
+          type: string
+        id:
+          description: Unique identifier of the enterprise
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+          format: uuid
           type: string
         industry:
           description: Industry classification
+          nullable: true
           type: string
         legal_name:
           description: Legal name of the enterprise
-          maxLength: 64
-          minLength: 3
+          example: Acme Corp Inc.
           type: string
         number_of_employees:
           description: Employee count range
@@ -545,6 +632,7 @@ components:
           - 501-2000
           - 2001-10000
           - 10001+
+          nullable: true
           type: string
         organization_contact:
           $ref: '#/components/schemas/OrganizationContact'
@@ -556,120 +644,718 @@ components:
           - partnership
           - nonprofit
           - other
+          nullable: true
           type: string
         organization_physical_address:
           $ref: '#/components/schemas/PhysicalAddress'
+        organization_type:
+          description: Type of organization
+          enum:
+          - commercial
+          - government
+          - non_profit
+          type: string
         primary_business_domain_sic_code:
           description: SIC Code
-          maxLength: 10
+          nullable: true
           type: string
         professional_license_number:
           description: Professional license number
-          maxLength: 100
+          nullable: true
+          type: string
+        role_type:
+          description: Role type in Branded Calling / Number Reputation services
+          enum:
+          - enterprise
+          - bpo
+          type: string
+        updated_at:
+          description: When the enterprise was last updated
+          format: date-time
           type: string
         website:
           description: Company website URL
-          maxLength: 255
+          nullable: true
           type: string
       type: object
-    EnterpriseListPublic:
+    TelnyxError:
       properties:
-        data:
-          items:
-            $ref: '#/components/schemas/EnterprisePublic'
-          type: array
+        code:
+          description: Telnyx error code
+          example: '10015'
+          type: string
+        detail:
+          description: Human-readable error detail
+          example: User has already agreed to Terms of Service version v1.0.0
+          type: string
         meta:
-          $ref: '#/components/schemas/MetaInfo'
+          properties:
+            url:
+              description: Link to error documentation
+              format: uri
+              type: string
+          type: object
+        source:
+          description: Reference to the field that caused the error
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the field that caused the error
+              example: /body/organization_type
+              type: string
+          type: object
+        title:
+          description: Short error title
+          example: Bad Request
+          type: string
+      required:
+      - code
+      - title
       type: object
-    OrganizationContact:
-      description: 'Organization contact information. Note: the response returns this object with the phone field as ''phone'' (not ''phone_number'').'
+    EnterpriseUpdate_2:
+      type: object
+      description: All fields are optional; only the ones supplied are updated. The same field-level rules from `EnterpriseCreateRequest` apply.
       properties:
-        email:
-          description: Contact's email address
-          example: jane.smith@acme.com
-          format: email
+        legal_name:
+          type: string
+          description: Your business's full registered legal name, exactly as it appears on your incorporation or tax documents, 3 to 64 characters.
+          minLength: 3
+          maxLength: 64
+        website:
+          type: string
+          format: uri
           maxLength: 255
+          description: Your business's public website address, including https://. Leave blank if your business has no website.
+        fein:
           type: string
-        first_name:
-          description: Contact's first name
-          example: Jane
+          description: US Federal Employer Identification Number (`NN-NNNNNNN`) or Canadian equivalent.
+        industry:
+          type: string
+          description: The industry your business operates in. Choose the closest match from the list; if your value is not accepted, pick the nearest category.
+          enum:
+          - accounting
+          - finance
+          - billing
+          - collections
+          - business
+          - charity
+          - nonprofit
+          - communications
+          - telecom
+          - customer service
+          - support
+          - delivery
+          - shipping
+          - logistics
+          - education
+          - financial
+          - banking
+          - government
+          - public
+          - healthcare
+          - health
+          - pharmacy
+          - medical
+          - insurance
+          - legal
+          - law
+          - notifications
+          - scheduling
+          - real estate
+          - property
+          - retail
+          - ecommerce
+          - sales
+          - marketing
+          - software
+          - technology
+          - tech
+          - media
+          - surveys
+          - market research
+          - travel
+          - hospitality
+          - hotel
+        number_of_employees:
+          type: string
+          description: Approximate headcount range. Used for vetting heuristics; pick the bucket that contains your current employee count.
+        organization_legal_type:
+          type: string
+          description: 'Legal-entity form. Pick the form that matches your incorporation documents:
+
+            - `corporation` - C-corp or S-corp.
+
+            - `llc` - limited liability company.
+
+            - `partnership` - general/limited partnership.
+
+            - `nonprofit` - non-profit corporation, charitable trust, or 501(c)(3)/equivalent.
+
+            - `other` - anything else (sole proprietorships, government bodies, DBAs, etc.). You may be asked for additional documents during vetting.'
+        doing_business_as:
+          type: string
           maxLength: 255
+          description: The trade name your business operates under if it is different from your legal name, also called a Doing Business As (DBA) name. Leave blank if you only use your legal name.
+        customer_reference:
           type: string
-        job_title:
-          description: Contact's job title (required)
-          example: VP of Engineering
           maxLength: 255
+          description: Your own label for this account. Enter any reference that helps you find it in your records. Telnyx does not use it during vetting.
+        primary_business_domain_sic_code:
           type: string
-        last_name:
-          description: Contact's last name
-          example: Smith
+          nullable: true
+          description: The 4-digit Standard Industrial Classification code for your main line of business, which tells us what industry you operate in. Look it up in the SIC code directory if you are unsure.
+        corporate_registration_number:
+          type: string
+          nullable: true
+          description: The official number your company received when it was legally registered or incorporated (for example from your state or national business registry). It is on your certificate of incorporation.
+        professional_license_number:
+          type: string
+          nullable: true
+          description: If your business operates under a professional license (for example legal, medical, or financial services), enter the license number issued by the licensing authority. Leave blank if it does not apply.
+        dun_bradstreet_number:
+          type: string
+          nullable: true
+          description: Your optional 9-digit D-U-N-S Number issued by Dun & Bradstreet, a unique identifier for your business. Leave blank if you do not have one.
+        organization_contact:
+          $ref: '#/components/schemas/OrganizationContact_2'
+        billing_contact:
+          $ref: '#/components/schemas/BillingContact_2'
+        organization_physical_address:
+          $ref: '#/components/schemas/PhysicalAddress_2'
+        billing_address:
+          $ref: '#/components/schemas/BillingAddress_2'
+        jurisdiction_of_incorporation:
+          type: string
           maxLength: 255
-          type: string
-        phone:
-          description: Contact's phone number in E.164 format
-          example: '+16035551234'
-          maxLength: 20
-          type: string
+          description: The state, province, or country where your business was legally incorporated, for example Delaware.
+          example: Delaware
+    BillingContact_2:
+      type: object
       required:
       - first_name
       - last_name
       - email
-      - job_title
-      - phone
-      type: object
-    PhysicalAddress:
+      - phone_number
       properties:
-        administrative_area:
-          description: State or province
-          example: Illinois
-          maxLength: 100
+        first_name:
           type: string
-        city:
-          description: City name
-          example: Chicago
-          maxLength: 100
-          type: string
-        country:
-          description: Country name (e.g., United States)
-          example: United States
-          maxLength: 100
-          type: string
-        extended_address:
-          description: Additional address line (suite, apt, etc.)
-          example: Suite 400
           maxLength: 255
-          nullable: true
+          description: The first name of the person Telnyx should contact about billing for this account.
+          example: Alex
+        last_name:
           type: string
-        postal_code:
-          description: ZIP or postal code
-          example: '60601'
-          maxLength: 20
-          type: string
-        street_address:
-          description: Street address
-          example: 123 Main St
           maxLength: 255
+          description: The last name of the person Telnyx should contact about billing for this account.
+          example: Bill
+        email:
           type: string
+          format: email
+          description: The email address of the person Telnyx should contact about billing for this account.
+          example: billing@acmeplumbing.example.com
+        phone_number:
+          type: string
+          description: The phone number of the billing contact, in E.164 format, for example +12125551234.
+          example: '+13125550001'
+    BillingAddress_2:
+      $ref: '#/components/schemas/PhysicalAddress_2'
+    PhysicalAddress_2:
+      type: object
       required:
       - country
       - administrative_area
       - city
       - postal_code
       - street_address
+      properties:
+        country:
+          type: string
+          description: ISO 3166-1 alpha-2 code (currently `US` or `CA`).
+          example: US
+        administrative_area:
+          type: string
+          description: State or province code (e.g. `IL`, `ON`).
+          example: IL
+        city:
+          type: string
+          maxLength: 100
+          description: The city of your registered business address.
+          example: Chicago
+        postal_code:
+          type: string
+          maxLength: 20
+          description: The postal or ZIP code of your registered business address.
+          example: '60601'
+        street_address:
+          type: string
+          maxLength: 255
+          description: The street address of your registered business, including the building number and street name.
+          example: 100 Main St
+        extended_address:
+          type: string
+          maxLength: 255
+          description: An optional second address line, such as a suite, unit, or floor. Leave blank if it does not apply.
+          example: Suite 504
+          nullable: true
+    branded-calling_PaginationMeta:
       type: object
+      required:
+      - total_pages
+      - total_results
+      - page_number
+      - page_size
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+          description: Total number of pages available given the current `page_size`.
+        total_results:
+          type: integer
+          example: 42
+          description: Total number of items across all pages (excludes soft-deleted rows).
+        page_number:
+          type: integer
+          example: 1
+          description: 1-based index of this page. Echoes the `page[number]` query parameter (default `1`).
+        page_size:
+          type: integer
+          example: 20
+          description: Number of items returned in this page's `data` array. Capped at 250.
+      description: JSON:API pagination metadata returned with every paginated list response. Page numbering is 1-based. `page_size` reports the number of items actually returned in `data` for this page; the requested size is taken from the `page[size]` query parameter.
+    OrganizationContact_2:
+      type: object
+      required:
+      - first_name
+      - last_name
+      - email
+      - job_title
+      - phone_number
+      properties:
+        first_name:
+          type: string
+          maxLength: 255
+          description: The first name of the main person Telnyx should contact about this account.
+          example: Sam
+        last_name:
+          type: string
+          maxLength: 255
+          description: The last name of the main person Telnyx should contact about this account.
+          example: Org
+        email:
+          type: string
+          format: email
+          description: The email address of the main person Telnyx should contact about this account. For a call center (BPO) account this is the email you will verify later, so use a mailbox you can access.
+          example: sam@acmeplumbing.example.com
+        job_title:
+          type: string
+          maxLength: 255
+          description: The job title of the main person Telnyx should contact about this account.
+          example: Compliance Lead
+        phone_number:
+          type: string
+          description: The phone number of the main contact, in E.164 format, for example +12125551234.
+          example: '+13125550000'
+    EnterprisePublicWrapped_2:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/EnterprisePublic_2'
+    EnterpriseListPublic_2:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnterprisePublic_2'
+        meta:
+          $ref: '#/components/schemas/branded-calling_PaginationMeta'
+    EnterpriseCreate_2:
+      type: object
+      required:
+      - legal_name
+      - organization_type
+      - country_code
+      - website
+      - fein
+      - industry
+      - number_of_employees
+      - organization_legal_type
+      - doing_business_as
+      - jurisdiction_of_incorporation
+      - organization_contact
+      - billing_contact
+      - organization_physical_address
+      - billing_address
+      properties:
+        legal_name:
+          type: string
+          example: Acme Plumbing LLC
+          description: Your business's full registered legal name, exactly as it appears on your incorporation or tax documents, 3 to 64 characters.
+          minLength: 3
+          maxLength: 64
+        organization_type:
+          type: string
+          enum:
+          - commercial
+          - government
+          - non_profit
+          example: commercial
+          description: 'Organization category for vetting purposes:
+
+            - `commercial` - for-profit business entities (LLC, corp, partnership, sole proprietorship). Most callers fall here.
+
+            - `government` - federal/state/local government bodies.
+
+            - `non_profit` - registered 501(c)(3)/equivalent (incl. educational institutions, charities, religious organisations).'
+        country_code:
+          type: string
+          description: ISO 3166-1 alpha-2 country code. Currently `US` and `CA` are supported.
+          example: US
+        role_type:
+          type: string
+          enum:
+          - enterprise
+          - bpo
+          description: '`enterprise` for an organization registering its own DIRs (the default, and the right choice when the calls display your own brand). `bpo` for a Business Process Outsourcer: a call center that places calls on behalf of other enterprises and displays their brand. A `bpo` enterprise describes the call center itself and cannot own a DIR. Each client the call center calls for gets its own `enterprise` in the same account, with the client''s DIR under it; that DIR is then linked to the `bpo` enterprise through `bpo_authorizations`. Fixed at creation.'
+          example: enterprise
+          default: enterprise
+        website:
+          type: string
+          format: uri
+          maxLength: 255
+          example: https://acmeplumbing.example.com
+          description: Your business's public website address, including https://. Leave blank if your business has no website.
+        fein:
+          type: string
+          description: US Federal Employer Identification Number (`NN-NNNNNNN`) or Canadian equivalent.
+          example: 12-3456789
+        industry:
+          type: string
+          description: The industry your business operates in. Choose the closest match from the list; if your value is not accepted, pick the nearest category.
+          example: technology
+          enum:
+          - accounting
+          - finance
+          - billing
+          - collections
+          - business
+          - charity
+          - nonprofit
+          - communications
+          - telecom
+          - customer service
+          - support
+          - delivery
+          - shipping
+          - logistics
+          - education
+          - financial
+          - banking
+          - government
+          - public
+          - healthcare
+          - health
+          - pharmacy
+          - medical
+          - insurance
+          - legal
+          - law
+          - notifications
+          - scheduling
+          - real estate
+          - property
+          - retail
+          - ecommerce
+          - sales
+          - marketing
+          - software
+          - technology
+          - tech
+          - media
+          - surveys
+          - market research
+          - travel
+          - hospitality
+          - hotel
+        number_of_employees:
+          type: string
+          enum:
+          - 1-10
+          - 11-50
+          - 51-200
+          - 201-500
+          - 501-2000
+          - 2001-10000
+          - 10001+
+          example: 51-200
+          description: Approximate headcount range. Used for vetting heuristics; pick the bucket that contains your current employee count.
+        organization_legal_type:
+          type: string
+          enum:
+          - corporation
+          - llc
+          - partnership
+          - nonprofit
+          - other
+          example: llc
+          description: 'Legal-entity form. Pick the form that matches your incorporation documents:
+
+            - `corporation` - C-corp or S-corp.
+
+            - `llc` - limited liability company.
+
+            - `partnership` - general/limited partnership.
+
+            - `nonprofit` - non-profit corporation, charitable trust, or 501(c)(3)/equivalent.
+
+            - `other` - anything else (sole proprietorships, government bodies, DBAs, etc.). You may be asked for additional documents during vetting.'
+        doing_business_as:
+          type: string
+          maxLength: 255
+          example: Acme Plumbing
+          description: The trade name your business operates under if it is different from your legal name, also called a Doing Business As (DBA) name. Leave blank if you only use your legal name.
+        jurisdiction_of_incorporation:
+          type: string
+          maxLength: 255
+          example: Delaware
+          description: The state, province, or country where your business was legally incorporated, for example Delaware.
+        customer_reference:
+          type: string
+          maxLength: 255
+          description: Your own label for this account. Enter any reference that helps you find it in your records. Telnyx does not use it during vetting.
+          example: internal-id-12345
+        primary_business_domain_sic_code:
+          type: string
+          nullable: true
+          description: The 4-digit Standard Industrial Classification code for your main line of business, which tells us what industry you operate in. Look it up in the SIC code directory if you are unsure.
+        corporate_registration_number:
+          type: string
+          nullable: true
+          description: The official number your company received when it was legally registered or incorporated (for example from your state or national business registry). It is on your certificate of incorporation.
+        professional_license_number:
+          type: string
+          nullable: true
+          description: If your business operates under a professional license (for example legal, medical, or financial services), enter the license number issued by the licensing authority. Leave blank if it does not apply.
+        dun_bradstreet_number:
+          type: string
+          nullable: true
+          description: Your optional 9-digit D-U-N-S Number issued by Dun & Bradstreet, a unique identifier for your business. Leave blank if you do not have one.
+        organization_contact:
+          $ref: '#/components/schemas/OrganizationContact_2'
+        billing_contact:
+          $ref: '#/components/schemas/BillingContact_2'
+        organization_physical_address:
+          $ref: '#/components/schemas/PhysicalAddress_2'
+        billing_address:
+          $ref: '#/components/schemas/BillingAddress_2'
+    EnterprisePublic_2:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 4a6192a4-573d-446d-b3ce-aff9117272a6
+          readOnly: true
+        legal_name:
+          type: string
+          example: Acme Plumbing LLC
+          description: Your business's full registered legal name, exactly as it appears on your incorporation or tax documents, 3 to 64 characters.
+        organization_type:
+          type: string
+          example: commercial
+        country_code:
+          type: string
+          example: US
+        role_type:
+          type: string
+          enum:
+          - enterprise
+          - bpo
+          example: enterprise
+        website:
+          type: string
+          example: https://acmeplumbing.example.com
+          description: Your business's public website address, including https://. Leave blank if your business has no website.
+        fein:
+          type: string
+          example: 12-3456789
+          description: US Federal Employer Identification Number (`NN-NNNNNNN`) or Canadian equivalent.
+        industry:
+          type: string
+          example: technology
+          description: The industry your business operates in. Choose the closest match from the list; if your value is not accepted, pick the nearest category.
+        number_of_employees:
+          type: string
+          example: 51-200
+          description: Approximate headcount range. Used for vetting heuristics; pick the bucket that contains your current employee count.
+        organization_legal_type:
+          type: string
+          example: llc
+          description: 'Legal-entity form. Pick the form that matches your incorporation documents:
+
+            - `corporation` - C-corp or S-corp.
+
+            - `llc` - limited liability company.
+
+            - `partnership` - general/limited partnership.
+
+            - `nonprofit` - non-profit corporation, charitable trust, or 501(c)(3)/equivalent.
+
+            - `other` - anything else (sole proprietorships, government bodies, DBAs, etc.). You may be asked for additional documents during vetting.'
+        doing_business_as:
+          type: string
+          example: Acme Plumbing
+          description: The trade name your business operates under if it is different from your legal name, also called a Doing Business As (DBA) name. Leave blank if you only use your legal name.
+        jurisdiction_of_incorporation:
+          type: string
+          example: Delaware
+          description: The state, province, or country where your business was legally incorporated, for example Delaware.
+        customer_reference:
+          type: string
+          description: Your own label for this account. Enter any reference that helps you find it in your records. Telnyx does not use it during vetting.
+          example: internal-id-12345
+        primary_business_domain_sic_code:
+          type: string
+          nullable: true
+          description: The 4-digit Standard Industrial Classification code for your main line of business, which tells us what industry you operate in. Look it up in the SIC code directory if you are unsure.
+          example: null
+        corporate_registration_number:
+          type: string
+          nullable: true
+          description: The official number your company received when it was legally registered or incorporated (for example from your state or national business registry). It is on your certificate of incorporation.
+          example: null
+        professional_license_number:
+          type: string
+          nullable: true
+          description: If your business operates under a professional license (for example legal, medical, or financial services), enter the license number issued by the licensing authority. Leave blank if it does not apply.
+          example: null
+        dun_bradstreet_number:
+          type: string
+          nullable: true
+          description: Your optional 9-digit D-U-N-S Number issued by Dun & Bradstreet, a unique identifier for your business. Leave blank if you do not have one.
+          example: null
+        organization_contact:
+          $ref: '#/components/schemas/OrganizationContact_2'
+        billing_contact:
+          $ref: '#/components/schemas/BillingContact_2'
+        organization_physical_address:
+          $ref: '#/components/schemas/PhysicalAddress_2'
+        billing_address:
+          $ref: '#/components/schemas/BillingAddress_2'
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-04-26T18:06:51.940749Z'
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          example: '2026-04-26T18:09:24.785211Z'
+          readOnly: true
+        branded_calling_enabled:
+          type: boolean
+          description: True once Branded Calling has been activated on this enterprise (see `POST /enterprises/{id}/branded_calling`).
+        number_reputation_enabled:
+          type: boolean
+          description: True once Phone Number Reputation has been enabled on this enterprise (see `POST /enterprises/{id}/reputation`).
+        bpo_verification_status:
+          type: string
+          enum:
+          - pending
+          - approved
+          - rejected
+          nullable: true
+          description: Whether Telnyx has approved this BPO (Business Process Outsourcer) account. Only set for accounts created with `role_type` `bpo`; `null` for normal enterprises. A BPO enterprise must be `approved` before a DIR can be linked to it through `bpo_authorizations`.
+          example: approved
+        bpo_verification_rejection_reason:
+          type: string
+          nullable: true
+          description: Reason Telnyx rejected the BPO (Business Process Outsourcer) verification, when `bpo_verification_status` is `rejected`; `null` otherwise.
+          example: Business registration document could not be verified.
+    branded-calling_Errors:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/branded-calling_Error'
+          description: List of one or more error entries. Order is not significant.
+      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
+    branded-calling_Error:
+      type: object
+      required:
+      - code
+      - title
+      - detail
+      - meta
+      properties:
+        code:
+          type: string
+          example: '10005'
+          description: Stable numeric Telnyx error catalog id. See `meta.url` for the full catalog entry.
+        title:
+          type: string
+          example: Invalid parameters
+          description: Short human-readable category, e.g. `Bad Request`, `Duplicate resource`, `Not Found`, `Forbidden`. Treat as advisory only - the stable identifier is `code`.
+        detail:
+          type: string
+          example: field required
+          description: Context-specific message describing what went wrong on this particular request. May embed offending values; do not rely on it for programmatic matching - branch on `code`.
+        meta:
+          type: object
+          required:
+          - url
+          properties:
+            url:
+              type: string
+              format: uri
+              example: https://developers.telnyx.com/docs/overview/errors/10005
+            pending_check_ids:
+              type: array
+              items:
+                type: string
+                format: uuid
+              description: Set on `422 vetting_checks_incomplete` responses from `/admin/dir/{id}/approve` and `/admin/phone-number-batches/approve`. Lists the still-pending vetting check ids.
+            pending_check_codes:
+              type: array
+              items:
+                type: string
+              description: Codes of the pending vetting checks (e.g. `loa_signature_valid`).
+            pending_check_labels:
+              type: array
+              items:
+                type: string
+              description: Human-readable labels of the pending vetting checks.
+          description: Carries `url` linking to the Telnyx error catalog entry for this `code`. Useful for forwarding the user to documentation.
+        source:
+          type: object
+          description: Optional pointer at the offending field of the request.
+          properties:
+            pointer:
+              type: string
+              example: /body/legal_name
+            parameter:
+              type: string
+              example: page[size]
+      description: A single entry in the canonical Telnyx error envelope. `code` is the stable Telnyx error catalog id; the human-readable explanation lives at `meta.url`. `detail` is a context-specific message; `source.pointer` (when present) names the offending field of the request.
   responses:
-    UnprocessableEntity:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/branded-calling_ErrorResponse'
-      description: Unprocessable entity — request structure is valid but contains semantic errors
     Unauthorized:
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/branded-calling_ErrorResponse'
       description: Unauthorized — missing or invalid API key
+    UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/branded-calling_ErrorResponse'
+      description: Unprocessable entity — request structure is valid but contains semantic errors
     NotFound:
       content:
         application/json:
@@ -682,6 +1368,52 @@ components:
           schema:
             $ref: '#/components/schemas/branded-calling_ErrorResponse'
       description: Bad request — invalid input or validation error
+    branded-calling_GenericErrorResponse:
+      description: An error occurred. The response carries the standard Telnyx error envelope.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/branded-calling_Errors'
+          examples:
+            validation_error:
+              summary: 422 - request body failed validation
+              value:
+                errors:
+                - code: '10005'
+                  title: Invalid parameters
+                  detail: field required
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10005
+                  source:
+                    pointer: /body/legal_name
+            bad_request:
+              summary: 400 - request rejected by a state guard
+              description: Returned when the request itself is well-formed but the resource is in a state that disallows this action (e.g. updating a DIR while it is being vetted, or deleting an enterprise that still has DIRs in vetting).
+              value:
+                errors:
+                - code: '10015'
+                  title: Bad Request
+                  detail: Cannot update DIR in 'verified' status
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10015
+            not_found:
+              summary: 404 - resource does not exist or is not yours
+              value:
+                errors:
+                - code: '10009'
+                  title: Resource not found
+                  detail: Enterprise not found.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+            conflict:
+              summary: 409 - request conflicts with current resource state
+              value:
+                errors:
+                - code: '10021'
+                  title: Resource in use
+                  detail: DIR has 1 active infringement claim(s). Resolve the claim before making this change.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10021
   parameters:
     EnterpriseId:
       description: Unique identifier of the enterprise (UUID)
@@ -692,6 +1424,25 @@ components:
         example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
         format: uuid
         type: string
+    BcPageNumber:
+      name: page[number]
+      in: query
+      description: 1-based page number. Out-of-range values return an empty page with correct meta.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+        example: 1
+    EnterpriseId_2:
+      name: enterprise_id
+      in: path
+      description: The enterprise id. Lowercase UUID.
+      required: true
+      schema:
+        type: string
+        format: uuid
+        example: 4a6192a4-573d-446d-b3ce-aff9117272a6
   securitySchemes:
     bearerAuth:
       scheme: bearer
@@ -726,3 +1477,40 @@ components:
       bearerFormat: JWT
       scheme: bearer
       type: http
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-refined-from:
+- telnyx-openapi.yml
+- telnyx-openapi.json

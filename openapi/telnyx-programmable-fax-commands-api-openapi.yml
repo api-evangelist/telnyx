@@ -1,11 +1,13 @@
 openapi: 3.2.0
 info:
-  contact:
-    email: support@telnyx.com
-  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
   title: Telnyx Programmable Fax Commands API
   version: 2.0.0
+  contact:
+    email: support@telnyx.com
   x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Programmable Fax Commands across 2 of this provider''s published API definitions: telnyx-openapi.yml, telnyx-openapi.json. Each path carries the servers of the definition it was published in.'
 servers:
 - description: Version 2.0.0 of the Telnyx API
   url: https://api.telnyx.com/v2
@@ -141,6 +143,9 @@ paths:
       tags:
       - Programmable Fax Commands
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /faxes/{id}:
     delete:
       operationId: DeleteFax
@@ -184,6 +189,9 @@ paths:
       tags:
       - Programmable Fax Commands
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /faxes/{id}/actions/cancel:
     post:
       description: 'Cancel the outbound fax that is in one of the following states: `queued`, `media.processed`, `originated` or `sending`'
@@ -209,6 +217,9 @@ paths:
       tags:
       - Programmable Fax Commands
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /faxes/{id}/actions/refresh:
     post:
       description: Refreshes the inbound fax's media_url when it has expired
@@ -232,105 +243,132 @@ paths:
       tags:
       - Programmable Fax Commands
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
 components:
-  responses:
-    CancelFaxResponse:
-      content:
-        application/json:
-          schema:
-            example:
-              data:
-                result: ok
-            properties:
-              data:
-                properties:
-                  result:
-                    example: ok
-                    type: string
-                type: object
-            title: Successful response upon accepting cancel fax command
-            type: object
-      description: Successful response upon accepting cancel fax command
-    programmable-fax_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/programmable-fax_Errors'
-      description: Unexpected error
-    programmable-fax_NotFoundResponse:
-      content:
-        application/json:
-          example:
-            errors:
-            - code: '404'
-              detail: The requested resource does not exist
-              title: Not Found
-          schema:
-            $ref: '#/components/schemas/programmable-fax_Errors'
-      description: The requested resource does not exist
-    GetFaxResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/Fax'
-            title: Get Fax Response
-            type: object
-      description: Get fax response
-    programmable-fax_UnprocessableEntityResponse:
-      content:
-        application/json:
-          example:
-            errors:
-            - code: '422'
-              detail: The request parameters failed validation
-              title: Unprocessable Entity
-          schema:
-            $ref: '#/components/schemas/programmable-fax_Errors'
-      description: Unprocessable entity. The request was well-formed but contains semantic errors.
-    SendFaxResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/Fax'
-            title: Send Fax Response
-            type: object
-      description: Send fax response
-    ListFaxesResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/Fax'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            title: List Faxes Response
-            type: object
-      description: List faxes response
-    RefreshFaxResponse:
-      content:
-        application/json:
-          schema:
-            example:
-              data:
-                result: ok
-            properties:
-              data:
-                properties:
-                  result:
-                    example: ok
-                    type: string
-                type: object
-            title: Refresh Fax Response
-            type: object
-      description: Refresh fax response
   schemas:
+    programmable-fax_Error:
+      properties:
+        code:
+          type: string
+        detail:
+          type: string
+        meta:
+          additionalProperties: true
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+          type: object
+        title:
+          type: string
+      required:
+      - code
+      - title
+      type: object
+    SendFaxRequest:
+      properties:
+        black_threshold:
+          default: 95
+          description: The black threshold percentage for monochrome faxes. Only applicable if `monochrome` is set to `true`.
+          maximum: 100
+          minimum: 1
+          type: integer
+        client_state:
+          description: Use this field to add state to every subsequent webhook. It must be a valid Base-64 encoded string.
+          example: aGF2ZSBhIG5pY2UgZGF5ID1d
+          type: string
+        connection_id:
+          description: The connection ID to send the fax with.
+          example: '234423'
+          type: string
+        from:
+          $ref: '#/components/schemas/From'
+        from_display_name:
+          description: The `from_display_name` string to be used as the caller id name (SIP From Display Name) presented to the destination (`to` number). The string should have a maximum of 128 characters, containing only letters, numbers, spaces, and -_~!.+ special characters. If ommited, the display name will be the same as the number in the `from` field.
+          example: Company Name
+          type: string
+        media_name:
+          $ref: '#/components/schemas/MediaName'
+        media_url:
+          $ref: '#/components/schemas/MediaUrl'
+        monochrome:
+          default: false
+          description: The flag to enable monochrome, true black and white fax results.
+          type: boolean
+        preview_format:
+          default: tiff
+          description: The format for the preview file in case the `store_preview` is `true`.
+          enum:
+          - pdf
+          - tiff
+          type: string
+        quality:
+          $ref: '#/components/schemas/Quality'
+        store_media:
+          default: false
+          description: Should fax media be stored on temporary URL. It does not support media_name, they can't be submitted together.
+          type: boolean
+        store_preview:
+          default: false
+          description: Should fax preview be stored on temporary URL.
+          type: boolean
+        t38_enabled:
+          default: true
+          description: The flag to disable the T.38 protocol.
+          type: boolean
+        to:
+          $ref: '#/components/schemas/To'
+        webhook_url:
+          description: Use this field to override the URL to which Telnyx will send subsequent webhooks for this fax.
+          example: https://www.example.com/server-b/
+          type: string
+      required:
+      - connection_id
+      - from
+      - to
+      title: Send fax request
+      type: object
+    Direction:
+      description: The direction of the fax.
+      enum:
+      - inbound
+      - outbound
+      example: outbound
+      type: string
+    Id:
+      description: Identifies the type of resource.
+      example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+      format: uuid
+      type: string
+    MediaName:
+      description: The media_name used for the fax's media. Must point to a file previously uploaded to api.telnyx.com/v2/media by the same user/organization. media_name and media_url/contents can't be submitted together.
+      example: my_media_uploaded_to_media_storage_api
+      type: string
+    programmable-fax_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/programmable-fax_Error'
+          type: array
+      type: object
+    Quality:
+      default: high
+      description: The quality of the fax. The `ultra` settings provides the highest quality available, but also present longer fax processing times. `ultra_light` is best suited for images, wihle `ultra_dark` is best suited for text.
+      enum:
+      - normal
+      - high
+      - very_high
+      - ultra_light
+      - ultra_dark
+      example: high
+      type: string
     PaginationMeta:
       properties:
         page_number:
@@ -346,10 +384,9 @@ components:
           example: 55
           type: integer
       type: object
-    Id:
-      description: Identifies the type of resource.
-      example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
-      format: uuid
+    ConnectionId:
+      description: The ID of the connection used to send the fax.
+      example: '234423'
       type: string
     SendFaxMultipartRequest:
       properties:
@@ -380,6 +417,14 @@ components:
       - to
       title: Send fax multipart request
       type: object
+    To:
+      description: The phone number, in E.164 format, the fax will be sent to or SIP URI
+      example: '+13127367276'
+      type: string
+    MediaUrl:
+      description: The URL (or list of URLs) to the PDF used for the fax's media. media_url and media_name/contents can't be submitted together.
+      example: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+      type: string
     Fax:
       example:
         client_state: aGF2ZSBhIG5pY2UgZGF5ID1d
@@ -469,154 +514,329 @@ components:
           description: URL that will receive fax webhooks
           type: string
       type: object
-    From:
-      description: The phone number, in E.164 format, the fax will be sent from.
-      example: '+13125790015'
-      type: string
-    Monochrome:
-      default: false
-      description: The flag to enable monochrome, true black and white fax results.
-      type: boolean
     T38Enabled:
       default: true
       description: The flag to disable the T.38 protocol.
       type: boolean
-    Quality:
-      default: high
-      description: The quality of the fax. The `ultra` settings provides the highest quality available, but also present longer fax processing times. `ultra_light` is best suited for images, wihle `ultra_dark` is best suited for text.
-      enum:
-      - normal
-      - high
-      - very_high
-      - ultra_light
-      - ultra_dark
-      example: high
-      type: string
-    To:
-      description: The phone number, in E.164 format, the fax will be sent to or SIP URI
-      example: '+13127367276'
-      type: string
-    programmable-fax_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/programmable-fax_Error'
-          type: array
-      type: object
-    SendFaxRequest:
-      properties:
-        black_threshold:
-          default: 95
-          description: The black threshold percentage for monochrome faxes. Only applicable if `monochrome` is set to `true`.
-          maximum: 100
-          minimum: 1
-          type: integer
-        client_state:
-          description: Use this field to add state to every subsequent webhook. It must be a valid Base-64 encoded string.
-          example: aGF2ZSBhIG5pY2UgZGF5ID1d
-          type: string
-        connection_id:
-          description: The connection ID to send the fax with.
-          example: '234423'
-          type: string
-        from:
-          $ref: '#/components/schemas/From'
-        from_display_name:
-          description: The `from_display_name` string to be used as the caller id name (SIP From Display Name) presented to the destination (`to` number). The string should have a maximum of 128 characters, containing only letters, numbers, spaces, and -_~!.+ special characters. If ommited, the display name will be the same as the number in the `from` field.
-          example: Company Name
-          type: string
-        media_name:
-          $ref: '#/components/schemas/MediaName'
-        media_url:
-          $ref: '#/components/schemas/MediaUrl'
-        monochrome:
-          default: false
-          description: The flag to enable monochrome, true black and white fax results.
-          type: boolean
-        preview_format:
-          default: tiff
-          description: The format for the preview file in case the `store_preview` is `true`.
-          enum:
-          - pdf
-          - tiff
-          type: string
-        quality:
-          $ref: '#/components/schemas/Quality'
-        store_media:
-          default: false
-          description: Should fax media be stored on temporary URL. It does not support media_name, they can't be submitted together.
-          type: boolean
-        store_preview:
-          default: false
-          description: Should fax preview be stored on temporary URL.
-          type: boolean
-        t38_enabled:
-          default: true
-          description: The flag to disable the T.38 protocol.
-          type: boolean
-        to:
-          $ref: '#/components/schemas/To'
-        webhook_url:
-          description: Use this field to override the URL to which Telnyx will send subsequent webhooks for this fax.
-          example: https://www.example.com/server-b/
-          type: string
-      required:
-      - connection_id
-      - from
-      - to
-      title: Send fax request
-      type: object
-    Direction:
-      description: The direction of the fax.
-      enum:
-      - inbound
-      - outbound
-      example: outbound
-      type: string
     StorePreview:
       default: false
       description: Should fax preview be stored on temporary URL.
       type: boolean
-    ConnectionId:
-      description: The ID of the connection used to send the fax.
-      example: '234423'
-      type: string
-    MediaName:
-      description: The media_name used for the fax's media. Must point to a file previously uploaded to api.telnyx.com/v2/media by the same user/organization. media_name and media_url/contents can't be submitted together.
-      example: my_media_uploaded_to_media_storage_api
-      type: string
-    programmable-fax_Error:
-      properties:
-        code:
-          type: string
-        detail:
-          type: string
-        meta:
-          additionalProperties: true
-          type: object
-        source:
-          properties:
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-          type: object
-        title:
-          type: string
-      required:
-      - code
-      - title
-      type: object
-    MediaUrl:
-      description: The URL (or list of URLs) to the PDF used for the fax's media. media_url and media_name/contents can't be submitted together.
-      example: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
-      type: string
+    Monochrome:
+      default: false
+      description: The flag to enable monochrome, true black and white fax results.
+      type: boolean
     StoreMedia:
       default: false
       description: Should fax media be stored on temporary URL. It does not support media_name, they can't be submitted together.
       type: boolean
+    From:
+      description: The phone number, in E.164 format, the fax will be sent from.
+      example: '+13125790015'
+      type: string
+    MediaName_2:
+      description: 'The media_name used for the fax''s media. Must point to a file previously uploaded to api.telnyx.com/v2/media by the same user/organization. Supported formats: PDF, TIFF, JPEG, PNG, DOC, DOCX, RTF, and TXT. media_name and media_url/contents can''t be submitted together.'
+      type: string
+      example: my_media_uploaded_to_media_storage_api
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    SendFaxMultipartRequest_2:
+      type: object
+      title: Send fax multipart request
+      required:
+      - connection_id
+      - contents
+      - from
+      - to
+      properties:
+        connection_id:
+          $ref: '#/components/schemas/ConnectionId'
+        contents:
+          description: 'The file you want to upload. The maximum allowed size is 20 MB. Supported formats: PDF, TIFF, JPEG, PNG, DOC, DOCX, RTF, and TXT. contents and media_name/media_url can''t be submitted together.'
+          type: string
+          format: binary
+        to:
+          $ref: '#/components/schemas/To'
+        from:
+          $ref: '#/components/schemas/From'
+        quality:
+          $ref: '#/components/schemas/Quality'
+        t38_enabled:
+          $ref: '#/components/schemas/T38Enabled'
+        monochrome:
+          $ref: '#/components/schemas/Monochrome'
+        store_media:
+          $ref: '#/components/schemas/StoreMedia'
+        store_preview:
+          $ref: '#/components/schemas/StorePreview'
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
+    MediaUrl_2:
+      description: 'The URL (or list of URLs) to the fax document. Supported formats: PDF, TIFF, JPEG, PNG, DOC, DOCX, RTF, and TXT. media_url and media_name/contents can''t be submitted together.'
+      type: string
+      example: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+    Fax_2:
+      type: object
+      properties:
+        record_type:
+          description: Identifies the type of the resource.
+          type: string
+          example: fax
+          enum:
+          - fax
+        id:
+          $ref: '#/components/schemas/Id'
+        connection_id:
+          $ref: '#/components/schemas/ConnectionId'
+        direction:
+          $ref: '#/components/schemas/Direction'
+        media_url:
+          $ref: '#/components/schemas/MediaUrl_2'
+        media_name:
+          $ref: '#/components/schemas/MediaName_2'
+        to:
+          $ref: '#/components/schemas/To'
+        from:
+          $ref: '#/components/schemas/From'
+        from_display_name:
+          description: The string used as the caller id name (SIP From Display Name) presented to the destination (`to` number).
+          type: string
+          example: Company Name
+        quality:
+          $ref: '#/components/schemas/Quality'
+        status:
+          description: Status of the fax
+          type: string
+          example: queued
+          enum:
+          - queued
+          - media.processed
+          - originated
+          - sending
+          - delivered
+          - failed
+          - initiated
+          - receiving
+          - media.processing
+          - received
+        webhook_url:
+          description: URL that will receive fax webhooks
+          type: string
+        webhook_failover_url:
+          description: Optional failover URL that will receive fax webhooks if webhook_url doesn't return a 2XX response
+          type: string
+        store_media:
+          description: Should fax media be stored on temporary URL. It does not support media_name.
+          type: boolean
+        stored_media_url:
+          description: If store_media was set to true, this is a link to temporary location. Link expires after 10 minutes.
+          type: string
+        preview_url:
+          description: If `store_preview` was set to `true`, this is a link to temporary location. Link expires after 10 minutes.
+          type: string
+        client_state:
+          description: State received from a command.
+          type: string
+          example: aGF2ZSBhIG5pY2UgZGF5ID1d
+        created_at:
+          description: ISO 8601 timestamp when resource was created
+          type: string
+          format: date-time
+        updated_at:
+          description: ISO 8601 timestamp when resource was updated
+          type: string
+          format: date-time
+        failure_reason:
+          description: 'Customer-facing failure reason for the fax. Present on every fax object (null when the fax has not failed). Mapped from the more granular `internal_failure_reason`. Common values include: `receiver_call_dropped`, `sender_call_dropped`, `sender_canceled`, `carrier_lost`, `service_unavailable`, `fax_signaling_error`, `receiver_communication_error`, `sender_communication_error`, `receiver_decline`, `receiver_recovery_on_timer_expire`, `receiver_no_response`, `receiver_invalid_number_format`, `receiver_no_answer`, `receiver_incompatible_destination`, `receiver_unallocated_number`, `destination_unreachable`, `user_busy`, `invalid_ecm_response_from_receiver`, `fax_initial_communication_timeout`, `destination_not_in_service_plan`, `account_disabled`, `destination_invalid`, `no_outbound_profile`, `destination_not_in_countries_whitelist`, `user_channel_limit_exceeded`, `outbound_profile_channel_limit_exceeded`, `connection_channel_limit_exceeded`, `outbound_profile_daily_spend_limit_exceeded`, `unverified_origination_number`, `unverified_destination_not_allowed`, `file_format_invalid`, `file_download_failed`, `file_size_limit_exceeded`, `page_count_limit_exceeded`, `media_processing_exception`.'
+          type:
+          - string
+          - 'null'
+          example: null
+        internal_failure_reason:
+          description: Internal, more granular failure reason for the fax. Present on every fax object (null when the fax has not failed). Useful for deeper debugging beyond the customer-facing `failure_reason`.
+          type:
+          - string
+          - 'null'
+          example: null
+      example:
+        record_type: fax
+        id: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+        connection_id: c-1
+        direction: outbound
+        from: '+123'
+        to: '+456'
+        media_url: http://www.example.com/fax.pdf
+        store_media: true
+        stored_media_url: https://s3.amazonaws.com/faxes-dev/user-1/cf4a6b52-bf8e-4945-9f49-611d0d2b083b.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=xxxxxxxxxx%2F20200505%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20200505T095917Z&X-Amz-Expires=7200&X-Amz-SignedHeaders=host&X-Amz-Signature=fac2af40464fcc77673ad762db86e34f9c1b91a82699b5578c5327f53874df51
+        preview_url: https://s3.amazonaws.com/faxes-dev/user-1/cf4a6b52-bf8e-4945-9f49-611d0d2b083b_preview.tiff?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=xxxxxxxxxx%2F20200505%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20200505T095917Z&X-Amz-Expires=7200&X-Amz-SignedHeaders=host&X-Amz-Signature=fac2af40464fcc77673ad762db86e34f9c1b91a82699b5578c5327f53874df51
+        quality: high
+        webhook_url: http://www.example.com/webhooks
+        webhook_failover_url: ''
+        status: queued
+        failure_reason: null
+        internal_failure_reason: null
+        client_state: aGF2ZSBhIG5pY2UgZGF5ID1d
+        created_at: '2020-05-05T09:59:12Z'
+        updated_at: '2020-05-05T09:59:12Z'
+  responses:
+    SendFaxResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/Fax'
+            title: Send Fax Response
+            type: object
+      description: Send fax response
+    GetFaxResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/Fax'
+            title: Get Fax Response
+            type: object
+      description: Get fax response
+    RefreshFaxResponse:
+      content:
+        application/json:
+          schema:
+            example:
+              data:
+                result: ok
+            properties:
+              data:
+                properties:
+                  result:
+                    example: ok
+                    type: string
+                type: object
+            title: Refresh Fax Response
+            type: object
+      description: Refresh fax response
+    CancelFaxResponse:
+      content:
+        application/json:
+          schema:
+            example:
+              data:
+                result: ok
+            properties:
+              data:
+                properties:
+                  result:
+                    example: ok
+                    type: string
+                type: object
+            title: Successful response upon accepting cancel fax command
+            type: object
+      description: Successful response upon accepting cancel fax command
+    programmable-fax_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/programmable-fax_Errors'
+      description: Unexpected error
+    programmable-fax_NotFoundResponse:
+      content:
+        application/json:
+          example:
+            errors:
+            - code: '404'
+              detail: The requested resource does not exist
+              title: Not Found
+          schema:
+            $ref: '#/components/schemas/programmable-fax_Errors'
+      description: The requested resource does not exist
+    programmable-fax_UnprocessableEntityResponse:
+      content:
+        application/json:
+          example:
+            errors:
+            - code: '422'
+              detail: The request parameters failed validation
+              title: Unprocessable Entity
+          schema:
+            $ref: '#/components/schemas/programmable-fax_Errors'
+      description: Unprocessable entity. The request was well-formed but contains semantic errors.
+    ListFaxesResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/Fax'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            title: List Faxes Response
+            type: object
+      description: List faxes response
+    programmable-fax_GenericErrorResponse_2:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          example:
+            errors:
+            - code: '10007'
+              title: Unexpected error
+              detail: An unexpected error occured.
+    programmable-fax_NotFoundResponse_2:
+      description: The requested resource does not exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          example:
+            errors:
+            - code: '404'
+              title: Not Found
+              detail: The requested resource does not exist
+    programmable-fax_UnprocessableEntityResponse_2:
+      description: Unprocessable entity. The request was well-formed but contains semantic errors.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          example:
+            errors:
+            - code: '422'
+              title: Unprocessable Entity
+              detail: The request parameters failed validation
   securitySchemes:
     bearerAuth:
       scheme: bearer
@@ -651,3 +871,40 @@ components:
       bearerFormat: JWT
       scheme: bearer
       type: http
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-refined-from:
+- telnyx-openapi.yml
+- telnyx-openapi.json

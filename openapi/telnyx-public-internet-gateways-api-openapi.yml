@@ -1,11 +1,13 @@
 openapi: 3.2.0
 info:
-  contact:
-    email: support@telnyx.com
-  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
   title: Telnyx Public Internet Gateways API
   version: 2.0.0
+  contact:
+    email: support@telnyx.com
   x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Public Internet Gateways across 2 of this provider''s published API definitions: telnyx-openapi.yml, telnyx-openapi.json. Each path carries the servers of the definition it was published in.'
 servers:
 - description: Version 2.0.0 of the Telnyx API
   url: https://api.telnyx.com/v2
@@ -64,6 +66,9 @@ paths:
       tags:
       - Public Internet Gateways
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /public_internet_gateways/{id}:
     delete:
       description: Delete a Public Internet Gateway.
@@ -97,13 +102,11 @@ paths:
       tags:
       - Public Internet Gateways
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
 components:
   schemas:
-    PublicInternetGatewayCreate:
-      allOf:
-      - $ref: '#/components/schemas/PublicInternetGateway'
-      - title: PublicInternetGatewayCreate
-        type: object
     netapps_Error:
       properties:
         code:
@@ -128,20 +131,24 @@ components:
       - code
       - title
       type: object
-    Interface:
+    PaginationMeta:
       properties:
-        name:
-          description: A user specified name for the interface.
-          example: test interface
-          type: string
-        network_id:
-          description: The id of the network associated with the interface.
-          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-          format: uuid
-          type: string
-        status:
-          $ref: '#/components/schemas/InterfaceStatus'
+        page_number:
+          example: 2
+          type: integer
+        page_size:
+          example: 25
+          type: integer
+        total_pages:
+          example: 3
+          type: integer
+        total_results:
+          example: 55
+          type: integer
       type: object
+    PublicInternetGatewayRead:
+      allOf:
+      - $ref: '#/components/schemas/PublicInternetGateway'
     PublicInternetGateway:
       allOf:
       - $ref: '#/components/schemas/Record'
@@ -163,31 +170,25 @@ components:
             type: string
         title: PublicInternetGateway
         type: object
-    PaginationMeta:
+    PublicInternetGatewayCreate:
+      allOf:
+      - $ref: '#/components/schemas/PublicInternetGateway'
+      - title: PublicInternetGatewayCreate
+        type: object
+    Interface:
       properties:
-        page_number:
-          example: 2
-          type: integer
-        page_size:
-          example: 25
-          type: integer
-        total_pages:
-          example: 3
-          type: integer
-        total_results:
-          example: 55
-          type: integer
+        name:
+          description: A user specified name for the interface.
+          example: test interface
+          type: string
+        network_id:
+          description: The id of the network associated with the interface.
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+          format: uuid
+          type: string
+        status:
+          $ref: '#/components/schemas/InterfaceStatus'
       type: object
-    InterfaceStatus:
-      description: The current status of the interface deployment.
-      enum:
-      - created
-      - provisioning
-      - provisioned
-      - deleting
-      example: provisioned
-      readOnly: true
-      type: string
     netapps_Errors:
       properties:
         errors:
@@ -195,9 +196,6 @@ components:
             $ref: '#/components/schemas/netapps_Error'
           type: array
       type: object
-    PublicInternetGatewayRead:
-      allOf:
-      - $ref: '#/components/schemas/PublicInternetGateway'
     Record:
       properties:
         created_at:
@@ -222,7 +220,56 @@ components:
           readOnly: true
           type: string
       type: object
+    InterfaceStatus:
+      description: The current status of the interface deployment.
+      enum:
+      - created
+      - provisioning
+      - provisioned
+      - deleting
+      example: provisioned
+      readOnly: true
+      type: string
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
   responses:
+    netapps_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/netapps_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
     PublicInternetGatewayListResponse:
       content:
         application/json:
@@ -245,18 +292,29 @@ components:
                 $ref: '#/components/schemas/PublicInternetGatewayRead'
             type: object
       description: Successful response
-    netapps_UnprocessableEntity:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/netapps_Errors'
-      description: Unprocessable entity. Check the 'detail' field in response for details.
     netapps_GenericErrorResponse:
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/netapps_Errors'
       description: Unexpected error
+    UnprocessableEntity:
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          example:
+            errors:
+            - code: '10027'
+              title: Unprocessable Entity
+              detail: The server understood the syntax of the request but was unable to process the instructions.
+    GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
   parameters:
     PageConsolidated:
       description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
@@ -321,3 +379,40 @@ components:
       bearerFormat: JWT
       scheme: bearer
       type: http
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-refined-from:
+- telnyx-openapi.yml
+- telnyx-openapi.json

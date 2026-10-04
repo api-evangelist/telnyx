@@ -1,11 +1,13 @@
 openapi: 3.2.0
 info:
-  contact:
-    email: support@telnyx.com
-  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
   title: Telnyx Pronunciation Dictionaries API
   version: 2.0.0
+  contact:
+    email: support@telnyx.com
   x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Pronunciation Dictionaries across 2 of this provider''s published API definitions: telnyx-openapi.yml, telnyx-openapi.json. Each path carries the servers of the definition it was published in.'
 servers:
 - description: Version 2.0.0 of the Telnyx API
   url: https://api.telnyx.com/v2
@@ -145,6 +147,9 @@ paths:
       tags:
       - Pronunciation Dictionaries
       x-latency-category: interactive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /pronunciation_dicts/{id}:
     delete:
       description: Permanently delete a pronunciation dictionary.
@@ -242,6 +247,9 @@ paths:
       tags:
       - Pronunciation Dictionaries
       x-latency-category: interactive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
 components:
   parameters:
     pronunciation_dict_id:
@@ -254,86 +262,52 @@ components:
         format: uuid
         type: string
   schemas:
-    pronunciation-dicts_ErrorResponse:
-      description: Standard Telnyx error response.
+    PronunciationDictItem:
+      description: A single pronunciation dictionary item. Use type 'alias' to replace matched text with a spoken alias, or type 'phoneme' to specify exact pronunciation using IPA notation.
+      discriminator:
+        mapping:
+          alias: '#/components/schemas/PronunciationDictAliasItem'
+          phoneme: '#/components/schemas/PronunciationDictPhonemeItem'
+        propertyName: type
+      oneOf:
+      - $ref: '#/components/schemas/PronunciationDictAliasItem'
+      - $ref: '#/components/schemas/PronunciationDictPhonemeItem'
+    PronunciationDictData:
+      description: A pronunciation dictionary record.
       properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/ErrorObject'
-          type: array
-      type: object
-    CreatePronunciationDictRequest:
-      description: Request body for creating a pronunciation dictionary.
-      properties:
+        created_at:
+          description: ISO 8601 timestamp with millisecond precision.
+          example: '2026-03-25T12:00:00.000Z'
+          format: date-time
+          type: string
+        id:
+          description: Unique identifier for the pronunciation dictionary.
+          example: c215a3e1-be41-4701-97e8-1d3c22f9a5b7
+          format: uuid
+          type: string
         items:
-          description: List of pronunciation items (alias or phoneme type). At least one item is required.
+          description: List of pronunciation items (alias or phoneme type).
           items:
             $ref: '#/components/schemas/PronunciationDictItem'
-          maxItems: 100
-          minItems: 1
           type: array
         name:
-          description: Human-readable name. Must be unique within the organization.
+          description: Human-readable name for the dictionary. Must be unique within the organization.
           example: Brand Names
-          maxLength: 255
-          minLength: 1
           type: string
-      required:
-      - name
-      - items
-      type: object
-    PronunciationDictPhonemeItem:
-      additionalProperties: false
-      description: A phoneme pronunciation item. When the `text` value is found in input, it is pronounced using the specified IPA phoneme notation.
-      properties:
-        alphabet:
-          description: The phonetic alphabet used for the phoneme notation.
+        record_type:
+          description: Identifies the resource type.
           enum:
-          - ipa
-          example: ipa
+          - pronunciation_dict
+          example: pronunciation_dict
           type: string
-        phoneme:
-          description: The phoneme notation representing the desired pronunciation.
-          example: ˈtɛl.nɪks
-          maxLength: 500
-          minLength: 1
+        updated_at:
+          description: ISO 8601 timestamp with millisecond precision.
+          example: '2026-03-25T12:00:00.000Z'
+          format: date-time
           type: string
-        text:
-          description: The text to match in the input. Case-insensitive matching is used during synthesis.
-          example: Telnyx
-          maxLength: 200
-          minLength: 1
-          type: string
-        type:
-          description: The item type.
-          enum:
-          - phoneme
-          example: phoneme
-          type: string
-      required:
-      - text
-      - type
-      - phoneme
-      - alphabet
-      type: object
-    pronunciation-dicts_PaginationMeta:
-      description: Pagination metadata returned with list responses.
-      properties:
-        page_number:
-          description: Current page number (1-based).
+        version:
+          description: Auto-incrementing version number. Increases by 1 on each update. Used for optimistic concurrency control and cache invalidation.
           example: 1
-          type: integer
-        page_size:
-          description: Number of results per page.
-          example: 20
-          type: integer
-        total_pages:
-          description: Total number of pages.
-          example: 1
-          type: integer
-        total_results:
-          description: Total number of results across all pages.
-          example: 3
           type: integer
       type: object
     PronunciationDictListResponse:
@@ -346,6 +320,20 @@ components:
           type: array
         meta:
           $ref: '#/components/schemas/pronunciation-dicts_PaginationMeta'
+      type: object
+    pronunciation-dicts_ErrorResponse:
+      description: Standard Telnyx error response.
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/ErrorObject'
+          type: array
+      type: object
+    PronunciationDictResponse:
+      description: Response containing a single pronunciation dictionary.
+      properties:
+        data:
+          $ref: '#/components/schemas/PronunciationDictData'
       type: object
     ErrorObject:
       properties:
@@ -397,59 +385,79 @@ components:
       - type
       - alias
       type: object
-    PronunciationDictData:
-      description: A pronunciation dictionary record.
+    PronunciationDictPhonemeItem:
+      additionalProperties: false
+      description: A phoneme pronunciation item. When the `text` value is found in input, it is pronounced using the specified IPA phoneme notation.
       properties:
-        created_at:
-          description: ISO 8601 timestamp with millisecond precision.
-          example: '2026-03-25T12:00:00.000Z'
-          format: date-time
+        alphabet:
+          description: The phonetic alphabet used for the phoneme notation.
+          enum:
+          - ipa
+          example: ipa
           type: string
-        id:
-          description: Unique identifier for the pronunciation dictionary.
-          example: c215a3e1-be41-4701-97e8-1d3c22f9a5b7
-          format: uuid
+        phoneme:
+          description: The phoneme notation representing the desired pronunciation.
+          example: ˈtɛl.nɪks
+          maxLength: 500
+          minLength: 1
           type: string
+        text:
+          description: The text to match in the input. Case-insensitive matching is used during synthesis.
+          example: Telnyx
+          maxLength: 200
+          minLength: 1
+          type: string
+        type:
+          description: The item type.
+          enum:
+          - phoneme
+          example: phoneme
+          type: string
+      required:
+      - text
+      - type
+      - phoneme
+      - alphabet
+      type: object
+    CreatePronunciationDictRequest:
+      description: Request body for creating a pronunciation dictionary.
+      properties:
         items:
-          description: List of pronunciation items (alias or phoneme type).
+          description: List of pronunciation items (alias or phoneme type). At least one item is required.
           items:
             $ref: '#/components/schemas/PronunciationDictItem'
+          maxItems: 100
+          minItems: 1
           type: array
         name:
-          description: Human-readable name for the dictionary. Must be unique within the organization.
+          description: Human-readable name. Must be unique within the organization.
           example: Brand Names
+          maxLength: 255
+          minLength: 1
           type: string
-        record_type:
-          description: Identifies the resource type.
-          enum:
-          - pronunciation_dict
-          example: pronunciation_dict
-          type: string
-        updated_at:
-          description: ISO 8601 timestamp with millisecond precision.
-          example: '2026-03-25T12:00:00.000Z'
-          format: date-time
-          type: string
-        version:
-          description: Auto-incrementing version number. Increases by 1 on each update. Used for optimistic concurrency control and cache invalidation.
+      required:
+      - name
+      - items
+      type: object
+    pronunciation-dicts_PaginationMeta:
+      description: Pagination metadata returned with list responses.
+      properties:
+        page_number:
+          description: Current page number (1-based).
           example: 1
           type: integer
-      type: object
-    PronunciationDictItem:
-      description: A single pronunciation dictionary item. Use type 'alias' to replace matched text with a spoken alias, or type 'phoneme' to specify exact pronunciation using IPA notation.
-      discriminator:
-        mapping:
-          alias: '#/components/schemas/PronunciationDictAliasItem'
-          phoneme: '#/components/schemas/PronunciationDictPhonemeItem'
-        propertyName: type
-      oneOf:
-      - $ref: '#/components/schemas/PronunciationDictAliasItem'
-      - $ref: '#/components/schemas/PronunciationDictPhonemeItem'
-    PronunciationDictResponse:
-      description: Response containing a single pronunciation dictionary.
-      properties:
-        data:
-          $ref: '#/components/schemas/PronunciationDictData'
+        page_size:
+          description: Number of results per page.
+          example: 20
+          type: integer
+        total_pages:
+          description: Total number of pages.
+          example: 1
+          type: integer
+        total_results:
+          description: Total number of results across all pages.
+          example: 3
+          type: integer
       type: object
     UpdatePronunciationDictRequest:
       description: Request body for updating a pronunciation dictionary. At least one field must be provided.
@@ -469,6 +477,37 @@ components:
           minLength: 1
           type: string
       type: object
+    pronunciation-dicts_ErrorResponse_2:
+      type: object
+      description: Standard Telnyx error response.
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/pronunciation-dicts_ErrorObject'
+    pronunciation-dicts_ErrorObject:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code.
+          example: '90202'
+        title:
+          type: string
+          description: Short human-readable error title.
+          example: Validation failed
+        detail:
+          type: string
+          description: Detailed error description.
+          example: items must have at least one item
+        source:
+          type: object
+          description: Source of the error.
+          properties:
+            pointer:
+              type: string
+              description: JSON pointer to the field that caused the error.
+              example: /items
   securitySchemes:
     bearerAuth:
       scheme: bearer
@@ -503,3 +542,40 @@ components:
       bearerFormat: JWT
       scheme: bearer
       type: http
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-refined-from:
+- telnyx-openapi.yml
+- telnyx-openapi.json

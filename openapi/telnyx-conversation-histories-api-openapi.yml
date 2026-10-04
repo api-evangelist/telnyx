@@ -1,0 +1,499 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Conversation Histories API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Conversation Histories
+  description: Semantic vector search over ingested conversation history records with multi-region fan-out.
+paths:
+  /ai/conversation_histories:
+    get:
+      summary: Search conversation histories
+      description: 'Performs semantic vector search across conversation history records.
+
+
+        **How it works:**
+
+        1. The query text is embedded into a 1024-dimensional vector using the multilingual-e5-large model.
+
+        2. The vector is compared against indexed record chunks using semantic similarity search.
+
+        3. When no region is specified, all regions are queried in parallel (fan-out) and results are merged by score.
+
+        4. Results are ranked by similarity score (descending) and paginated via `page[number]` / `page[size]`.
+
+
+        **Authentication:** Requires a Telnyx API key via `Authorization: Bearer `. Results are automatically scoped to the caller''s organization — `organization_id` is injected from the auth token and cannot be overridden.
+
+
+        **Chunking:** Records are split into chunks of up to 480 tokens with 64-token overlap at ingestion time. Each search result represents a single chunk, with `chunk_index` and `chunk_total` indicating its position within the original record.
+
+
+        **Filtering:** Use `filter[field][operator]=value` query parameters to narrow results before vector search.
+
+
+        Top-level filterable fields: `user_id`, `region`, `record_id`, `record_created_at`, `ingested_at`, `retention`
+
+
+        Note: `retention` is filter-only — it can be used to narrow results but is not returned in the response body.
+
+
+        Metadata fields: any field not in the list above is resolved to `data.metadata.` (e.g., `filter[language]=en` → `data.metadata.language`).
+
+
+        Supported filter operators:
+
+        - `eq` — exact match (default when no operator specified)
+
+        - `in` — match any of comma-separated values
+
+        - `gte`, `gt`, `lte`, `lt` — range comparisons (useful for date filtering)
+
+        - `contains` — wildcard substring match
+
+
+        **Examples:**
+
+        - `GET /v2/ai/conversation_histories?q=billing+issue&page[size]=10`
+
+        - `GET /v2/ai/conversation_histories?q=setup+guide®ion=USA&min_score=0.5`
+
+        - `GET /v2/ai/conversation_histories?q=refund&filter[record_created_at][gte]=2026-01-01T00:00:00Z`
+
+        - `GET /v2/ai/conversation_histories?q=outage&filter[region][in]=USA,DEU`
+
+        - `GET /v2/ai/conversation_histories?q=hold+time&filter[language]=en`'
+      operationId: SearchConversationHistories
+      tags:
+      - Conversation Histories
+      parameters:
+      - name: q
+        in: query
+        required: true
+        description: Natural language search query. The text is embedded into a 1024-dimensional vector and compared against indexed record chunks using semantic similarity.
+        schema:
+          type: string
+          minLength: 1
+          example: customer called about billing issue
+      - name: region
+        in: query
+        required: false
+        description: Restrict search to a specific region. When omitted, all regions are queried in parallel (fan-out) and results are merged by similarity score.
+        schema:
+          type: string
+          enum:
+          - USA
+          - DEU
+          - AUS
+          - UAE
+          example: USA
+      - name: page[number]
+        in: query
+        required: false
+        description: Page number to return (1-based). Defaults to 1.
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          example: 1
+      - name: page[size]
+        in: query
+        required: false
+        description: Number of results per page. Defaults to 20, maximum 100.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+          example: 10
+      - name: min_score
+        in: query
+        required: false
+        description: Minimum cosine similarity score threshold (0.0 to 1.0). Results below this threshold are excluded.
+        schema:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          default: 0
+          example: 0.5
+      - name: filter[user_id]
+        in: query
+        required: false
+        description: Filter to records owned by a specific user (exact match).
+        schema:
+          type: string
+          example: user-123
+      - name: filter[record_id]
+        in: query
+        required: false
+        description: Filter to chunks belonging to a specific parent record (exact match).
+        schema:
+          type: string
+          example: rec-001
+      - name: filter[region][in]
+        in: query
+        required: false
+        description: Filter by the region stored on the record. Comma-separated to match multiple regions (USA, DEU, AUS, UAE). Distinct from the `region` parameter, which selects which cluster(s) are queried.
+        schema:
+          type: string
+          example: USA,DEU
+      - name: filter[record_created_at][gte]
+        in: query
+        required: false
+        description: Only include records whose original creation time is on or after this ISO 8601 timestamp.
+        schema:
+          type: string
+          format: date-time
+          example: '2026-01-01T00:00:00Z'
+      - name: filter[record_created_at][lte]
+        in: query
+        required: false
+        description: Only include records whose original creation time is on or before this ISO 8601 timestamp.
+        schema:
+          type: string
+          format: date-time
+          example: '2026-12-31T23:59:59Z'
+      - name: filter[ingested_at][gte]
+        in: query
+        required: false
+        description: Only include records ingested (chunked, embedded, and indexed) on or after this ISO 8601 timestamp.
+        schema:
+          type: string
+          format: date-time
+          example: '2026-01-01T00:00:00Z'
+      - name: filter[ingested_at][lte]
+        in: query
+        required: false
+        description: Only include records ingested (chunked, embedded, and indexed) on or before this ISO 8601 timestamp.
+        schema:
+          type: string
+          format: date-time
+          example: '2026-12-31T23:59:59Z'
+      - name: filter[retention]
+        in: query
+        required: false
+        description: 'Filter by retention policy (exact match). Filter-only: not returned in the response body.'
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful search response with ranked conversation history chunks.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationHistoryResponse'
+              example:
+                data:
+                - id: rec-001_chunk_0
+                  record_id: rec-001
+                  chunk_index: 0
+                  chunk_total: 3
+                  text: Customer called regarding a billing discrepancy on their latest invoice. Agent confirmed the charge was correct and explained the prorated amount.
+                  score: 0.92
+                  region: USA
+                  user_id: user-123
+                  organization_id: org-456
+                  record_created_at: '2026-05-28T12:00:00Z'
+                  ingested_at: '2026-05-28T12:01:00Z'
+                  metadata:
+                    source: call-center
+                    language: en
+                meta:
+                  total_pages: 1
+                  total_results: 1
+                  page_number: 1
+                  page_size: 20
+        '400':
+          description: Invalid request parameters — invalid region or malformed filter expression.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '400'
+                  title: Bad Request
+                  detail: 'Invalid region: invalid. Must be one of: USA, DEU, AUS, UAE'
+        '401':
+          description: 'Missing or invalid authentication. Provide a valid Telnyx API key via the Authorization: Bearer header.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10004'
+                  title: Authentication failed
+                  detail: The required authentication headers were either invalid or not included in the request.
+        '422':
+          description: Request validation failed (e.g., missing required parameter).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10027'
+                  title: Unprocessable Entity
+                  detail: The server understood the syntax of the request but was unable to process the instructions.
+        '500':
+          description: Server-side error — embeddings service unavailable, search backend unreachable, or internal processing failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10007'
+                  title: Unexpected error
+                  detail: An unexpected error occured.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10007
+        '503':
+          description: Service not initialized — bootstrap still in progress.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10037'
+                  title: Service unavailable
+                  detail: Service is unavailable.
+components:
+  schemas:
+    ConversationHistoryResponse:
+      type: object
+      description: Search response following the standard Telnyx V2 API format.
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          description: Ranked list of matching text chunks, sorted by cosine similarity score descending.
+          items:
+            $ref: '#/components/schemas/ConversationHistoryRecord'
+        meta:
+          $ref: '#/components/schemas/transcriptions-search_PaginationMeta'
+    transcriptions-search_PaginationMeta:
+      type: object
+      description: Pagination metadata following the standard Telnyx V2 API format.
+      required:
+      - total_pages
+      - total_results
+      - page_number
+      - page_size
+      properties:
+        total_pages:
+          type: integer
+          description: Total number of pages.
+          example: 1
+        total_results:
+          type: integer
+          description: Total number of matching results across all queried regions.
+          example: 42
+        page_number:
+          type: integer
+          description: Current page number (1-based), matching the requested page[number].
+          example: 1
+        page_size:
+          type: integer
+          description: Number of results per page, matching the requested page[size].
+          example: 20
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    ConversationHistoryRecord:
+      type: object
+      description: A single search result representing one chunk of a conversation history record. Records are split into chunks of up to 480 tokens with 64-token overlap at ingestion time.
+      required:
+      - id
+      - record_id
+      - chunk_index
+      - chunk_total
+      - text
+      - score
+      - region
+      - user_id
+      - organization_id
+      - record_created_at
+      - ingested_at
+      properties:
+        id:
+          type: string
+          description: Unique chunk identifier.
+          example: rec-001_chunk_0
+        record_id:
+          type: string
+          description: Identifier of the parent record. Multiple chunks from the same record share this ID.
+          example: rec-001
+        chunk_index:
+          type: integer
+          description: Zero-based index of this chunk within the parent record.
+          example: 0
+        chunk_total:
+          type: integer
+          description: Total number of chunks the parent record was split into.
+          example: 3
+        text:
+          type: string
+          description: The text content of this chunk (up to 480 tokens).
+          example: Customer called regarding a billing discrepancy on their latest invoice.
+        score:
+          type: number
+          format: float
+          description: Cosine similarity score between the query vector and this chunk's vector. Higher values indicate greater semantic relevance.
+          example: 0.92
+        region:
+          type: string
+          enum:
+          - USA
+          - DEU
+          - AUS
+          - UAE
+          description: The region where this record is stored.
+          example: USA
+        user_id:
+          type: string
+          description: Identifier of the user who owns this record.
+          example: user-123
+        organization_id:
+          type: string
+          description: Identifier of the organization that owns this record.
+          example: org-456
+        record_created_at:
+          type: string
+          format: date-time
+          description: When the original record was created (ISO 8601).
+          example: '2026-05-28T12:00:00Z'
+        ingested_at:
+          type: string
+          format: date-time
+          description: When the record was chunked, embedded, and indexed (ISO 8601).
+          example: '2026-05-28T12:01:00Z'
+        metadata:
+          type: object
+          additionalProperties: true
+          default: {}
+          description: Arbitrary metadata attached to the record at ingestion time. Filterable via filter[field]=value query parameters.
+          example:
+            source: call-center
+            language: en
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

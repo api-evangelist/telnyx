@@ -1,11 +1,13 @@
 openapi: 3.2.0
 info:
-  contact:
-    email: support@telnyx.com
-  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
   title: Telnyx Charges Breakdown API
   version: 2.0.0
+  contact:
+    email: support@telnyx.com
   x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Charges Breakdown across 2 of this provider''s published API definitions: telnyx-openapi.yml, telnyx-openapi.json. Each path carries the servers of the definition it was published in.'
 servers:
 - description: Version 2.0.0 of the Telnyx API
   url: https://api.telnyx.com/v2
@@ -67,26 +69,10 @@ paths:
       x-latency-category: responsive
       tags:
       - Charges Breakdown
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
 components:
-  responses:
-    charges_BadRequestErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/charges_Errors'
-      description: Invalid request parameters or date range
-    charges_UnprocessableEntityErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/charges_Errors'
-      description: User account not found
-    charges_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/charges_Errors'
-      description: Unexpected error
   schemas:
     charges_Error:
       properties:
@@ -131,12 +117,6 @@ components:
       - name
       - cost
       type: object
-    charges_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/charges_Error'
-          type: array
     BreakdownData:
       properties:
         currency:
@@ -175,6 +155,13 @@ components:
       - currency
       - results
       type: object
+    MonthlyChargesBreakdownResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/BreakdownData'
+      required:
+      - data
+      type: object
     NumberBreakdownResult:
       properties:
         charge_type:
@@ -206,13 +193,64 @@ components:
       - service_owner_email
       - services
       type: object
-    MonthlyChargesBreakdownResponse:
+    charges_Errors:
       properties:
-        data:
-          $ref: '#/components/schemas/BreakdownData'
-      required:
-      - data
-      type: object
+        errors:
+          items:
+            $ref: '#/components/schemas/charges_Error'
+          type: array
+  responses:
+    charges_BadRequestErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/charges_Errors'
+      description: Invalid request parameters or date range
+    charges_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/charges_Errors'
+      description: Unexpected error
+    charges_UnprocessableEntityErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/charges_Errors'
+      description: User account not found
+    charges_BadRequestErrorResponse_2:
+      description: Invalid request parameters or date range
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/charges_Errors'
+          example:
+            errors:
+            - code: '10015'
+              title: Bad Request
+              detail: The request failed because it was not well-formed.
+    charges_GenericErrorResponse_2:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/charges_Errors'
+          example:
+            errors:
+            - code: '10007'
+              title: Unexpected error
+              detail: An unexpected error occured.
+    charges_UnprocessableEntityErrorResponse_2:
+      description: User account not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/charges_Errors'
+          example:
+            errors:
+            - code: '10027'
+              title: Unprocessable Entity
+              detail: The server understood the syntax of the request but was unable to process the instructions.
   securitySchemes:
     bearerAuth:
       scheme: bearer
@@ -247,3 +285,40 @@ components:
       bearerFormat: JWT
       scheme: bearer
       type: http
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-refined-from:
+- telnyx-openapi.yml
+- telnyx-openapi.json

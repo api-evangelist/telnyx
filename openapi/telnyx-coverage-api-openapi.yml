@@ -1,11 +1,13 @@
 openapi: 3.2.0
 info:
-  contact:
-    email: support@telnyx.com
-  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
   title: Telnyx Coverage API
   version: 2.0.0
+  contact:
+    email: support@telnyx.com
   x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Coverage across 2 of this provider''s published API definitions: telnyx-openapi.yml, telnyx-openapi.json. Each path carries the servers of the definition it was published in.'
 servers:
 - description: Version 2.0.0 of the Telnyx API
   url: https://api.telnyx.com/v2
@@ -75,36 +77,26 @@ paths:
       tags:
       - Coverage
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
 components:
-  parameters:
-    PageConsolidated:
-      description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
-      explode: true
-      in: query
-      name: page
-      schema:
-        properties:
-          number:
-            default: 1
-            description: The page number to load
-            minimum: 1
-            type: integer
-          size:
-            default: 20
-            description: The size of the page
-            maximum: 250
-            minimum: 1
-            type: integer
-        type: object
-      style: deepObject
   schemas:
-    AvailableService:
-      enum:
-      - cloud_vpn
-      - private_wireless_gateway
-      - virtual_cross_connect
-      title: Available service
-      type: string
+    PaginationMeta:
+      properties:
+        page_number:
+          example: 2
+          type: integer
+        page_size:
+          example: 25
+          type: integer
+        total_pages:
+          example: 3
+          type: integer
+        total_results:
+          example: 55
+          type: integer
+      type: object
     netapps_Error:
       properties:
         code:
@@ -128,21 +120,6 @@ components:
       required:
       - code
       - title
-      type: object
-    PaginationMeta:
-      properties:
-        page_number:
-          example: 2
-          type: integer
-        page_size:
-          example: 25
-          type: integer
-        total_pages:
-          example: 3
-          type: integer
-        total_results:
-          example: 55
-          type: integer
       type: object
     netapps_Location:
       properties:
@@ -168,13 +145,6 @@ components:
           type: string
       title: Location
       type: object
-    netapps_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/netapps_Error'
-          type: array
-      type: object
     NetworkCoverage:
       properties:
         available_services:
@@ -192,6 +162,94 @@ components:
           type: string
       title: NetworkCoverage
       type: object
+    AvailableService:
+      enum:
+      - cloud_vpn
+      - private_wireless_gateway
+      - virtual_cross_connect
+      title: Available service
+      type: string
+    netapps_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/netapps_Error'
+          type: array
+      type: object
+    netapps_Location_17904fcfbc:
+      type: object
+      title: Location
+      properties:
+        region:
+          type: string
+          description: Identifies the geographical region of location.
+          example: AMER
+        site:
+          type: string
+          description: Site of location.
+          example: ORD
+        pop:
+          type: string
+          description: Point of presence of location.
+          example: CH1
+        code:
+          type: string
+          description: Location code.
+          example: chicago-il
+        name:
+          type: string
+          description: Human readable name of location.
+          example: Chicago IL, US
+    NetworkCoverage_2:
+      type: object
+      title: NetworkCoverage
+      properties:
+        record_type:
+          type: string
+          description: Identifies the type of the resource.
+          readOnly: true
+          example: network_coverage
+        location:
+          $ref: '#/components/schemas/netapps_Location_17904fcfbc'
+        available_services:
+          type: array
+          description: List of interface types supported in this region.
+          items:
+            oneOf:
+            - $ref: '#/components/schemas/AvailableService'
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
   responses:
     NetworkCoverageListResponse:
       content:
@@ -212,6 +270,33 @@ components:
           schema:
             $ref: '#/components/schemas/netapps_Errors'
       description: Unexpected error
+    GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+  parameters:
+    PageConsolidated:
+      description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
+      explode: true
+      in: query
+      name: page
+      schema:
+        properties:
+          number:
+            default: 1
+            description: The page number to load
+            minimum: 1
+            type: integer
+          size:
+            default: 20
+            description: The size of the page
+            maximum: 250
+            minimum: 1
+            type: integer
+        type: object
+      style: deepObject
   securitySchemes:
     bearerAuth:
       scheme: bearer
@@ -246,3 +331,40 @@ components:
       bearerFormat: JWT
       scheme: bearer
       type: http
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-refined-from:
+- telnyx-openapi.yml
+- telnyx-openapi.json

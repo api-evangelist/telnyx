@@ -1,0 +1,1313 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Meeting Sessions API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Meeting Sessions
+  description: Create, list, retrieve, update, and stop meeting sessions.
+paths:
+  /meeting_sessions:
+    get:
+      operationId: listMeetingSessions
+      tags:
+      - Meeting Sessions
+      summary: List meeting sessions
+      description: Returns a list of meeting sessions, optionally filtered by status.
+      parameters:
+      - name: status
+        in: query
+        required: false
+        description: Filter meeting sessions by current status.
+        schema:
+          type: string
+          enum:
+          - scheduled
+          - joining
+          - waiting_for_admission
+          - active
+          - leaving
+          - ended
+          - failed
+          - admission_denied
+          description: 'Lifecycle status of the session. `scheduled`: waiting for `join_at` before the bot attempts to join. `joining`: the bot is connecting to the meeting. `waiting_for_admission`: the bot is in the lobby waiting to be admitted. `active`: the bot is in the meeting and capturing. `leaving`: the bot is exiting the meeting. `ended`: the bot left and the session is complete. `failed`: the bot could not join or the session failed. `admission_denied`: the host did not admit the bot.'
+      responses:
+        '200':
+          description: Successful response with a list of meeting sessions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingSessionListResponse'
+              example:
+                data:
+                - id: mtgsess_9b2f...
+                  account_id: '22'
+                  provider: telnyx
+                  status: active
+                  status_detail: null
+                  recording: true
+                  meeting_url: https://meet.google.com/abc-defg-hij
+                  platform: google_meet
+                  bot_name: Notetaker
+                  config:
+                    voice: null
+                    speak_on_enter: null
+                    barge_in: false
+                    summarize_on_end: true
+                    chat_on_enter: null
+                  avatar: null
+                  avatar_state: null
+                  avatar_state_changed_at: null
+                  assistant: null
+                  assistant_state: null
+                  assistant_state_changed_at: null
+                  webhook_url: null
+                  metadata: {}
+                  failure_reason: null
+                  created_at: '2026-06-16T08:58:00Z'
+                  join_at: null
+                  joined_at: '2026-06-16T09:00:00Z'
+                  ended_at: null
+                  updated_at: '2026-06-16T09:00:00Z'
+        '400':
+          $ref: '#/components/responses/meeting-sessions_BadRequest'
+        '401':
+          $ref: '#/components/responses/meeting-sessions_Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/meeting-sessions_InternalServerError'
+        '503':
+          $ref: '#/components/responses/MeetingReadAuthUnavailable'
+    post:
+      operationId: createMeetingSession
+      tags:
+      - Meeting Sessions
+      summary: Create a meeting session
+      description: Creates a new meeting session. When an idempotency_key is supplied in the request body, replay lookup is scoped to the authenticated account and compares only the key; the request payload is not fingerprinted or compared. If a session with that key already exists for the account, the existing session is replayed (200); otherwise a new session is created (201). Supports bring-your-own-key (BYOK) configuration. The session may enter asynchronous states (e.g. joining, waiting_for_admission) before becoming active. Optional `camera_image` input is write-only and applies only when no Avatar or Assistant webpage output takes precedence. An ignored URL is not fetched. An effective URL source is resolved before bot creation; neither the source URL nor image bytes are persisted, returned, or logged. Treat signed URLs as credentials.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMeetingSessionRequest'
+      responses:
+        '200':
+          description: Replayed existing meeting session matching the account-scoped idempotency_key. Replay is key-only; the request payload is not fingerprinted or compared.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingSessionResponse'
+        '201':
+          description: New meeting session created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateMeetingSessionResponse'
+        '400':
+          $ref: '#/components/responses/meeting-sessions_BadRequest'
+        '401':
+          $ref: '#/components/responses/meeting-sessions_Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '422':
+          $ref: '#/components/responses/meeting-sessions_UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/meeting-sessions_InternalServerError'
+        '502':
+          $ref: '#/components/responses/MeetingCreateProviderError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /meeting_sessions/{id}:
+    delete:
+      operationId: deleteMeetingSession
+      tags:
+      - Meeting Sessions
+      summary: Delete a meeting session
+      description: Stops a meeting session without deleting its persisted record. Scheduled bots are cancelled, while bots that are joining or active are asked to leave. The persisted meeting session record remains available.
+      parameters:
+      - $ref: '#/components/parameters/MeetingSessionId'
+      responses:
+        '200':
+          description: Successful response with the deleted meeting session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingSessionResponse'
+              example:
+                data:
+                  id: mtgsess_9b2f...
+                  account_id: '22'
+                  provider: telnyx
+                  status: leaving
+                  status_detail: null
+                  recording: true
+                  meeting_url: https://meet.google.com/abc-defg-hij
+                  platform: google_meet
+                  bot_name: Notetaker
+                  config:
+                    voice: null
+                    speak_on_enter: null
+                    barge_in: false
+                    summarize_on_end: true
+                    chat_on_enter: null
+                  avatar: null
+                  avatar_state: null
+                  avatar_state_changed_at: null
+                  assistant: null
+                  assistant_state: null
+                  assistant_state_changed_at: null
+                  webhook_url: null
+                  metadata: {}
+                  failure_reason: null
+                  created_at: '2026-06-16T08:58:00Z'
+                  join_at: null
+                  joined_at: '2026-06-16T09:00:00Z'
+                  ended_at: null
+                  updated_at: '2026-06-16T09:00:00Z'
+        '401':
+          $ref: '#/components/responses/meeting-sessions_Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/meeting-sessions_NotFound'
+        '409':
+          $ref: '#/components/responses/meeting-sessions_Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/meeting-sessions_InternalServerError'
+        '502':
+          $ref: '#/components/responses/MeetingStopProviderError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    get:
+      operationId: retrieveMeetingSession
+      tags:
+      - Meeting Sessions
+      summary: Retrieve a meeting session
+      description: Retrieves a single meeting session by ID. A session that does not exist or that belongs to a different account both return 404.
+      parameters:
+      - $ref: '#/components/parameters/MeetingSessionId'
+      responses:
+        '200':
+          description: Successful response with the meeting session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingSessionResponse'
+              example:
+                data:
+                  id: mtgsess_9b2f...
+                  account_id: '22'
+                  provider: telnyx
+                  status: active
+                  status_detail: null
+                  recording: true
+                  meeting_url: https://meet.google.com/abc-defg-hij
+                  platform: google_meet
+                  bot_name: Notetaker
+                  config:
+                    voice: null
+                    speak_on_enter: null
+                    barge_in: false
+                    summarize_on_end: true
+                    chat_on_enter: null
+                  avatar: null
+                  avatar_state: null
+                  avatar_state_changed_at: null
+                  assistant: null
+                  assistant_state: null
+                  assistant_state_changed_at: null
+                  webhook_url: null
+                  metadata: {}
+                  failure_reason: null
+                  created_at: '2026-06-16T08:58:00Z'
+                  join_at: null
+                  joined_at: '2026-06-16T09:00:00Z'
+                  ended_at: null
+                  updated_at: '2026-06-16T09:00:00Z'
+        '401':
+          $ref: '#/components/responses/meeting-sessions_Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/meeting-sessions_NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/meeting-sessions_InternalServerError'
+        '503':
+          $ref: '#/components/responses/MeetingReadAuthUnavailable'
+    patch:
+      operationId: updateMeetingSession
+      tags:
+      - Meeting Sessions
+      summary: Update a meeting session
+      description: Updates mutable properties of a meeting session. Only sessions in the scheduled state can be updated; any other state returns 409 with the invalid_state error code. All request fields are optional, and an empty object is a valid no-op update.
+      parameters:
+      - $ref: '#/components/parameters/MeetingSessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMeetingSessionRequest'
+            example:
+              join_at: '2026-08-05T17:00:00Z'
+      responses:
+        '200':
+          description: Successful response with the updated meeting session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingSessionResponse'
+              example:
+                data:
+                  id: mtgsess_9b2f...
+                  account_id: '22'
+                  provider: telnyx
+                  status: scheduled
+                  status_detail: null
+                  recording: false
+                  meeting_url: https://meet.google.com/abc-defg-hij
+                  platform: google_meet
+                  bot_name: Notetaker
+                  config:
+                    voice: null
+                    speak_on_enter: null
+                    barge_in: false
+                    summarize_on_end: true
+                    chat_on_enter: null
+                  avatar: null
+                  avatar_state: null
+                  avatar_state_changed_at: null
+                  assistant: null
+                  assistant_state: null
+                  assistant_state_changed_at: null
+                  webhook_url: null
+                  metadata: {}
+                  failure_reason: null
+                  created_at: '2026-06-16T08:58:00Z'
+                  join_at: '2026-08-05T17:00:00Z'
+                  joined_at: null
+                  ended_at: null
+                  updated_at: '2026-06-16T09:00:00Z'
+        '400':
+          $ref: '#/components/responses/meeting-sessions_BadRequest'
+        '401':
+          $ref: '#/components/responses/meeting-sessions_Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/meeting-sessions_NotFound'
+        '409':
+          $ref: '#/components/responses/meeting-sessions_Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/meeting-sessions_InternalServerError'
+        '502':
+          $ref: '#/components/responses/MeetingUpdateProviderError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+components:
+  responses:
+    meeting-sessions_BadRequest:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: invalid_request
+              message: request is invalid
+    PayloadTooLarge:
+      description: Payload Too Large
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: invalid_request
+              message: request body too large
+    ServiceUnavailable:
+      description: A required feature or dependency is not configured or authentication is unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: not_configured
+              message: required feature is not configured
+    meeting-sessions_UnprocessableEntity:
+      description: Unprocessable Entity, including an unsupported capability
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: unsupported_capability
+              message: avatar video is not supported on platform 'unknown'
+    MeetingUpdateProviderError:
+      description: The meeting provider rejected the scheduled-session update.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: provider_error
+              message: meeting provider rejected session update
+    MeetingCreateProviderError:
+      description: The meeting provider rejected bot creation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: provider_error
+              message: meeting provider rejected bot creation
+    TooManyRequests:
+      description: Authentication is temporarily overloaded. Retry after the number of seconds in `Retry-After`.
+      headers:
+        Retry-After:
+          required: true
+          description: Seconds to wait before retrying.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: auth_overloaded
+              message: authentication temporarily overloaded
+    meeting-sessions_NotFound:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: not_found
+              message: meeting session not found
+    meeting-sessions_Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: invalid_state
+              message: only scheduled sessions can be updated
+    meeting-sessions_InternalServerError:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: internal_error
+              message: internal server error
+    meeting-sessions_Unauthorized:
+      description: 'Unauthorized. On api.telnyx.com, authentication is enforced by the API gateway before the request reaches the Meeting service, so a missing or invalid API key returns the standard Telnyx error envelope (`{"errors": [{"code": "10009", ...}]}`) rather than the single-`error` shape below.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: unauthorized
+              message: invalid or missing credentials
+    MeetingStopProviderError:
+      description: The meeting provider rejected cancellation or leave.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: provider_error
+              message: meeting provider rejected bot stop
+    MeetingReadAuthUnavailable:
+      description: Authentication is temporarily unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: auth_unavailable
+              message: authentication service unavailable
+    Forbidden:
+      description: The authenticated credential is not permitted to perform this operation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: forbidden
+              message: credential is not permitted
+  schemas:
+    MeetingSessionAssistantRequest:
+      title: MeetingSessionAssistantRequest
+      type: object
+      additionalProperties: false
+      description: Attach a Telnyx AI Assistant to the session. Supply the Assistant's ID; the Meeting service connects it to the meeting directly. The Call Control connection, caller ID and loopback SIP URI previously required here have been removed and are now rejected as unknown fields.
+      required:
+      - id
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Identifier of the assistant to attach.
+        audio_gate:
+          type: string
+          enum:
+          - half_duplex
+          - full_duplex
+          default: half_duplex
+          description: 'Audio gating strategy for the assistant call leg. `half_duplex` (default) sends the assistant a single mixed meeting stream and mutes it while the assistant speaks, so the assistant cannot hear itself and cannot be interrupted. `full_duplex` sends a separate stream per participant, which allows barge-in and removes self-hearing, and COSTS SIGNIFICANTLY MORE: per-participant streams multiply the per-minute cost by the number of participants.'
+        dynamic_variables:
+          type: object
+          description: Per-conversation values for the [dynamic variables](/docs/inference/ai-assistants/dynamic-variables) used in the Assistant's instructions, greeting, or tools. Delivered before the Assistant's first utterance, so they resolve for the opening line as well as the rest of the conversation. At most 63 entries; keys 1-128 characters; values must be strings. The map is budgeted in aggregate at 1,047,552 bytes (1023 KiB) rather than capped per value. `streaming_audio`, `ai_assistant_streaming_audio` and `meeting_session_id` are reserved and rejected with `400 invalid_request` -- they toggle provider infrastructure or are set by the service rather than fill a prompt template.
+          maxProperties: 63
+          propertyNames:
+            minLength: 1
+            maxLength: 128
+            not:
+              enum:
+              - streaming_audio
+              - ai_assistant_streaming_audio
+              - meeting_session_id
+          additionalProperties:
+            type: string
+        leave_on_end:
+          type: boolean
+          default: false
+          description: 'Leave the meeting when the Assistant''s conversation reaches a terminal state -- `ended` **or** `failed`. Off by default, which leaves the bot in the meeting after the Assistant stops. Fires once: a second terminal transition does not leave twice, and a leave the provider refuses is logged without changing how the session settles.'
+    MeetingSessionAvatar:
+      title: MeetingSessionAvatar
+      type: object
+      additionalProperties: false
+      required:
+      - provider
+      - avatar_id
+      properties:
+        provider:
+          type: string
+          const: anam
+          description: Avatar provider identifier.
+        avatar_id:
+          type: string
+          description: Identifier of the avatar.
+    CreateMeetingSessionResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/MeetingSessionCreated'
+    MeetingSessionAvatarRequest:
+      title: MeetingSessionAvatarRequest
+      type: object
+      additionalProperties: false
+      description: Request options for attaching a bring-your-own-key avatar to the session.
+      required:
+      - provider
+      - avatar_id
+      - api_key
+      properties:
+        provider:
+          type: string
+          const: anam
+          description: Avatar provider identifier. Currently only "anam" is supported.
+        avatar_id:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Identifier of the avatar to use.
+        api_key:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          writeOnly: true
+          description: Bring-your-own-key API key for the avatar provider. The key is never stored or returned by the API.
+    UpdateMeetingSessionRequest:
+      title: UpdateMeetingSessionRequest
+      type: object
+      additionalProperties: false
+      description: Request body for updating a meeting session. All fields are optional; an empty object is a valid no-op update.
+      properties:
+        join_at:
+          type: string
+          format: date-time
+          description: ISO-8601 timestamp for the bot to join. May be updated to reschedule.
+        bot_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Updated display name for the bot.
+    MeetingSessionCameraImageBase64Source:
+      title: MeetingSessionCameraImageBase64Source
+      type: object
+      additionalProperties: false
+      required:
+      - format
+      - base64_data
+      properties:
+        format:
+          type: string
+          const: jpeg
+          description: Only JPEG images are accepted.
+        base64_data:
+          type: string
+          minLength: 4
+          maxLength: 1835008
+          pattern: ^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$
+          description: Canonical plain RFC 4648 Base64 for a valid decoded JPEG. Data URIs, whitespace, and the URL-safe alphabet are rejected. The encoded value is limited to 1,835,008 characters and the decoded JPEG to 1,363,148 bytes. The JPEG is limited to 4,096 pixels per dimension, 4 megapixels, and 128 MB of decoder memory. The image bytes are not persisted, returned, or logged.
+      examples:
+      - format: jpeg
+        base64_data: /9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/wAALCAACAAIBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACP/EAB4QAAAEBwAAAAAAAAAAAAAAAAAEBgcCFic1RVNi/9oACAEBAAA/AH8hGJbWR09TxKW4vhC2qHgf/9k=
+    CreateMeetingSessionRequest:
+      title: CreateMeetingSessionRequest
+      type: object
+      additionalProperties: false
+      description: 'Request body for creating a new meeting session.
+
+
+        Cross-field rules:
+
+        - Neither `avatar` nor `assistant` can be combined with `join_at`; both are available only for sessions that join immediately.
+
+        - `assistant` cannot be combined with `barge_in: true`.
+
+        - The `avatar` and `assistant` options take effect at session creation and cannot be modified later.
+
+        - An effective Avatar or Assistant webpage output takes precedence over `camera_image`; the static image is ignored and a URL source is not fetched.'
+      required:
+      - meeting_url
+      properties:
+        meeting_url:
+          type: string
+          format: uri
+          description: The meeting URL the bot should join.
+        bot_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Display name for the bot in the meeting. Defaults to "Meeting Bot".
+        join_at:
+          type: string
+          format: date-time
+          description: ISO-8601 timestamp in the future at which the bot should join. If omitted, the bot joins immediately.
+        voice:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Session-default voice identifier used for `speak_on_enter` and ordinary speak actions. A voice supplied on an individual speak action overrides this default for that utterance.
+        speak_on_enter:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: 'Text the bot speaks when it enters the meeting. **Not spoken when an `assistant` is attached**: the value is accepted and echoed back on the session, but the assistant owns the voice and the line is never delivered, with no event reporting the omission. Use `chat_on_enter` to announce an assistant-backed bot.'
+        chat_on_enter:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: 'A message the bot posts to the meeting''s chat as soon as it becomes active — typically a recording disclosure. Delivered at most once. Independent of `speak_on_enter`: both may be set, and the chat message posts first because it does not wait for text-to-speech or avatar startup. Rejected with 422 `unsupported_capability` on platforms without meeting chat.'
+        barge_in:
+          type: boolean
+          default: false
+          description: 'When enabled, a human participant `speech_on` event interrupts and stops the current bot audio; it does not bypass admission or initiate speech. Assistant sessions reject `barge_in: true`.'
+        summarize_on_end:
+          type: boolean
+          default: false
+          description: If true, generate a summary artifact when the session ends.
+        camera_image:
+          $ref: '#/components/schemas/MeetingSessionCameraImage'
+        webhook_url:
+          type: string
+          format: uri
+          description: HTTPS endpoint to receive session lifecycle callbacks. Static validation requires HTTPS, rejects embedded credentials and blocked hosts, and enforces egress policy. Validation makes no network request to the endpoint.
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Arbitrary key-value metadata attached to the session. The serialized JSON representation must not exceed 16384 characters at runtime.
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Client-supplied idempotency key to safely retry creation requests without duplicating sessions. Lookup is scoped to the authenticated account and compares the key only; the request payload is not fingerprinted or compared.
+        avatar:
+          $ref: '#/components/schemas/MeetingSessionAvatarRequest'
+        assistant:
+          $ref: '#/components/schemas/MeetingSessionAssistantRequest'
+      examples:
+      - meeting_url: https://zoom.us/j/1234567890
+        bot_name: Notetaker
+      - meeting_url: https://meet.google.com/abc-defg-hij
+        bot_name: Avatar Bot
+        avatar:
+          provider: anam
+          avatar_id: avatar_fake-001
+          api_key: fake_avatar_api_key_do_not_use
+      - meeting_url: https://teams.microsoft.com/l/meetup-join/example
+        bot_name: Voice Assistant
+        assistant:
+          id: asst_fake-uuid-1234
+          audio_gate: half_duplex
+          dynamic_variables:
+            candidate_name: Ada Lovelace
+            role: Staff Engineer
+    MeetingSessionAssistant:
+      title: MeetingSessionAssistant
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - audio_gate
+      - dynamic_variables
+      - leave_on_end
+      properties:
+        id:
+          type: string
+          description: Identifier of the assistant.
+        audio_gate:
+          type: string
+          enum:
+          - half_duplex
+          - full_duplex
+          description: Audio gating strategy in force for the assistant call leg.
+        dynamic_variables:
+          anyOf:
+          - type: object
+            additionalProperties:
+              type: string
+          - type: 'null'
+          description: The dynamic variables in force for this session, or null when none were supplied.
+        leave_on_end:
+          type: boolean
+          description: Whether the bot leaves when the Assistant's conversation ends or fails.
+    MeetingSessionCameraImage:
+      title: MeetingSessionCameraImage
+      type: object
+      description: Write-only static camera-tile image for this session, not a native account or participant profile photo. Supply exactly one JPEG source. When effective, the image is used as the bot's static camera/video output; presentation varies by meeting platform and recording configuration and is not guaranteed in recordings. An effective Avatar or Assistant webpage output takes precedence, so this input is ignored and a URL source is not fetched.
+      writeOnly: true
+      oneOf:
+      - $ref: '#/components/schemas/MeetingSessionCameraImageBase64Source'
+      - $ref: '#/components/schemas/MeetingSessionCameraImageUrlSource'
+    MeetingSessionCreated:
+      title: MeetingSessionCreated
+      type: object
+      additionalProperties: false
+      description: Response returned when a meeting session is first created. It is a full session representation plus an optional `webhook_secret` that is returned only on the first successful create when a `webhook_url` is configured. The secret is never replayed, listed, or retrievable on subsequent requests. No actor, provider-bot, idempotency, routing, key, or internal fields are exposed.
+      required:
+      - id
+      - account_id
+      - provider
+      - status
+      - status_detail
+      - recording
+      - meeting_url
+      - platform
+      - bot_name
+      - config
+      - avatar
+      - avatar_state
+      - avatar_state_changed_at
+      - assistant
+      - assistant_state
+      - assistant_state_changed_at
+      - webhook_url
+      - metadata
+      - failure_reason
+      - created_at
+      - join_at
+      - joined_at
+      - ended_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the meeting session.
+        account_id:
+          type: string
+          description: Identifier of the owning account.
+        provider:
+          type: string
+          description: Provider handling the meeting session.
+        status:
+          type: string
+          enum:
+          - scheduled
+          - joining
+          - waiting_for_admission
+          - active
+          - leaving
+          - ended
+          - failed
+          - admission_denied
+          description: Lifecycle status. `waiting_for_admission` means the bot reached the meeting lobby and may require host approval. `active` means the bot entered the meeting/media path. `ended` alone does not prove attendance; use non-null `joined_at` as positive evidence that the session became active. `admission_denied` is reserved for an explicit provider denial, while cancellation or another termination can end a never-admitted session as `ended`.
+        status_detail:
+          type:
+          - string
+          - 'null'
+          description: Additional human-readable detail about the status, or null.
+        recording:
+          type: boolean
+          description: Whether the session is being recorded.
+        meeting_url:
+          type: string
+          format: uri
+          description: The meeting URL the bot joins.
+        platform:
+          type: string
+          enum:
+          - zoom
+          - google_meet
+          - teams
+          - webex
+          - unknown
+          description: Detected meeting platform.
+        bot_name:
+          type: string
+          description: Display name of the bot in the meeting.
+        config:
+          $ref: '#/components/schemas/MeetingSessionConfig'
+        avatar:
+          oneOf:
+          - $ref: '#/components/schemas/MeetingSessionAvatar'
+          - type: 'null'
+          description: Avatar configuration if an avatar is attached, otherwise null.
+        avatar_state:
+          type:
+          - string
+          - 'null'
+          enum:
+          - starting
+          - connected
+          - degraded
+          - disconnected
+          - null
+          description: Current state of the avatar connection, or null if no avatar is attached.
+        avatar_state_changed_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: Timestamp of the last avatar state change, or null.
+        assistant:
+          oneOf:
+          - $ref: '#/components/schemas/MeetingSessionAssistant'
+          - type: 'null'
+          description: Assistant configuration if an assistant is attached, otherwise null.
+        assistant_state:
+          type:
+          - string
+          - 'null'
+          enum:
+          - starting
+          - connected
+          - failed
+          - ended
+          - null
+          description: Current state of the assistant, or null if no assistant is attached.
+        assistant_state_changed_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: Timestamp of the last assistant state change, or null.
+        webhook_url:
+          type:
+          - string
+          - 'null'
+          format: uri
+          description: Webhook endpoint for session lifecycle callbacks, or null if not configured.
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Arbitrary key-value metadata attached to the session.
+        failure_reason:
+          type:
+          - string
+          - 'null'
+          description: Human-readable failure reason if the session failed, or null.
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the session was created.
+        join_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: Scheduled join time, or null for immediate join.
+        joined_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: Timestamp when the session first became `active`, or null if it never became active. This remains positive admission evidence after terminal transitions.
+        ended_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: Timestamp when the session ended, or null if ongoing.
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp of the last update to the session.
+        webhook_secret:
+          type: string
+          readOnly: true
+          description: Secret for validating webhook signatures. Returned only on the first successful create when `webhook_url` is configured. Never replayed, listed, or retrievable on subsequent requests.
+      examples:
+      - id: mtgsess_a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        account_id: acct_fake-uuid-0001
+        provider: telnyx
+        status: scheduled
+        status_detail: null
+        recording: false
+        meeting_url: https://zoom.us/j/1234567890
+        platform: zoom
+        bot_name: Notetaker
+        config:
+          voice: null
+          speak_on_enter: null
+          barge_in: false
+          summarize_on_end: false
+          chat_on_enter: null
+        avatar: null
+        avatar_state: null
+        avatar_state_changed_at: null
+        assistant: null
+        assistant_state: null
+        assistant_state_changed_at: null
+        webhook_url: null
+        metadata: {}
+        failure_reason: null
+        created_at: '2026-07-30T12:00:00Z'
+        join_at: '2026-07-30T13:00:00Z'
+        joined_at: null
+        ended_at: null
+        updated_at: '2026-07-30T12:00:00Z'
+      - id: mtgsess_b2c3d4e5-f6a7-8901-bcde-f23456789012
+        account_id: acct_fake-uuid-0002
+        provider: telnyx
+        status: joining
+        status_detail: null
+        recording: false
+        meeting_url: https://teams.microsoft.com/l/meetup-join/example
+        platform: teams
+        bot_name: Voice Assistant
+        config:
+          voice: voice-fake-001
+          speak_on_enter: Hello, I am joining.
+          barge_in: false
+          summarize_on_end: true
+          chat_on_enter: null
+        avatar: null
+        avatar_state: null
+        avatar_state_changed_at: null
+        assistant:
+          id: asst_fake-uuid-1234
+          audio_gate: half_duplex
+          dynamic_variables: null
+          leave_on_end: false
+        assistant_state: starting
+        assistant_state_changed_at: '2026-07-30T12:00:00Z'
+        webhook_url: https://example.invalid/webhooks/sessions
+        metadata: {}
+        failure_reason: null
+        created_at: '2026-07-30T12:00:00Z'
+        join_at: null
+        joined_at: null
+        ended_at: null
+        updated_at: '2026-07-30T12:00:00Z'
+        webhook_secret: whsec_example_do_not_use
+    MeetingSessionCameraImageUrlSource:
+      title: MeetingSessionCameraImageUrlSource
+      type: object
+      additionalProperties: false
+      required:
+      - format
+      - url
+      properties:
+        format:
+          type: string
+          const: jpeg
+          description: Only JPEG images are accepted.
+        url:
+          type: string
+          format: uri
+          minLength: 1
+          maxLength: 2048
+          pattern: ^[Hh][Tt][Tt][Pp][Ss]://
+          description: Public HTTPS JPEG URL with at most 2,048 characters and no credentials, fragment, surrounding whitespace, raw control characters, or explicit non-default port. Signed queries are allowed but must be treated as credentials. Fetching is limited to public network destinations, a five-second timeout, no redirects, a 2xx image/jpeg response with identity or no content encoding, and a 1,363,148-byte limit enforced against both declared and streamed content. The service resolves the URL before bot creation and does not persist, return, or log the URL or image bytes.
+      examples:
+      - format: jpeg
+        url: https://cdn.example.com/bot-camera.jpg
+    meeting-sessions_ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - error
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+          - code
+          - message
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+      examples:
+      - error:
+          code: invalid_request
+          message: webhook_url is disabled
+      - error:
+          code: not_found
+          message: meeting session not found
+      - error:
+          code: unsupported_capability
+          message: avatar video is not supported on platform 'unknown'
+      - error:
+          code: internal_error
+          message: internal server error
+    MeetingSessionResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/MeetingSession'
+    MeetingSessionConfig:
+      title: MeetingSessionConfig
+      type: object
+      additionalProperties: false
+      required:
+      - voice
+      - speak_on_enter
+      - barge_in
+      - summarize_on_end
+      - chat_on_enter
+      properties:
+        voice:
+          type:
+          - string
+          - 'null'
+          description: Configured voice identifier, or null if not set.
+        speak_on_enter:
+          type:
+          - string
+          - 'null'
+          description: Text spoken on meeting entry, or null if not set.
+        chat_on_enter:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The message posted to chat on join, or null when unset.
+        barge_in:
+          type: boolean
+          description: 'When enabled, a human participant `speech_on` event interrupts and stops the current bot audio; it does not bypass admission or initiate speech. Assistant sessions reject `barge_in: true`.'
+        summarize_on_end:
+          type: boolean
+          description: Whether a summary artifact is generated on session end.
+    MeetingSessionListResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeetingSession'
+    MeetingSession:
+      title: MeetingSession
+      type: object
+      additionalProperties: false
+      description: Represents a meeting session. All serializer fields are present and required; nullable fields use null when absent. No actor, provider-bot, idempotency, routing, key, or internal fields are exposed.
+      required:
+      - id
+      - account_id
+      - provider
+      - status
+      - status_detail
+      - recording
+      - meeting_url
+      - platform
+      - bot_name
+      - config
+      - avatar
+      - avatar_state
+      - avatar_state_changed_at
+      - assistant
+      - assistant_state
+      - assistant_state_changed_at
+      - webhook_url
+      - metadata
+      - failure_reason
+      - created_at
+      - join_at
+      - joined_at
+      - ended_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the meeting session.
+        account_id:
+          type: string
+          description: Identifier of the owning account.
+        provider:
+          type: string
+          description: Provider handling the meeting session.
+        status:
+          type: string
+          enum:
+          - scheduled
+          - joining
+          - waiting_for_admission
+          - active
+          - leaving
+          - ended
+          - failed
+          - admission_denied
+          description: Lifecycle status. `waiting_for_admission` means the bot reached the meeting lobby and may require host approval. `active` means the bot entered the meeting/media path. `ended` alone does not prove attendance; use non-null `joined_at` as positive evidence that the session became active. `admission_denied` is reserved for an explicit provider denial, while cancellation or another termination can end a never-admitted session as `ended`.
+        status_detail:
+          type:
+          - string
+          - 'null'
+          description: Additional human-readable detail about the status, or null.
+        recording:
+          type: boolean
+          description: Whether the session is being recorded.
+        meeting_url:
+          type: string
+          format: uri
+          description: The meeting URL the bot joins.
+        platform:
+          type: string
+          enum:
+          - zoom
+          - google_meet
+          - teams
+          - webex
+          - unknown
+          description: Detected meeting platform.
+        bot_name:
+          type: string
+          description: Display name of the bot in the meeting.
+        config:
+          $ref: '#/components/schemas/MeetingSessionConfig'
+        avatar:
+          oneOf:
+          - $ref: '#/components/schemas/MeetingSessionAvatar'
+          - type: 'null'
+          description: Avatar configuration if an avatar is attached, otherwise null.
+        avatar_state:
+          type:
+          - string
+          - 'null'
+          enum:
+          - starting
+          - connected
+          - degraded
+          - disconnected
+          - null
+          description: Current state of the avatar connection, or null if no avatar is attached.
+        avatar_state_changed_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: Timestamp of the last avatar state change, or null.
+        assistant:
+          oneOf:
+          - $ref: '#/components/schemas/MeetingSessionAssistant'
+          - type: 'null'
+          description: Assistant configuration if an assistant is attached, otherwise null.
+        assistant_state:
+          type:
+          - string
+          - 'null'
+          enum:
+          - starting
+          - connected
+          - failed
+          - ended
+          - null
+          description: Current state of the assistant, or null if no assistant is attached.
+        assistant_state_changed_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: Timestamp of the last assistant state change, or null.
+        webhook_url:
+          type:
+          - string
+          - 'null'
+          format: uri
+          description: Webhook endpoint for session lifecycle callbacks, or null if not configured.
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Arbitrary key-value metadata attached to the session.
+        failure_reason:
+          type:
+          - string
+          - 'null'
+          description: Human-readable failure reason if the session failed, or null.
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the session was created.
+        join_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: Scheduled join time, or null for immediate join.
+        joined_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: Timestamp when the session first became `active`, or null if it never became active. This remains positive admission evidence after terminal transitions.
+        ended_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: Timestamp when the session ended, or null if ongoing.
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp of the last update to the session.
+  parameters:
+    MeetingSessionId:
+      name: id
+      in: path
+      required: true
+      description: Unique identifier for the meeting session.
+      schema:
+        type: string
+        examples:
+        - mtgsess_a1b2c3d4-e5f6-7890-abcd-ef1234567890
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

@@ -1,0 +1,648 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Email Events API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Email Events
+  description: Retrieve account-level email events and event statistics.
+paths:
+  /email_events:
+    get:
+      tags:
+      - Email Events
+      operationId: ListEmailEvents
+      summary: List account email events
+      description: 'Lists account-level email events sorted oldest first by `occurred_at asc, id asc`. Each row contains a legacy email.-prefixed event_type and an additive canonical_event_type. Gateway rejection renders email.failed with canonical email.gw_reject; ambiguous injection timeout renders email.injection_timeout in both; MTA expiration renders email.bounced with canonical email.expired. Message-scoped queued, sending, sandbox, cancelled, and daily_limit_exceeded rows fan out per durable recipient with stable derived IDs matching webhook delivery. Scheduled is the cardinality exception: account polling retains one message-scoped scheduled row with its stored event ID, while scheduled webhook publication fans out per recipient with derived IDs; reconcile scheduled events by message ID, event type, and occurrence time rather than event UUID. Recipient-scoped stored rows retain their stored UUIDs across polling and webhook delivery. Legacy names are derived from stored rows; an AdminBounce row stored as failed renders email.failed in polling while its webhook retains email.bounced, both with canonical email.failed.'
+      parameters:
+      - $ref: '#/components/parameters/email_PageSize'
+      - name: page[cursor]
+        in: query
+        description: Opaque URL-safe Base64 cursor returned by a previous event list response. The legacy `page[after]` and flat `page_cursor` forms are also accepted.
+        required: false
+        schema:
+          type: string
+        example: eyJpbn...EifQ
+      - name: event_type
+        in: query
+        description: 'Comma-separated list of event types to include. Also accepts repeated
+
+          query parameters (e.g. event_type=delivered&event_type=bounced).
+
+          Unknown values return no matches.
+
+
+          Dual-name compatibility: values are accepted
+
+          bare or `email.`-prefixed. A legacy value keeps matching the
+
+          rows it matched pre-rename — no widening: `failed` also
+
+          matches the rows that now store the canonical names of the
+
+          outcomes it covered (`gw_reject`, `injection_timeout`,
+
+          `expired`); `bounced` matches stored `bounced` rows only
+
+          (recipient-scoped Expirations stored `failed` pre-rename and
+
+          never matched `bounced`, so `expired` is deliberately not a
+
+          `bounced` expansion). A canonical value matches its own rows
+
+          plus legacy rows whose recorded payload evidence proves that
+
+          outcome (`expired` also surfaces legacy `bounced` rows with
+
+          `bounce_category: transient`). The additive
+
+          `canonical_event_type` field in each response row names the
+
+          canonical outcome.
+
+          '
+        required: false
+        schema:
+          oneOf:
+          - type: string
+          - type: array
+            items:
+              type: string
+        example: delivered,bounced,opened
+      - name: email_id
+        in: query
+        description: Filter events for a specific email message UUID. Invalid UUID values are silently ignored (no filter applied).
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/FromTimestamp'
+      - $ref: '#/components/parameters/ToTimestamp'
+      responses:
+        '200':
+          description: Paginated list of account email events.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountEmailEventListResponse'
+              example:
+                data:
+                - id: f3a2c1d0-1234-4abc-9def-67890abcdef0
+                  event_type: email.delivered
+                  canonical_event_type: email.delivered
+                  occurred_at: '2026-07-06T18:24:00.000Z'
+                  recipient_id: 7c1e9a44-2f60-4d1b-9a0e-3c7b5e8d1f22
+                  payload:
+                    id: b0c7e8cb-6227-4c74-9f32-c7f80c30934b
+                    recipient_id: 7c1e9a44-2f60-4d1b-9a0e-3c7b5e8d1f22
+                    status: delivered
+                    occurred_at: '2026-07-06T18:24:00.000Z'
+                    from:
+                      email: sender@example.com
+                      name: Telnyx
+                    to:
+                      email: recipient@example.com
+                      name: null
+                      kind: to
+                    subject: Welcome
+                meta:
+                  page_size: 50
+                  time_range:
+                    from: '2026-07-01T00:00:00Z'
+                    to: '2026-07-31T00:00:00Z'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+  /email_events/stats:
+    get:
+      tags:
+      - Email Events
+      operationId: GetEmailEventStats
+      summary: Get email event statistics
+      description: Returns counts and rates for email events over a time range. The default start time is 30 days ago.
+      parameters:
+      - $ref: '#/components/parameters/FromTimestamp'
+      - $ref: '#/components/parameters/ToTimestamp'
+      responses:
+        '200':
+          description: Email event statistics.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailEventStatsResponse'
+              example:
+                data:
+                  record_type: email_event_stats
+                  counts:
+                    queued: 0
+                    sent: 0
+                    delivered: 0
+                    deferred: 0
+                    bounced: 0
+                    opened: 0
+                    clicked: 0
+                    complained: 0
+                    unsubscribed: 0
+                    failed: 0
+                  rates:
+                    delivery_rate: 0
+                    bounce_rate: 0
+                    deferred_rate: 0
+                    open_rate: 0
+                    click_rate: 0
+                    complaint_rate: 0
+                  time_range:
+                    from: '2024-01-23T18:10:02.574Z'
+                    to: '2024-01-23T18:10:02.574Z'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+components:
+  parameters:
+    FromTimestamp:
+      name: from
+      in: query
+      description: Inclusive ISO 8601 start timestamp. Defaults to 30 days ago when omitted.
+      required: false
+      schema:
+        type: string
+        format: date-time
+    ToTimestamp:
+      name: to
+      in: query
+      description: Inclusive ISO 8601 end timestamp. When `from` is provided without `to`, defaults to `from + 30 days`.
+      required: false
+      schema:
+        type: string
+        format: date-time
+    email_PageSize:
+      name: page_size
+      in: query
+      description: Number of results to return. Defaults to 25; maximum is 100. Invalid values are clamped to the valid range.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+  schemas:
+    EmailEventStatsResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailEventStats'
+      required:
+      - data
+    email_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorObject'
+        suppressed:
+          type: array
+          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
+      required:
+      - errors
+    AccountEmailEvent:
+      type: object
+      description: 'An account-polling event. The envelope is webhook-shaped, but polling preserves stored-event cardinality: queued, sending, sandbox, cancelled, and daily_limit_exceeded message events fan out per recipient; scheduled remains one message-scoped row. Payload fields vary among recipient-scoped, message-scoped, and minimal fallback rows.'
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Event UUID.
+        event_type:
+          type: string
+          pattern: ^email\.
+          example: email.delivered
+          description: Legacy customer-visible event name, prefixed with `email.`. Gateway rejections render `email.failed`; MTA expirations render `email.bounced`. Webhook subscription allowlists match the legacy name.
+        canonical_event_type:
+          type: string
+          pattern: ^email\.
+          example: email.delivered
+          description: Additive canonical outcome name, prefixed with `email.`. Gateway rejection is `email.gw_reject`, ambiguous injection timeout is `email.injection_timeout`, and MTA expiration is `email.expired`. Unchanged outcomes retain their names. Existing stored rows are translated only when recorded payload evidence proves the outcome; a legacy failed row is not guessed or sharpened.
+        occurred_at:
+          type: string
+          format: date-time
+        recipient_id:
+          type: string
+          format: uuid
+          description: Durable email recipient UUID. Present for recipient-scoped events, including each queued, sending, sandbox, cancelled, and daily_limit_exceeded fan-out event.
+        payload:
+          $ref: '#/components/schemas/AccountEmailEventPayload'
+      required:
+      - id
+      - event_type
+      - canonical_event_type
+      - occurred_at
+      - payload
+    EmailWebhookRecipient:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+          nullable: true
+        kind:
+          type: string
+          enum:
+          - to
+          - cc
+          - bcc
+      required:
+      - email
+    EmailEventRates:
+      type: object
+      description: Recipient-level event rates as percentages, rounded to 2 decimal places.
+      properties:
+        delivery_rate:
+          type: number
+          format: float
+          minimum: 0
+          description: Delivered recipients / queued recipients as a percentage.
+        bounce_rate:
+          type: number
+          format: float
+          minimum: 0
+          description: Bounced recipients / queued recipients as a percentage.
+        deferred_rate:
+          type: number
+          format: float
+          minimum: 0
+          description: Deferred recipients / queued recipients as a percentage.
+        open_rate:
+          type: number
+          format: float
+          minimum: 0
+          description: Recipients opened / recipients delivered as a percentage.
+        click_rate:
+          type: number
+          format: float
+          minimum: 0
+          description: Recipients clicked / recipients opened as a percentage.
+        complaint_rate:
+          type: number
+          format: float
+          minimum: 0
+          description: Recipients with a complaint feedback report / delivered recipients as a percentage.
+      required:
+      - delivery_rate
+      - bounce_rate
+      - deferred_rate
+      - open_rate
+      - click_rate
+      - complaint_rate
+    EmailEventCounts:
+      type: object
+      description: Recipient-level outcome counts for the queried time range. Each to, cc, and bcc recipient counts separately; repeated events of the same type for the same message and recipient count once. Partial MTA injection results count successful recipients as sent and unsuccessful recipients as failed. Only the ten listed event types are counted; other valid event types (scheduled, cancelled, sandbox, sending, rejected) are not included in stats.
+      properties:
+        queued:
+          type: integer
+          minimum: 0
+        sent:
+          type: integer
+          minimum: 0
+        delivered:
+          type: integer
+          minimum: 0
+        deferred:
+          type: integer
+          minimum: 0
+        bounced:
+          type: integer
+          minimum: 0
+        opened:
+          type: integer
+          minimum: 0
+        clicked:
+          type: integer
+          minimum: 0
+        complained:
+          type: integer
+          minimum: 0
+        unsubscribed:
+          type: integer
+          minimum: 0
+        failed:
+          type: integer
+          minimum: 0
+      required:
+      - queued
+      - sent
+      - delivered
+      - deferred
+      - bounced
+      - opened
+      - clicked
+      - complained
+      - unsubscribed
+      - failed
+    AccountEmailEventListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccountEmailEvent'
+        meta:
+          $ref: '#/components/schemas/EventPaginationMeta'
+      required:
+      - data
+      - meta
+    ErrorObject:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Telnyx error code. Send admission errors include account daily quota 10011 and sender-domain ramp code domain_graduation_limit_exceeded. Edge idempotency errors use 10027 or 10036. Fallback 404/500 responses from the framework may use string status codes ('404', '500') instead.
+          enum:
+          - '10001'
+          - '10006'
+          - '10007'
+          - '10011'
+          - '10015'
+          - '10016'
+          - '10019'
+          - domain_graduation_limit_exceeded
+          - recipient_suppressed
+          - reputation_suspended
+          - '404'
+          - '500'
+          - '10027'
+          - '10036'
+        title:
+          type: string
+        detail:
+          description: Human-readable error detail. Changeset responses may return a structured object.
+          oneOf:
+          - type: string
+          - type: object
+            additionalProperties: true
+        source:
+          type: object
+          additionalProperties: true
+          nullable: true
+        meta:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: Additional metadata. Present on 401 errors with a documentation URL.
+      required:
+      - code
+      - title
+      - detail
+    TimeRange:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date-time
+          nullable: true
+        to:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - from
+      - to
+    SuppressedRecipient:
+      type: object
+      properties:
+        to:
+          type: string
+          format: email
+          description: Suppressed recipient email address.
+        reason:
+          type: string
+          description: Suppression reason returned by the recipient suppression service.
+        scope:
+          type: string
+          description: Scope at which the suppression applies.
+        override_allowed:
+          type: boolean
+          description: Whether an authorized send may override this suppression.
+      required:
+      - to
+      - reason
+      - scope
+      - override_allowed
+    EmailEventStats:
+      type: object
+      properties:
+        record_type:
+          type: string
+          enum:
+          - email_event_stats
+        counts:
+          $ref: '#/components/schemas/EmailEventCounts'
+        rates:
+          $ref: '#/components/schemas/EmailEventRates'
+        time_range:
+          $ref: '#/components/schemas/TimeRange'
+      required:
+      - record_type
+      - counts
+      - rates
+      - time_range
+    AccountEmailEventPayload:
+      type: object
+      additionalProperties: true
+      description: Payload returned by GET /email_events. Every row includes id, status, and occurred_at. Recipient-scoped rows also include recipient_id, from, subject, and exactly one object-valued to, cc, or bcc field. Legacy or message-scoped rows can omit recipient_id and use object-valued or string-valued to/cc fields, including an empty string when no address exists; bcc is redacted. If the related message or recipient cannot be loaded, the minimal fallback can omit from, subject, and recipient fields. Additional persisted public evidence can be present.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Email message UUID.
+        recipient_id:
+          type: string
+          format: uuid
+          description: Durable email recipient UUID. Present for recipient-scoped events.
+        status:
+          type: string
+          description: 'Stored event outcome slug, not the authoritative recipient status. Account polling returns the stored name, including suppression, scan, and quarantine lifecycle names. Webhooks retain legacy payload names: gateway rejections use failed and MTA expirations use bounced. New sharp stored rows can expose gw_reject, injection_timeout, or expired. Use the envelope canonical_event_type to identify the outcome across surfaces.'
+          enum:
+          - queued
+          - deferred
+          - scheduled
+          - cancelled
+          - sandbox
+          - sending
+          - sent
+          - failed
+          - delivered
+          - bounced
+          - complained
+          - suppressed
+          - rejected
+          - opened
+          - clicked
+          - unsubscribed
+          - daily_limit_exceeded
+          - scan_deferred
+          - quarantined
+          - quarantine_released
+          - quarantine_release_dispatched
+          - quarantine_rejected
+          - quarantine_expired
+          - gw_reject
+          - injection_timeout
+          - expired
+        occurred_at:
+          type: string
+          format: date-time
+        from:
+          $ref: '#/components/schemas/AccountEmailEventSender'
+        to:
+          oneOf:
+          - $ref: '#/components/schemas/EmailWebhookRecipient'
+          - type: string
+            description: Legacy message-scoped address, or an empty string when absent.
+        cc:
+          oneOf:
+          - $ref: '#/components/schemas/EmailWebhookRecipient'
+          - type: string
+            description: Legacy message-scoped address, or an empty string when absent.
+        bcc:
+          oneOf:
+          - $ref: '#/components/schemas/EmailWebhookRecipient'
+          - type: string
+            enum:
+            - redacted
+        subject:
+          type: string
+      required:
+      - id
+      - status
+      - occurred_at
+    EventPaginationMeta:
+      type: object
+      properties:
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        time_range:
+          $ref: '#/components/schemas/TimeRange'
+        page_cursor:
+          type: string
+          description: Cursor for the next page, when more results are available.
+      required:
+      - page_size
+      - time_range
+    AccountEmailEventSender:
+      type: object
+      additionalProperties: false
+      description: Sender projection in account event polling. The display name is explicitly null when the message has no sender name.
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+          nullable: true
+      required:
+      - email
+      - name
+  responses:
+    email_UnauthorizedResponse:
+      description: Not authorized (10006).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10006'
+              title: Not authorized
+              detail: Invalid API key
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10006
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

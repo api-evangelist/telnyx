@@ -1,11 +1,13 @@
 openapi: 3.2.0
 info:
-  contact:
-    email: support@telnyx.com
-  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
   title: Telnyx Traffic Policy Profiles API
   version: 2.0.0
+  contact:
+    email: support@telnyx.com
   x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Traffic Policy Profiles across 2 of this provider''s published API definitions: telnyx-openapi.yml, telnyx-openapi.json. Each path carries the servers of the definition it was published in.'
 servers:
 - description: Version 2.0.0 of the Telnyx API
   url: https://api.telnyx.com/v2
@@ -123,6 +125,9 @@ paths:
       tags:
       - Traffic Policy Profiles
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /traffic_policy_profiles/services:
     get:
       description: Get all available PCEF services that can be used in traffic policy profiles.
@@ -155,6 +160,9 @@ paths:
       tags:
       - Traffic Policy Profiles
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /traffic_policy_profiles/{id}:
     delete:
       description: Deletes the traffic policy profile.
@@ -252,117 +260,369 @@ paths:
       tags:
       - Traffic Policy Profiles
       x-latency-category: responsive
-components:
-  responses:
-    wireless_ResourceNotFound:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/wireless_Error'
-      description: Resource not found
-    GetTrafficPolicyProfileResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/TrafficPolicyProfile'
-            type: object
-      description: Successful Response
-    GetTrafficPolicyProfileServicesResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/WirelessPcrfService'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful Response
-    DeleteTrafficPolicyProfileResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                properties:
-                  id:
-                    description: Identifies the resource.
-                    example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-                    format: uuid
-                    type: string
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
+  /traffic/policy/profiles:
+    get:
+      summary: Get all traffic policy profiles
+      description: Get all traffic policy profiles belonging to the user that match the given filters.
+      operationId: getTrafficPolicyProfiles
+      tags:
+      - Traffic Policy Profiles
+      parameters:
+      - $ref: '#/components/parameters/wireless_PageNumber'
+      - $ref: '#/components/parameters/wireless_PageSize'
+      - name: filter[type]
+        description: Filter by traffic policy profile type.
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - whitelist
+          - blacklist
+          - throttling
+        example: whitelist
+      - name: filter[service]
+        description: Filter by service ID.
+        in: query
+        required: false
+        schema:
+          type: string
+        example: service_123
+      - name: sort
+        description: Sorts traffic policy profiles by the given field. Defaults to ascending order unless field is prefixed with a minus sign.
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - service
+          - -service
+          - type
+          - -type
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
                 type: object
-            type: object
-      description: Successful Response
-    GetTrafficPolicyProfilesResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/TrafficPolicyProfile'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful Response
-    wireless_UnprocessableEntity:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/wireless_Errors'
-      description: Unprocessable entity. Check the 'detail' field in response for details.
-    CreateTrafficPolicyProfileResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/TrafficPolicyProfile'
-            type: object
-      description: Successful Response
-    wireless_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/wireless_Errors'
-      description: Unexpected error
-    UpdateTrafficPolicyProfileResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/TrafficPolicyProfile'
-            type: object
-      description: Successful Response
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TrafficPolicyProfile'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          description: Unauthorized
+        default:
+          $ref: '#/components/responses/sim-cards-configuration_wireless_GenericErrorResponse'
+      x-latency-category: responsive
+      x-operation-id-source: normalized
+      x-operation-id-original: GetTrafficPolicyProfiles
+    post:
+      summary: Create a traffic policy profile
+      description: Create a new traffic policy profile. At least one of `services`, `ip_ranges`, or `domains` must be provided.
+      operationId: postTrafficPolicyProfiles
+      tags:
+      - Traffic Policy Profiles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  description: The type of the traffic policy profile.
+                  type: string
+                  enum:
+                  - whitelist
+                  - blacklist
+                  example: whitelist
+                services:
+                  description: Array of PCEF service IDs to include in the profile.
+                  type: array
+                  items:
+                    type: string
+                  example:
+                  - service_123
+                  - service_456
+                ip_ranges:
+                  description: Array of IP ranges in CIDR notation.
+                  type: array
+                  items:
+                    type: string
+                  example:
+                  - 10.64.0.0/24
+                  - 10.64.0.0/25
+                domains:
+                  description: Array of domain names.
+                  type: array
+                  items:
+                    type: string
+                  example:
+                  - www.hbomax.com
+                  - netflix.com
+                limit_bw_kbps:
+                  description: Bandwidth limit in kbps. Must be 512 or 1024.
+                  type: integer
+                  enum:
+                  - 512
+                  - 1024
+                  example: 512
+              required:
+              - type
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TrafficPolicyProfile'
+        '422':
+          $ref: '#/components/responses/sim-cards-configuration_wireless_UnprocessableEntity'
+        default:
+          $ref: '#/components/responses/sim-cards-configuration_wireless_GenericErrorResponse'
+      x-latency-category: responsive
+      x-operation-id-source: normalized
+      x-operation-id-original: CreateTrafficPolicyProfile
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /traffic/policy/profiles/services:
+    get:
+      summary: Get all available traffic policy profile services
+      description: Get all available PCEF services that can be used in traffic policy profiles.
+      operationId: getTrafficPolicyProfilesServices
+      tags:
+      - Traffic Policy Profiles
+      parameters:
+      - $ref: '#/components/parameters/wireless_PageNumber'
+      - $ref: '#/components/parameters/wireless_PageSize'
+      - name: filter[group]
+        description: Filter services by group.
+        in: query
+        required: false
+        schema:
+          type: string
+        example: Social Media
+      - name: filter[name]
+        description: Filter services by name.
+        in: query
+        required: false
+        schema:
+          type: string
+        example: Netflix
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WirelessPcrfService'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          description: Unauthorized
+        default:
+          $ref: '#/components/responses/sim-cards-configuration_wireless_GenericErrorResponse'
+      x-latency-category: responsive
+      x-operation-id-source: normalized
+      x-operation-id-original: GetTrafficPolicyProfileServices
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /traffic/policy/profiles/{id}:
+    delete:
+      summary: Delete a traffic policy profile
+      description: Permanently deletes the specified traffic policy profile from your account.
+      operationId: deleteTrafficPolicyProfilesById
+      tags:
+      - Traffic Policy Profiles
+      parameters:
+      - $ref: '#/components/parameters/TrafficPolicyProfileId'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        description: Identifies the resource.
+                        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+        '404':
+          $ref: '#/components/responses/wireless_ResourceNotFound'
+        default:
+          $ref: '#/components/responses/sim-cards-configuration_wireless_GenericErrorResponse'
+      x-latency-category: responsive
+      x-operation-id-source: normalized
+      x-operation-id-original: DeleteTrafficPolicyProfile
+    get:
+      summary: Get a traffic policy profile
+      description: Returns the details regarding a specific traffic policy profile.
+      operationId: getTrafficPolicyProfilesById
+      tags:
+      - Traffic Policy Profiles
+      parameters:
+      - $ref: '#/components/parameters/TrafficPolicyProfileId'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TrafficPolicyProfile'
+        '404':
+          $ref: '#/components/responses/wireless_ResourceNotFound'
+        default:
+          $ref: '#/components/responses/sim-cards-configuration_wireless_GenericErrorResponse'
+      x-latency-category: responsive
+      x-operation-id-source: normalized
+      x-operation-id-original: GetTrafficPolicyProfile
+    patch:
+      summary: Update a traffic policy profile
+      description: Updates the specified traffic policy profile and returns the updated profile.
+      operationId: patchTrafficPolicyProfilesById
+      tags:
+      - Traffic Policy Profiles
+      parameters:
+      - $ref: '#/components/parameters/TrafficPolicyProfileId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  description: The type of the traffic policy profile.
+                  type: string
+                  enum:
+                  - whitelist
+                  - blacklist
+                  - throttling
+                  example: whitelist
+                services:
+                  description: Array of PCEF service IDs to include in the profile.
+                  type: array
+                  items:
+                    type: string
+                  example:
+                  - service_123
+                ip_ranges:
+                  description: Array of IP ranges in CIDR notation.
+                  type: array
+                  items:
+                    type: string
+                  example:
+                  - 10.64.0.0/24
+                domains:
+                  description: Array of domain names.
+                  type: array
+                  items:
+                    type: string
+                  example:
+                  - netflix.com
+                limit_bw_kbps:
+                  description: Bandwidth limit in kbps. Must be 512 or 1024, or null to remove.
+                  type:
+                  - integer
+                  - 'null'
+                  enum:
+                  - 512
+                  - 1024
+                  - null
+                  example: 1024
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TrafficPolicyProfile'
+        '404':
+          $ref: '#/components/responses/wireless_ResourceNotFound'
+        '422':
+          $ref: '#/components/responses/sim-cards-configuration_wireless_UnprocessableEntity'
+        default:
+          $ref: '#/components/responses/sim-cards-configuration_wireless_GenericErrorResponse'
+      x-latency-category: responsive
+      x-operation-id-source: normalized
+      x-operation-id-original: UpdateTrafficPolicyProfile
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+components:
+  parameters:
+    wireless_PageSize:
+      description: The size of the page.
+      in: query
+      name: page[size]
+      schema:
+        default: 20
+        maximum: 250
+        minimum: 1
+        type: integer
+    TrafficPolicyProfileId:
+      description: Identifies the traffic policy profile.
+      in: path
+      name: id
+      required: true
+      schema:
+        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+        format: uuid
+        type: string
+    wireless_PageNumber:
+      description: The page number to load.
+      in: query
+      name: page[number]
+      schema:
+        default: 1
+        minimum: 1
+        type: integer
+    wireless_PageSize_c5290d5308:
+      name: page[size]
+      in: query
+      description: The size of the page.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 250
+        default: 20
+    wireless_PageNumber_c5290d5308:
+      name: page[number]
+      in: query
+      description: The page number to load.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
   schemas:
-    wireless_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/wireless_Error'
-          type: array
-      type: object
-    PaginationMeta:
-      properties:
-        page_number:
-          example: 2
-          type: integer
-        page_size:
-          example: 25
-          type: integer
-        total_pages:
-          example: 3
-          type: integer
-        total_results:
-          example: 55
-          type: integer
-      type: object
     wireless_Error:
       properties:
         code:
@@ -386,6 +646,21 @@ components:
       required:
       - code
       - title
+      type: object
+    PaginationMeta:
+      properties:
+        page_number:
+          example: 2
+          type: integer
+        page_size:
+          example: 25
+          type: integer
+        total_pages:
+          example: 3
+          type: integer
+        total_results:
+          example: 55
+          type: integer
       type: object
     TrafficPolicyProfile:
       properties:
@@ -448,6 +723,13 @@ components:
           readOnly: true
           type: string
       type: object
+    wireless_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/wireless_Error'
+          type: array
+      type: object
     WirelessPcrfService:
       properties:
         group:
@@ -467,33 +749,206 @@ components:
           readOnly: true
           type: string
       type: object
-  parameters:
-    wireless_PageNumber:
-      description: The page number to load.
-      in: query
-      name: page[number]
-      schema:
-        default: 1
-        minimum: 1
-        type: integer
-    wireless_PageSize:
-      description: The size of the page.
-      in: query
-      name: page[size]
-      schema:
-        default: 20
-        maximum: 250
-        minimum: 1
-        type: integer
-    TrafficPolicyProfileId:
-      description: Identifies the traffic policy profile.
-      in: path
-      name: id
-      required: true
-      schema:
-        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-        format: uuid
-        type: string
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
+    documents_Error:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          additionalProperties: true
+      type: object
+  responses:
+    CreateTrafficPolicyProfileResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/TrafficPolicyProfile'
+            type: object
+      description: Successful Response
+    GetTrafficPolicyProfileServicesResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/WirelessPcrfService'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful Response
+    GetTrafficPolicyProfilesResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/TrafficPolicyProfile'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful Response
+    wireless_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/wireless_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+    DeleteTrafficPolicyProfileResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                properties:
+                  id:
+                    description: Identifies the resource.
+                    example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+                    format: uuid
+                    type: string
+                type: object
+            type: object
+      description: Successful Response
+    GetTrafficPolicyProfileResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/TrafficPolicyProfile'
+            type: object
+      description: Successful Response
+    wireless_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/wireless_Errors'
+      description: Unexpected error
+    wireless_ResourceNotFound:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/wireless_Error'
+      description: Resource not found
+    UpdateTrafficPolicyProfileResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/TrafficPolicyProfile'
+            type: object
+      description: Successful Response
+    wireless_UnprocessableEntity_c5290d5308:
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          examples:
+            unprocessableEntity:
+              summary: Request could not be processed
+              value:
+                errors:
+                - code: '10027'
+                  title: Unprocessable Entity
+                  detail: The server understood the syntax of the request but was unable to process the instructions.
+    sim-cards-configuration_wireless_UnprocessableEntity:
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/wireless_Errors'
+          example:
+            errors:
+            - code: '10027'
+              title: Unprocessable Entity
+              detail: The server understood the syntax of the request but was unable to process the instructions.
+    wireless_GenericErrorResponse_c5290d5308:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          examples:
+            unexpectedError:
+              summary: Unexpected API error
+              value:
+                errors:
+                - code: '10007'
+                  title: Unexpected error
+                  detail: An unexpected error occured.
+    ResourceNotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/documents_Error'
+    sim-cards-configuration_wireless_GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/wireless_Errors'
+          example:
+            errors:
+            - code: '10007'
+              title: Unexpected error
+              detail: An unexpected error occured.
   securitySchemes:
     bearerAuth:
       scheme: bearer
@@ -528,3 +983,40 @@ components:
       bearerFormat: JWT
       scheme: bearer
       type: http
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-refined-from:
+- telnyx-openapi.yml
+- telnyx-openapi.json

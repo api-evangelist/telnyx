@@ -1,11 +1,13 @@
 openapi: 3.2.0
 info:
-  contact:
-    email: support@telnyx.com
-  description: Telnyx provides global communications and connectivity APIs for developers — including SIP trunking, programmable voice, SMS, MMS, WhatsApp Business Messaging, Call Control, Fax, Wireless (IoT & eSIM), Phone Numbers (DID provisioning & porting), Emergency Services, and Network APIs for private interconnects and edge connectivity. Build, scale, and manage voice, messaging, and data networks with Telnyx's carrier-grade global infrastructure and API-first platform.
   title: Telnyx OpenAI Chat API
   version: 2.0.0
+  contact:
+    email: support@telnyx.com
   x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged OpenAI Chat across 2 of this provider''s published API definitions: telnyx-openapi.yml, telnyx-openapi.json. Each path carries the servers of the definition it was published in.'
 servers:
 - description: Version 2.0.0 of the Telnyx API
   url: https://api.telnyx.com/v2
@@ -48,6 +50,9 @@ paths:
       tags:
       - OpenAI Chat
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
   /ai/openai/models:
     get:
       description: 'This endpoint returns a list of Open Source and OpenAI models that are available for use.
@@ -72,44 +77,161 @@ paths:
       tags:
       - OpenAI Chat
       x-latency-category: responsive
+    servers:
+    - description: Version 2.0.0 of the Telnyx API
+      url: https://api.telnyx.com/v2
+  /ai/openai/responses:
+    post:
+      tags:
+      - OpenAI Chat
+      summary: Create an OpenAI-compatible response
+      description: 'Create a response using Telnyx''s OpenAI-compatible Responses API. This endpoint is compatible with the OpenAI Responses API and may be used with the OpenAI JS or Python SDK by setting the base URL to `https://api.telnyx.com/v2/ai/openai`.
+
+
+        The `conversation` parameter refers to a Telnyx Conversation rather than an OpenAI-hosted conversation object. To persist a thread across turns, first create a conversation with `POST /ai/conversations`, then pass that conversation''s `id` in the Responses request as `conversation`. The endpoint appends the new input, assistant output, reasoning, and tool-call messages to that conversation. Reuse the same `conversation` id on subsequent Responses requests, including tool-result followups, so the model receives the prior context.
+
+
+        If `conversation` is omitted, the request is processed without persisting messages to a Telnyx conversation. Use the Conversations API to manage history: list conversations (optionally filtered by metadata), fetch messages for a conversation, and optionally add messages outside the Responses flow.
+
+
+        You can attach arbitrary metadata when creating a conversation (for example to tag the conversation''s source, channel, or user) and later filter by it when listing conversations.'
+      operationId: chat_public_openai_responses_completions_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                model:
+                  type: string
+                  description: Model identifier to use for the response, for example `zai-org/GLM-5.1-FP8` or another model available from the Telnyx OpenAI-compatible models endpoint.
+                service_tier:
+                  type: string
+                  description: The service tier to use for this request. Supported values vary by model; use `GET /v2/ai/openai/models` and inspect the model's `service_tiers` field. If omitted, Telnyx-hosted models use `default`.
+                region:
+                  type: string
+                  enum:
+                  - USA
+                  - EU
+                  - AUS
+                  - UAE
+                  description: 'Optional data-residency region the request should be served from, using the same vocabulary as your account''s Data Locality setting. Behavior depends on `mode`. Supported for Telnyx-hosted models only: a request routed to an external provider never passes through Telnyx model routing, so a region cannot be enforced for it. Omit for today''s latency-based routing.'
+                mode:
+                  type: string
+                  enum:
+                  - preferred
+                  - strict
+                  default: preferred
+                  description: 'How strictly `region` is applied. `preferred` (the default when `region` is set) tries that region first and falls back to another when the model cannot be served there, so a request that would have succeeded still succeeds. `strict` pins the request: it is served from that region or it fails with a 422, never redirected to another region. Requires `region`.'
+                input:
+                  description: The input items for this turn, using the OpenAI Responses API input format.
+                conversation:
+                  type: string
+                  format: uuid
+                  description: Optional Telnyx Conversation ID from `POST /ai/conversations`. When provided, Telnyx stores this turn on that conversation and uses the conversation's prior messages as context. Reuse the same ID for subsequent turns and tool-result followups. Omit it for a non-persisted, stateless response.
+                instructions:
+                  type: string
+                  description: Optional system/developer instructions for the model. When used with a persisted `conversation`, send these on the first request that creates the thread; subsequent turns can rely on the stored history.
+                stream:
+                  type: boolean
+                  description: Set to `true` to stream Server-Sent Events, matching OpenAI's Responses streaming format.
+                reasoning:
+                  type: object
+                  properties:
+                    effort:
+                      type: string
+                      enum:
+                      - none
+                      - minimal
+                      - low
+                      - medium
+                      - high
+                      - xhigh
+                      - max
+                      description: Controls the reasoning effort for models that support it. Same values and semantics as reasoning_effort on Chat Completions.
+            example:
+              model: zai-org/GLM-5.1-FP8
+              conversation: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+              instructions: You are a friendly chatbot.
+              input:
+              - role: user
+                content:
+                - type: input_text
+                  text: Hello, world!
+              stream: false
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+              example:
+                id: resp_8b1f2a3c9d4e5f6a
+                object: response
+                created_at: 1706011802
+                status: completed
+                model: zai-org/GLM-5.1-FP8
+                output:
+                - type: message
+                  id: msg_8b1f2a3c9d4e5f6a
+                  role: assistant
+                  content:
+                  - type: output_text
+                    text: Telnyx provides carrier-grade voice, messaging, and AI inference through one API.
+                usage:
+                  input_tokens: 24
+                  output_tokens: 18
+                  total_tokens: 42
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError_2'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    ChatCompletionResponseFormatParam:
+    ModelsResponse:
       properties:
-        type:
-          enum:
-          - text
-          - json_object
+        data:
+          items:
+            $ref: '#/components/schemas/ModelMetadata'
+          title: Data
+          type: array
+        object:
+          default: list
+          title: Object
           type: string
       required:
-      - type
-      title: ChatCompletionResponseFormatParam
+      - data
+      title: ModelsResponse
       type: object
-    ChatCompletionToolParam:
+    ValidationError:
       properties:
-        function:
-          $ref: '#/components/schemas/FunctionDefinition'
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
         type:
-          enum:
-          - function
+          title: Error Type
           type: string
       required:
-      - function
+      - loc
+      - msg
       - type
-      title: Function
-      type: object
-    Retrieval:
-      properties:
-        retrieval:
-          $ref: '#/components/schemas/BucketIds'
-        type:
-          enum:
-          - retrieval
-          type: string
-      required:
-      - type
-      - retrieval
-      title: Retrieval
+      title: ValidationError
       type: object
     ChatCompletionRequest:
       properties:
@@ -227,33 +349,30 @@ components:
       - messages
       title: ChatCompletionRequest
       type: object
-    FunctionDefinition:
+    BucketIds:
       properties:
-        description:
-          type: string
-        name:
-          type: string
-        parameters:
-          additionalProperties: true
-          type: object
-      required:
-      - name
-      title: FunctionDefinition
-      type: object
-    ModelsResponse:
-      properties:
-        data:
+        bucket_ids:
+          description: List of [embedded storage buckets](https://developers.telnyx.com/api-reference/embeddings/embed-documents) to use for retrieval-augmented generation.
           items:
-            $ref: '#/components/schemas/ModelMetadata'
-          title: Data
+            type: string
           type: array
-        object:
-          default: list
-          title: Object
+        max_num_results:
+          description: The maximum number of results to retrieve as context for the language model.
+          type: integer
+      required:
+      - bucket_ids
+      title: BucketIds
+      type: object
+    ChatCompletionResponseFormatParam:
+      properties:
+        type:
+          enum:
+          - text
+          - json_object
           type: string
       required:
-      - data
-      title: ModelsResponse
+      - type
+      title: ChatCompletionResponseFormatParam
       type: object
     ChatCompletionSystemMessageParam:
       properties:
@@ -290,14 +409,18 @@ components:
       - role
       title: ChatCompletionSystemMessageParam
       type: object
-    HTTPValidationError:
+    Retrieval:
       properties:
-        detail:
-          items:
-            $ref: '#/components/schemas/ValidationError'
-          title: Detail
-          type: array
-      title: HTTPValidationError
+        retrieval:
+          $ref: '#/components/schemas/BucketIds'
+        type:
+          enum:
+          - retrieval
+          type: string
+      required:
+      - type
+      - retrieval
+      title: Retrieval
       type: object
     ModelMetadata:
       properties:
@@ -320,40 +443,398 @@ components:
       - owned_by
       title: ModelMetadata
       type: object
-    ValidationError:
+    HTTPValidationError:
       properties:
-        loc:
+        detail:
           items:
-            anyOf:
-            - type: string
-            - type: integer
-          title: Location
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
           type: array
-        msg:
-          title: Message
+      title: HTTPValidationError
+      type: object
+    FunctionDefinition:
+      properties:
+        description:
           type: string
+        name:
+          type: string
+        parameters:
+          additionalProperties: true
+          type: object
+      required:
+      - name
+      title: FunctionDefinition
+      type: object
+    ChatCompletionToolParam:
+      properties:
+        function:
+          $ref: '#/components/schemas/FunctionDefinition'
         type:
-          title: Error Type
+          enum:
+          - function
           type: string
       required:
-      - loc
-      - msg
+      - function
       - type
-      title: ValidationError
+      title: Function
       type: object
-    BucketIds:
+    ChatCompletionRequest_2:
       properties:
-        bucket_ids:
-          description: List of [embedded storage buckets](https://developers.telnyx.com/api-reference/embeddings/embed-documents) to use for retrieval-augmented generation.
+        messages:
+          items:
+            $ref: '#/components/schemas/ChatCompletionSystemMessageParam'
+          type: array
+          example:
+          - role: system
+            content: You are a friendly chatbot.
+          - role: user
+            content: Hello, world!
+          description: A list of the previous chat messages for context.
+        model:
+          type: string
+          default: meta-llama/Meta-Llama-3.1-8B-Instruct
+          description: The language model to chat with.
+        service_tier:
+          type: string
+          description: The service tier to use for this request. Supported values vary by model; use `GET /v2/ai/openai/models` and inspect the model's `service_tiers` field. If omitted, Telnyx-hosted models use `default`.
+        region:
+          type: string
+          enum:
+          - USA
+          - EU
+          - AUS
+          - UAE
+          description: 'Optional data-residency region the request should be served from, using the same vocabulary as your account''s Data Locality setting. Behavior depends on `mode`. Supported for Telnyx-hosted models only: a request routed to an external provider never passes through Telnyx model routing, so a region cannot be enforced for it. Omit for today''s latency-based routing.'
+        mode:
+          type: string
+          enum:
+          - preferred
+          - strict
+          default: preferred
+          description: 'How strictly `region` is applied. `preferred` (the default when `region` is set) tries that region first and falls back to another when the model cannot be served there, so a request that would have succeeded still succeeds. `strict` pins the request: it is served from that region or it fails with a 422, never redirected to another region. Requires `region`.'
+        api_key_ref:
+          type: string
+          description: If you are using an external inference provider like xAI or OpenAI, this field allows you to pass along a reference to your API key. After creating an [integration secret](https://developers.telnyx.com/api-reference/integration-secrets/create-a-secret) for you API key, pass the secret's `identifier` in this field.
+        stream:
+          type: boolean
+          default: false
+          description: Whether or not to stream data-only server-sent events as they become available.
+        temperature:
+          type: number
+          default: 0.1
+          description: Adjusts the "creativity" of the model. Lower values make the model more deterministic and repetitive, while higher values make the model more random and creative.
+        max_tokens:
+          type:
+          - integer
+          - 'null'
+          default: 8192
+          description: Maximum number of completion (output) tokens the model may generate per request. Defaults to 8192 when omitted or `null`. Set a higher value to allow longer completions. The model's `max_completion_tokens` metadata (see `GET /ai/models`), when set, caps both the default and any larger explicit value. Reasoning models consume this budget across reasoning and answer tokens combined.
+        tools:
+          items:
+            oneOf:
+            - $ref: '#/components/schemas/ChatCompletionToolParam'
+            - $ref: '#/components/schemas/Retrieval'
+          type: array
+          description: The `function` tool type follows the same schema as the [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat). The `retrieval` tool type is unique to Telnyx. You may pass a list of [embedded storage buckets](https://developers.telnyx.com/api-reference/embeddings/embed-documents) for retrieval-augmented generation.
+        tool_choice:
+          type: string
+          enum:
+          - none
+          - auto
+          - required
+        response_format:
+          description: Controls the format of the model output. `json_object` guarantees valid JSON output without defining a schema; `json_schema` constrains the output to the JSON schema you supply via the `json_schema` property and is the supported way to get guaranteed structured output on Telnyx-hosted models.
+          $ref: '#/components/schemas/ChatCompletionResponseFormatParam_2'
+        min_p:
+          type: number
+          description: This is an alternative to `top_p` that [many prefer](https://github.com/huggingface/transformers/issues/27670). Must be in [0, 1].
+        n:
+          type: number
+          description: This will return multiple choices for you instead of a single chat completion.
+        use_beam_search:
+          type: boolean
+          default: false
+          description: Setting this to `true` will allow the model to [explore more completion options](https://huggingface.co/blog/how-to-generate#beam-search). This is not supported by OpenAI.
+        best_of:
+          type: integer
+          description: This is used with `use_beam_search` to determine how many candidate beams to explore.
+        length_penalty:
+          type: number
+          default: 1
+          description: This is used with `use_beam_search` to prefer shorter or longer completions.
+        early_stopping:
+          type: boolean
+          default: false
+          description: This is used with `use_beam_search`. If `true`, generation stops as soon as there are `best_of` complete candidates; if `false`, a heuristic is applied and the generation stops when is it very unlikely to find better candidates.
+        logprobs:
+          type: boolean
+          default: false
+          description: Whether to return log probabilities of the output tokens or not. If true, returns the log probabilities of each output token returned in the `content` of `message`.
+        top_logprobs:
+          type: integer
+          description: This is used with `logprobs`. An integer between 0 and 20 specifying the number of most likely tokens to return at each token position, each with an associated log probability.
+        frequency_penalty:
+          type: number
+          default: 0
+          description: Higher values will penalize the model from repeating the same output tokens.
+        presence_penalty:
+          type: number
+          default: 0
+          description: Higher values will penalize the model from repeating the same output tokens.
+        top_p:
+          type: number
+          description: An alternative or complement to `temperature`. This adjusts how many of the top possibilities to consider.
+        stop:
+          description: Up to 4 sequences where the API will stop generating further tokens. The returned text will not contain the stop sequence.
+          oneOf:
+          - type: string
+          - type: array
+            items:
+              type: string
+            maxItems: 4
+        seed:
+          type: integer
+          description: If specified, the system will make a best effort to sample deterministically, such that repeated requests with the same `seed` and parameters should return the same result.
+        enable_thinking:
+          type: boolean
+          default: true
+          description: Whether to enable the thinking/reasoning phase for models that support it (e.g., QwQ, Qwen3). When set to false, the model will skip the internal reasoning step and respond directly, which can reduce latency. Defaults to true.
+        reasoning_effort:
+          type: string
+          enum:
+          - none
+          - minimal
+          - low
+          - medium
+          - high
+          - xhigh
+          - max
+          description: 'Controls the reasoning effort for models that support it. When set, the model spends more or less compute on internal reasoning before generating its response. Supported values: none, minimal, low, medium, high, xhigh, max. Not all models support all values; unsupported values are rejected with a 400 error. When omitted, reasoning models use their default effort level.'
+      type: object
+      required:
+      - messages
+      title: ChatCompletionRequest
+    ChatCompletionResponseFormatParam_2:
+      description: Output format for the model response. `text` returns plain text, `json_object` enables JSON mode (valid JSON output without a schema), and `json_schema` constrains the output to a schema you supply. For guaranteed schema-conformant structured output on Telnyx-hosted models, use `json_schema`.
+      oneOf:
+      - $ref: '#/components/schemas/ResponseFormatText'
+      - $ref: '#/components/schemas/ResponseFormatJsonObject'
+      - $ref: '#/components/schemas/ResponseFormatJsonSchemaParam'
+      title: ChatCompletionResponseFormatParam
+    ResponseFormatText:
+      description: Plain text output.
+      properties:
+        type:
+          const: text
+          type: string
+      required:
+      - type
+      title: ResponseFormatText
+      type: object
+    ResponseFormatJsonSchemaParam:
+      description: 'Structured output: the model output is constrained to the JSON schema supplied in `json_schema`.'
+      properties:
+        type:
+          const: json_schema
+          type: string
+        json_schema:
+          $ref: '#/components/schemas/ResponseFormatJsonSchema'
+      required:
+      - type
+      - json_schema
+      title: ResponseFormatJsonSchemaParam
+      type: object
+    ModelMetadata_2:
+      type: object
+      title: ModelMetadata
+      description: Metadata for a model available on Telnyx Inference. Returned by `GET /v2/ai/openai/models` (and the deprecated `GET /v2/ai/models`). Open-source models live under their Hugging Face organization (e.g. `moonshotai/Kimi-K2.6`, `zai-org/GLM-5.1-FP8`, `MiniMaxAI/MiniMax-M2.7`); fine-tuned models are owned by the Telnyx organization that trained them.
+      required:
+      - id
+      - created
+      - owned_by
+      - organization
+      - context_length
+      - languages
+      - parameters
+      - tier
+      - license
+      properties:
+        id:
+          type: string
+          title: Id
+          description: Model identifier. For open-source models, follows the `{organization}/{model_name}` convention from Hugging Face (e.g. `moonshotai/Kimi-K2.6`).
+          example: moonshotai/Kimi-K2.6
+        object:
+          type: string
+          title: Object
+          default: model
+          description: Object type. Always `model`.
+        created:
+          type: string
+          format: date-time
+          title: Created
+          description: Timestamp at which the model was registered on Telnyx Inference (ISO 8601).
+        base_model:
+          type:
+          - string
+          - 'null'
+          title: Base Model
+          description: Base model the fine-tuned model was trained from. Only set for fine-tuned models.
+        owned_by:
+          type: string
+          title: Owned By
+          description: Owner of the model. `Telnyx` for Telnyx-hosted open-source models, the upstream provider name for proxied models, or the Telnyx organization id for fine-tuned models.
+          example: Telnyx
+        organization:
+          type: string
+          title: Organization
+          description: Organization that originally published the model, matching the prefix of `id` for open-source models.
+          example: moonshotai
+        task:
+          type: string
+          title: Task
+          default: text-generation
+          description: Primary task the model is intended for, e.g. `text-generation`, `audio-text-to-text`, `feature-extraction` (embeddings).
+          example: text-generation
+        context_length:
+          type: integer
+          title: Context Length
+          description: Maximum total tokens (prompt + completion) supported by the model in a single request.
+          example: 262144
+        max_completion_tokens:
+          type:
+          - integer
+          - 'null'
+          title: Max Completion Tokens
+          description: Maximum completion (output) tokens the model may generate per request. This value caps the Chat Completions `max_tokens` default and any larger explicit value on that model. `null` if unconstrained beyond `context_length`.
+        languages:
+          type: array
+          title: Languages
           items:
             type: string
-          type: array
-        max_num_results:
-          description: The maximum number of results to retrieve as context for the language model.
+          description: ISO language codes the model supports (e.g. `en`, `es`).
+        parameters:
           type: integer
+          title: Parameters
+          description: Total parameter count of the model.
+          example: 1000000000000
+        parameters_str:
+          type:
+          - string
+          - 'null'
+          title: Parameters (human readable)
+          description: Human-readable parameter count, e.g. `1.0T`, `753.9B`, `8B`.
+          example: 1.0T
+        tier:
+          type: string
+          title: Tier
+          enum:
+          - small
+          - medium
+          - large
+          - unlisted
+          description: Billing tier the model belongs to. Used together with `pricing` to determine cost per 1M tokens.
+        license:
+          type: string
+          title: License
+          description: License the model is distributed under, e.g. `Apache 2.0`, `MIT`, `Llama 3 Community License`.
+        is_fine_tunable:
+          type: boolean
+          title: Is Fine Tunable
+          default: false
+          description: Whether the model can be used as a base for a fine-tuning job via `POST /v2/ai/fine_tuning/jobs`.
+        recommended_for_assistants:
+          type: boolean
+          title: Recommended For Assistants
+          default: false
+          description: Whether Telnyx currently recommends this model as the LLM powering a Telnyx AI Assistant.
+        is_vision_supported:
+          type: boolean
+          title: Is Vision Supported
+          default: false
+          description: Whether the model accepts image inputs in chat completions (multimodal vision support).
+        description:
+          type:
+          - string
+          - 'null'
+          title: Description
+          description: Short, human-readable summary of what the model is best suited for.
+        pricing:
+          type: object
+          title: Pricing
+          additionalProperties:
+            type: string
+          description: Mapping of token kind to price, as strings to preserve precision. Typical keys are `prompt`, `cached_prompt`, and `completion`. When pricing is available the block also includes `currency` (ISO 4217 code matching the account's configured billing currency) and `unit` (the denomination the prices are quoted in, currently always `1M_tokens` for token-priced models).
+          example:
+            prompt: '0.300000'
+            completion: '1.200000'
+            cached_prompt: '0.060000'
+            currency: USD
+            unit: 1M_tokens
+        regions:
+          type: array
+          title: Regions
+          items:
+            type: string
+          description: Public region names where the model is currently deployed (e.g. `us-central-1`, `eu-central-1`).
+          example:
+          - us-central-1
+          - us-east-1
+        service_tiers:
+          type: array
+          title: Service Tiers
+          items:
+            type: string
+            enum:
+            - default
+            - priority
+            - flex
+          description: Service tiers supported by this Telnyx-hosted model. Use one of these values as `service_tier` in Chat Completions or Responses requests. This field is omitted for externally hosted models.
+    HTTPValidationError_2:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+      example:
+        detail:
+        - loc:
+          - body
+          - name
+          msg: Field required
+          type: missing
+    ResponseFormatJsonSchema:
+      description: The JSON schema configuration, required when `type` is `json_schema`. Matches the [OpenAI structured outputs](https://platform.openai.com/docs/guides/structured-outputs) `json_schema` response format.
+      properties:
+        name:
+          type: string
+          description: The name of the response format. Used for clarity only.
+        description:
+          type: string
+          description: A description of what the response format is for, typically used to guide the model.
+        schema:
+          type: object
+          additionalProperties: true
+          description: The JSON schema the model output must conform to. A valid [JSON Schema](https://json-schema.org) object, e.g. a Pydantic `model_json_schema()` export.
+        strict:
+          type: boolean
+          description: Enables strict schema adherence when supported by the model. If the generated output does not match the provided schema, the request fails instead of returning non-conformant output.
+      type: object
       required:
-      - bucket_ids
-      title: BucketIds
+      - name
+      title: ResponseFormatJsonSchema
+    ResponseFormatJsonObject:
+      description: 'JSON mode: the model output is valid JSON, without a schema.'
+      properties:
+        type:
+          const: json_object
+          type: string
+      required:
+      - type
+      title: ResponseFormatJsonObject
       type: object
   securitySchemes:
     bearerAuth:
@@ -389,3 +870,40 @@ components:
       bearerFormat: JWT
       scheme: bearer
       type: http
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-refined-from:
+- telnyx-openapi.yml
+- telnyx-openapi.json
