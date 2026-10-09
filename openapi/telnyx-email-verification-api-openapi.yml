@@ -1,0 +1,479 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Email Verification API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Email Verification
+  description: Verify ownership of a DIR's authorizer email. A short code is emailed and confirmed; the email must be verified before references can be submitted.
+paths:
+  /dir/{dir_id}/verify_email:
+    get:
+      tags:
+      - Email Verification
+      summary: Get email-ownership verification status
+      operationId: getDirEmailVerificationStatus
+      description: Whether the DIR's current authorizer email has been verified.
+      parameters:
+      - $ref: '#/components/parameters/DirId'
+      responses:
+        '200':
+          description: The current verification state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailVerificationStatusWrapped'
+        '404':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+    post:
+      tags:
+      - Email Verification
+      summary: Send an email-ownership verification code
+      operationId: requestDirEmailVerification
+      description: 'Email a 6-digit code to the DIR''s authorizer email to confirm ownership of that address.
+
+
+        The code expires in 15 minutes. Requesting a new code invalidates any previous one. Resends are rate limited (a short cooldown plus a daily cap). Submit the code to `POST /dir/{dir_id}/verify_email/confirm`.'
+      parameters:
+      - $ref: '#/components/parameters/DirId'
+      responses:
+        '200':
+          description: A code was emailed; the current verification state is returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailVerificationStatusWrapped'
+        '400':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        '404':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        '429':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        '503':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+  /dir/{dir_id}/verify_email/confirm:
+    post:
+      tags:
+      - Email Verification
+      summary: Confirm an email-ownership verification code
+      operationId: confirmDirEmailVerification
+      description: 'Submit the 6-digit code that was emailed to the DIR''s authorizer email. On success the authorizer email is marked verified.
+
+
+        For security, any failure (wrong, expired, already-used, or too many attempts) returns the same generic message.'
+      parameters:
+      - $ref: '#/components/parameters/DirId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationConfirmRequest'
+      responses:
+        '200':
+          description: The authorizer email is verified.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailVerificationStatusWrapped'
+        '400':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        '404':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+  /enterprises/{enterprise_id}/verify_email:
+    post:
+      tags:
+      - Email Verification
+      summary: Send an email-ownership verification code to an enterprise
+      operationId: requestEnterpriseEmailVerification
+      description: 'Email a 6-digit code to the enterprise account''s contact email to confirm ownership of that address.
+
+
+        A BPO (Business Process Outsourcer) account has no DIR, so it proves ownership of its own contact email here rather than through a DIR. A BPO account cannot be approved for use until this contact email is verified.
+
+
+        The code expires in 15 minutes. Requesting a new code invalidates any previous one. Resends are rate limited (a short cooldown plus a daily cap). Submit the code to `POST /enterprises/{enterprise_id}/verify_email/confirm`.'
+      parameters:
+      - $ref: '#/components/parameters/EnterpriseId'
+      responses:
+        '200':
+          description: A code was emailed; the current verification state is returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnterpriseEmailVerificationStatusWrapped'
+        '400':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        '404':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        '429':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        '503':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+  /enterprises/{enterprise_id}/verify_email/confirm:
+    post:
+      tags:
+      - Email Verification
+      summary: Confirm an enterprise email-ownership verification code
+      operationId: confirmEnterpriseEmailVerification
+      description: 'Submit the 6-digit code that was emailed to the enterprise account''s contact email. On success the contact email is marked verified.
+
+
+        For security, any failure (wrong, expired, already-used, or too many attempts) returns the same generic message.'
+      parameters:
+      - $ref: '#/components/parameters/EnterpriseId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnterpriseEmailVerificationConfirmRequest'
+      responses:
+        '200':
+          description: The contact email is verified.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnterpriseEmailVerificationStatusWrapped'
+        '400':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        '404':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+components:
+  schemas:
+    EmailVerificationStatus:
+      type: object
+      description: Verification state for a DIR's authorizer email.
+      required:
+      - record_type
+      - email_verified
+      - status
+      properties:
+        record_type:
+          type: string
+          enum:
+          - email_verification
+          description: Always `email_verification`.
+          example: email_verification
+          readOnly: true
+        email_verified:
+          type: boolean
+          description: Whether the DIR's authorizer email has been confirmed.
+          example: false
+        status:
+          type: string
+          enum:
+          - sent
+          - verified
+          - unverified
+          description: '`sent` after a code is emailed; `verified` after a successful confirm; `unverified` when no verification is in progress.'
+          example: sent
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the outstanding code stops being accepted. Null when no verification is in progress.
+          example: '2026-07-30T17:15:00Z'
+          readOnly: true
+        sends_remaining_today:
+          type: integer
+          nullable: true
+          description: How many more codes may be requested for this DIR today. Null when the daily cap does not apply.
+          example: 9
+          readOnly: true
+    EnterpriseEmailVerificationStatus:
+      type: object
+      description: Verification state for an enterprise account's contact email.
+      required:
+      - record_type
+      - email_verified
+      - status
+      properties:
+        record_type:
+          type: string
+          enum:
+          - email_verification
+          description: Always `email_verification`.
+          example: email_verification
+          readOnly: true
+        email_verified:
+          type: boolean
+          description: Whether the enterprise account's contact email has been confirmed.
+          example: false
+        status:
+          type: string
+          enum:
+          - sent
+          - verified
+          description: '`sent` after a code is emailed; `verified` after a successful confirm.'
+          example: sent
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the code just sent stops being accepted. Present on a send response; null on a confirm response.
+          example: '2026-07-30T17:15:00Z'
+          readOnly: true
+        sends_remaining_today:
+          type: integer
+          nullable: true
+          description: How many more codes may be requested for this enterprise account today. Present on a send response; null on a confirm response.
+          example: 9
+          readOnly: true
+    EnterpriseEmailVerificationConfirmRequest:
+      type: object
+      required:
+      - code
+      properties:
+        code:
+          type: string
+          minLength: 6
+          maxLength: 6
+          pattern: ^\d{6}$
+          description: The 6-digit code sent to the enterprise account's contact email.
+          example: '482915'
+    EmailVerificationStatusWrapped:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailVerificationStatus'
+    EmailVerificationConfirmRequest:
+      type: object
+      required:
+      - code
+      properties:
+        code:
+          type: string
+          minLength: 6
+          maxLength: 6
+          pattern: ^\d{6}$
+          description: The 6-digit code sent to the authorizer email.
+          example: '482915'
+    EnterpriseEmailVerificationStatusWrapped:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/EnterpriseEmailVerificationStatus'
+    branded-calling_Errors:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/branded-calling_Error'
+          description: List of one or more error entries. Order is not significant.
+      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
+    branded-calling_Error:
+      type: object
+      required:
+      - code
+      - title
+      - detail
+      - meta
+      properties:
+        code:
+          type: string
+          example: '10005'
+          description: Stable numeric Telnyx error catalog id. See `meta.url` for the full catalog entry.
+        title:
+          type: string
+          example: Invalid parameters
+          description: Short human-readable category, e.g. `Bad Request`, `Duplicate resource`, `Not Found`, `Forbidden`. Treat as advisory only - the stable identifier is `code`.
+        detail:
+          type: string
+          example: field required
+          description: Context-specific message describing what went wrong on this particular request. May embed offending values; do not rely on it for programmatic matching - branch on `code`.
+        meta:
+          type: object
+          required:
+          - url
+          properties:
+            url:
+              type: string
+              format: uri
+              example: https://developers.telnyx.com/docs/overview/errors/10005
+            pending_check_ids:
+              type: array
+              items:
+                type: string
+                format: uuid
+              description: Set on `422 vetting_checks_incomplete` responses from `/admin/dir/{id}/approve` and `/admin/phone-number-batches/approve`. Lists the still-pending vetting check ids.
+            pending_check_codes:
+              type: array
+              items:
+                type: string
+              description: Codes of the pending vetting checks (e.g. `loa_signature_valid`).
+            pending_check_labels:
+              type: array
+              items:
+                type: string
+              description: Human-readable labels of the pending vetting checks.
+          description: Carries `url` linking to the Telnyx error catalog entry for this `code`. Useful for forwarding the user to documentation.
+        source:
+          type: object
+          description: Optional pointer at the offending field of the request.
+          properties:
+            pointer:
+              type: string
+              example: /body/legal_name
+            parameter:
+              type: string
+              example: page[size]
+      description: A single entry in the canonical Telnyx error envelope. `code` is the stable Telnyx error catalog id; the human-readable explanation lives at `meta.url`. `detail` is a context-specific message; `source.pointer` (when present) names the offending field of the request.
+  parameters:
+    DirId:
+      name: dir_id
+      in: path
+      description: The DIR id. Lowercase UUID.
+      required: true
+      schema:
+        type: string
+        format: uuid
+        example: 16635d38-75a6-4481-82e8-69af60e05011
+    EnterpriseId:
+      name: enterprise_id
+      in: path
+      description: The enterprise id. Lowercase UUID.
+      required: true
+      schema:
+        type: string
+        format: uuid
+        example: 4a6192a4-573d-446d-b3ce-aff9117272a6
+  responses:
+    branded-calling_GenericErrorResponse:
+      description: An error occurred. The response carries the standard Telnyx error envelope.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/branded-calling_Errors'
+          examples:
+            validation_error:
+              summary: 422 - request body failed validation
+              value:
+                errors:
+                - code: '10005'
+                  title: Invalid parameters
+                  detail: field required
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10005
+                  source:
+                    pointer: /body/legal_name
+            bad_request:
+              summary: 400 - request rejected by a state guard
+              description: Returned when the request itself is well-formed but the resource is in a state that disallows this action (e.g. updating a DIR while it is being vetted, or deleting an enterprise that still has DIRs in vetting).
+              value:
+                errors:
+                - code: '10015'
+                  title: Bad Request
+                  detail: Cannot update DIR in 'verified' status
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10015
+            not_found:
+              summary: 404 - resource does not exist or is not yours
+              value:
+                errors:
+                - code: '10009'
+                  title: Resource not found
+                  detail: Enterprise not found.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+            conflict:
+              summary: 409 - request conflicts with current resource state
+              value:
+                errors:
+                - code: '10021'
+                  title: Resource in use
+                  detail: DIR has 1 active infringement claim(s). Resolve the claim before making this change.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10021
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

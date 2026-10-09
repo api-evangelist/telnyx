@@ -1,0 +1,476 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx kv keys API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: kv keys
+  description: Read and write keys within a KV namespace
+paths:
+  /storage/kvs/{id}/keys:
+    get:
+      description: Lists the keys in a namespace. Returns key names and metadata only, never values. Results are paginated with `limit` and an opaque `cursor`.
+      tags:
+      - kv keys
+      summary: List keys
+      operationId: ListKvKeys
+      parameters:
+      - description: KV namespace ID
+        name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - description: Return only keys that start with this prefix.
+        name: prefix
+        in: query
+        schema:
+          type: string
+      - description: Maximum number of keys to return. Values above 1000 are treated as 1000.
+        name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          default: 1000
+      - description: Opaque pagination cursor from a previous response's `meta.cursor`.
+        name: cursor
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Keys retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KvKeyListResponseWrapper'
+        '400':
+          description: Bad request — `id` is not a valid UUID, or `limit` is not a positive integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '404':
+          description: KV namespace not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '409':
+          description: Conflict — the namespace is not ready (`status` is not `provision_ok`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /storage/kvs/{id}/keys/{key}:
+    delete:
+      description: 'Deletes a key. Idempotent: deleting a key that does not exist still succeeds. The namespace itself must exist and be provisioned.'
+      tags:
+      - kv keys
+      summary: Delete a key
+      operationId: DeleteKvKey
+      parameters:
+      - description: KV namespace ID
+        name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - description: 'Key name. Allowed characters: `a-z A-Z 0-9 - _ / = .`; maximum 256 characters; names starting with `_` are reserved for system use. May contain `/`. When calling the HTTP API directly, URL-encode the key so the whole string is treated as one key (for example `user/1` -> `user%2F1`). SDK users should pass the key raw - SDKs URL-encode path parameters automatically.'
+        name: key
+        in: path
+        required: true
+        schema:
+          type: string
+          maxLength: 256
+          pattern: ^[-/_=.a-zA-Z0-9]+$
+      responses:
+        '200':
+          description: Key deleted (returned even if the key did not exist)
+        '400':
+          description: Bad request — invalid `id` or key name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '404':
+          description: KV namespace not found (a missing key is not an error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '409':
+          description: Conflict — the namespace is not ready (`status` is not `provision_ok`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+    get:
+      description: Returns the raw stored value for a key. The response body is the value exactly as it was written; the `Content-Type` header echoes the value's stored content type (defaults to `application/octet-stream`).
+      tags:
+      - kv keys
+      summary: Get a key's value
+      operationId: GetKvKey
+      parameters:
+      - description: KV namespace ID
+        name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - description: 'Key name. Allowed characters: `a-z A-Z 0-9 - _ / = .`; maximum 256 characters; names starting with `_` are reserved for system use. May contain `/`. When calling the HTTP API directly, URL-encode the key so the whole string is treated as one key (for example `user/1` -> `user%2F1`). SDK users should pass the key raw - SDKs URL-encode path parameters automatically.'
+        name: key
+        in: path
+        required: true
+        schema:
+          type: string
+          maxLength: 256
+          pattern: ^[-/_=.a-zA-Z0-9]+$
+      responses:
+        '200':
+          description: Value retrieved successfully. The `Content-Type` header is the value's stored content type (defaults to `application/octet-stream`).
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Bad request — invalid `id` or key name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '404':
+          description: Key or namespace not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '409':
+          description: Conflict — the namespace is not ready (`status` is not `provision_ok`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+    put:
+      description: Creates or replaces the value for a key. The request body is stored verbatim as the value — no base64, no JSON envelope — up to 1 MiB. The request's `Content-Type` header is stored with the value and echoed back on retrieval. Returns `201` when the key is created and `200` when an existing key is updated.
+      tags:
+      - kv keys
+      summary: Set a key's value
+      operationId: PutKvKey
+      parameters:
+      - description: KV namespace ID
+        name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - description: 'Key name. Allowed characters: `a-z A-Z 0-9 - _ / = .`; maximum 256 characters; names starting with `_` are reserved for system use. May contain `/`. When calling the HTTP API directly, URL-encode the key so the whole string is treated as one key (for example `user/1` -> `user%2F1`). SDK users should pass the key raw - SDKs URL-encode path parameters automatically.'
+        name: key
+        in: path
+        required: true
+        schema:
+          type: string
+          maxLength: 256
+          pattern: ^[-/_=.a-zA-Z0-9]+$
+      - description: Time-to-live in seconds. When set, the key expires and is deleted after this duration. Requires a namespace provisioned with TTL support; namespaces without it return a `409`.
+        name: ttl_secs
+        in: query
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 9223372036
+      requestBody:
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+              description: Raw value bytes, stored verbatim.
+            example: my-value
+        description: 'The value to store, sent as the raw request body. Maximum size: 1 MiB (1048576 bytes).'
+        required: true
+      responses:
+        '200':
+          description: Key updated
+        '201':
+          description: Key created
+        '400':
+          description: Bad request — invalid `id`, key name, or request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '404':
+          description: KV namespace not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '409':
+          description: Conflict — the namespace is not ready (`status` is not `provision_ok`), or `ttl_secs` was set on a namespace without TTL support
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '413':
+          description: Payload too large — the value exceeds 1 MiB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '422':
+          description: Unprocessable entity — `ttl_secs` is not a positive integer within range, or the unsupported `ttl` parameter was used
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+components:
+  schemas:
+    GenericErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/edge-compute_Error'
+    ErrorSource:
+      type: object
+      properties:
+        parameter:
+          type: string
+          example: id
+        pointer:
+          type: string
+          example: /id
+    KvKeyListResponseWrapper:
+      type: object
+      properties:
+        record_type:
+          type: string
+          example: storage_kv_key
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/KvKey'
+        meta:
+          $ref: '#/components/schemas/KvListMeta'
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    KvKey:
+      type: object
+      properties:
+        key:
+          type: string
+          example: user/123
+        size_bytes:
+          type: integer
+          description: Size of the stored value in bytes.
+          example: 21
+        updated_at:
+          type: string
+          format: date-time
+          example: '2026-06-18T14:48:17Z'
+    edge-compute_Error:
+      type: object
+      properties:
+        code:
+          type: string
+          example: '10005'
+        detail:
+          type: string
+          example: The requested function does not exist or you don't have access to it
+        meta:
+          $ref: '#/components/schemas/ErrorMeta'
+        source:
+          $ref: '#/components/schemas/ErrorSource'
+        title:
+          type: string
+          example: Function not found
+    ErrorMeta:
+      type: object
+      properties:
+        url:
+          type: string
+          example: https://docs.telnyx.com/api/errors/10005
+    KvListMeta:
+      type: object
+      properties:
+        has_more:
+          type: boolean
+          description: Whether more results are available on a following page.
+          example: false
+        cursor:
+          type: string
+          description: Opaque cursor for the next page; pass it back as the `cursor` query parameter. Omitted when there are no further results.
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

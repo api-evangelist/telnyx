@@ -1,0 +1,784 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Email Templates API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Email Templates
+  description: Create, list, retrieve, update, delete, and render Liquid email templates.
+paths:
+  /email_templates:
+    get:
+      tags:
+      - Email Templates
+      operationId: ListEmailTemplates
+      summary: List email templates
+      description: Lists templates sorted newest first by `created_at desc, id desc`.
+      parameters:
+      - $ref: '#/components/parameters/email_PageSize'
+      - $ref: '#/components/parameters/PageCursor'
+      responses:
+        '200':
+          description: Paginated list of templates.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailTemplateListResponse'
+              example:
+                data:
+                - record_type: email_template
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  name: string
+                  subject: string
+                  html_body: string
+                  text_body: string
+                  variables:
+                  - string
+                  strict_variables: false
+                  autoescape: false
+                  variable_schema: null
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  updated_at: '2024-01-23T18:10:02.574Z'
+                meta:
+                  page_size: 1
+                  page_cursor: string
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+    post:
+      tags:
+      - Email Templates
+      operationId: CreateEmailTemplate
+      summary: Create an email template
+      description: Creates a Liquid email template. Variables are auto-extracted when omitted.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEmailTemplateRequest'
+            example:
+              name: Welcome Email
+              subject: Welcome, {{ first_name }}!
+              html_body: <h1>Hello {{ first_name }}</h1>
+              text_body: Hello {{ first_name }}
+      responses:
+        '201':
+          description: Template created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailTemplateResponse'
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+        '400':
+          description: Bad Request / Validation Failed (10015). Invalid, duplicate, empty, malformed, or overlong Idempotency-Key headers are rejected by Edge with HTTP 400 and error code 10015.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              example:
+                errors:
+                - code: '10015'
+                  title: Bad Request
+                  detail: email is required
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflictResponse'
+        '413':
+          $ref: '#/components/responses/PayloadTooLargeResponse'
+        '422':
+          description: Validation Failed (10015) or changeset validation error. Reusing an Idempotency-Key with a different request also returns 422 (10027).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              example:
+                errors:
+                - code: '10015'
+                  title: Validation Failed
+                  detail: subject can't be blank
+                  source:
+                    pointer: /data/attributes/subject
+        '503':
+          $ref: '#/components/responses/email_ServiceUnavailableResponse'
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+  /email_templates/{id}:
+    delete:
+      tags:
+      - Email Templates
+      operationId: DeleteEmailTemplate
+      summary: Delete an email template
+      parameters:
+      - $ref: '#/components/parameters/TemplateId'
+      responses:
+        '204':
+          description: Template deleted. Empty response body.
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+      description: Deletes the account-owned template. The operation returns `204` with no body and prevents future sends or renders from using the deleted template ID.
+    get:
+      tags:
+      - Email Templates
+      operationId: GetEmailTemplate
+      summary: Get an email template
+      parameters:
+      - $ref: '#/components/parameters/TemplateId'
+      responses:
+        '200':
+          description: Template details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailTemplateResponse'
+              example:
+                data:
+                  record_type: email_template
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  name: string
+                  subject: string
+                  html_body: string
+                  text_body: string
+                  variables:
+                  - string
+                  strict_variables: false
+                  autoescape: false
+                  variable_schema: null
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  updated_at: '2024-01-23T18:10:02.574Z'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+      description: Returns the account-owned template identified by ID, including its Liquid subject and bodies, declared variables, and timestamps.
+    patch:
+      tags:
+      - Email Templates
+      operationId: UpdateEmailTemplate
+      summary: Update an email template
+      description: Updates one or more fields of the specified email template and returns the updated template.
+      parameters:
+      - $ref: '#/components/parameters/TemplateId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEmailTemplateRequest'
+            example:
+              subject: Welcome aboard, {{first_name}}!
+      responses:
+        '200':
+          description: Template updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailTemplateResponse'
+              example:
+                data:
+                  record_type: email_template
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  name: string
+                  subject: string
+                  html_body: string
+                  text_body: string
+                  variables:
+                  - string
+                  strict_variables: false
+                  autoescape: false
+                  variable_schema: null
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  updated_at: '2024-01-23T18:10:02.574Z'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+    put:
+      tags:
+      - Email Templates
+      operationId: ReplaceEmailTemplate
+      summary: Replace an email template
+      description: Replaces template fields. Behaves identically to PATCH; provided for compatibility with Phoenix resource routes.
+      parameters:
+      - $ref: '#/components/parameters/TemplateId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEmailTemplateRequest'
+            example:
+              subject: Welcome aboard, {{first_name}}!
+      responses:
+        '200':
+          description: Template updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailTemplateResponse'
+              example:
+                data:
+                  record_type: email_template
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  name: string
+                  subject: string
+                  html_body: string
+                  text_body: string
+                  variables:
+                  - string
+                  strict_variables: false
+                  autoescape: false
+                  variable_schema: null
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  updated_at: '2024-01-23T18:10:02.574Z'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+  /email_templates/{id}/render:
+    post:
+      tags:
+      - Email Templates
+      operationId: RenderEmailTemplate
+      summary: Render an email template
+      description: 'Renders a template using the provided Liquid variables. Missing `template_variables` defaults to `{}`.
+
+
+        When the template has `strict_variables` enabled and a required variable (per `variable_schema`) is missing, returns 422 naming the variable. When the template has `autoescape` enabled, the rendered `html_body` expression output is HTML-escaped at the output boundary; `subject` and `text_body` are not autoescaped.'
+      parameters:
+      - $ref: '#/components/parameters/TemplateId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenderEmailTemplateRequest'
+            example:
+              template_variables:
+                first_name: Ada
+      responses:
+        '200':
+          description: Rendered template content.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RenderedEmailTemplateResponse'
+              example:
+                data:
+                  record_type: email_template
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  name: string
+                  subject: string
+                  html_body: string
+                  text_body: string
+                  variables:
+                  - string
+                  strict_variables: false
+                  autoescape: false
+                  variable_schema: null
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  updated_at: '2024-01-23T18:10:02.574Z'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/TemplateRenderFailedResponse'
+components:
+  schemas:
+    email_PaginationMeta:
+      type: object
+      properties:
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        page_cursor:
+          type: string
+          description: Cursor for the next page, when more results are available.
+      required:
+      - page_size
+    VariableSchemaEntry:
+      type: object
+      additionalProperties: false
+      properties:
+        required:
+          type: boolean
+          description: Whether the variable must be supplied when strict variable validation is enabled.
+        default:
+          type: string
+          description: Default value for an optional variable. Rejected when `required` is `true`.
+      required:
+      - required
+    ErrorObject:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Telnyx error code. Send admission errors include account daily quota 10011 and sender-domain ramp code domain_graduation_limit_exceeded. Edge idempotency errors use 10027 or 10036. Fallback 404/500 responses from the framework may use string status codes ('404', '500') instead.
+          enum:
+          - '10001'
+          - '10006'
+          - '10007'
+          - '10011'
+          - '10015'
+          - '10016'
+          - '10019'
+          - domain_graduation_limit_exceeded
+          - recipient_suppressed
+          - reputation_suspended
+          - '404'
+          - '500'
+          - '10027'
+          - '10036'
+        title:
+          type: string
+        detail:
+          description: Human-readable error detail. Changeset responses may return a structured object.
+          oneOf:
+          - type: string
+          - type: object
+            additionalProperties: true
+        source:
+          type: object
+          additionalProperties: true
+          nullable: true
+        meta:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: Additional metadata. Present on 401 errors with a documentation URL.
+      required:
+      - code
+      - title
+      - detail
+    RenderedEmailTemplate:
+      allOf:
+      - $ref: '#/components/schemas/EmailTemplate'
+      - type: object
+        description: Template object with `subject`, `html_body`, and `text_body` replaced by their Liquid-rendered values. All other template fields (id, name, variables, etc.) remain unchanged.
+    RenderEmailTemplateRequest:
+      type: object
+      properties:
+        template_variables:
+          type: object
+          default: {}
+          additionalProperties: true
+          description: Variables for Liquid template rendering. Non-object values are silently treated as an empty object.
+    email_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorObject'
+        suppressed:
+          type: array
+          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
+      required:
+      - errors
+    EmailTemplateListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailTemplate'
+        meta:
+          $ref: '#/components/schemas/email_PaginationMeta'
+      required:
+      - data
+      - meta
+    RenderedEmailTemplateResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/RenderedEmailTemplate'
+      required:
+      - data
+    SuppressedRecipient:
+      type: object
+      properties:
+        to:
+          type: string
+          format: email
+          description: Suppressed recipient email address.
+        reason:
+          type: string
+          description: Suppression reason returned by the recipient suppression service.
+        scope:
+          type: string
+          description: Scope at which the suppression applies.
+        override_allowed:
+          type: boolean
+          description: Whether an authorized send may override this suppression.
+      required:
+      - to
+      - reason
+      - scope
+      - override_allowed
+    EmailTemplate:
+      type: object
+      properties:
+        record_type:
+          type: string
+          enum:
+          - email_template
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        subject:
+          type: string
+          nullable: true
+        html_body:
+          type: string
+          nullable: true
+        text_body:
+          type: string
+          nullable: true
+        variables:
+          type: array
+          description: Legacy unstructured variable names. This path remains supported unchanged.
+          items:
+            type: string
+        strict_variables:
+          type: boolean
+          description: 'Whether strict variable validation is enabled for this template. When `true`, sends and renders that are missing a variable marked `required: true` in `variable_schema` fail with 422 naming the variable.'
+        autoescape:
+          type: boolean
+          description: Whether HTML autoescaping is enabled for this template. When `true`, only rendered `html_body` expression output is HTML-escaped at the output boundary; `subject` and `text_body` are never autoescaped.
+        variable_schema:
+          type: object
+          nullable: true
+          description: Structured variable requirements, or `null` when the template uses only the legacy `variables` array.
+          additionalProperties:
+            $ref: '#/components/schemas/VariableSchemaEntry'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+      - record_type
+      - id
+      - name
+      - subject
+      - html_body
+      - text_body
+      - variables
+      - strict_variables
+      - autoescape
+      - variable_schema
+      - created_at
+      - updated_at
+    EmailTemplateResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailTemplate'
+      required:
+      - data
+    CreateEmailTemplateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          pattern: ^[A-Za-z0-9 _-]+$
+          description: Letters, numbers, spaces, hyphens, and underscores only.
+        subject:
+          type: string
+          nullable: true
+          description: Liquid template subject.
+        html_body:
+          type: string
+          nullable: true
+          description: Liquid template HTML body.
+        text_body:
+          type: string
+          nullable: true
+          description: Liquid template text body.
+        variables:
+          type: array
+          description: Template variables. Auto-extracted from subject/body fields when absent.
+          items:
+            type: string
+        strict_variables:
+          type: boolean
+          default: false
+          description: 'Per-template strict variable-validation setting. Defaults to `false` for backward compatibility. When `true`, a send or render that is missing a variable marked `required: true` in `variable_schema` fails with 422 naming the variable. Missing optional variables never fail; their schema `default` (when set) is applied to the render.'
+        autoescape:
+          type: boolean
+          default: false
+          description: 'Per-template HTML autoescaping setting. Defaults to `false` for backward compatibility. When `true`, the rendered `html_body` HTML-escapes each Liquid expression''s output at the output boundary (after its filters run, before concatenation with literal template markup). Input values are never mutated and `subject`/`text_body` are never autoescaped. The boundary escape is idempotent: HTML entities already present in the output (e.g. from an explicit `escape` filter) are preserved, so an explicit `escape`/`escape_once` is never double-escaped, and markup introduced by any later filter in the chain is still escaped.'
+        variable_schema:
+          type: object
+          nullable: true
+          description: 'Structured variable requirements. Required variables cannot define defaults; invalid combinations return 422. This is independent of the legacy `variables` array. On render with `strict_variables` enabled: `required` variables must be supplied as non-empty values — absent, `null`, empty string, empty object `{}`, and empty array `[]` all fail with 422 naming the variable, while present values such as `false` and `0` pass (they are present, not empty). Optional variables fall back to their `default` when absent.'
+          additionalProperties:
+            $ref: '#/components/schemas/VariableSchemaEntry'
+      required:
+      - name
+    UpdateEmailTemplateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          pattern: ^[A-Za-z0-9 _-]+$
+        subject:
+          type: string
+          nullable: true
+          description: Liquid template subject.
+        html_body:
+          type: string
+          nullable: true
+          description: Liquid template HTML body.
+        text_body:
+          type: string
+          nullable: true
+          description: Liquid template text body.
+        variables:
+          type: array
+          items:
+            type: string
+        strict_variables:
+          type: boolean
+          description: Per-template strict variable-validation setting.
+        autoescape:
+          type: boolean
+          description: Per-template HTML autoescaping setting.
+        variable_schema:
+          type: object
+          nullable: true
+          description: Structured variable requirements. Required variables cannot define defaults; invalid combinations return 422. Set to `null` to clear the schema.
+          additionalProperties:
+            $ref: '#/components/schemas/VariableSchemaEntry'
+  parameters:
+    PageCursor:
+      name: page_cursor
+      in: query
+      description: Opaque URL-safe Base64 cursor returned by a previous list response.
+      required: false
+      schema:
+        type: string
+      example: eyJpbnNlcnRlZF9hdCI6IjIwMjQtMDEtMDEifQ
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Optional opaque, unquoted key for safely retrying the same logical request. Keys must contain 1 to 255 letters, numbers, hyphens, or underscores. Generate a unique UUID v4 for each operation and reuse it only when retrying that operation with the same request. Invalid headers—including duplicate, empty, malformed, or overlong values—return 400 with error code 10015. A request already in progress with the same key returns 409; reusing the key with a different request returns 422. Only successful responses are replayed, for up to 24 hours. Do not include sensitive data in the key.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+        pattern: ^[A-Za-z0-9_-]{1,255}$
+      example: 8e03978e-40d5-43e8-bc93-6894a57f9326
+    TemplateId:
+      name: id
+      in: path
+      required: true
+      description: Email template UUID.
+      schema:
+        type: string
+        format: uuid
+    email_PageSize:
+      name: page_size
+      in: query
+      description: Number of results to return. Defaults to 25; maximum is 100. Invalid values are clamped to the valid range.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+  responses:
+    IdempotencyConflictResponse:
+      description: A request with the same Idempotency-Key is still being processed (10036). Retry later with the same key and request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10036'
+              title: Resource is being processed
+              detail: A request with this Idempotency-Key is already being processed.
+              source:
+                pointer: /header/Idempotency-Key
+    email_ServiceUnavailableResponse:
+      description: Service unavailable (10016), including an unavailable upstream dependency or unavailable Edge idempotency protection for a keyed request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10016'
+              title: Service Unavailable
+              detail: The email domain service is temporarily unavailable. Please try again later.
+    email_NotFoundResponse:
+      description: Resource not found (10001).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10001'
+              title: Not Found
+              detail: The requested resource was not found
+    email_UnauthorizedResponse:
+      description: Not authorized (10006).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10006'
+              title: Not authorized
+              detail: Invalid API key
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10006
+    TemplateRenderFailedResponse:
+      description: Standalone template render failure (10015).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10015'
+              title: Template Render Failed
+              detail: Liquid parse error
+    ValidationErrorResponse:
+      description: Validation Failed (10015) or changeset validation error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10015'
+              title: Validation Failed
+              detail: subject can't be blank
+              source:
+                pointer: /data/attributes/subject
+    PayloadTooLargeResponse:
+      description: Request body exceeds the 8,000,000-byte limit for this endpoint.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10007'
+              title: Unexpected error
+              detail: An unexpected error occured.
+  headers:
+    IdempotentReplayed:
+      description: Present with value `true` when Edge replayed a stored successful response for the supplied Idempotency-Key. Omitted for first-time requests and error responses.
+      schema:
+        type: boolean
+        enum:
+        - true
+        example: true
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

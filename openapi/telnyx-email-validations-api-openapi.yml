@@ -1,0 +1,622 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Email Validations API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Email Validations
+  description: Validate email addresses synchronously or in asynchronous batches.
+paths:
+  /email_validations:
+    post:
+      tags:
+      - Email Validations
+      operationId: CreateEmailValidation
+      summary: Validate a single email address
+      description: Validates a single email address and returns deliverability checks.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEmailValidationRequest'
+            example:
+              email: user@example.com
+      responses:
+        '200':
+          description: Email validation result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailValidationResponse'
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+        '400':
+          description: Bad Request / Validation Failed (10015). Invalid, duplicate, empty, malformed, or overlong Idempotency-Key headers are rejected by Edge with HTTP 400 and error code 10015.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              example:
+                errors:
+                - code: '10015'
+                  title: Bad Request
+                  detail: email is required
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflictResponse'
+        '413':
+          $ref: '#/components/responses/PayloadTooLargeResponse'
+        '422':
+          description: The Idempotency-Key was already used for a different request (10027).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              example:
+                errors:
+                - code: '10027'
+                  title: Unprocessable Entity
+                  detail: The server understood the syntax of the request but was unable to process the instructions.
+        '503':
+          $ref: '#/components/responses/email_ServiceUnavailableResponse'
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+  /email_validations/batch:
+    post:
+      tags:
+      - Email Validations
+      operationId: CreateEmailValidationBatch
+      summary: Create a batch email validation job
+      description: Creates an asynchronous batch validation job for up to 1,000 email addresses.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEmailValidationBatchRequest'
+            example:
+              emails:
+              - user@example.com
+              - admin@example.org
+              webhook_url: https://example.com/webhooks/email-validation
+      responses:
+        '202':
+          description: Batch validation job accepted. Poll GET /email_validations/batch/{id} with the returned batch id to retrieve results.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailValidationBatchResponse'
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+        '400':
+          description: Missing or invalid email list, or batch size exceeded. Invalid, duplicate, empty, malformed, or overlong Idempotency-Key headers are rejected by Edge with HTTP 400 and error code 10015.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              examples:
+                invalidEmails:
+                  value:
+                    errors:
+                    - code: '10015'
+                      title: Bad Request
+                      detail: emails is required and must be an array
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflictResponse'
+        '413':
+          $ref: '#/components/responses/PayloadTooLargeResponse'
+        '422':
+          description: Changeset validation error (e.g. invalid webhook_url). Reusing an Idempotency-Key with a different request also returns 422 (10027).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/email_ErrorResponse'
+              example:
+                errors:
+                - code: '10015'
+                  title: Validation Failed
+                  detail: webhook_url must be an HTTP or HTTPS URL
+                  source:
+                    pointer: /data/attributes/webhook_url
+        '500':
+          $ref: '#/components/responses/email_InternalServerErrorResponse'
+        '503':
+          $ref: '#/components/responses/email_ServiceUnavailableResponse'
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+  /email_validations/batch/{id}:
+    get:
+      tags:
+      - Email Validations
+      operationId: GetEmailValidationBatch
+      summary: Get a batch email validation job
+      description: Retrieves the current status and, once completed, validation results for a batch job.
+      parameters:
+      - $ref: '#/components/parameters/BatchId'
+      responses:
+        '200':
+          description: Batch validation job status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailValidationBatchDetailResponse'
+              example:
+                data:
+                  record_type: email_validation_batch
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  status: pending
+                  total: 0
+                  webhook_url: https://example.com
+                  completed_at: '2024-01-23T18:10:02.574Z'
+        '401':
+          $ref: '#/components/responses/email_UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/email_NotFoundResponse'
+components:
+  responses:
+    IdempotencyConflictResponse:
+      description: A request with the same Idempotency-Key is still being processed (10036). Retry later with the same key and request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10036'
+              title: Resource is being processed
+              detail: A request with this Idempotency-Key is already being processed.
+              source:
+                pointer: /header/Idempotency-Key
+    email_InternalServerErrorResponse:
+      description: Internal server error (10019).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10019'
+              title: Internal Server Error
+              detail: Failed to create batch validation
+    email_ServiceUnavailableResponse:
+      description: Service unavailable (10016), including an unavailable upstream dependency or unavailable Edge idempotency protection for a keyed request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10016'
+              title: Service Unavailable
+              detail: The email domain service is temporarily unavailable. Please try again later.
+    email_NotFoundResponse:
+      description: Resource not found (10001).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10001'
+              title: Not Found
+              detail: The requested resource was not found
+    email_UnauthorizedResponse:
+      description: Not authorized (10006).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10006'
+              title: Not authorized
+              detail: Invalid API key
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10006
+    PayloadTooLargeResponse:
+      description: Request body exceeds the 8,000,000-byte limit for this endpoint.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10007'
+              title: Unexpected error
+              detail: An unexpected error occured.
+  schemas:
+    EmailValidationChecks:
+      type: object
+      properties:
+        syntax:
+          $ref: '#/components/schemas/EmailValidationCheck'
+        mx:
+          $ref: '#/components/schemas/EmailValidationCheck'
+        disposable:
+          $ref: '#/components/schemas/EmailValidationCheck'
+        role_based:
+          $ref: '#/components/schemas/EmailValidationCheck'
+        typo:
+          $ref: '#/components/schemas/EmailValidationTypoCheck'
+      required:
+      - syntax
+      - mx
+      - disposable
+      - role_based
+      - typo
+    EmailValidationBatchDetailResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailValidationBatchDetail'
+      required:
+      - data
+    ErrorObject:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Telnyx error code. Send admission errors include account daily quota 10011 and sender-domain ramp code domain_graduation_limit_exceeded. Edge idempotency errors use 10027 or 10036. Fallback 404/500 responses from the framework may use string status codes ('404', '500') instead.
+          enum:
+          - '10001'
+          - '10006'
+          - '10007'
+          - '10011'
+          - '10015'
+          - '10016'
+          - '10019'
+          - domain_graduation_limit_exceeded
+          - recipient_suppressed
+          - reputation_suspended
+          - '404'
+          - '500'
+          - '10027'
+          - '10036'
+        title:
+          type: string
+        detail:
+          description: Human-readable error detail. Changeset responses may return a structured object.
+          oneOf:
+          - type: string
+          - type: object
+            additionalProperties: true
+        source:
+          type: object
+          additionalProperties: true
+          nullable: true
+        meta:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: Additional metadata. Present on 401 errors with a documentation URL.
+      required:
+      - code
+      - title
+      - detail
+    EmailValidationBatchResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailValidationBatch'
+      required:
+      - data
+    EmailValidation:
+      type: object
+      properties:
+        record_type:
+          type: string
+          enum:
+          - email_validation
+        email:
+          type: string
+        valid:
+          type: boolean
+        risk_score:
+          type: number
+          format: float
+          minimum: 0
+        did_you_mean:
+          type: string
+          description: Suggested correction for typo. Omitted when nil.
+        checks:
+          $ref: '#/components/schemas/EmailValidationChecks'
+      required:
+      - record_type
+      - email
+      - valid
+      - risk_score
+      - checks
+    email_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorObject'
+        suppressed:
+          type: array
+          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
+      required:
+      - errors
+    EmailValidationTypoCheck:
+      allOf:
+      - $ref: '#/components/schemas/EmailValidationCheck'
+      - type: object
+        properties:
+          suggestion:
+            type: string
+            description: Suggested correction for common typos. Omitted when nil.
+    EmailValidationBatchDetail:
+      description: Shape returned by the GET endpoint. Does not include duplicates_removed.
+      allOf:
+      - type: object
+        properties:
+          record_type:
+            type: string
+            enum:
+            - email_validation_batch
+          id:
+            type: string
+            format: uuid
+          status:
+            $ref: '#/components/schemas/EmailValidationBatchStatus'
+          total:
+            type: integer
+            minimum: 0
+          webhook_url:
+            type: string
+            format: uri
+          completed_at:
+            type: string
+            format: date-time
+          results:
+            type: object
+            description: Map keyed by original email address. Present only when the batch is completed.
+            additionalProperties:
+              $ref: '#/components/schemas/EmailValidationResult'
+        required:
+        - record_type
+        - id
+        - status
+        - total
+    SuppressedRecipient:
+      type: object
+      properties:
+        to:
+          type: string
+          format: email
+          description: Suppressed recipient email address.
+        reason:
+          type: string
+          description: Suppression reason returned by the recipient suppression service.
+        scope:
+          type: string
+          description: Scope at which the suppression applies.
+        override_allowed:
+          type: boolean
+          description: Whether an authorized send may override this suppression.
+      required:
+      - to
+      - reason
+      - scope
+      - override_allowed
+    EmailValidationBatch:
+      type: object
+      description: Shape returned by the create endpoint. Includes duplicates_removed.
+      properties:
+        record_type:
+          type: string
+          enum:
+          - email_validation_batch
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/EmailValidationBatchStatus'
+        total:
+          type: integer
+          minimum: 0
+        duplicates_removed:
+          type: integer
+          minimum: 0
+        webhook_url:
+          type: string
+          format: uri
+      required:
+      - record_type
+      - id
+      - status
+      - total
+      - duplicates_removed
+    CreateEmailValidationRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          description: Email address to validate. Any non-empty string is accepted; invalid syntax returns valid=false rather than a request error.
+      required:
+      - email
+    EmailValidationCheck:
+      type: object
+      properties:
+        pass:
+          type: boolean
+        details:
+          type: string
+          description: Human-readable check detail. Omitted when nil.
+      required:
+      - pass
+    EmailValidationBatchStatus:
+      type: string
+      enum:
+      - pending
+      - processing
+      - completed
+      - failed
+    EmailValidationResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailValidation'
+      required:
+      - data
+    EmailValidationResult:
+      type: object
+      properties:
+        email:
+          type: string
+        valid:
+          type: boolean
+        risk_score:
+          type: number
+          format: float
+          minimum: 0
+        did_you_mean:
+          type: string
+          description: Suggested correction for typo. Omitted when nil.
+        checks:
+          $ref: '#/components/schemas/EmailValidationChecks'
+      required:
+      - email
+      - valid
+      - risk_score
+      - checks
+    CreateEmailValidationBatchRequest:
+      type: object
+      properties:
+        emails:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items:
+            type: string
+            description: Email address to validate. Any string is accepted; validation results indicate whether the address is valid. Blank strings are discarded and counted in duplicates_removed; if all entries are blank, returns 400.
+        webhook_url:
+          type: string
+          format: uri
+          maxLength: 2048
+          pattern: ^https?://
+          description: URL for batch completion webhook. Empty string is treated as omitted. SSRF-protected; private/reserved IPs and internal hostnames are rejected.
+      required:
+      - emails
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Optional opaque, unquoted key for safely retrying the same logical request. Keys must contain 1 to 255 letters, numbers, hyphens, or underscores. Generate a unique UUID v4 for each operation and reuse it only when retrying that operation with the same request. Invalid headers—including duplicate, empty, malformed, or overlong values—return 400 with error code 10015. A request already in progress with the same key returns 409; reusing the key with a different request returns 422. Only successful responses are replayed, for up to 24 hours. Do not include sensitive data in the key.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+        pattern: ^[A-Za-z0-9_-]{1,255}$
+      example: 8e03978e-40d5-43e8-bc93-6894a57f9326
+    BatchId:
+      name: id
+      in: path
+      required: true
+      description: Email validation batch UUID.
+      schema:
+        type: string
+        format: uuid
+  headers:
+    IdempotentReplayed:
+      description: Present with value `true` when Edge replayed a stored successful response for the supplied Idempotency-Key. Omitted for first-time requests and error responses.
+      schema:
+        type: boolean
+        enum:
+        - true
+        example: true
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

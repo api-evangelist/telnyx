@@ -1,0 +1,319 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Settings API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Settings
+  description: How a namespace's summaries are written.
+paths:
+  /ai/memory/namespaces/{namespace}/settings:
+    get:
+      summary: Get a namespace's settings
+      operationId: GetNamespaceSettings
+      tags:
+      - Settings
+      description: 'What is currently set for this namespace. `instructions: null` means none are set and summaries use the neutral default.'
+      parameters:
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          description: The namespace. `default` exists for every organization.
+        description: The namespace. `default` exists for every organization.
+      responses:
+        '200':
+          description: The namespace's settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NamespaceSettingsResponse'
+              example:
+                data:
+                  summary:
+                    instructions: null
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: '10009'
+                  title: Authentication failed
+                  detail: Could not find any usable credentials in the request.
+                  source:
+                    pointer: /
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+        '404':
+          description: The namespace does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: namespace_not_found
+                  detail: no such namespace
+        '502':
+          description: Upstream error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: upstream_error
+                  detail: the memory dataplane is unavailable
+    patch:
+      summary: Change a namespace's settings
+      operationId: UpdateNamespaceSettings
+      tags:
+      - Settings
+      description: 'Only the fields you send are changed; anything omitted is left as it is, so `{}` changes nothing. Sending `instructions: null`, or an empty or whitespace-only string, clears them and returns summaries to the neutral default.
+
+
+        Instructions are capped at 2000 characters. A longer note is refused rather than truncated, because a note cut mid-sentence is a worse steer than none. A change reaches each summary the next time that summary is regenerated, not immediately.'
+      parameters:
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          description: The namespace. `default` exists for every organization.
+        description: The namespace. `default` exists for every organization.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NamespaceSettingsPatch'
+            example:
+              summary:
+                instructions: Lead with the customer's plan tier. Keep it under 100 words.
+      responses:
+        '200':
+          description: The settings as stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NamespaceSettingsResponse'
+              example:
+                data:
+                  summary:
+                    instructions: Lead with the customer's plan tier. Keep it under 100 words.
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: '10009'
+                  title: Authentication failed
+                  detail: Could not find any usable credentials in the request.
+                  source:
+                    pointer: /
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+        '404':
+          description: The namespace does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: namespace_not_found
+                  detail: no such namespace
+        '422':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: invalid_instructions
+                  detail: instructions must be at most 2000 characters
+        '502':
+          description: Upstream error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: upstream_error
+                  detail: the memory dataplane is unavailable
+components:
+  schemas:
+    NamespaceSettings:
+      properties:
+        summary:
+          $ref: '#/components/schemas/SummarySettings'
+          description: Settings that shape this namespace's summaries.
+      type: object
+      title: NamespaceSettings
+      description: A namespace's settings, grouped by what they affect.
+    NamespaceSettingsPatch:
+      properties:
+        summary:
+          anyOf:
+          - $ref: '#/components/schemas/SummarySettingsPatch'
+          - type: 'null'
+          description: Summary settings to change. Omit to change nothing.
+      type: object
+      title: NamespaceSettingsPatch
+    TelnyxErrors:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/TelnyxError'
+    SummarySettings:
+      properties:
+        instructions:
+          anyOf:
+          - type: string
+            maxLength: 2000
+          - type: 'null'
+          title: Instructions
+          description: 'Free-form instructions that influence how this namespace''s summaries are written, shared by every profile in the namespace. How you use them is up to you -- they steer the outcome, so try a phrasing and see how the summary comes out. Advisory: they steer the summary but never override or deny a profile''s own facts, and they do not affect recall. Null or empty means none are set, and summaries use the neutral default. A change reaches each summary the next time it is regenerated.'
+      type: object
+      title: SummarySettings
+      description: A namespace's summary settings, shared by every profile in it.
+    NamespaceSettingsResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/NamespaceSettings'
+      type: object
+      required:
+      - data
+      title: NamespaceSettingsResponse
+    SummarySettingsPatch:
+      properties:
+        instructions:
+          anyOf:
+          - type: string
+            maxLength: 2000
+          - type: 'null'
+          title: Instructions
+          description: Replace the namespace's summary instructions. Null or empty clears them and returns to the neutral default. Omit the field to leave the current instructions unchanged.
+      type: object
+      title: SummarySettingsPatch
+      description: 'A partial update to a namespace''s summary settings.
+
+
+        Only the fields present in the request are changed; the rest are left as
+
+        they are. Sending `instructions: null` (or empty) clears the instructions.'
+    TelnyxError:
+      type: object
+      properties:
+        code:
+          type: string
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              type: string
+        meta:
+          type: object
+          properties:
+            url:
+              type: string
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

@@ -1,0 +1,228 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Operations API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Operations
+  description: Whether a write has finished.
+paths:
+  /ai/memory/namespaces/{namespace}/operations/{operation_id}:
+    get:
+      summary: Status of a write
+      operationId: GetMemoryOperation
+      tags:
+      - Operations
+      parameters:
+      - name: operation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Operation Id
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Namespace
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationResponse'
+              example:
+                data:
+                  operation_id: op_01HZY4M7Q9
+                  status: completed
+                  created_at: '2026-08-26T21:14:07Z'
+                  completed_at: '2026-08-26T21:14:11Z'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: '10009'
+                  title: Authentication failed
+                  detail: Could not find any usable credentials in the request.
+                  source:
+                    pointer: /
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+        '404':
+          description: The operation does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: operation_not_found
+                  detail: no such operation
+        '502':
+          description: Upstream error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelnyxErrors'
+              example:
+                errors:
+                - code: upstream_error
+                  detail: the memory dataplane is unavailable
+      description: Whether a write has finished. Both `ingest` and `remember` return an `operation_id`, and a memory is not recallable until its operation completes — extraction, embedding and consolidation all run first.
+components:
+  schemas:
+    TelnyxError:
+      type: object
+      properties:
+        code:
+          type: string
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              type: string
+        meta:
+          type: object
+          properties:
+            url:
+              type: string
+    TelnyxErrors:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/TelnyxError'
+    OperationResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/Operation'
+      type: object
+      required:
+      - data
+      title: OperationResponse
+    Operation:
+      properties:
+        operation_id:
+          type: string
+          title: Operation Id
+        status:
+          type: string
+          title: Status
+          description: 'Where the write is. `completed`, `failed` and `cancelled` are terminal: stop polling at any of them, and treat `failed` and `cancelled` as writes that did not happen.'
+          enum:
+          - pending
+          - processing
+          - completed
+          - failed
+          - cancelled
+        created_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Created At
+        completed_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Completed At
+      type: object
+      required:
+      - operation_id
+      - status
+      title: Operation
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

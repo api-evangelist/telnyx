@@ -1,0 +1,612 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Meeting Session Data API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Meeting Session Data
+  description: Read lifecycle events, transcript segments, and recordings for a meeting session.
+paths:
+  /meeting_sessions/{id}/events:
+    get:
+      operationId: listMeetingSessionEvents
+      tags:
+      - Meeting Session Data
+      summary: List meeting session events
+      description: Returns stored events ordered by ascending `seq`. To continue, pass the last returned item's `seq` as `after`. An empty page means no later stored events existed at read time; this operation returns no separate next-page cursor. Default `limit` is 100 and maximum is 1,000.
+      parameters:
+      - $ref: '#/components/parameters/MeetingSessionId'
+      - $ref: '#/components/parameters/After'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Successful response with a list of meeting session events.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingSessionEventListResponse'
+              example:
+                data:
+                - seq: 12
+                  type: session.status_changed
+                  payload:
+                    status: active
+                    previous_status: waiting_for_admission
+                  occurred_at: '2026-06-16T09:00:05Z'
+        '400':
+          $ref: '#/components/responses/meeting-sessions_BadRequest'
+        '401':
+          $ref: '#/components/responses/meeting-sessions_Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/meeting-sessions_NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/meeting-sessions_InternalServerError'
+        '503':
+          $ref: '#/components/responses/MeetingReadAuthUnavailable'
+  /meeting_sessions/{id}/recording_media:
+    delete:
+      operationId: deleteMeetingSessionRecordingMedia
+      tags:
+      - Meeting Session Data
+      summary: Delete meeting session recording media
+      description: Irreversibly requests deletion of the aggregate recording media for the session. The operation retains the Telnyx-local Meeting session, transcript segments, events, artifacts, and usage records. It is separate from `DELETE /meeting_sessions/{id}`, which stops or cancels participation without deleting the persisted session. A missing/foreign session returns 404; provider deletion failures return 502.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/MeetingSessionId'
+      responses:
+        '202':
+          description: The irreversible recording-media deletion request was accepted, or a deletion is already in progress.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingSessionRecordingMediaDeletionResponse'
+        '401':
+          $ref: '#/components/responses/meeting-sessions_Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/RecordingMediaResourceNotFound'
+        '409':
+          $ref: '#/components/responses/RecordingMediaInvalidState'
+        '422':
+          $ref: '#/components/responses/RecordingMediaUnsupportedCapability'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/meeting-sessions_InternalServerError'
+        '502':
+          $ref: '#/components/responses/RecordingMediaProviderError'
+        '503':
+          $ref: '#/components/responses/RecordingMediaAuthenticationUnavailable'
+  /meeting_sessions/{id}/recordings:
+    get:
+      operationId: listMeetingSessionRecordings
+      tags:
+      - Meeting Session Data
+      summary: List meeting session recordings
+      description: Returns recordings for a meeting session.
+      parameters:
+      - $ref: '#/components/parameters/MeetingSessionId'
+      responses:
+        '200':
+          description: Successful response with a list of meeting session recordings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingSessionRecordingListResponse'
+              example:
+                data:
+                - type: video_mixed
+                  url: https://cdn.telnyx.com/recordings/mtgsess_9b2f.../video_mixed.mp4
+                  expires_at: '2026-06-17T09:00:42Z'
+        '401':
+          $ref: '#/components/responses/meeting-sessions_Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/meeting-sessions_NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/meeting-sessions_InternalServerError'
+        '502':
+          $ref: '#/components/responses/MeetingRecordingLookupProviderError'
+        '503':
+          $ref: '#/components/responses/MeetingReadAuthUnavailable'
+  /meeting_sessions/{id}/transcript:
+    get:
+      operationId: listMeetingSessionTranscript
+      tags:
+      - Meeting Session Data
+      summary: List meeting session transcript
+      description: 'Returns transcript segments ordered by ascending `seq`. Default `limit` is 100 and maximum is 1,000. Continue with `after=meta.next_after`. A long-poll timeout returns 200 with empty `data` and `meta.next_after: null`; retain the cursor supplied to that request because null is not a replacement cursor.'
+      parameters:
+      - $ref: '#/components/parameters/MeetingSessionId'
+      - $ref: '#/components/parameters/After'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/WaitSeconds'
+      responses:
+        '200':
+          description: Successful response with transcript segments (may be empty on wait timeout).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranscriptSegmentListResponse'
+        '400':
+          $ref: '#/components/responses/meeting-sessions_BadRequest'
+        '401':
+          $ref: '#/components/responses/meeting-sessions_Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/meeting-sessions_NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/meeting-sessions_InternalServerError'
+        '503':
+          $ref: '#/components/responses/MeetingReadAuthUnavailable'
+components:
+  parameters:
+    WaitSeconds:
+      name: wait_seconds
+      in: query
+      required: false
+      description: Long-poll duration in seconds. The server holds the connection open for up to this many seconds, waiting for new or updated results before returning an empty response. Set to 0 for an immediate response.
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 25
+        default: 0
+    After:
+      name: after
+      in: query
+      required: false
+      description: Return results with a cursor position after this value.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    MeetingSessionId:
+      name: id
+      in: path
+      required: true
+      description: Unique identifier for the meeting session.
+      schema:
+        type: string
+        examples:
+        - mtgsess_a1b2c3d4-e5f6-7890-abcd-ef1234567890
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: Maximum number of results to return per page.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 1000
+        default: 100
+  responses:
+    meeting-sessions_BadRequest:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: invalid_request
+              message: request is invalid
+    MeetingRecordingLookupProviderError:
+      description: The provider failed to return recording entries.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: provider_error
+              message: failed to fetch recordings from provider
+    RecordingMediaInvalidState:
+      description: Provider recording media cannot be deleted while the meeting is in progress.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: invalid_state
+              message: provider recording media cannot be deleted while the meeting is in progress
+    RecordingMediaUnsupportedCapability:
+      description: The session's provider does not support recording-media deletion, or does not match the configured provider.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: unsupported_capability
+              message: provider recording-media deletion is not supported
+    TooManyRequests:
+      description: Authentication is temporarily overloaded. Retry after the number of seconds in `Retry-After`.
+      headers:
+        Retry-After:
+          required: true
+          description: Seconds to wait before retrying.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: auth_overloaded
+              message: authentication temporarily overloaded
+    meeting-sessions_NotFound:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: not_found
+              message: meeting session not found
+    meeting-sessions_InternalServerError:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: internal_error
+              message: internal server error
+    RecordingMediaAuthenticationUnavailable:
+      description: The authentication service is unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: auth_unavailable
+              message: authentication service is unavailable
+    meeting-sessions_Unauthorized:
+      description: 'Unauthorized. On api.telnyx.com, authentication is enforced by the API gateway before the request reaches the Meeting service, so a missing or invalid API key returns the standard Telnyx error envelope (`{"errors": [{"code": "10009", ...}]}`) rather than the single-`error` shape below.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: unauthorized
+              message: invalid or missing credentials
+    RecordingMediaProviderError:
+      description: The provider request failed and the recording-media deletion outcome is unknown.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: provider_error
+              message: recording-media deletion outcome is unknown
+    RecordingMediaResourceNotFound:
+      description: The meeting session does not exist or belongs to another account.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: not_found
+              message: meeting session not found
+    MeetingReadAuthUnavailable:
+      description: Authentication is temporarily unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: auth_unavailable
+              message: authentication service unavailable
+    Forbidden:
+      description: The authenticated credential is not permitted to perform this operation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: forbidden
+              message: credential is not permitted
+  schemas:
+    MeetingSessionRecording:
+      type: object
+      additionalProperties: false
+      required:
+      - type
+      - url
+      - expires_at
+      properties:
+        type:
+          type: string
+        url:
+          type: string
+          format: uri
+          description: Current provider download URL. The API does not guarantee URL lifetime or refresh behavior.
+        expires_at:
+          type:
+          - string
+          - 'null'
+          description: Expiry timestamp when available, or null. Currently returns null.
+    MeetingSessionEventListResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeetingSessionEvent'
+    MeetingSessionEvent:
+      type: object
+      additionalProperties: false
+      required:
+      - seq
+      - type
+      - payload
+      - occurred_at
+      properties:
+        seq:
+          type: integer
+        type:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+        occurred_at:
+          type: string
+          format: date-time
+    TranscriptSegment:
+      type: object
+      additionalProperties: false
+      required:
+      - seq
+      - text
+      - confidence
+      - speaker_label
+      - relative_ts
+      - occurred_at
+      properties:
+        seq:
+          type: integer
+        text:
+          type: string
+        confidence:
+          type:
+          - number
+          - 'null'
+          minimum: 0
+          maximum: 1
+        speaker_label:
+          type:
+          - string
+          - 'null'
+        relative_ts:
+          type:
+          - number
+          - 'null'
+        occurred_at:
+          type: string
+          format: date-time
+      example:
+        seq: 1
+        text: Welcome to the project kickoff.
+        confidence: 0.98
+        speaker_label: Speaker 1
+        relative_ts: 12.5
+        occurred_at: '2025-01-15T10:00:12Z'
+    meeting-sessions_ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - error
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+          - code
+          - message
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+      examples:
+      - error:
+          code: invalid_request
+          message: webhook_url is disabled
+      - error:
+          code: not_found
+          message: meeting session not found
+      - error:
+          code: unsupported_capability
+          message: avatar video is not supported on platform 'unknown'
+      - error:
+          code: internal_error
+          message: internal server error
+    MeetingSessionRecordingListResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeetingSessionRecording'
+    MeetingSessionRecordingMediaDeletionResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required:
+          - meeting_session_id
+          - provider
+          - scope
+          - deletion_status
+          properties:
+            meeting_session_id:
+              type: string
+              description: The account-scoped Meeting Session identifier.
+            provider:
+              type: string
+              const: telnyx
+            scope:
+              type: string
+              const: provider_recording_media
+            deletion_status:
+              type: string
+              enum:
+              - requested
+              - already_in_progress
+      example:
+        data:
+          meeting_session_id: mtgsess_a1b2c3d4-e5f6-7890-abcd-ef1234567890
+          provider: telnyx
+          scope: provider_recording_media
+          deletion_status: requested
+    TranscriptSegmentListResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranscriptSegment'
+        meta:
+          type: object
+          additionalProperties: false
+          required:
+          - next_after
+          properties:
+            next_after:
+              type:
+              - integer
+              - 'null'
+              description: Cursor to pass as `after` on the next request, or null when the response contains no segments.
+      example:
+        data:
+        - seq: 41
+          text: let's ship it
+          confidence: 0.94
+          speaker_label: Ada L.
+          relative_ts: 1240.5
+          occurred_at: '2026-06-16T09:00:42Z'
+        meta:
+          next_after: 41
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

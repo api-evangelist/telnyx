@@ -1,0 +1,840 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Infringement Claims API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Infringement Claims
+  description: Trademark or impersonation claims filed against your DIR. Customers may contest a claim with supporting evidence.
+paths:
+  /dir/{dir_id}/infringement_claims:
+    get:
+      summary: List infringement claims for a DIR
+      description: 'Return the trademark or copyright claims filed against this DIR. Each claim''s `status` is `pending` (newly filed; DIR auto-suspended), `contested` (you have submitted contest evidence; awaiting resolution), or `resolved` (final). Resolution outcomes: `upheld` (claim accepted; DIR stays suspended/permanently_rejected), `rejected` (claim dismissed; DIR restored to `verified`), `modified` (partial outcome).'
+      operationId: listInfringementClaimsForDir
+      tags:
+      - Infringement Claims
+      parameters:
+      - $ref: '#/components/parameters/DirId'
+      - $ref: '#/components/parameters/BcPageNumber'
+      - $ref: '#/components/parameters/BcPageSize'
+      responses:
+        '200':
+          description: Paginated list of claims for this DIR.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InfringementClaimList'
+        default:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        4XX:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+  /dir/{dir_id}/infringement_update:
+    put:
+      summary: Update a DIR to resolve an infringement concern
+      description: Push a fix for a DIR that is `suspended` with an open infringement claim back into vetting. `POST /dir/{dir_id}/submit` is blocked while a claim is open, so this is the customer-callable path to update the DIR's content and re-certify before Telnyx adjudicates the claim. All four certification booleans must be `true`. Optional content fields (`display_name`, `logo_url`, `call_reasons`, `documents`) update the DIR; documents are append-only.
+      operationId: updateDirInfringement
+      tags:
+      - Infringement Claims
+      parameters:
+      - $ref: '#/components/parameters/DirId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DirInfringementUpdateRequest'
+            example:
+              certify_no_infringement: true
+              certify_brand_is_accurate: true
+              certify_no_shaft_content: true
+              certify_ip_ownership: true
+              infringement_resolution_notes: Updated the display name to remove the disputed mark and re-uploaded the authorization.
+      responses:
+        '200':
+          description: DIR updated and re-submitted for vetting.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirWrapped'
+        '400':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        '401':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        '404':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        '409':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        '422':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+  /infringement_claims/{claim_id}:
+    get:
+      summary: Get an infringement claim
+      description: Retrieve a single claim by id. Returns `404` if the claim does not exist or is not against a DIR you own.
+      operationId: getInfringementClaim
+      tags:
+      - Infringement Claims
+      parameters:
+      - name: claim_id
+        in: path
+        required: true
+        description: Claim id (lowercase UUID).
+        schema:
+          type: string
+          format: uuid
+          example: e379fbc8-cd83-4bef-a280-a0ac9d00dcf8
+      responses:
+        '200':
+          description: Claim.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InfringementClaimWrapped'
+        default:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        4XX:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+  /infringement_claims/{claim_id}/contest:
+    post:
+      summary: Contest an infringement claim
+      description: 'Submit a written response and supporting documents disputing the claim. The first call moves the claim from `pending` to `contested`; subsequent calls append supplementary evidence without changing status. The `documents[]` you attach are aggregated across rounds in the claim''s `contest_documents` field.
+
+
+        Only `pending` and `contested` claims accept new evidence. A `resolved` claim returns `400`.
+
+
+        Failure modes:
+
+        - `400` - the claim is `resolved` (terminal); cannot be contested further.
+
+        - `404` - the claim does not exist or is not against a DIR you own.
+
+        - `422` - `contest_notes` is too short ( 2000 chars), `documents` is > 20 entries, or a `document_id` is duplicated within the same submission.'
+      operationId: contestInfringementClaim
+      tags:
+      - Infringement Claims
+      parameters:
+      - name: claim_id
+        in: path
+        description: Unique identifier of the claim.
+        required: true
+        schema:
+          type: string
+          format: uuid
+          example: e379fbc8-cd83-4bef-a280-a0ac9d00dcf8
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InfringementClaimContest'
+            example:
+              contest_notes: We own the trademark outright; our registration precedes the claimant by three years. See attached certificate.
+              documents:
+              - document_id: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
+                document_type: trademark_registration
+                description: USPTO trademark certificate.
+      responses:
+        '200':
+          description: Updated claim, status `contested`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InfringementClaimWrapped'
+        default:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        4XX:
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+components:
+  schemas:
+    ContestSubmission:
+      type: object
+      description: One round of customer contest evidence on an infringement claim. The aggregated documents across rounds live on the parent claim's `contest_documents`; this submission record carries only the per-round notes and document count.
+      properties:
+        notes:
+          type: string
+          example: We own the trademark outright; our registration precedes the claimant by three years.
+        submitted_at:
+          type: string
+          format: date-time
+          example: '2026-04-22T02:13:06.629473Z'
+          readOnly: true
+        document_count:
+          type: integer
+          minimum: 0
+          example: 1
+          readOnly: true
+    CallReason:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 64
+          example: Appointment reminders
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-04-26T18:06:51.940749Z'
+          readOnly: true
+    InfringementClaimType:
+      type: string
+      enum:
+      - trademark
+      - copyright
+      description: Category of infringement being claimed.
+    InfringementClaimDirRef:
+      type: object
+      description: Snapshot of the DIR the claim is filed against, embedded for convenience.
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 42a3f554-7ce3-44c2-bfe9-6e1afe0d7991
+          readOnly: true
+        display_name:
+          type: string
+          example: Acme Plumbing
+        enterprise_id:
+          type: string
+          format: uuid
+          example: 7eca8226-8081-4e11-abdc-437b5f53a81f
+        status:
+          $ref: '#/components/schemas/DirStatus'
+    Document:
+      type: object
+      required:
+      - document_id
+      - document_type
+      properties:
+        document_id:
+          type: string
+          format: uuid
+          description: Id returned by the Telnyx Documents API after you upload the file (upload via `POST /v2/documents`; see https://developers.telnyx.com/api/documents).
+          example: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
+        document_type:
+          type: string
+          enum:
+          - letter_of_authorization
+          - business_registration
+          - articles_of_incorporation
+          - tax_document
+          - ein_letter
+          - trademark_registration
+          - website_ownership
+          - business_license
+          - professional_license
+          - government_id
+          - utility_bill
+          - bank_statement
+          - other
+          example: business_registration
+          description: Type of supporting document. Pick the closest match to what the file actually contains; `other` triggers manual vetting and may slow approval. The matching short_name reference list is at `GET /v2/dir/document_types`.
+        description:
+          type: string
+          maxLength: 255
+          description: An optional note describing this document, for example what it proves.
+          example: Certificate of incorporation.
+    branded-calling_Errors:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/branded-calling_Error'
+          description: List of one or more error entries. Order is not significant.
+      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
+    InfringementClaimList:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/InfringementClaim'
+        meta:
+          $ref: '#/components/schemas/branded-calling_PaginationMeta'
+    DirInfringementUpdateRequest:
+      type: object
+      required:
+      - certify_no_infringement
+      - certify_brand_is_accurate
+      - certify_no_shaft_content
+      - certify_ip_ownership
+      - infringement_resolution_notes
+      properties:
+        certify_no_infringement:
+          type: boolean
+          description: Check to certify that the brand no longer infringes anyone else's trademark or intellectual property.
+          enum:
+          - true
+        certify_brand_is_accurate:
+          type: boolean
+          description: Must be `true`.
+          enum:
+          - true
+        certify_no_shaft_content:
+          type: boolean
+          description: Must be `true`.
+          enum:
+          - true
+        certify_ip_ownership:
+          type: boolean
+          description: Must be `true`.
+          enum:
+          - true
+        infringement_resolution_notes:
+          type: string
+          minLength: 10
+          maxLength: 500
+          description: Explanation of how the infringement concern was addressed.
+        display_name:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 35
+          description: The business name shown to call recipients, 1 to 35 characters, no emoji, not blank.
+        logo_url:
+          type: string
+          nullable: true
+          maxLength: 128
+          description: Publicly accessible HTTPS URL (max 128 chars) to a 256x256 BMP logo (max 1 MB).
+        call_reasons:
+          type: array
+          items:
+            type: string
+          nullable: true
+          minItems: 1
+          maxItems: 10
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+          nullable: true
+          maxItems: 20
+          description: Append-only supporting documents to attach while resolving the claim (e.g. authorization or licensing proof).
+    Dir:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 16635d38-75a6-4481-82e8-69af60e05011
+          readOnly: true
+        enterprise_id:
+          type: string
+          format: uuid
+          example: 4a6192a4-573d-446d-b3ce-aff9117272a6
+        display_name:
+          type: string
+          example: Acme Plumbing
+        reselling:
+          type: boolean
+          example: false
+        certify_brand_is_accurate:
+          type: boolean
+          example: true
+        certify_no_shaft_content:
+          type: boolean
+          example: true
+        certify_ip_ownership:
+          type: boolean
+          example: true
+        authorizer_name:
+          type: string
+          nullable: true
+          example: Sam Owner
+        authorizer_email:
+          type: string
+          format: email
+          nullable: true
+          example: sam@acmeplumbing.example.com
+        logo_url:
+          type: string
+          format: uri
+          nullable: true
+          example: https://acmeplumbing.example.com/logo-256.bmp
+        call_reasons:
+          type: array
+          items:
+            $ref: '#/components/schemas/CallReason'
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+          nullable: true
+        status:
+          $ref: '#/components/schemas/DirStatus'
+        rejection_reasons:
+          type: array
+          items:
+            $ref: '#/components/schemas/RejectionReason'
+          nullable: true
+          description: Populated when `status` is `rejected`; cleared on `/submit` or successful approval.
+        rejected_at:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-04-26T18:06:51.940749Z'
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          example: '2026-04-26T18:09:24.785211Z'
+          readOnly: true
+        submitted_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2026-04-26T18:07:03.716411Z'
+          readOnly: true
+        verified_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2026-04-26T18:07:29.537926Z'
+          readOnly: true
+        expiring_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2027-04-26T18:07:29.537981Z'
+          readOnly: true
+        delete_requested_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When deletion was requested. Set once the DIR enters `delete_requested`; `null` otherwise.
+          example: '2026-04-27T09:12:44.201820Z'
+          readOnly: true
+        webhook_url:
+          type: string
+          format: uri
+          nullable: true
+          description: '`https://` URL that receives webhook notifications for this DIR''s compliance-review outcomes. `null` when not subscribed.'
+          example: https://acmehealthcare.example.com/webhooks/branded-calling
+    DirStatus:
+      type: string
+      enum:
+      - draft
+      - submitted
+      - in_review
+      - verified
+      - rejected
+      - unsuccessful
+      - suspended
+      - expired
+      - infringement_claimed
+      - permanently_rejected
+      - delete_requested
+      description: 'DIR lifecycle status.
+
+        - `draft` - newly created; editable; not yet submitted.
+
+        - `submitted` / `in_review` - Telnyx is reviewing.
+
+        - `verified` - approved; phone numbers may be attached.
+
+        - `rejected` - Telnyx rejected this submission; `rejection_reasons` is populated; customer can edit and resubmit.
+
+        - `unsuccessful` - system-side error during processing; customer can edit and resubmit.
+
+        - `suspended` - temporarily disabled (e.g. by an active infringement claim).
+
+        - `expired` - verification expired; customer must resubmit.
+
+        - `infringement_claimed` - a trademark/impersonation claim is open against this DIR.
+
+        - `permanently_rejected` - terminal; cannot be resubmitted.
+
+        - `delete_requested` - you have requested deletion; the DIR still exists and Telnyx is completing the removal (de-registration and cleanup). A verified DIR keeps serving its branded identity, and keeps billing, until the removal finishes.'
+    DirWrapped:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/Dir'
+    InfringementClaimWrapped:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/InfringementClaim'
+    RejectionReason:
+      type: object
+      properties:
+        code:
+          type: string
+          example: documentation_incomplete
+        title:
+          type: string
+          example: Documentation incomplete
+        detail:
+          type: string
+          example: Provided documents do not establish business identity.
+        message:
+          type: string
+          nullable: true
+          description: Customer-visible free-text comment from the Telnyx vetting team. Only the first entry of `rejection_reasons` carries this; the rest are `null`.
+          example: Please re-upload a clearer scan of the certificate.
+    branded-calling_PaginationMeta:
+      type: object
+      required:
+      - total_pages
+      - total_results
+      - page_number
+      - page_size
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+          description: Total number of pages available given the current `page_size`.
+        total_results:
+          type: integer
+          example: 42
+          description: Total number of items across all pages (excludes soft-deleted rows).
+        page_number:
+          type: integer
+          example: 1
+          description: 1-based index of this page. Echoes the `page[number]` query parameter (default `1`).
+        page_size:
+          type: integer
+          example: 20
+          description: Number of items returned in this page's `data` array. Capped at 250.
+      description: JSON:API pagination metadata returned with every paginated list response. Page numbering is 1-based. `page_size` reports the number of items actually returned in `data` for this page; the requested size is taken from the `page[size]` query parameter.
+    InfringementClaimContest:
+      type: object
+      required:
+      - contest_notes
+      additionalProperties: false
+      properties:
+        contest_notes:
+          type: string
+          minLength: 10
+          maxLength: 2000
+          description: Customer's response to the claim. 10–2000 characters.
+          example: We own the trademark outright; our registration precedes the claimant by three years.
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+          maxItems: 20
+          description: Up to 20 supporting documents per submission. `document_id` must be unique within this submission. Documents are aggregated into the claim's `contest_documents` across all submissions.
+    InfringementClaimStatus:
+      type: string
+      enum:
+      - pending
+      - contested
+      - resolved
+      description: Lifecycle status. `pending` - newly filed; the DIR is auto-suspended. `contested` - you have submitted contest evidence; awaiting Telnyx review. `resolved` - final.
+    branded-calling_Error:
+      type: object
+      required:
+      - code
+      - title
+      - detail
+      - meta
+      properties:
+        code:
+          type: string
+          example: '10005'
+          description: Stable numeric Telnyx error catalog id. See `meta.url` for the full catalog entry.
+        title:
+          type: string
+          example: Invalid parameters
+          description: Short human-readable category, e.g. `Bad Request`, `Duplicate resource`, `Not Found`, `Forbidden`. Treat as advisory only - the stable identifier is `code`.
+        detail:
+          type: string
+          example: field required
+          description: Context-specific message describing what went wrong on this particular request. May embed offending values; do not rely on it for programmatic matching - branch on `code`.
+        meta:
+          type: object
+          required:
+          - url
+          properties:
+            url:
+              type: string
+              format: uri
+              example: https://developers.telnyx.com/docs/overview/errors/10005
+            pending_check_ids:
+              type: array
+              items:
+                type: string
+                format: uuid
+              description: Set on `422 vetting_checks_incomplete` responses from `/admin/dir/{id}/approve` and `/admin/phone-number-batches/approve`. Lists the still-pending vetting check ids.
+            pending_check_codes:
+              type: array
+              items:
+                type: string
+              description: Codes of the pending vetting checks (e.g. `loa_signature_valid`).
+            pending_check_labels:
+              type: array
+              items:
+                type: string
+              description: Human-readable labels of the pending vetting checks.
+          description: Carries `url` linking to the Telnyx error catalog entry for this `code`. Useful for forwarding the user to documentation.
+        source:
+          type: object
+          description: Optional pointer at the offending field of the request.
+          properties:
+            pointer:
+              type: string
+              example: /body/legal_name
+            parameter:
+              type: string
+              example: page[size]
+      description: A single entry in the canonical Telnyx error envelope. `code` is the stable Telnyx error catalog id; the human-readable explanation lives at `meta.url`. `detail` is a context-specific message; `source.pointer` (when present) names the offending field of the request.
+    InfringementClaim:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: e379fbc8-cd83-4bef-a280-a0ac9d00dcf8
+          readOnly: true
+        dir_id:
+          type: string
+          format: uuid
+          example: 42a3f554-7ce3-44c2-bfe9-6e1afe0d7991
+        enterprise_id:
+          type: string
+          format: uuid
+          example: 7eca8226-8081-4e11-abdc-437b5f53a81f
+        claim_type:
+          $ref: '#/components/schemas/InfringementClaimType'
+        claim_description:
+          type: string
+          minLength: 10
+          maxLength: 2000
+          example: Alleged infringement on trademark XYZ.
+        claimant_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: Test Claimant LLC
+        claimant_contact:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: legal@testclaimant.example.com
+        claim_date:
+          type: string
+          format: date-time
+          description: When the claim was filed (set by the claimant's representative at file time).
+          example: '2026-04-22T02:12:54Z'
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/InfringementClaimStatus'
+        resolution:
+          type: string
+          nullable: true
+          enum:
+          - upheld
+          - rejected
+          - modified
+          description: Set only when `status` is `resolved`.
+        resolution_date:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        resolution_notes:
+          type: string
+          nullable: true
+          maxLength: 2000
+          readOnly: true
+        contest_documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+          description: Aggregated across all customer contest submissions on this claim.
+        contest_history:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContestSubmission'
+          description: Per-round submission audit trail. Each entry records one `POST /infringement_claims/{id}/contest` call (notes, timestamp, document count). Aggregated documents live on `contest_documents`.
+          readOnly: true
+        dir:
+          $ref: '#/components/schemas/InfringementClaimDirRef'
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-04-22T02:12:55.908411Z'
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          example: '2026-04-22T02:12:55.908417Z'
+          readOnly: true
+  parameters:
+    BcPageNumber:
+      name: page[number]
+      in: query
+      description: 1-based page number. Out-of-range values return an empty page with correct meta.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+        example: 1
+    BcPageSize:
+      name: page[size]
+      in: query
+      description: Items per page. Maximum 250; values above are clamped to 250.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 250
+        default: 20
+        example: 20
+    DirId:
+      name: dir_id
+      in: path
+      description: The DIR id. Lowercase UUID.
+      required: true
+      schema:
+        type: string
+        format: uuid
+        example: 16635d38-75a6-4481-82e8-69af60e05011
+  responses:
+    branded-calling_GenericErrorResponse:
+      description: An error occurred. The response carries the standard Telnyx error envelope.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/branded-calling_Errors'
+          examples:
+            validation_error:
+              summary: 422 - request body failed validation
+              value:
+                errors:
+                - code: '10005'
+                  title: Invalid parameters
+                  detail: field required
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10005
+                  source:
+                    pointer: /body/legal_name
+            bad_request:
+              summary: 400 - request rejected by a state guard
+              description: Returned when the request itself is well-formed but the resource is in a state that disallows this action (e.g. updating a DIR while it is being vetted, or deleting an enterprise that still has DIRs in vetting).
+              value:
+                errors:
+                - code: '10015'
+                  title: Bad Request
+                  detail: Cannot update DIR in 'verified' status
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10015
+            not_found:
+              summary: 404 - resource does not exist or is not yours
+              value:
+                errors:
+                - code: '10009'
+                  title: Resource not found
+                  detail: Enterprise not found.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+            conflict:
+              summary: 409 - request conflicts with current resource state
+              value:
+                errors:
+                - code: '10021'
+                  title: Resource in use
+                  detail: DIR has 1 active infringement claim(s). Resolve the claim before making this change.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10021
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

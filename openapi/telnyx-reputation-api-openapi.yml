@@ -1,0 +1,1351 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Reputation API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Reputation
+  description: Phone-number reputation monitoring (spam-score lookup and tracking).
+paths:
+  /enterprises/{enterprise_id}/reputation:
+    delete:
+      summary: Disable phone-number reputation for an enterprise
+      description: Disable Phone Number Reputation. All registered numbers are de-registered as a cascade. The enterprise itself is unaffected. Returns `204` on success, `404` if reputation is not enabled for this enterprise.
+      operationId: disableReputationSettings
+      tags:
+      - Reputation
+      parameters:
+      - $ref: '#/components/parameters/EnterpriseId'
+      responses:
+        '204':
+          description: 204 (no body)
+        '400':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '401':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '404':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+    get:
+      summary: Get phone-number reputation settings for an enterprise
+      description: 'Phone Number Reputation tracks how your outbound caller-IDs are perceived (spam risk, engagement, etc.) across the call-screening ecosystem. This endpoint reads the enterprise-level settings: whether the product is enabled, the refresh cadence, and the stored Letter of Authorization document id.
+
+
+        Returns `404` if reputation has never been enabled for this enterprise.'
+      operationId: getReputationSettings
+      tags:
+      - Reputation
+      parameters:
+      - $ref: '#/components/parameters/EnterpriseId'
+      responses:
+        '200':
+          description: Reputation settings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnterpriseReputationPublicWrapped'
+        '401':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '404':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+    post:
+      summary: Enable phone-number reputation for an enterprise
+      description: 'Activate Phone Number Reputation for the given enterprise. Requires an uploaded Letter of Authorization document (the `loa_document_id` references the Telnyx Documents API) and a refresh-frequency selection. After activation, individual phone numbers can be registered via `POST .../reputation/numbers`.
+
+
+        **Prerequisite**: the calling user must have agreed to the Phone Number Reputation Terms of Service (`POST /terms_of_service/number_reputation/agree`).
+
+
+        Failure modes:
+
+        - `403` - Phone Number Reputation Terms of Service not accepted.
+
+        - `404` - enterprise does not exist or does not belong to your account.
+
+        - `400` - reputation already enabled for this enterprise.
+
+        - `422` - `loa_document_id` missing or `check_frequency` invalid.
+
+
+        **Pricing:** This is a billable action. See https://telnyx.com/pricing/numbers for current pricing.'
+      operationId: enableReputationSettings
+      tags:
+      - Reputation
+      parameters:
+      - $ref: '#/components/parameters/EnterpriseId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnterpriseReputationCreate'
+            example:
+              loa_document_id: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
+              check_frequency: business_daily
+      responses:
+        '201':
+          description: Reputation enabled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnterpriseReputationPublicWrapped'
+        '400':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '401':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '404':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+  /enterprises/{enterprise_id}/reputation/frequency:
+    patch:
+      summary: Change the reputation refresh frequency
+      description: 'Update how often Telnyx refreshes the reputation data for this enterprise''s registered numbers. The new frequency takes effect on the next scheduled refresh.
+
+
+        The enterprise''s reputation must be in `approved` status. A request made while the status is `pending` is rejected with `400 Bad Request`.'
+      operationId: updateReputationFrequency
+      tags:
+      - Reputation
+      parameters:
+      - $ref: '#/components/parameters/EnterpriseId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnterpriseReputationUpdateFrequency'
+            example:
+              check_frequency: weekly
+      responses:
+        '200':
+          description: Frequency updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnterpriseReputationPublicWrapped'
+        '400':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '401':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '404':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+  /enterprises/{enterprise_id}/reputation/loa:
+    patch:
+      summary: Replace the reputation Letter of Authorization document
+      description: Point the enterprise's reputation settings at a new signed LOA document. This resets LOA approval to `pending`; the new document must be approved before additional phone numbers can be added.
+      operationId: replaceReputationLoa
+      tags:
+      - Reputation
+      parameters:
+      - $ref: '#/components/parameters/EnterpriseId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnterpriseReputationLoaUpdate'
+            example:
+              loa_document_id: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
+      responses:
+        '200':
+          description: Updated reputation settings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnterpriseReputationPublicWrapped'
+        '400':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '401':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '404':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+    post:
+      summary: Render a phone-number reputation Letter of Authorization
+      description: Render the LOA for this enterprise as a PDF. The enterprise identity, address, and authorized-representative contact are taken from the enterprise record; the optional `agent` block is supplied only when a third-party partner manages the numbers. The response is the PDF itself (unsigned unless a `signature` is provided). Sign it and upload it to the Telnyx Documents API (`POST /v2/documents`, see https://developers.telnyx.com/api/documents) to obtain the `loa_document_id` required by `POST .../reputation`.
+      operationId: generateReputationLoa
+      tags:
+      - Reputation
+      parameters:
+      - $ref: '#/components/parameters/EnterpriseId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnterpriseReputationLoaRender'
+            example: {}
+      responses:
+        '200':
+          description: Rendered LOA PDF.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '401':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '403':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '404':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+  /enterprises/{enterprise_id}/reputation/numbers:
+    get:
+      summary: List reputation-monitored phone numbers for an enterprise
+      description: Paginated list of phone numbers registered for reputation monitoring under this enterprise. The response includes the latest reputation snapshot per number where one has been collected.
+      operationId: listReputationNumbers
+      tags:
+      - Reputation
+      parameters:
+      - $ref: '#/components/parameters/EnterpriseId'
+      - $ref: '#/components/parameters/BcPageNumber'
+      - name: page[size]
+        in: query
+        description: Items per page. Default 10. Maximum 250; values above are clamped to 250.
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 250
+          default: 10
+          example: 10
+      - name: filter[phone_number][contains]
+        in: query
+        required: false
+        description: Partial match on phone number. Must contain at least 5 digits.
+        schema:
+          type: string
+          example: '+16035551234'
+      - name: filter[phone_number][eq]
+        in: query
+        required: false
+        description: Exact phone-number match (E.164).
+        schema:
+          type: string
+          example: '+16035551234'
+      responses:
+        '200':
+          description: Paginated list of numbers with reputation data.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReputationPhoneNumberListWithReputation'
+        '401':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '404':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+    post:
+      summary: Register phone numbers for reputation monitoring
+      description: 'Add up to 100 phone numbers to reputation monitoring on this enterprise. Each must be in E.164 format (`+1NPANXXXXXX` for US/CA) and belong to your Telnyx phone-number inventory.
+
+
+        **Prerequisite**: reputation must already be enabled on this enterprise (see `POST .../reputation`).
+
+
+        **Pricing:** This is a billable action. See https://telnyx.com/pricing/numbers for current pricing.'
+      operationId: associateReputationNumbers
+      tags:
+      - Reputation
+      parameters:
+      - $ref: '#/components/parameters/EnterpriseId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReputationPhoneNumberCreate'
+            example:
+              phone_numbers:
+              - '+19493253498'
+              - '+12134445566'
+      responses:
+        '201':
+          description: Numbers registered.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReputationPhoneNumberList'
+        '400':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '401':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '404':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+  /enterprises/{enterprise_id}/reputation/numbers/refresh:
+    post:
+      summary: Force a reputation refresh
+      description: 'Immediately refresh the stored reputation data for the listed numbers. This is in addition to the periodic refresh determined by `check_frequency`. Up to 100 numbers per call. The response carries the kicked-off jobs; the actual refresh runs asynchronously.
+
+
+        **Pricing:** Forcing a refresh performs live reputation lookups, which are billable. See https://telnyx.com/pricing/numbers for current pricing.'
+      operationId: refreshReputationNumbers
+      tags:
+      - Reputation
+      parameters:
+      - $ref: '#/components/parameters/EnterpriseId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshReputationRequest'
+            example:
+              phone_numbers:
+              - '+19493253498'
+      responses:
+        '200':
+          description: Refresh completed (the call is synchronous from the customer's POV - Telnyx fans out to the reputation feed before responding).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshReputationResponse'
+        default:
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        4XX:
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+  /enterprises/{enterprise_id}/reputation/numbers/{phone_number}:
+    delete:
+      summary: Remove a phone number from reputation monitoring
+      description: Stop tracking the reputation of this phone number. The number itself remains in your inventory; only the reputation registration is removed.
+      operationId: disassociateReputationNumber
+      tags:
+      - Reputation
+      parameters:
+      - $ref: '#/components/parameters/EnterpriseId'
+      - $ref: '#/components/parameters/PhoneNumberPath'
+      responses:
+        '204':
+          description: 204 (no body)
+        '401':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '404':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+    get:
+      summary: Get a single reputation-monitored phone number
+      description: Retrieve one registered number with its latest reputation snapshot. The `phone_number` path parameter is in E.164 format and must be URL-encoded (e.g. `%2B19493253498`).
+      operationId: getPhoneNumberReputation
+      tags:
+      - Reputation
+      parameters:
+      - $ref: '#/components/parameters/EnterpriseId'
+      - $ref: '#/components/parameters/PhoneNumberPath'
+      - name: fresh
+        in: query
+        description: When true, fetches fresh reputation data (incurs API cost). When false (default), returns cached data.
+        required: false
+        schema:
+          type: boolean
+          default: false
+      responses:
+        '200':
+          description: Phone number with reputation data.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReputationPhoneNumberWithReputation'
+        '401':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '403':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '404':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+  /enterprises/{enterprise_id}/reputation/remediation:
+    get:
+      summary: List reputation remediation requests for an enterprise
+      description: Paginated list of remediation requests for this enterprise. List items omit per-number results and webhook URLs to keep the response small; call GET by id for full detail. Supports JSON:API pagination and optional filters on status and created-at range.
+      operationId: listReputationRemediations
+      tags:
+      - Reputation
+      parameters:
+      - $ref: '#/components/parameters/EnterpriseId'
+      - $ref: '#/components/parameters/BcPageNumber'
+      - $ref: '#/components/parameters/BcPageSize'
+      - name: filter[status]
+        in: query
+        required: false
+        description: Filter by customer-facing status.
+        schema:
+          $ref: '#/components/schemas/RemediationStatus'
+      - name: filter[created_at][gte]
+        in: query
+        required: false
+        description: Only requests created on or after this timestamp (ISO 8601).
+        schema:
+          type: string
+          format: date-time
+          example: '2026-01-01T00:00:00Z'
+      - name: filter[created_at][lte]
+        in: query
+        required: false
+        description: Only requests created on or before this timestamp (ISO 8601).
+        schema:
+          type: string
+          format: date-time
+          example: '2026-12-31T23:59:59Z'
+      responses:
+        '200':
+          description: Paginated list of remediation requests.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RemediationRequestList'
+        '401':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '404':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+    post:
+      summary: Submit phone numbers for reputation remediation
+      description: 'Submit a batch of phone numbers belonging to this enterprise for reputation remediation. The request is accepted asynchronously: this endpoint returns `202` with the persisted request id, then the request transitions through processing states until completion. Use the GET endpoints to poll status and per-number results.
+
+
+        Each phone number must be in E.164 format and belong to this enterprise. A number that already has an in-flight remediation request is rejected.'
+      operationId: submitReputationRemediation
+      tags:
+      - Reputation
+      parameters:
+      - $ref: '#/components/parameters/EnterpriseId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RemediationRequestCreate'
+            example:
+              phone_numbers:
+              - '+19493253498'
+              - '+12134445566'
+              call_purpose: Appointment reminders for our dental clinic.
+              contact_email: ops@example.com
+              webhook_url: https://example.com/webhooks/remediation
+      responses:
+        '202':
+          description: Remediation request accepted and persisted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RemediationRequestWrapped'
+        '400':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '401':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '404':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '409':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '422':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+  /enterprises/{enterprise_id}/reputation/remediation/{remediation_id}:
+    get:
+      summary: Get a reputation remediation request
+      description: Retrieve the full detail of a remediation request, including current status, per-number results (once available), and submission metadata.
+      operationId: getReputationRemediation
+      tags:
+      - Reputation
+      parameters:
+      - $ref: '#/components/parameters/EnterpriseId'
+      - name: remediation_id
+        in: path
+        description: The remediation request id. Lowercase UUID.
+        required: true
+        schema:
+          type: string
+          format: uuid
+          example: b7c1f1c0-7a9d-4f0a-9d3e-2f6a1c4b8e21
+      responses:
+        '200':
+          description: The remediation request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RemediationRequestWrapped'
+        '401':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '404':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+  /reputation/numbers:
+    get:
+      summary: List reputation-monitored phone numbers across all enterprises
+      description: Convenience alias for `GET /v2/enterprises/{enterprise_id}/reputation/numbers` that returns numbers across every enterprise you own. Useful when you don't want to look up the enterprise id first.
+      operationId: listReputationNumbersSimplified
+      tags:
+      - Reputation
+      parameters:
+      - $ref: '#/components/parameters/BcPageNumber'
+      - $ref: '#/components/parameters/BcPageSize'
+      - name: filter[phone_number][contains]
+        in: query
+        required: false
+        description: Partial match on phone number. Must contain at least 5 digits.
+        schema:
+          type: string
+          example: '+16035551234'
+      - name: filter[enterprise_id]
+        in: query
+        required: false
+        description: Filter by enterprise ID.
+        schema:
+          type: string
+          format: uuid
+      - name: filter[phone_number][eq]
+        in: query
+        required: false
+        description: Exact phone-number match (E.164).
+        schema:
+          type: string
+          example: '+16035551234'
+      responses:
+        '200':
+          description: Paginated list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReputationPhoneNumberListWithReputation'
+        '401':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+  /reputation/numbers/{phone_number}:
+    delete:
+      summary: Remove a phone number from reputation monitoring (no enterprise_id required)
+      description: Convenience alias for `DELETE /v2/enterprises/{enterprise_id}/reputation/numbers/{phone_number}`.
+      operationId: disassociateReputationNumberSimplified
+      tags:
+      - Reputation
+      parameters:
+      - $ref: '#/components/parameters/PhoneNumberPath'
+      responses:
+        '204':
+          description: 204 (no body)
+        '401':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '404':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+    get:
+      summary: Get a reputation-monitored number (no enterprise_id required)
+      description: Convenience alias for `GET /v2/enterprises/{enterprise_id}/reputation/numbers/{phone_number}`.
+      operationId: getPhoneNumberReputationSimplified
+      tags:
+      - Reputation
+      parameters:
+      - $ref: '#/components/parameters/PhoneNumberPath'
+      - name: fresh
+        in: query
+        description: When true, fetches fresh reputation data (incurs API cost). When false (default), returns cached data.
+        required: false
+        schema:
+          type: boolean
+          default: false
+      responses:
+        '200':
+          description: Phone number with reputation data.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReputationPhoneNumberWithReputation'
+        '401':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+        '404':
+          $ref: '#/components/responses/number-reputation_GenericErrorResponse'
+components:
+  schemas:
+    ReputationData:
+      type: object
+      description: Reputation snapshot for a phone number. Each metric is a 0–100 score; `spam_risk` is a coarse bucket. Field set may grow over time - read by key.
+      properties:
+        spam_risk:
+          type: string
+          enum:
+          - low
+          - medium
+          - high
+          nullable: true
+          description: Overall spam-risk classification.
+          example: low
+        spam_category:
+          type: string
+          nullable: true
+          description: Category label from the reputation feed when the number is flagged.
+          example: null
+        maturity_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+          example: 72
+        connection_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+          example: 80
+        engagement_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+          example: 64
+        sentiment_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+          example: 75
+        last_refreshed_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2026-04-26T18:09:24.785211Z'
+    RemediationRequestListItem:
+      type: object
+      description: Slim list-endpoint shape. Omits per-number results and webhook URLs to keep responses small.
+      required:
+      - id
+      - status
+      - phone_numbers_count
+      - call_purpose
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: b7c1f1c0-7a9d-4f0a-9d3e-2f6a1c4b8e21
+        status:
+          $ref: '#/components/schemas/RemediationStatus'
+        phone_numbers_count:
+          type: integer
+          example: 2
+        call_purpose:
+          type: string
+          example: Appointment reminders for our dental clinic.
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-06-01T12:00:00Z'
+        updated_at:
+          type: string
+          format: date-time
+          example: '2026-06-01T12:05:00Z'
+        tier1_completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        tier2_completed_at:
+          type: string
+          format: date-time
+          nullable: true
+    EnterpriseReputationCreate:
+      type: object
+      required:
+      - loa_document_id
+      additionalProperties: false
+      properties:
+        loa_document_id:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Id of the signed Letter of Authorization document, returned by the Telnyx Documents API after upload (upload via `POST /v2/documents`; see https://developers.telnyx.com/api/documents).
+          example: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
+        check_frequency:
+          allOf:
+          - $ref: '#/components/schemas/ReputationCheckFrequency'
+          default: business_daily
+          description: Refresh cadence. Defaults to `business_daily` if omitted.
+    RefreshReputationResponse:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          type: object
+          required:
+          - results
+          - total_requested
+          - total_successful
+          - total_failed
+          properties:
+            results:
+              type: array
+              description: Per-number outcome of the refresh.
+              items:
+                type: object
+                required:
+                - phone_number
+                - success
+                properties:
+                  phone_number:
+                    type: string
+                    example: '+19493253498'
+                  success:
+                    type: boolean
+                    example: true
+                  error:
+                    type: string
+                    nullable: true
+                    description: '`null` when `success` is `true`; carries an error message otherwise.'
+                    example: null
+            total_requested:
+              type: integer
+              example: 1
+            total_successful:
+              type: integer
+              example: 1
+            total_failed:
+              type: integer
+              example: 0
+    number-reputation_Error:
+      type: object
+      required:
+      - code
+      - title
+      - detail
+      - meta
+      properties:
+        code:
+          type: string
+          example: '10005'
+          description: Stable numeric Telnyx error catalog id. See `meta.url` for the full catalog entry.
+        title:
+          type: string
+          example: Invalid parameters
+          description: Short human-readable category, e.g. `Bad Request`, `Duplicate resource`, `Not Found`, `Forbidden`. Treat as advisory only - the stable identifier is `code`.
+        detail:
+          type: string
+          example: field required
+          description: Context-specific message describing what went wrong on this particular request. May embed offending values; do not rely on it for programmatic matching - branch on `code`.
+        meta:
+          type: object
+          required:
+          - url
+          properties:
+            url:
+              type: string
+              format: uri
+              example: https://developers.telnyx.com/docs/overview/errors/10005
+            pending_check_ids:
+              type: array
+              items:
+                type: string
+                format: uuid
+              description: Set on `422 vetting_checks_incomplete` responses from `/admin/dir/{id}/approve` and `/admin/phone-number-batches/approve`. Lists the still-pending vetting check ids.
+            pending_check_codes:
+              type: array
+              items:
+                type: string
+              description: Codes of the pending vetting checks (e.g. `loa_signature_valid`).
+            pending_check_labels:
+              type: array
+              items:
+                type: string
+              description: Human-readable labels of the pending vetting checks.
+          description: Carries `url` linking to the Telnyx error catalog entry for this `code`. Useful for forwarding the user to documentation.
+        source:
+          type: object
+          description: Optional pointer at the offending field of the request.
+          properties:
+            pointer:
+              type: string
+              example: /body/legal_name
+            parameter:
+              type: string
+              example: page[size]
+      description: A single entry in the canonical Telnyx error envelope. `code` is the stable Telnyx error catalog id; the human-readable explanation lives at `meta.url`. `detail` is a context-specific message; `source.pointer` (when present) names the offending field of the request.
+    RemediationRequest:
+      type: object
+      description: Full detail of a remediation request, returned on submit and GET by id.
+      required:
+      - id
+      - status
+      - phone_numbers_count
+      - phone_numbers_submitted
+      - phone_numbers_ineligible
+      - call_purpose
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: b7c1f1c0-7a9d-4f0a-9d3e-2f6a1c4b8e21
+        status:
+          $ref: '#/components/schemas/RemediationStatus'
+        phone_numbers_count:
+          type: integer
+          description: Total phone numbers in this batch, including any later cancelled. May exceed the sum of the per-category result buckets, which omit cancelled numbers.
+          example: 2
+        phone_numbers_submitted:
+          type: integer
+          description: Numbers accepted for remediation, i.e. not rejected as ineligible. Counts numbers still queued (pending) as well as processed ones.
+          example: 2
+        phone_numbers_ineligible:
+          type: integer
+          description: Numbers rejected before submission (e.g. cooldown).
+          example: 0
+        call_purpose:
+          type: string
+          example: Appointment reminders for our dental clinic.
+        contact_email:
+          type: string
+          format: email
+          nullable: true
+          example: ops@example.com
+        webhook_url:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/webhooks/remediation
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-06-01T12:00:00Z'
+        updated_at:
+          type: string
+          format: date-time
+          example: '2026-06-01T12:05:00Z'
+        tier1_completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        tier2_completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        results:
+          $ref: '#/components/schemas/RemediationPerNumberResults'
+          nullable: true
+          description: Per-category buckets. Populated once results are available. Null while the request is still pending.
+    LoaSignaturePayload:
+      type: object
+      description: Optional signature embedded in the rendered PDF. When omitted the PDF is returned unsigned for the customer to sign and upload.
+      required:
+      - image_base64
+      properties:
+        image_base64:
+          type: string
+          description: Base64-encoded signature image.
+        signer_name:
+          type: string
+          nullable: true
+    EnterpriseReputationLoaRender:
+      type: object
+      description: All fields optional. The enterprise identity, address, and authorized-representative contact are read from the enterprise record keyed by the path parameter.
+      properties:
+        agent:
+          $ref: '#/components/schemas/number-reputation_AgentInput'
+        signature:
+          $ref: '#/components/schemas/LoaSignaturePayload'
+    EnterpriseReputationPublic:
+      type: object
+      properties:
+        enterprise_id:
+          type: string
+          format: uuid
+          example: 4a6192a4-573d-446d-b3ce-aff9117272a6
+        status:
+          $ref: '#/components/schemas/ReputationStatus'
+        check_frequency:
+          $ref: '#/components/schemas/ReputationCheckFrequency'
+        loa_document_id:
+          type: string
+          nullable: true
+          description: Id of the signed LOA document.
+          example: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
+        loa_status:
+          $ref: '#/components/schemas/ReputationLoaStatusPublic'
+        rejection_reasons:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: Populated when `status` is `rejected`.
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-04-26T18:06:51.940749Z'
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          example: '2026-04-26T18:09:24.785211Z'
+          readOnly: true
+    ReputationPhoneNumberList:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReputationPhoneNumber'
+        meta:
+          $ref: '#/components/schemas/number-reputation_PaginationMeta'
+    RemediationPerNumberResults:
+      type: object
+      description: Per-category buckets of phone numbers, populated once results are available. Empty lists are kept (not omitted) so consumers can iterate without null-checking each key.
+      properties:
+        remediated:
+          type: array
+          items:
+            type: string
+            example: '+19493253498'
+        not_flagged:
+          type: array
+          items:
+            type: string
+        requires_review:
+          type: array
+          items:
+            type: string
+        ineligible:
+          type: array
+          items:
+            type: string
+        refused:
+          type: array
+          items:
+            type: string
+    EnterpriseReputationPublicWrapped:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/EnterpriseReputationPublic'
+    number-reputation_AgentInput:
+      type: object
+      description: Third-party reseller / partner managing the enterprise's phone numbers. Omit when the enterprise works directly with Telnyx.
+      required:
+      - legal_name
+      - street_address
+      - city
+      - administrative_area
+      - postal_code
+      - country
+      - contact_name
+      - contact_title
+      - contact_email
+      - contact_phone
+      properties:
+        legal_name:
+          type: string
+          maxLength: 200
+        dba:
+          type: string
+          nullable: true
+          maxLength: 200
+        street_address:
+          type: string
+          maxLength: 255
+        extended_address:
+          type: string
+          nullable: true
+          maxLength: 255
+        city:
+          type: string
+          maxLength: 120
+        administrative_area:
+          type: string
+          maxLength: 120
+        postal_code:
+          type: string
+          maxLength: 30
+        country:
+          type: string
+          minLength: 2
+          maxLength: 2
+          example: US
+        contact_name:
+          type: string
+          maxLength: 200
+        contact_title:
+          type: string
+          maxLength: 200
+        contact_email:
+          type: string
+          format: email
+        contact_phone:
+          type: string
+          maxLength: 30
+          example: '+13125550000'
+    RemediationRequestWrapped:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/RemediationRequest'
+    RefreshReputationRequest:
+      type: object
+      required:
+      - phone_numbers
+      additionalProperties: false
+      properties:
+        phone_numbers:
+          type: array
+          items:
+            type: string
+            example: '+19493253498'
+          minItems: 1
+          maxItems: 100
+          description: Phone numbers to refresh reputation data for. 1–100 numbers per request, each in E.164 format. Reputation refreshes are subject to per-enterprise rate limits.
+    ReputationPhoneNumber:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 8a4b1f5e-2f12-4c0c-9a98-9b3a7d8b8e62
+          readOnly: true
+        enterprise_id:
+          type: string
+          format: uuid
+          example: 4a6192a4-573d-446d-b3ce-aff9117272a6
+        phone_number:
+          type: string
+          description: E.164 with leading `+`.
+          example: '+19493253498'
+        reputation_data:
+          $ref: '#/components/schemas/ReputationData'
+          nullable: true
+          description: '`null` until the first refresh has been collected for this number.'
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-04-26T18:06:51.940749Z'
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          example: '2026-04-26T18:09:24.785211Z'
+          readOnly: true
+    number-reputation_PaginationMeta:
+      type: object
+      required:
+      - total_pages
+      - total_results
+      - page_number
+      - page_size
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+          description: Total number of pages available given the current `page_size`.
+        total_results:
+          type: integer
+          example: 42
+          description: Total number of items across all pages (excludes soft-deleted rows).
+        page_number:
+          type: integer
+          example: 1
+          description: 1-based index of this page. Echoes the `page[number]` query parameter (default `1`).
+        page_size:
+          type: integer
+          example: 20
+          description: Number of items returned in this page's `data` array. Capped at 250.
+      description: JSON:API pagination metadata returned with every paginated list response. Page numbering is 1-based. `page_size` reports the number of items actually returned in `data` for this page; the requested size is taken from the `page[size]` query parameter.
+    RemediationRequestList:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RemediationRequestListItem'
+        meta:
+          $ref: '#/components/schemas/number-reputation_PaginationMeta'
+    number-reputation_Errors:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/number-reputation_Error'
+          description: List of one or more error entries. Order is not significant.
+      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
+    ReputationCheckFrequency:
+      type: string
+      enum:
+      - business_daily
+      - daily
+      - weekly
+      - biweekly
+      - monthly
+      - never
+      description: How often Telnyx refreshes the stored reputation data for this enterprise's registered numbers.
+    RemediationStatus:
+      type: string
+      description: Customer-facing status of a remediation request.
+      enum:
+      - pending
+      - in_progress
+      - completed
+      - failed
+      - cancelled
+      example: in_progress
+    ReputationPhoneNumberListWithReputation:
+      description: List of reputation-monitored phone numbers, each carrying its current reputation data.
+      allOf:
+      - $ref: '#/components/schemas/ReputationPhoneNumberList'
+    EnterpriseReputationUpdateFrequency:
+      type: object
+      required:
+      - check_frequency
+      additionalProperties: false
+      properties:
+        check_frequency:
+          $ref: '#/components/schemas/ReputationCheckFrequency'
+    RemediationRequestCreate:
+      type: object
+      additionalProperties: false
+      required:
+      - phone_numbers
+      - call_purpose
+      properties:
+        phone_numbers:
+          type: array
+          description: Phone numbers in E.164 format. Each must belong to this enterprise. Maximum 2,000 per request.
+          minItems: 1
+          maxItems: 2000
+          items:
+            type: string
+            pattern: ^\+[1-9][0-9]{9,14}$
+            example: '+19493253498'
+        call_purpose:
+          type: string
+          description: How the numbers are used (free text).
+          minLength: 1
+          maxLength: 2000
+          example: Appointment reminders for our dental clinic.
+        contact_email:
+          type: string
+          format: email
+          description: Optional contact email for this remediation request.
+          maxLength: 255
+          example: ops@example.com
+        webhook_url:
+          type: string
+          format: uri
+          description: Optional https:// URL for status notifications.
+          maxLength: 2048
+          example: https://example.com/webhooks/remediation
+    ReputationLoaStatusPublic:
+      type: string
+      enum:
+      - pending
+      - approved
+      - rejected
+      description: Customer-facing Letter-of-Authorization verification state. `approved` is required (alongside reputation status) before phone numbers can be added.
+      example: pending
+    ReputationStatus:
+      type: string
+      enum:
+      - pending
+      - approved
+      - deleted
+      - rejected
+      description: Lifecycle status of the enterprise's Phone Number Reputation activation.
+    ReputationPhoneNumberCreate:
+      type: object
+      required:
+      - phone_numbers
+      additionalProperties: false
+      properties:
+        phone_numbers:
+          type: array
+          items:
+            type: string
+            example: '+19493253498'
+          minItems: 1
+          maxItems: 100
+          description: 1–100 phone numbers in E.164 format with a leading `+`.
+    ReputationPhoneNumberWithReputation:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/ReputationPhoneNumber'
+    EnterpriseReputationLoaUpdate:
+      type: object
+      required:
+      - loa_document_id
+      properties:
+        loa_document_id:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Id of the new signed LOA document (from the Telnyx Documents API). Changing it resets LOA approval; the new document must be approved before more numbers can be added.
+          example: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
+  parameters:
+    BcPageNumber:
+      name: page[number]
+      in: query
+      description: 1-based page number. Out-of-range values return an empty page with correct meta.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+        example: 1
+    BcPageSize:
+      name: page[size]
+      in: query
+      description: Items per page. Maximum 250; values above are clamped to 250.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 250
+        default: 20
+        example: 20
+    EnterpriseId:
+      name: enterprise_id
+      in: path
+      description: The enterprise id. Lowercase UUID.
+      required: true
+      schema:
+        type: string
+        format: uuid
+        example: 4a6192a4-573d-446d-b3ce-aff9117272a6
+    PhoneNumberPath:
+      name: phone_number
+      in: path
+      required: true
+      description: Phone number in E.164 format (`+1NPANXXXXXX` for US/CA). The leading `+` MUST be URL-encoded as `%2B` (e.g. `%2B19493253498`).
+      schema:
+        type: string
+        example: '+19493253498'
+  responses:
+    number-reputation_GenericErrorResponse:
+      description: An error occurred. The response carries the standard Telnyx error envelope.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/number-reputation_Errors'
+          examples:
+            validation_error:
+              summary: 422 - request body failed validation
+              value:
+                errors:
+                - code: '10005'
+                  title: Invalid parameters
+                  detail: field required
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10005
+                  source:
+                    pointer: /body/legal_name
+            bad_request:
+              summary: 400 - request rejected by a state guard
+              description: Returned when the request itself is well-formed but the resource is in a state that disallows this action (e.g. updating a DIR while it is being vetted, or deleting an enterprise that still has DIRs in vetting).
+              value:
+                errors:
+                - code: '10015'
+                  title: Bad Request
+                  detail: Cannot update DIR in 'verified' status
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10015
+            not_found:
+              summary: 404 - resource does not exist or is not yours
+              value:
+                errors:
+                - code: '10009'
+                  title: Resource not found
+                  detail: Enterprise not found.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+            conflict:
+              summary: 409 - request conflicts with current resource state
+              value:
+                errors:
+                - code: '10021'
+                  title: Resource in use
+                  detail: DIR has 1 active infringement claim(s). Resolve the claim before making this change.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10021
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

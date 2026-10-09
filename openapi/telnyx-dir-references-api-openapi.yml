@@ -1,0 +1,530 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx DIR References API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: DIR References
+  description: Submit and manage the two business references and one financial reference that vouch for a DIR. References are contacted to confirm the business identity during vetting.
+paths:
+  /dir/{dir_id}/references:
+    get:
+      tags:
+      - DIR References
+      summary: List a DIR's references
+      operationId: listDirReferences
+      description: 'List the business and financial references submitted for a DIR.
+
+
+        Returns the two business references (slots 1 and 2) followed by the single financial reference. Each entry carries its `ref_type` and `slot`, which together address the reference when updating it, alongside the details supplied when it was submitted (name, title, organization, relationship, phone, email, timezone). No internal identifiers are exposed. Returns an empty list when no references were submitted.'
+      parameters:
+      - $ref: '#/components/parameters/DirId'
+      responses:
+        '200':
+          description: The DIR's references.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferenceList'
+        '404':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+    post:
+      tags:
+      - DIR References
+      summary: Submit a DIR's references
+      operationId: submitDirReferences
+      description: 'Submit the two business references and one financial reference for a DIR.
+
+
+        The DIR''s authorizer email must be verified first (see the email-verification endpoint). Until it is, this returns `409` and no references are stored.
+
+
+        The request body carries exactly two business references plus one financial reference. The first submission stores them and returns `201`. Resubmitting returns `200`: identical values are simply confirmed and nothing is written, while changed values replace those references.
+
+
+        Replacing a reference is allowed only while the DIR itself is still editable, the same window in which a single reference may be updated; once the DIR has been submitted for vetting this returns `400`. A replaced reference''s pending verification call is cancelled and its dial-in code stops working, and the replacement contact is emailed fresh scheduling details. References whose details did not change keep their existing call, code, and the notice already sent to them.
+
+
+        The response always echoes the stored references in the same shape as the GET.
+
+
+        Who qualifies: the two business references confirm the company''s reputation and operations. Each should be a senior contact at an organization the business works with, such as a vendor, partner, or client: a C-suite executive (CEO, CFO, CTO, COO), an owner or founder as reflected in the company''s corporate records, or a senior manager, director, or executive. The financial reference confirms the company pays its bills and should be a licensed certified public accountant (CPA) the company uses, a contact at a bank or financial institution that has a relationship with the company, or a reasonable alternative banking or financial reference.'
+      parameters:
+      - $ref: '#/components/parameters/DirId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReferenceSubmissionRequest'
+      responses:
+        '200':
+          description: Resubmit accepted. Identical values were confirmed unchanged, or changed values replaced those references.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferenceList'
+        '201':
+          description: The stored references.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferenceList'
+        '400':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        '404':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        '409':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+  /dir/{dir_id}/references/{ref_type}/{slot}:
+    patch:
+      tags:
+      - DIR References
+      summary: Update a DIR reference
+      operationId: updateDirReference
+      description: 'Partially update one reference, addressed by the DIR id plus the reference''s type (business or financial) and slot.
+
+
+        Cosmetic fields (full name, job title, organization, relationship, email) are always editable. The phone number and timezone may only be changed while a scheduled call has not yet been dialed; if a call is in progress or all attempts are complete, those fields are locked. Changing the timezone reschedules any pending call into the new local calling window.'
+      parameters:
+      - $ref: '#/components/parameters/DirId'
+      - name: ref_type
+        in: path
+        required: true
+        description: Reference type to address.
+        schema:
+          type: string
+          enum:
+          - business
+          - financial
+          example: business
+      - name: slot
+        in: path
+        required: true
+        description: Reference slot, counting from 1. Business references are slots 1 and 2, matching the order they were sent in the `business_references` array; the financial reference is slot 1. Every reference returned by the submit and list endpoints carries its own `ref_type` and `slot`, so you do not need to derive them.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 2
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReferenceUpdateRequest'
+      responses:
+        '200':
+          description: The updated reference.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferenceWrapped'
+        '400':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+        '404':
+          $ref: '#/components/responses/branded-calling_GenericErrorResponse'
+components:
+  schemas:
+    ReferenceUpdateRequest:
+      type: object
+      minProperties: 1
+      description: Partial update for a single reference; supply at least one field. Cosmetic fields are always editable. phone_e164 and timezone may only be changed while a scheduled call has not yet been dialed.
+      properties:
+        full_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: The full name of the person we should contact as your reference.
+          example: Dana Reyes
+        job_title:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: The reference contact's job title, for example CFO or Owner.
+          example: VP of Operations
+        organization:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: The name of the organization the reference contact works for.
+          example: Acme Logistics
+        relationship_to_registrant:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: How the reference contact is related to the registering business.
+          example: Supplier
+        phone_e164:
+          type: string
+          pattern: ^\+[1-9]\d{1,14}$
+          description: The reference's phone number in E.164 format, for example +14155550123. We call this number during their local business hours.
+          example: '+14155550123'
+        email:
+          type: string
+          format: email
+          description: The reference's email address. We email them scheduling and dial-in instructions before we call, so use an address they check.
+          example: dana.reyes@example.com
+        timezone:
+          type: string
+          description: The reference's IANA time zone, for example America/New_York. We only call during their local 8am to 9pm hours, which is why we need it.
+          example: America/New_York
+    branded-calling_Errors:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/branded-calling_Error'
+          description: List of one or more error entries. Order is not significant.
+      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
+    ReferenceInput:
+      type: object
+      description: One reference supplied at submit. The reference type is implied by the field that carries it (business_references vs financial_reference).
+      required:
+      - full_name
+      - phone_e164
+      - email
+      - timezone
+      properties:
+        full_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Full name of the reference contact.
+          example: Dana Reyes
+        job_title:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: Job title of the reference contact.
+          example: VP of Operations
+        organization:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: Organization the reference contact belongs to.
+          example: Acme Logistics
+        relationship_to_registrant:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: How the reference contact is related to the registering business.
+          example: Supplier
+        phone_e164:
+          type: string
+          pattern: ^\+[1-9]\d{1,14}$
+          description: Reference phone number in E.164 format, e.g. +14155550123.
+          example: '+14155550123'
+        email:
+          type: string
+          format: email
+          description: 'Reference contact email address. Required: the reference is emailed scheduling and dial-in notices.'
+          example: dana.reyes@example.com
+        timezone:
+          type: string
+          description: 'IANA timezone id for the reference (e.g. America/New_York). Required: calls are only placed within the reference''s local 8am-9pm window.'
+          example: America/New_York
+    Reference:
+      type: object
+      description: A reference (business or financial) on a DIR, in the customer-facing shape. No internal identifiers are exposed.
+      required:
+      - record_type
+      - ref_type
+      - slot
+      - full_name
+      - phone_e164
+      - timezone
+      properties:
+        record_type:
+          type: string
+          enum:
+          - dir_reference
+          description: Always `dir_reference`.
+          example: dir_reference
+          readOnly: true
+        ref_type:
+          type: string
+          enum:
+          - business
+          - financial
+          description: Whether this is a business reference or the financial reference.
+          example: business
+        slot:
+          type: integer
+          minimum: 1
+          maximum: 2
+          description: Position within the reference type, counting from 1. Business references occupy slots 1 and 2, in the order they were sent in the `business_references` array; the financial reference occupies slot 1. Use this value together with `ref_type` to address the reference when updating it.
+          example: 1
+        full_name:
+          type: string
+          maxLength: 255
+          description: Full name of the reference contact.
+          example: Dana Reyes
+        job_title:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: Job title of the reference contact.
+          example: VP of Operations
+        organization:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: Organization the reference contact belongs to.
+          example: Acme Logistics
+        relationship_to_registrant:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: How the reference contact is related to the registering business.
+          example: Supplier
+        phone_e164:
+          type: string
+          description: Reference phone number in E.164 format.
+          example: '+14155550123'
+        email:
+          type: string
+          format: email
+          nullable: true
+          description: Reference contact email address.
+          example: dana.reyes@example.com
+        timezone:
+          type: string
+          description: IANA timezone id for the reference. Calls are only placed within the reference's local 8am-9pm window.
+          example: America/New_York
+    ReferenceSubmissionRequest:
+      type: object
+      description: Exactly two business references plus one financial reference. The DIR's authorizer email must be verified before this is accepted.
+      required:
+      - business_references
+      - financial_reference
+      properties:
+        business_references:
+          type: array
+          minItems: 2
+          maxItems: 2
+          description: 'Exactly two business references. Array order determines each one''s slot: the first entry becomes slot 1 and the second becomes slot 2. Those slots are what you pass when updating a single reference later. Each should be a senior contact who can speak to your company''s reputation and operations: a C-suite executive (CEO, CFO, CTO, COO), an owner or founder as reflected in your corporate records, or a senior manager, director, or executive at an organization you work with, such as a vendor, partner, or client.'
+          items:
+            $ref: '#/components/schemas/ReferenceInput'
+        financial_reference:
+          description: 'One financial reference who can confirm the company pays its bills: a licensed certified public accountant (CPA) the company uses, a contact at a bank or financial institution that has a relationship with the company, or a reasonable alternative banking or financial reference.'
+          allOf:
+          - $ref: '#/components/schemas/ReferenceInput'
+    ReferenceWrapped:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/Reference'
+    ReferenceList:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reference'
+    branded-calling_Error:
+      type: object
+      required:
+      - code
+      - title
+      - detail
+      - meta
+      properties:
+        code:
+          type: string
+          example: '10005'
+          description: Stable numeric Telnyx error catalog id. See `meta.url` for the full catalog entry.
+        title:
+          type: string
+          example: Invalid parameters
+          description: Short human-readable category, e.g. `Bad Request`, `Duplicate resource`, `Not Found`, `Forbidden`. Treat as advisory only - the stable identifier is `code`.
+        detail:
+          type: string
+          example: field required
+          description: Context-specific message describing what went wrong on this particular request. May embed offending values; do not rely on it for programmatic matching - branch on `code`.
+        meta:
+          type: object
+          required:
+          - url
+          properties:
+            url:
+              type: string
+              format: uri
+              example: https://developers.telnyx.com/docs/overview/errors/10005
+            pending_check_ids:
+              type: array
+              items:
+                type: string
+                format: uuid
+              description: Set on `422 vetting_checks_incomplete` responses from `/admin/dir/{id}/approve` and `/admin/phone-number-batches/approve`. Lists the still-pending vetting check ids.
+            pending_check_codes:
+              type: array
+              items:
+                type: string
+              description: Codes of the pending vetting checks (e.g. `loa_signature_valid`).
+            pending_check_labels:
+              type: array
+              items:
+                type: string
+              description: Human-readable labels of the pending vetting checks.
+          description: Carries `url` linking to the Telnyx error catalog entry for this `code`. Useful for forwarding the user to documentation.
+        source:
+          type: object
+          description: Optional pointer at the offending field of the request.
+          properties:
+            pointer:
+              type: string
+              example: /body/legal_name
+            parameter:
+              type: string
+              example: page[size]
+      description: A single entry in the canonical Telnyx error envelope. `code` is the stable Telnyx error catalog id; the human-readable explanation lives at `meta.url`. `detail` is a context-specific message; `source.pointer` (when present) names the offending field of the request.
+  parameters:
+    DirId:
+      name: dir_id
+      in: path
+      description: The DIR id. Lowercase UUID.
+      required: true
+      schema:
+        type: string
+        format: uuid
+        example: 16635d38-75a6-4481-82e8-69af60e05011
+  responses:
+    branded-calling_GenericErrorResponse:
+      description: An error occurred. The response carries the standard Telnyx error envelope.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/branded-calling_Errors'
+          examples:
+            validation_error:
+              summary: 422 - request body failed validation
+              value:
+                errors:
+                - code: '10005'
+                  title: Invalid parameters
+                  detail: field required
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10005
+                  source:
+                    pointer: /body/legal_name
+            bad_request:
+              summary: 400 - request rejected by a state guard
+              description: Returned when the request itself is well-formed but the resource is in a state that disallows this action (e.g. updating a DIR while it is being vetted, or deleting an enterprise that still has DIRs in vetting).
+              value:
+                errors:
+                - code: '10015'
+                  title: Bad Request
+                  detail: Cannot update DIR in 'verified' status
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10015
+            not_found:
+              summary: 404 - resource does not exist or is not yours
+              value:
+                errors:
+                - code: '10009'
+                  title: Resource not found
+                  detail: Enterprise not found.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+            conflict:
+              summary: 409 - request conflicts with current resource state
+              value:
+                errors:
+                - code: '10021'
+                  title: Resource in use
+                  detail: DIR has 1 active infringement claim(s). Resolve the claim before making this change.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10021
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

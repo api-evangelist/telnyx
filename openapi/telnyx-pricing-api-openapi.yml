@@ -1,0 +1,385 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Pricing API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Pricing
+  description: Public pricing operations
+paths:
+  /pricing/products:
+    get:
+      summary: List products
+      description: Returns the full product catalog with pagination. Each entry contains a slug, display name, and description. Use the slug to fetch per-product pricing via GET /pricing/products/{slug}.
+      operationId: listPricingProducts
+      tags:
+      - Pricing
+      parameters:
+      - name: page[number]
+        in: query
+        description: Page number (1-based).
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          title: Page Number
+          default: 1
+      - name: page[size]
+        in: query
+        description: Number of items per page (max 100).
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          title: Page Size
+          default: 20
+      responses:
+        '200':
+          description: Product catalog listing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PricingProductListResponse'
+              example:
+                data:
+                - slug: string
+                  name: string
+                  description: string
+                meta:
+                  page_number: 0
+                  page_size: 0
+                  total_pages: 0
+                  total_results: 0
+        '400':
+          description: Invalid pagination parameters
+      x-latency-category: responsive
+      security: []
+  /pricing/products/{slug}:
+    get:
+      summary: Get product pricing
+      description: 'Returns pricing entries for a single product. Most products return standard rate entries with fields like rate, unit, country_iso, direction, and tiers. Inference products return model-specific fields (model, input_rate, output_rate, cached_input_rate) with tiered pricing. Some products use rate decks (pricing_type: rate_deck) where rates are determined dynamically.'
+      operationId: getProductPricing
+      tags:
+      - Pricing
+      parameters:
+      - name: slug
+        in: path
+        description: Product slug from the catalog listing.
+        required: true
+        schema:
+          type: string
+      - name: page[number]
+        in: query
+        description: Page number (1-based).
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          title: Page Number
+          default: 1
+      - name: page[size]
+        in: query
+        description: Number of items per page (max 100).
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          title: Page Size
+          default: 20
+      - name: filter[country_iso]
+        description: Two-letter ISO 3166-1 alpha-2 country code (uppercase, e.g. US) to filter pricing to a single country.
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 2
+            minLength: 2
+            pattern: ^[A-Z]{2}$
+          - type: 'null'
+          title: Filter[Country Iso]
+      responses:
+        '200':
+          description: Product pricing entries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PricingEntryListResponse'
+              example:
+                data:
+                - name: string
+                  rate: 0
+                  unit: string
+                  currency: string
+                  type: string
+                  tiers:
+                  - min: 0
+                    rate: 0
+                    max: 1000000
+                  model: string
+                  input_rate: string
+                  cached_input_rate: string
+                  output_rate: string
+                  input_tiers:
+                  - min: 0
+                    rate: 0
+                    max: 1000000
+                  cached_input_tiers:
+                  - min: 0
+                    rate: 0
+                    max: 1000000
+                  output_tiers:
+                  - min: 0
+                    rate: 0
+                    max: 1000000
+                meta:
+                  page_number: 0
+                  page_size: 0
+                  total_pages: 0
+                  total_results: 0
+        '404':
+          description: Product not found
+      x-latency-category: responsive
+      security: []
+components:
+  schemas:
+    PricingEntryListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PricingEntry'
+        meta:
+          $ref: '#/components/schemas/pricing_PaginationMeta'
+      required:
+      - data
+      - meta
+    pricing_PaginationMeta:
+      type: object
+      properties:
+        page_number:
+          type: integer
+        page_size:
+          type: integer
+        total_pages:
+          type: integer
+        total_results:
+          type: integer
+      required:
+      - page_number
+      - page_size
+      - total_pages
+      - total_results
+    PricingEntry:
+      type: object
+      description: A single pricing entry. Standard products include rate, unit, currency, type, country_iso, direction, and tiers. Inference products include model, input_rate, output_rate, cached_input_rate, and their respective tier arrays. Rate-deck products include pricing_type and note fields with null rate and empty tiers.
+      properties:
+        name:
+          type: string
+          description: Human-readable name describing the pricing entry.
+        rate:
+          oneOf:
+          - type: number
+            description: Rate for standard products (e.g., 0.004).
+          - type: string
+            description: Rate for inference products (e.g., "0.001").
+          - type: 'null'
+          description: Per-unit rate. Numeric for standard products, string for inference products. Null for rate-deck products.
+        unit:
+          type: string
+          description: Unit of measurement (e.g., part, message, GB, per_1k_tokens).
+        currency:
+          type: string
+          description: ISO currency code (e.g., USD).
+        type:
+          type: string
+          description: Pricing type (e.g., usage).
+        country_iso:
+          type:
+          - string
+          - 'null'
+          description: ISO country code. Null for non-geographic products.
+        direction:
+          type:
+          - string
+          - 'null'
+          description: Direction (e.g., termination). Null for non-directional products.
+        tiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PricingTier'
+          description: Volume-based tiered pricing. Empty for rate-deck products.
+        pricing_type:
+          type:
+          - string
+          - 'null'
+          description: Pricing type for non-standard products (e.g., rate_deck). Absent on standard products.
+        note:
+          type:
+          - string
+          - 'null'
+          description: Additional note for rate-deck products (e.g., "Pricing is determined by the WhatsApp rate deck.").
+        model:
+          type: string
+          description: Model identifier. Present only on inference product entries.
+        input_rate:
+          type: string
+          description: Input token rate. Present only on inference product entries.
+        cached_input_rate:
+          type: string
+          description: Cached input token rate. Present only on inference product entries.
+        output_rate:
+          type: string
+          description: Output token rate. Present only on inference product entries.
+        input_tiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PricingTier'
+          description: Input token tiered pricing. Present only on inference product entries.
+        cached_input_tiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PricingTier'
+          description: Cached input token tiered pricing. Present only on inference product entries.
+        output_tiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PricingTier'
+          description: Output token tiered pricing. Present only on inference product entries.
+    PricingProduct:
+      type: object
+      properties:
+        slug:
+          type: string
+          description: Product identifier used in the per-product pricing endpoint.
+        name:
+          type: string
+          description: Display name of the product.
+        description:
+          type: string
+          description: Human-readable description of the product.
+      required:
+      - slug
+      - name
+      - description
+    PricingTier:
+      type: object
+      properties:
+        min:
+          type: integer
+          minimum: 0
+          description: Lower bound of the tier (inclusive).
+        max:
+          type:
+          - integer
+          - 'null'
+          description: Upper bound of the tier (exclusive). Null means no upper limit.
+        rate:
+          oneOf:
+          - type: number
+          - type: string
+          description: Rate for this tier. Numeric for standard products, string for inference products.
+      required:
+      - min
+      - max
+      - rate
+    PricingProductListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PricingProduct'
+        meta:
+          $ref: '#/components/schemas/pricing_PaginationMeta'
+      required:
+      - data
+      - meta
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

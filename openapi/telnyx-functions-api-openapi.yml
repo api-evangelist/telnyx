@@ -1,0 +1,1039 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Functions API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Functions
+paths:
+  /compute/funcs/{id}/logs:
+    get:
+      operationId: GetComputeFunctionLogs
+      summary: Get function logs
+      description: Returns logs oldest first. `type=runtime` (default) returns function stdout/stderr. `type=invocations` returns one platform-generated record per HTTP request served.
+      tags:
+      - Functions
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Function ID
+        schema:
+          type: string
+      - name: type
+        in: query
+        required: false
+        description: Log stream to return.
+        schema:
+          type: string
+          enum:
+          - runtime
+          - invocations
+          default: runtime
+      - name: start_time
+        in: query
+        required: false
+        description: Return records at or after this RFC 3339 timestamp.
+        schema:
+          type: string
+          format: date-time
+      - name: end_time
+        in: query
+        required: false
+        description: Return records at or before this RFC 3339 timestamp.
+        schema:
+          type: string
+          format: date-time
+      - name: limit
+        in: query
+        required: false
+        description: Maximum records to return.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 250
+      responses:
+        '200':
+          description: Logs retrieved successfully
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/FuncRuntimeLogsResponse'
+                - $ref: '#/components/schemas/FuncInvocationLogsResponse'
+              examples:
+                runtime:
+                  value:
+                    meta:
+                      has_more: false
+                      partial: false
+                    data:
+                    - record_type: compute_func_runtime_log
+                      timestamp: '2026-09-09T16:00:00.000Z'
+                      level: log
+                      message: Hello from Edge Compute!
+                invocations:
+                  value:
+                    meta:
+                      has_more: false
+                      partial: false
+                    data:
+                    - record_type: compute_func_invocation_log
+                      timestamp: '2026-09-09T16:00:01.000Z'
+                      method: GET
+                      path: /health
+                      status_code: 200
+                      duration_ms: 2.276
+                      request_size_bytes: 0
+                      response_size_bytes: 19
+                      region: us-east-1
+        '400':
+          description: Invalid query parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '404':
+          description: Function not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '422':
+          description: Invalid function ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+  /compute/funcs/{id}/logs/export:
+    delete:
+      operationId: DeleteComputeFunctionLogExport
+      summary: Delete log export configuration
+      description: 'Stops exporting a function''s logs and removes its destination configuration. Idempotent: deleting when nothing is configured succeeds.'
+      tags:
+      - Functions
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Function ID
+        schema:
+          type: string
+      responses:
+        '204':
+          description: Log export configuration deleted, or none was configured (idempotent). No content is returned.
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              examples:
+                error:
+                  value:
+                    errors:
+                    - code: '10020'
+                      title: Unprocessable entity
+                      detail: Request could not be processed.
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              examples:
+                error:
+                  value:
+                    errors:
+                    - code: '10001'
+                      title: Unauthorized
+                      detail: Invalid or missing API key.
+        '404':
+          description: Function not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              examples:
+                error:
+                  value:
+                    errors:
+                    - code: '10005'
+                      title: Resource not found
+                      detail: The requested resource or URL could not be found.
+        '422':
+          description: Invalid function ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              examples:
+                error:
+                  value:
+                    errors:
+                    - code: '10020'
+                      title: Unprocessable entity
+                      detail: Request could not be processed.
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              examples:
+                error:
+                  value:
+                    errors:
+                    - code: '10010'
+                      title: Internal server error
+                      detail: An unexpected error occurred.
+    get:
+      operationId: GetComputeFunctionLogExport
+      summary: Get log export configuration
+      description: Returns the function's configured log export destination and which log types are exported. Headers are never returned. Returns 404 (error code 10005) when no destination is configured for the function.
+      tags:
+      - Functions
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Function ID
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Log export configuration retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FuncLogExportConfigResponse'
+              examples:
+                configured:
+                  value:
+                    data:
+                      record_type: compute_func_log_export_config
+                      id: cfg-1
+                      func_id: 6b7e8f9a-1c2d-3e4f-5a6b-7c8d9e0f1a2b
+                      endpoint: https://api.honeycomb.io/v1/logs
+                      enabled: true
+                      runtime_export_enabled: true
+                      invocation_export_enabled: true
+                      created_at: '2026-09-18T14:30:00.000Z'
+                      updated_at: '2026-09-21T18:00:00.000Z'
+        '400':
+          description: Invalid query parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              examples:
+                error:
+                  value:
+                    errors:
+                    - code: '10020'
+                      title: Unprocessable entity
+                      detail: Request could not be processed.
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              examples:
+                error:
+                  value:
+                    errors:
+                    - code: '10001'
+                      title: Unauthorized
+                      detail: Invalid or missing API key.
+        '404':
+          description: Function not found, or no log export destination configured for this function (both return error code 10005)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              examples:
+                error:
+                  value:
+                    errors:
+                    - code: '10005'
+                      title: Resource not found
+                      detail: The requested resource or URL could not be found.
+        '422':
+          description: Invalid function ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              examples:
+                error:
+                  value:
+                    errors:
+                    - code: '10020'
+                      title: Unprocessable entity
+                      detail: Request could not be processed.
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              examples:
+                error:
+                  value:
+                    errors:
+                    - code: '10010'
+                      title: Internal server error
+                      detail: An unexpected error occurred.
+    put:
+      operationId: SetComputeFunctionLogExport
+      summary: Configure log export destination
+      description: 'Configures the external OTLP endpoint a function''s runtime and/or invocation logs are pushed to as they happen. This operation is a **full replace, not a patch**: `endpoint`, `headers`, `runtime_export_enabled`, and `invocation_export_enabled` are all required on every call — omitting any of them is a 422, not "keep the current value". Headers are encrypted at rest and never returned in any response.
+
+
+        The endpoint must be an HTTPS URL. When export is configured, new log records are converted to OTLP log records and delivered continuously; export never bypasses platform log storage, and delivery retries with a bounded policy while the destination is unreachable. Only logs generated after configuration are exported — there is no historical replay.'
+      tags:
+      - Functions
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Function ID
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FuncLogExportConfigSetRequest'
+            examples:
+              honeycomb:
+                summary: Export both log types to Honeycomb
+                value:
+                  endpoint: https://api.honeycomb.io/v1/logs
+                  headers:
+                    x-honeycomb-team: abc123
+                  runtime_export_enabled: true
+                  invocation_export_enabled: true
+              invocations_only:
+                summary: Export invocation records only
+                value:
+                  endpoint: https://collector.example.com/v1/logs
+                  headers: {}
+                  runtime_export_enabled: false
+                  invocation_export_enabled: true
+      responses:
+        '200':
+          description: Log export configuration replaced successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FuncLogExportConfigResponse'
+              examples:
+                replaced:
+                  value:
+                    data:
+                      record_type: compute_func_log_export_config
+                      id: cfg-1
+                      func_id: 6b7e8f9a-1c2d-3e4f-5a6b-7c8d9e0f1a2b
+                      endpoint: https://api.honeycomb.io/v1/logs
+                      enabled: true
+                      runtime_export_enabled: true
+                      invocation_export_enabled: true
+                      created_at: '2026-09-18T14:30:00.000Z'
+                      updated_at: '2026-09-21T18:00:00.000Z'
+        '201':
+          description: Log export configuration created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FuncLogExportConfigResponse'
+              examples:
+                created:
+                  value:
+                    data:
+                      record_type: compute_func_log_export_config
+                      id: cfg-1
+                      func_id: 6b7e8f9a-1c2d-3e4f-5a6b-7c8d9e0f1a2b
+                      endpoint: https://api.honeycomb.io/v1/logs
+                      enabled: true
+                      runtime_export_enabled: true
+                      invocation_export_enabled: true
+                      created_at: '2026-09-21T18:00:00.000Z'
+                      updated_at: '2026-09-21T18:00:00.000Z'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              examples:
+                error:
+                  value:
+                    errors:
+                    - code: '10020'
+                      title: Unprocessable entity
+                      detail: Request could not be processed.
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              examples:
+                error:
+                  value:
+                    errors:
+                    - code: '10001'
+                      title: Unauthorized
+                      detail: Invalid or missing API key.
+        '404':
+          description: Function not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              examples:
+                error:
+                  value:
+                    errors:
+                    - code: '10005'
+                      title: Resource not found
+                      detail: The requested resource or URL could not be found.
+        '422':
+          description: Invalid function ID, or a required request field was omitted (full replace — no partial updates)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              examples:
+                missing_required_field:
+                  value:
+                    errors:
+                    - code: '10020'
+                      title: Unprocessable entity
+                      detail: 'Request could not be processed: this endpoint is a full replace — endpoint, headers, runtime_export_enabled, and invocation_export_enabled are all required on every call.'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              examples:
+                error:
+                  value:
+                    errors:
+                    - code: '10010'
+                      title: Internal server error
+                      detail: An unexpected error occurred.
+  /compute/funcs/{id}/metric_aggregates:
+    get:
+      operationId: GetComputeFunctionMetricAggregates
+      summary: Get function metric aggregates
+      description: Returns aggregate request, latency, CPU, memory, and resource-limit metrics for a function over the requested window.
+      tags:
+      - Functions
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Function ID
+        schema:
+          type: string
+      - name: start_time
+        in: query
+        required: true
+        description: Inclusive window start, UTC ISO 8601 with milliseconds
+        schema:
+          type: string
+          format: date-time
+      - name: end_time
+        in: query
+        required: true
+        description: Exclusive window end, UTC ISO 8601 with milliseconds
+        schema:
+          type: string
+          format: date-time
+      - name: filter[edge_site]
+        in: query
+        required: false
+        description: Edge site filter
+        schema:
+          type: string
+      - name: filter[namespace]
+        in: query
+        required: false
+        description: Kubernetes namespace filter
+        schema:
+          type: string
+      - name: page[number]
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+      - name: page[size]
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 250
+          default: 20
+      responses:
+        '200':
+          description: Metric aggregates retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FunctionMetricAggregateListResponse'
+              example:
+                meta:
+                  total_pages: 1
+                  total_results: 1
+                  page_number: 1
+                  page_size: 20
+                data:
+                - record_type: edge_compute_function_metric_aggregate
+                  product: edge_compute
+                  start_time: '2026-09-08T16:00:00.000Z'
+                  end_time: '2026-09-09T16:00:00.000Z'
+                  function_id: 01998f0a-1111-7777-8888-123456789abc
+                  function_name: my-func
+                  request_count: 1250
+                  request_success_rate: 0.982
+                  request_client_error_rate: 0.012
+                  request_error_rate: 0.006
+                  request_latency_p50_ms: 8.4
+                  request_latency_p95_ms: 21.7
+                  request_latency_p99_ms: 44.2
+                  request_latency_avg_ms: 10.1
+                  cpu_used_cores_avg: 0.03
+                  cpu_used_cores_max: 0.18
+                  memory_used_bytes_avg: 67108864
+                  memory_used_bytes_max: 94371840
+        '401':
+          description: Unauthorized
+        '404':
+          description: Function not found
+        '422':
+          description: Invalid function ID or query parameter
+        '500':
+          description: Internal server error
+        '502':
+          description: Metrics backend query failed
+        '503':
+          description: Metrics backend unavailable
+        '504':
+          description: Metrics backend timed out
+  /compute/funcs/{id}/revisions:
+    get:
+      operationId: ListComputeFunctionRevisions
+      summary: List function revisions
+      description: Lists a function's ship history newest first, including per-ship failure stage and reason when recorded.
+      tags:
+      - Functions
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Function ID
+        schema:
+          type: string
+      - name: page[number]
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: page[size]
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 250
+          default: 10
+      responses:
+        '200':
+          description: Function revisions retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevisionListResponse'
+              example:
+                meta:
+                  total_pages: 1
+                  total_results: 2
+                  page_number: 1
+                  page_size: 10
+                data:
+                - record_type: compute_func_revision
+                  revision_id: rev-01998f0a
+                  image: registry.example/function@sha256:abc
+                  commit_sha: 3f8a1c2
+                  shipped_by: user@example.com
+                  shipped_at: '2026-09-09T15:45:00.000Z'
+                  build_status: build_ok
+                  deploy_status: deploy_ok
+                  active: true
+                  build_ok_at: '2026-09-09T15:44:41.000Z'
+                - record_type: compute_func_revision
+                  revision_id: ''
+                  image: ''
+                  commit_sha: 0d9c123
+                  shipped_by: user@example.com
+                  shipped_at: '2026-09-09T14:30:00.000Z'
+                  build_status: build_failed
+                  deploy_status: pending
+                  active: false
+                  failure_stage: build
+                  failure_reason: TypeScript compilation failed.
+        '400':
+          description: Invalid function ID
+        '401':
+          description: Unauthorized
+        '404':
+          description: Function not found
+        '500':
+          description: Internal server error
+  /compute/funcs/{id}/ship_inspection:
+    get:
+      operationId: GetComputeFunctionShipInspection
+      summary: Inspect latest function ship
+      description: Returns the latest ship outcome. The stage is `none` on success, `pending` while building, or a failure stage such as `build`, `platform`, `pre_build`, `deploy`, or `security_review`. This stage-neutral customer-facing path is an alias over the same inspection resource as `build_log_inspection`.
+      tags:
+      - Functions
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Function ID
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Latest ship inspection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShipInspectionResponseWrapper'
+              example:
+                data:
+                  record_type: build_log_inspection
+                  runtime: node
+                  stage: build
+                  reason: 'index.ts(8,7): error TS2322: Type ''string'' is not assignable to type ''number''.'
+                  snippet: 'index.ts(8,7): error TS2322'
+                  created_at: '2026-09-09T15:30:00.000Z'
+        '404':
+          description: Function or inspectable ship outcome not found
+        '422':
+          description: Invalid function ID
+        '500':
+          description: Internal server error
+components:
+  schemas:
+    FuncRuntimeLogsResponse:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/LogsMeta'
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/FuncRuntimeLog'
+    FuncInvocationLog:
+      type: object
+      properties:
+        record_type:
+          type: string
+          const: compute_func_invocation_log
+        timestamp:
+          type: string
+          format: date-time
+        method:
+          type: string
+        path:
+          type: string
+        status_code:
+          type: integer
+        duration_ms:
+          type: number
+        request_size_bytes:
+          type: integer
+        response_size_bytes:
+          type: integer
+        region:
+          type: string
+    RevisionListResponse:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/functions-observability_PaginationMeta'
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Revision'
+    Revision:
+      type: object
+      properties:
+        record_type:
+          type: string
+        revision_id:
+          type: string
+        image:
+          type: string
+        commit_sha:
+          type: string
+        shipped_by:
+          type: string
+        shipped_at:
+          type: string
+          format: date-time
+        build_status:
+          type: string
+        deploy_status:
+          type: string
+        active:
+          type: boolean
+        failure_stage:
+          type: string
+        failure_reason:
+          type: string
+        build_ok_at:
+          type: string
+          format: date-time
+    FunctionMetricAggregateListResponse:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/functions-observability_PaginationMeta'
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/FunctionMetricAggregate'
+    FuncLogExportConfig:
+      type: object
+      description: Metadata-only view of a function's log export destination. Header values are write-only (encrypted server-side) and never appear in any response.
+      properties:
+        record_type:
+          type: string
+          enum:
+          - compute_func_log_export_config
+        id:
+          type: string
+          description: Configuration record ID
+        func_id:
+          type: string
+          description: Function ID this configuration belongs to
+        endpoint:
+          type: string
+          format: uri
+          description: HTTPS OTLP endpoint URL logs are pushed to
+        enabled:
+          type: boolean
+          description: Whether export is enabled for this function
+        runtime_export_enabled:
+          type: boolean
+          description: Whether runtime logs (function stdout/stderr) are exported
+        invocation_export_enabled:
+          type: boolean
+          description: Whether invocation records (one per HTTP request) are exported
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    FuncRuntimeLog:
+      type: object
+      properties:
+        record_type:
+          type: string
+          const: compute_func_runtime_log
+        timestamp:
+          type: string
+          format: date-time
+        level:
+          type: string
+        message:
+          type: string
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    FuncLogExportConfigResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/FuncLogExportConfig'
+    functions-observability_PaginationMeta:
+      type: object
+      properties:
+        total_pages:
+          type: integer
+        total_results:
+          type: integer
+        page_number:
+          type: integer
+        page_size:
+          type: integer
+    ShipInspection:
+      type: object
+      properties:
+        record_type:
+          type: string
+          const: build_log_inspection
+          description: Stable record type retained by both inspection path aliases.
+        runtime:
+          type: string
+        stage:
+          type: string
+          enum:
+          - build
+          - platform
+          - pre_build
+          - deploy
+          - security_review
+          - none
+          - pending
+        reason:
+          type: string
+        snippet:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    LogsMeta:
+      type: object
+      properties:
+        has_more:
+          type: boolean
+        partial:
+          type: boolean
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
+    FuncInvocationLogsResponse:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/LogsMeta'
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/FuncInvocationLog'
+    ShipInspectionResponseWrapper:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/ShipInspection'
+    FunctionMetricAggregate:
+      type: object
+      properties:
+        record_type:
+          type: string
+        product:
+          type: string
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        function_id:
+          type: string
+        function_name:
+          type: string
+        request_count:
+          type:
+          - number
+          - 'null'
+        request_success_rate:
+          type:
+          - number
+          - 'null'
+        request_client_error_rate:
+          type:
+          - number
+          - 'null'
+        request_error_rate:
+          type:
+          - number
+          - 'null'
+        request_latency_p50_ms:
+          type:
+          - number
+          - 'null'
+        request_latency_p95_ms:
+          type:
+          - number
+          - 'null'
+        request_latency_p99_ms:
+          type:
+          - number
+          - 'null'
+        request_latency_avg_ms:
+          type:
+          - number
+          - 'null'
+        cpu_used_cores_avg:
+          type:
+          - number
+          - 'null'
+        cpu_used_cores_max:
+          type:
+          - number
+          - 'null'
+        memory_used_bytes_avg:
+          type:
+          - number
+          - 'null'
+        memory_used_bytes_max:
+          type:
+          - number
+          - 'null'
+    FuncLogExportConfigSetRequest:
+      type: object
+      description: 'Full-replace configuration body. All fields are required on every call: the API treats PUT as a replace (RFC 7231), so omitting any field is a 422, not "keep the current value".'
+      required:
+      - endpoint
+      - headers
+      - runtime_export_enabled
+      - invocation_export_enabled
+      properties:
+        endpoint:
+          type: string
+          format: uri
+          description: HTTPS URL to push logs to
+        headers:
+          type: object
+          description: Headers attached to every export push, as key-value pairs (e.g. an auth token the collector expects). Required even when empty — {} means "no headers". Encrypted at rest; never returned.
+          additionalProperties:
+            type: string
+        runtime_export_enabled:
+          type: boolean
+          description: Export runtime logs (function stdout/stderr) to this destination
+        invocation_export_enabled:
+          type: boolean
+          description: Export invocation records (one per HTTP request) to this destination
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt
