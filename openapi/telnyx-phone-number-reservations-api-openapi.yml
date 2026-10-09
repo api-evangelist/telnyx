@@ -151,6 +151,35 @@ paths:
       x-latency-category: responsive
 components:
   schemas:
+    numbers_Error:
+      properties:
+        code:
+          example: '10007'
+          type: string
+        detail:
+          example: An unexpected error occured.
+          type: string
+        meta:
+          properties:
+            url:
+              description: URL with additional information on the error.
+              example: https://developers.telnyx.com/docs/overview/errors/10015
+              type: string
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              example: /base
+              type: string
+          type: object
+        title:
+          example: Unexpected error
+          type: string
+      type: object
     ReservedPhoneNumber:
       example:
         created_at: '2018-01-01T00:00:00.000000Z'
@@ -205,6 +234,21 @@ components:
           format: date-time
           readOnly: true
           type: string
+      type: object
+    PaginationMeta:
+      properties:
+        page_number:
+          example: 2
+          type: integer
+        page_size:
+          example: 25
+          type: integer
+        total_pages:
+          example: 3
+          type: integer
+        total_results:
+          example: 55
+          type: integer
       type: object
     CreateNumberReservationRequest:
       example:
@@ -261,28 +305,6 @@ components:
           format: date-time
           readOnly: true
           type: string
-      type: object
-    PaginationMeta:
-      properties:
-        page_number:
-          example: 2
-          type: integer
-        page_size:
-          example: 25
-          type: integer
-        total_pages:
-          example: 3
-          type: integer
-        total_results:
-          example: 55
-          type: integer
-      type: object
-    numbers_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/numbers_Error'
-          type: array
       type: object
     NumberReservation:
       example:
@@ -345,36 +367,57 @@ components:
           readOnly: true
           type: string
       type: object
-    numbers_Error:
+    numbers_Errors:
       properties:
-        code:
-          example: '10007'
-          type: string
-        detail:
-          example: An unexpected error occured.
-          type: string
-        meta:
-          properties:
-            url:
-              description: URL with additional information on the error.
-              example: https://developers.telnyx.com/docs/overview/errors/10015
-              type: string
-          type: object
-        source:
-          properties:
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              example: /base
-              type: string
-          type: object
-        title:
-          example: Unexpected error
-          type: string
+        errors:
+          items:
+            $ref: '#/components/schemas/numbers_Error'
+          type: array
       type: object
   responses:
+    numbers_NotFoundResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: The requested resource doesn't exist.
+    NumberReservationResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/NumberReservation'
+            title: Number Reservation Response
+            type: object
+      description: Successful response with details about a number reservation.
+    numbers_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Unexpected error
+    numbers_BadRequestResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Bad request, the request was unacceptable, often due to missing a required parameter.
+    numbers_UnauthorizedResponse:
+      content:
+        application/json:
+          examples:
+            Authentication Failed:
+              value:
+                errors:
+                - code: '10009'
+                  detail: Could not understand the provided credentials.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+                  title: Authentication failed
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Unauthorized
     ListNumberReservationsResponse:
       content:
         application/json:
@@ -395,49 +438,6 @@ components:
           schema:
             $ref: '#/components/schemas/numbers_Errors'
       description: Unprocessable entity. Check the 'detail' field in response for details.
-    numbers_BadRequestResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/numbers_Errors'
-      description: Bad request, the request was unacceptable, often due to missing a required parameter.
-    numbers_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/numbers_Errors'
-      description: Unexpected error
-    NumberReservationResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/NumberReservation'
-            title: Number Reservation Response
-            type: object
-      description: Successful response with details about a number reservation.
-    numbers_NotFoundResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/numbers_Errors'
-      description: The requested resource doesn't exist.
-    numbers_UnauthorizedResponse:
-      content:
-        application/json:
-          examples:
-            Authentication Failed:
-              value:
-                errors:
-                - code: '10009'
-                  detail: Could not understand the provided credentials.
-                  meta:
-                    url: https://developers.telnyx.com/docs/overview/errors/10009
-                  title: Authentication failed
-          schema:
-            $ref: '#/components/schemas/numbers_Errors'
-      description: Unauthorized
   parameters:
     numbers_PageConsolidated:
       description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'

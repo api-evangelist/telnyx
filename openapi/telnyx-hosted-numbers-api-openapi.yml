@@ -225,39 +225,42 @@ paths:
       x-latency-category: responsive
 components:
   schemas:
-    HostedNumber:
-      example:
-        id: bf6307bd-884d-4c1f-b6ea-c62b8c495d3c
-        phone_number: '+18665550001'
-        record_type: messaging_hosted_number
-        status: successful
+    messaging_Error:
       properties:
-        id:
-          description: Identifies the type of resource.
-          format: uuid
-          readOnly: true
+        code:
           type: string
-        phone_number:
-          description: The messaging hosted phone number (+E.164 format)
+          x-format: integer
+        detail:
           type: string
-          x-format: +E.164
-        record_type:
-          example: messaging_hosted_number
+        meta:
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              format: json-pointer
+              type: string
+          type: object
+        title:
           type: string
-        status:
-          enum:
-          - deleted
-          - failed
-          - failed_activation
-          - failed_carrier_rejected
-          - failed_ineligible_carrier
-          - failed_number_already_hosted
-          - failed_number_not_found
-          - failed_ownership_verification
-          - failed_timeout
-          - pending
-          - provisioning
-          - successful
+      required:
+      - code
+      - title
+    UploadFileMessagingHostedNumberOrderRequest:
+      example:
+        bill: bill example
+        loa: example loa
+      properties:
+        bill:
+          description: Must be the last month's bill with proof of ownership of all of the numbers in the order in PDF format.
+          format: binary
+          type: string
+        loa:
+          description: Must be a signed LOA for the numbers in the order in PDF format.
+          format: binary
           type: string
       type: object
     MessagingHostedNumberOrder:
@@ -310,6 +313,14 @@ components:
           - provisioning
           - successful
           type: string
+      type: object
+    EligibilityNumbersResponse:
+      properties:
+        phone_numbers:
+          description: List of phone numbers with their eligibility status.
+          items:
+            $ref: '#/components/schemas/EligibilityNumberResponse'
+          type: array
       type: object
     CreatedVerificationCodesResponse:
       properties:
@@ -368,6 +379,41 @@ components:
       - phone_numbers
       - order_id
       type: object
+    HostedNumber:
+      example:
+        id: bf6307bd-884d-4c1f-b6ea-c62b8c495d3c
+        phone_number: '+18665550001'
+        record_type: messaging_hosted_number
+        status: successful
+      properties:
+        id:
+          description: Identifies the type of resource.
+          format: uuid
+          readOnly: true
+          type: string
+        phone_number:
+          description: The messaging hosted phone number (+E.164 format)
+          type: string
+          x-format: +E.164
+        record_type:
+          example: messaging_hosted_number
+          type: string
+        status:
+          enum:
+          - deleted
+          - failed
+          - failed_activation
+          - failed_carrier_rejected
+          - failed_ineligible_carrier
+          - failed_number_already_hosted
+          - failed_number_not_found
+          - failed_ownership_verification
+          - failed_timeout
+          - pending
+          - provisioning
+          - successful
+          type: string
+      type: object
     ValidationCodesRequest:
       properties:
         verification_codes:
@@ -386,6 +432,12 @@ components:
       required:
       - verification_codes
       type: object
+    messaging_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/messaging_Error'
+          type: array
     messaging_PaginationMeta:
       properties:
         page_number:
@@ -405,14 +457,6 @@ components:
       - total_results
       - page_size
       - page_number
-      type: object
-    EligibilityNumbersResponse:
-      properties:
-        phone_numbers:
-          description: List of phone numbers with their eligibility status.
-          items:
-            $ref: '#/components/schemas/EligibilityNumberResponse'
-          type: array
       type: object
     EligibilityNumberResponse:
       properties:
@@ -442,12 +486,18 @@ components:
           description: The phone number in e164 format.
           type: string
       type: object
-    messaging_Errors:
+    EligibilityNumbersRequest:
       properties:
-        errors:
+        phone_numbers:
+          description: List of phone numbers to check eligibility
           items:
-            $ref: '#/components/schemas/messaging_Error'
+            description: Phone number to check eligibility
+            type: string
+            x-format: +E.164
           type: array
+      required:
+      - phone_numbers
+      type: object
     VerificationCodesRequest:
       properties:
         phone_numbers:
@@ -464,44 +514,6 @@ components:
       - phone_numbers
       - verification_method
       type: object
-    UploadFileMessagingHostedNumberOrderRequest:
-      example:
-        bill: bill example
-        loa: example loa
-      properties:
-        bill:
-          description: Must be the last month's bill with proof of ownership of all of the numbers in the order in PDF format.
-          format: binary
-          type: string
-        loa:
-          description: Must be a signed LOA for the numbers in the order in PDF format.
-          format: binary
-          type: string
-      type: object
-    messaging_Error:
-      properties:
-        code:
-          type: string
-          x-format: integer
-        detail:
-          type: string
-        meta:
-          type: object
-        source:
-          properties:
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              format: json-pointer
-              type: string
-          type: object
-        title:
-          type: string
-      required:
-      - code
-      - title
     CreateMessagingHostedNumberOrderRequest:
       example:
         messaging_profile_id: dc8f39ac-953d-4520-b93b-786ae87db0da
@@ -519,29 +531,7 @@ components:
             x-format: +E.164
           type: array
       type: object
-    EligibilityNumbersRequest:
-      properties:
-        phone_numbers:
-          description: List of phone numbers to check eligibility
-          items:
-            description: Phone number to check eligibility
-            type: string
-            x-format: +E.164
-          type: array
-      required:
-      - phone_numbers
-      type: object
   responses:
-    MessagingHostedNumberOrderResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/MessagingHostedNumberOrder'
-            title: Retrieve Messaging Hosted Number Order Response
-            type: object
-      description: Successful response with details about a messaging hosted number order.
     ListMessagingHostedNumberOrdersResponse:
       content:
         application/json:
@@ -556,12 +546,16 @@ components:
             title: List Messaging Hosted Number Order Response
             type: object
       description: Successful response with a list of messaging hosted number orders.
-    messaging_GenericErrorResponse:
+    MessagingHostedNumberOrderResponse:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/messaging_Errors'
-      description: Unexpected error
+            properties:
+              data:
+                $ref: '#/components/schemas/MessagingHostedNumberOrder'
+            title: Retrieve Messaging Hosted Number Order Response
+            type: object
+      description: Successful response with details about a messaging hosted number order.
     ValidationCodesResponse:
       content:
         application/json:
@@ -572,6 +566,12 @@ components:
             title: Retrieve Messaging Hosted Number Response
             type: object
       description: Successful response with the phone numbers and their respective status of the validation codes.
+    messaging_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors'
+      description: Unexpected error
   parameters:
     PageConsolidated:
       description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'

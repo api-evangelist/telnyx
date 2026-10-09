@@ -1,0 +1,190 @@
+generated: '2026-10-08'
+method: searched
+source: https://developers.telnyx.com/docs/development/api-fundamentals/{authentication,pagination-filtering-sorting,api-errors,reliability/rate-limiting,reliability/command-retries,webhooks/receiving-webhooks}
+  (markdown twins, 2026-10-08) + https://developers.telnyx.com/docs/voice/programmable-voice/voice-api-webhooks
+  + https://telnyx.com/openapi.json
+authentication:
+  style: Bearer API key in Authorization header; OAuth 2.0 (authorization_code + PKCE, client_credentials, refresh_token)
+    for multi-user agent platforms; x402 pay-per-call for inference without an account
+  docs: https://developers.telnyx.com/docs/development/api-fundamentals/authentication
+  artifact: authentication/telnyx-authentication.yml
+idempotency:
+  coverage: partial
+  mechanism: 'Two product-specific mechanisms, neither applied across the whole mutating surface: (1) an `Idempotency-Key`
+    request header (components/parameters/IdempotencyKey) on AI assistant/test/deploy operations, answered with
+    an `Idempotent-Replayed` response header and rejected with HTTP 400 / code 10015 when invalid or duplicate;
+    (2) a `command_id` body field on Call Control and Conference commands - ''Telnyx will ignore any command with
+    the same command_id for the same call_control_id''; the voice webhooks guide states duplicate IDs are ignored
+    within 60 seconds.'
+  header: Idempotency-Key
+  body_field: command_id
+  retention: 60 seconds for command_id duplicates (voice-api-webhooks); unstated for Idempotency-Key
+  scope:
+  - AnswerCall
+  - BridgeCall
+  - CallAddMessagesToAIAssistant
+  - CallJoinAIAssistant
+  - CallStartAIAssistant
+  - CallStartConversationRelay
+  - CallStopAIAssistant
+  - CallStopConversationRelay
+  - CreateCanaryDeploy
+  - CreateCloudfsFilesystem
+  - CreateConference
+  - CreateEmailMessage
+  - CreateEmailMessageBatch
+  - CreateEmailTemplate
+  - CreateEmailValidation
+  - CreateEmailValidationBatch
+  - DialCall
+  - EndConference
+  - EnqueueCall
+  - GatherCall
+  - GatherUsingAudio
+  - GatherUsingSpeak
+  - HangupCall
+  - JoinConference
+  - LeaveConference
+  - LeaveQueue
+  - PauseCallRecording
+  - PauseConferenceRecording
+  - PayCall
+  - PostEmbedding
+  - PostEmbeddingUrl
+  - PostSummary
+  - ReferCall
+  - RejectCall
+  - ResumeCallRecording
+  - ResumeConferenceRecording
+  - RotateCloudfsMetaToken
+  - SendDTMF
+  - SendSIPInfo
+  - SpeakCall
+  - SpeakTextToConference
+  - StartCallFork
+  - StartCallPlayback
+  - StartCallRecord
+  - StartCallStreaming
+  - StartCallTranscription
+  - StartConferenceRecording
+  - StopCallFork
+  - StopCallGather
+  - StopCallPlayback
+  - StopCallRecording
+  - StopCallStreaming
+  - StopCallTranscription
+  - StopConferenceRecording
+  - StopSiprecSession
+  - TransferCall
+  - TriggerTestSuiteRuns
+  - UpdateConference
+  - add_new_message
+  - assistant_sms_chat_assistants__assistant_id__chat_sms_post
+  - assistant_whatsapp_chat_assistants__assistant_id__chat_w_1byyum7
+  - callGatherUsingAI
+  - clone_assistant_public_assistants__assistant_id__clone_post
+  - create_assistant_test_public_assistants_tests_post
+  - create_insight
+  - create_insight_group
+  - create_mcp_server
+  - create_new_assistant_public_assistants_post
+  - create_new_conversation_public_conversations_post
+  - create_scheduled_event
+  - create_tool_post
+  - import_assistants_public_assistants_import_post
+  - noiseSuppressionStart
+  - noiseSuppressionStop
+  - trigger_test_run_public_assistants_tests__test_id__runs_post
+  scope_note: 75 of 743 mutating operations in https://telnyx.com/openapi.json declare one of the two mechanisms
+    (operationIds as the live spec names them)
+  docs: https://developers.telnyx.com/docs/development/api-fundamentals/reliability/command-retries
+reversibility:
+  grade: documented
+  note: Reversal operations exist for calls, faxes, scheduled messages/emails, porting and number orders, OAuth
+    grants, assistants and AI jobs, but no page states a time window inside which a reversal works (a scheduled
+    message can be cancelled until it is sent; nothing quantifies it). No dry-run mode is documented.
+  operations:
+  - operationId: HangupCall
+    operation: POST /calls/{call_control_id}/actions/hangup
+    reverses: ends an in-progress call
+  - operationId: RejectCall
+    operation: POST /calls/{call_control_id}/actions/reject
+    reverses: declines an incoming call
+  - operationId: CancelFax
+    operation: POST /faxes/{id}/actions/cancel
+    reverses: cancels a fax
+  - operationId: CancelMessage
+    operation: DELETE /messages/{id}
+    reverses: cancels a scheduled message
+  - operationId: CancelScheduledEmailMessage
+    operation: DELETE /email_messages/{email_id}/schedule
+    reverses: cancels a scheduled email message
+  - operationId: CancelPortingOrder
+    operation: POST /porting_orders/{id}/actions/cancel
+    reverses: cancels a porting order
+  - operationId: CancelSubNumberOrder
+    operation: PATCH /sub_number_orders/{sub_number_order_id}/cancel
+    reverses: cancels a sub number order
+  - operationId: CancelPendingRequirementVersion
+    operation: DELETE /requirements/{id}/versions/pending
+    reverses: cancels a pending requirement version
+  - operationId: RevokeOAuthGrant
+    operation: DELETE /oauth/grants/{id}
+    reverses: revokes an OAuth grant
+  - operationId: restore_assistant_public_assistants__assistant_id__restore_post
+    operation: POST /ai/assistants/{assistant_id}/restore
+    reverses: restores a deleted assistant
+  - operationId: cancel_new_finetuningjob_public_finetuning_post
+    operation: POST /ai/fine_tuning/jobs/{job_id}/cancel
+    reverses: cancels a fine-tuning job
+  - operationId: post_public_missions_missions_mission_id_runs_run_id_cancel
+    operation: POST /ai/missions/{mission_id}/runs/{run_id}/cancel
+    reverses: cancels a mission run
+  window: null
+  dry_run_mode: none documented
+pagination:
+  style: page-based
+  params:
+  - page[number]
+  - page[size]
+  response_fields:
+  - meta.page_number
+  - meta.page_size
+  - meta.total_pages
+  - meta.total_results
+  note: 1-based; defaults and maximum page sizes are per endpoint; some endpoints use links/cursors instead
+  filtering: filter[field]=value and filter[field][]=v1&filter[field][]=v2 (endpoint-specific)
+  sorting: sort=field or sort=-field (leading - = descending)
+  docs: https://developers.telnyx.com/docs/development/api-fundamentals/pagination-filtering-sorting
+error_envelope:
+  shape: '{"errors": [{"code": "10011", "title": "Too many requests", "detail": "..."}]}'
+  code_registry: https://developers.telnyx.com/data/api-errors.json
+  artifact: errors/telnyx-problem-types.yml
+rate_limit_signaling:
+  headers:
+  - x-ratelimit-limit
+  - x-ratelimit-remaining
+  - x-ratelimit-reset
+  - retry-after
+  exhaustion: 429 Too Many Requests with error code 10011
+  note: Header availability and the x-ratelimit-reset representation are product-specific; a missing header is not
+    evidence of no limit
+  docs: https://developers.telnyx.com/docs/development/api-fundamentals/reliability/rate-limiting
+  artifact: rate-limits/telnyx-rate-limits.yml
+retries:
+  policy: bounded exponential backoff with jitter; retry 429/5xx only when the operation is safe to repeat; never
+    auto-retry a timed-out side-effecting POST
+  docs: https://developers.telnyx.com/docs/development/api-fundamentals/reliability/command-retries
+versioning:
+  style: URL path (/v2)
+  artifact: lifecycle/telnyx-lifecycle.yml
+webhooks:
+  envelope: data{record_type:'event', event_type, id, occurred_at, payload} + meta{attempt, delivered_to}
+  signature_headers:
+  - telnyx-timestamp
+  - telnyx-signature-ed25519
+  catalog: https://developers.telnyx.com/data/webhook-events.json
+  docs: https://developers.telnyx.com/docs/development/api-fundamentals/webhooks/receiving-webhooks
+request_tracing: null
+field_expansion: null
+metadata: null

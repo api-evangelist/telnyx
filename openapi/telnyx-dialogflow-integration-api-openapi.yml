@@ -87,6 +87,63 @@ paths:
       - Dialogflow Integration
       x-latency-category: responsive
 components:
+  parameters:
+    media-streaming_ConnectionId:
+      description: Uniquely identifies a Telnyx application (Call Control).
+      in: path
+      name: connection_id
+      required: true
+      schema:
+        type: string
+  responses:
+    media-streaming_UnprocessableEntityResponse:
+      content:
+        application/json:
+          example:
+            errors:
+            - code: '422'
+              detail: The request parameters failed validation.
+              source:
+                pointer: /service_account
+              title: Unprocessable Entity
+          schema:
+            $ref: '#/components/schemas/media-streaming_Errors'
+      description: Unprocessable entity. The request was well-formed but contains semantic errors.
+    media-streaming_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/media-streaming_Errors'
+      description: Unexpected error.
+    media-streaming_NotFoundResponse:
+      content:
+        application/json:
+          examples:
+            connection_not_found:
+              summary: Connection not found
+              value:
+                errors:
+                - code: '10005'
+                  detail: The Dialogflow connection for the specified connection_id could not be found.
+                  source:
+                    pointer: /connection_id
+                  title: Resource not found
+            not_found:
+              summary: Generic not found
+              value:
+                errors:
+                - code: '404'
+                  detail: Page not found
+                  title: Not Found
+          schema:
+            $ref: '#/components/schemas/media-streaming_Errors'
+      description: Resource not found. The requested resource or URL could not be found.
+    DialogflowConnectionResponseBody:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DialogflowConnectionResponse'
+      description: Return details of the Dialogflow connection associated with the given CallControl connection.
   schemas:
     DialogflowConnectionResponse:
       properties:
@@ -117,6 +174,37 @@ components:
       - data
       title: Dialogflow Connection Response
       type: object
+    media-streaming_Error:
+      properties:
+        code:
+          type: string
+        detail:
+          type: string
+        meta:
+          additionalProperties: true
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+          type: object
+        title:
+          type: string
+      required:
+      - code
+      - title
+      type: object
+    media-streaming_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/media-streaming_Error'
+          type: array
+      type: object
     DialogflowConnection:
       example:
         conversation_profile_id: a-VMHLWzTmKjiJw5S6O0-w
@@ -129,9 +217,7 @@ components:
           client_email: example@example.com
           client_id: your-client-id
           client_x509_cert_url: https://www.googleapis.com/robot/v1/metadata/x509/example%40example.iam.gserviceaccount.com
-          private_key: '-----BEGIN PRIVATE KEY-----
-
-            -----END PRIVATE KEY-----'
+          private_key: REDACTED_PRIVATE_KEY_EXAMPLE
           private_key_id: your-private-key
           project_id: your-project-id
           token_uri: https://oauth2.googleapis.com/token
@@ -165,86 +251,6 @@ components:
       - service_account
       title: Dialogflow Connection Params
       type: object
-    media-streaming_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/media-streaming_Error'
-          type: array
-      type: object
-    media-streaming_Error:
-      properties:
-        code:
-          type: string
-        detail:
-          type: string
-        meta:
-          additionalProperties: true
-          type: object
-        source:
-          properties:
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-          type: object
-        title:
-          type: string
-      required:
-      - code
-      - title
-      type: object
-  responses:
-    media-streaming_UnprocessableEntityResponse:
-      content:
-        application/json:
-          example:
-            errors:
-            - code: '422'
-              detail: The request parameters failed validation.
-              source:
-                pointer: /service_account
-              title: Unprocessable Entity
-          schema:
-            $ref: '#/components/schemas/media-streaming_Errors'
-      description: Unprocessable entity. The request was well-formed but contains semantic errors.
-    media-streaming_NotFoundResponse:
-      content:
-        application/json:
-          examples:
-            connection_not_found:
-              summary: Connection not found
-              value:
-                errors:
-                - code: '10005'
-                  detail: The Dialogflow connection for the specified connection_id could not be found.
-                  source:
-                    pointer: /connection_id
-                  title: Resource not found
-            not_found:
-              summary: Generic not found
-              value:
-                errors:
-                - code: '404'
-                  detail: Page not found
-                  title: Not Found
-          schema:
-            $ref: '#/components/schemas/media-streaming_Errors'
-      description: Resource not found. The requested resource or URL could not be found.
-    media-streaming_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/media-streaming_Errors'
-      description: Unexpected error.
-    DialogflowConnectionResponseBody:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/DialogflowConnectionResponse'
-      description: Return details of the Dialogflow connection associated with the given CallControl connection.
   requestBodies:
     DialogflowConnectionRequest:
       content:
@@ -253,14 +259,6 @@ components:
             $ref: '#/components/schemas/DialogflowConnection'
       description: The params expected to create/update a Dialogflow Connection for given connection_id.
       required: true
-  parameters:
-    media-streaming_ConnectionId:
-      description: Uniquely identifies a Telnyx application (Call Control).
-      in: path
-      name: connection_id
-      required: true
-      schema:
-        type: string
   securitySchemes:
     bearerAuth:
       scheme: bearer

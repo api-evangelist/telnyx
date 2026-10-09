@@ -118,13 +118,26 @@ paths:
       x-latency-category: responsive
 components:
   schemas:
-    SummaryResponseData:
+    ValidationError:
       properties:
-        data:
-          $ref: '#/components/schemas/SummaryResponse'
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
       required:
-      - data
-      title: SummaryResponseData
+      - loc
+      - msg
+      - type
+      title: ValidationError
       type: object
     ChatCompletionResponseFormatParam:
       properties:
@@ -136,6 +149,69 @@ components:
       required:
       - type
       title: ChatCompletionResponseFormatParam
+      type: object
+    ChatCompletionSystemMessageParam:
+      properties:
+        content:
+          oneOf:
+          - title: Content String
+            type: string
+          - items:
+              additionalProperties: false
+              properties:
+                image_url:
+                  type: string
+                text:
+                  type: string
+                type:
+                  enum:
+                  - text
+                  - image_url
+                  type: string
+              required:
+              - type
+              type: object
+            title: Text and Image Array
+            type: array
+        role:
+          enum:
+          - system
+          - user
+          - assistant
+          - tool
+          type: string
+      required:
+      - content
+      - role
+      title: ChatCompletionSystemMessageParam
+      type: object
+    ModelsResponse:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/ModelMetadata'
+          title: Data
+          type: array
+        object:
+          default: list
+          title: Object
+          type: string
+      required:
+      - data
+      title: ModelsResponse
+      type: object
+    Retrieval:
+      properties:
+        retrieval:
+          $ref: '#/components/schemas/BucketIds'
+        type:
+          enum:
+          - retrieval
+          type: string
+      required:
+      - type
+      - retrieval
+      title: Retrieval
       type: object
     ChatCompletionToolParam:
       properties:
@@ -150,43 +226,48 @@ components:
       - type
       title: Function
       type: object
-    SummaryRequest:
+    BucketIds:
       properties:
-        bucket:
-          description: The name of the bucket that contains the file to be summarized.
-          type: string
-        filename:
-          description: The name of the file to be summarized.
-          type: string
-        system_prompt:
-          description: A system prompt to guide the summary generation.
-          type: string
+        bucket_ids:
+          description: List of [embedded storage buckets](https://developers.telnyx.com/api-reference/embeddings/embed-documents) to use for retrieval-augmented generation.
+          items:
+            type: string
+          type: array
+        max_num_results:
+          description: The maximum number of results to retrieve as context for the language model.
+          type: integer
       required:
-      - bucket
-      - filename
-      title: SummaryRequest
+      - bucket_ids
+      title: BucketIds
       type: object
-    SummaryResponse:
+    SummaryResponseData:
       properties:
-        summary:
-          title: Summary
-          type: string
+        data:
+          $ref: '#/components/schemas/SummaryResponse'
       required:
-      - summary
-      title: SummaryResponse
+      - data
+      title: SummaryResponseData
       type: object
-    Retrieval:
+    ModelMetadata:
       properties:
-        retrieval:
-          $ref: '#/components/schemas/BucketIds'
-        type:
-          enum:
-          - retrieval
+        created:
+          title: Created
+          type: integer
+        id:
+          title: Id
+          type: string
+        object:
+          default: model
+          title: Object
+          type: string
+        owned_by:
+          title: Owned By
           type: string
       required:
-      - type
-      - retrieval
-      title: Retrieval
+      - id
+      - created
+      - owned_by
+      title: ModelMetadata
       type: object
     ChatCompletionRequest:
       properties:
@@ -317,56 +398,6 @@ components:
       - name
       title: FunctionDefinition
       type: object
-    ModelsResponse:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/ModelMetadata'
-          title: Data
-          type: array
-        object:
-          default: list
-          title: Object
-          type: string
-      required:
-      - data
-      title: ModelsResponse
-      type: object
-    ChatCompletionSystemMessageParam:
-      properties:
-        content:
-          oneOf:
-          - title: Content String
-            type: string
-          - items:
-              additionalProperties: false
-              properties:
-                image_url:
-                  type: string
-                text:
-                  type: string
-                type:
-                  enum:
-                  - text
-                  - image_url
-                  type: string
-              required:
-              - type
-              type: object
-            title: Text and Image Array
-            type: array
-        role:
-          enum:
-          - system
-          - user
-          - assistant
-          - tool
-          type: string
-      required:
-      - content
-      - role
-      title: ChatCompletionSystemMessageParam
-      type: object
     HTTPValidationError:
       properties:
         detail:
@@ -376,61 +407,30 @@ components:
           type: array
       title: HTTPValidationError
       type: object
-    ModelMetadata:
+    SummaryResponse:
       properties:
-        created:
-          title: Created
-          type: integer
-        id:
-          title: Id
-          type: string
-        object:
-          default: model
-          title: Object
-          type: string
-        owned_by:
-          title: Owned By
+        summary:
+          title: Summary
           type: string
       required:
-      - id
-      - created
-      - owned_by
-      title: ModelMetadata
+      - summary
+      title: SummaryResponse
       type: object
-    ValidationError:
+    SummaryRequest:
       properties:
-        loc:
-          items:
-            anyOf:
-            - type: string
-            - type: integer
-          title: Location
-          type: array
-        msg:
-          title: Message
+        bucket:
+          description: The name of the bucket that contains the file to be summarized.
           type: string
-        type:
-          title: Error Type
+        filename:
+          description: The name of the file to be summarized.
+          type: string
+        system_prompt:
+          description: A system prompt to guide the summary generation.
           type: string
       required:
-      - loc
-      - msg
-      - type
-      title: ValidationError
-      type: object
-    BucketIds:
-      properties:
-        bucket_ids:
-          description: List of [embedded storage buckets](https://developers.telnyx.com/api-reference/embeddings/embed-documents) to use for retrieval-augmented generation.
-          items:
-            type: string
-          type: array
-        max_num_results:
-          description: The maximum number of results to retrieve as context for the language model.
-          type: integer
-      required:
-      - bucket_ids
-      title: BucketIds
+      - bucket
+      - filename
+      title: SummaryRequest
       type: object
   securitySchemes:
     bearerAuth:

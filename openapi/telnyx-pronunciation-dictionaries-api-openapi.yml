@@ -243,44 +243,111 @@ paths:
       - Pronunciation Dictionaries
       x-latency-category: interactive
 components:
-  parameters:
-    pronunciation_dict_id:
-      description: The UUID of the pronunciation dictionary.
-      in: path
-      name: id
-      required: true
-      schema:
-        example: c215a3e1-be41-4701-97e8-1d3c22f9a5b7
-        format: uuid
-        type: string
   schemas:
-    pronunciation-dicts_ErrorResponse:
-      description: Standard Telnyx error response.
+    ErrorObject:
       properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/ErrorObject'
-          type: array
+        code:
+          description: Machine-readable error code.
+          example: '90202'
+          type: string
+        detail:
+          description: Detailed error description.
+          example: items must have at least one item
+          type: string
+        source:
+          description: Source of the error.
+          properties:
+            pointer:
+              description: JSON pointer to the field that caused the error.
+              example: /items
+              type: string
+          type: object
+        title:
+          description: Short human-readable error title.
+          example: Validation failed
+          type: string
       type: object
-    CreatePronunciationDictRequest:
-      description: Request body for creating a pronunciation dictionary.
+    pronunciation-dicts_PaginationMeta:
+      description: Pagination metadata returned with list responses.
+      properties:
+        page_number:
+          description: Current page number (1-based).
+          example: 1
+          type: integer
+        page_size:
+          description: Number of results per page.
+          example: 20
+          type: integer
+        total_pages:
+          description: Total number of pages.
+          example: 1
+          type: integer
+        total_results:
+          description: Total number of results across all pages.
+          example: 3
+          type: integer
+      type: object
+    UpdatePronunciationDictRequest:
+      description: Request body for updating a pronunciation dictionary. At least one field must be provided.
+      minProperties: 1
       properties:
         items:
-          description: List of pronunciation items (alias or phoneme type). At least one item is required.
+          description: Updated list of pronunciation items (alias or phoneme type).
           items:
             $ref: '#/components/schemas/PronunciationDictItem'
           maxItems: 100
           minItems: 1
           type: array
         name:
-          description: Human-readable name. Must be unique within the organization.
-          example: Brand Names
+          description: Updated dictionary name.
+          example: Updated Brand Names
           maxLength: 255
           minLength: 1
           type: string
+      type: object
+    PronunciationDictAliasItem:
+      additionalProperties: false
+      description: An alias pronunciation item. When the `text` value is found in input, it is replaced with the `alias` before speech synthesis.
+      properties:
+        alias:
+          description: The replacement text that will be spoken instead.
+          example: tel-nicks
+          maxLength: 500
+          minLength: 1
+          type: string
+        text:
+          description: The text to match in the input. Case-insensitive matching is used during synthesis.
+          example: Telnyx
+          maxLength: 200
+          minLength: 1
+          type: string
+        type:
+          description: The item type.
+          enum:
+          - alias
+          example: alias
+          type: string
       required:
-      - name
-      - items
+      - text
+      - type
+      - alias
+      type: object
+    PronunciationDictResponse:
+      description: Response containing a single pronunciation dictionary.
+      properties:
+        data:
+          $ref: '#/components/schemas/PronunciationDictData'
+      type: object
+    PronunciationDictListResponse:
+      description: Paginated list of pronunciation dictionaries.
+      properties:
+        data:
+          description: Array of pronunciation dictionary objects.
+          items:
+            $ref: '#/components/schemas/PronunciationDictData'
+          type: array
+        meta:
+          $ref: '#/components/schemas/pronunciation-dicts_PaginationMeta'
       type: object
     PronunciationDictPhonemeItem:
       additionalProperties: false
@@ -316,86 +383,25 @@ components:
       - phoneme
       - alphabet
       type: object
-    pronunciation-dicts_PaginationMeta:
-      description: Pagination metadata returned with list responses.
+    CreatePronunciationDictRequest:
+      description: Request body for creating a pronunciation dictionary.
       properties:
-        page_number:
-          description: Current page number (1-based).
-          example: 1
-          type: integer
-        page_size:
-          description: Number of results per page.
-          example: 20
-          type: integer
-        total_pages:
-          description: Total number of pages.
-          example: 1
-          type: integer
-        total_results:
-          description: Total number of results across all pages.
-          example: 3
-          type: integer
-      type: object
-    PronunciationDictListResponse:
-      description: Paginated list of pronunciation dictionaries.
-      properties:
-        data:
-          description: Array of pronunciation dictionary objects.
+        items:
+          description: List of pronunciation items (alias or phoneme type). At least one item is required.
           items:
-            $ref: '#/components/schemas/PronunciationDictData'
+            $ref: '#/components/schemas/PronunciationDictItem'
+          maxItems: 100
+          minItems: 1
           type: array
-        meta:
-          $ref: '#/components/schemas/pronunciation-dicts_PaginationMeta'
-      type: object
-    ErrorObject:
-      properties:
-        code:
-          description: Machine-readable error code.
-          example: '90202'
-          type: string
-        detail:
-          description: Detailed error description.
-          example: items must have at least one item
-          type: string
-        source:
-          description: Source of the error.
-          properties:
-            pointer:
-              description: JSON pointer to the field that caused the error.
-              example: /items
-              type: string
-          type: object
-        title:
-          description: Short human-readable error title.
-          example: Validation failed
-          type: string
-      type: object
-    PronunciationDictAliasItem:
-      additionalProperties: false
-      description: An alias pronunciation item. When the `text` value is found in input, it is replaced with the `alias` before speech synthesis.
-      properties:
-        alias:
-          description: The replacement text that will be spoken instead.
-          example: tel-nicks
-          maxLength: 500
+        name:
+          description: Human-readable name. Must be unique within the organization.
+          example: Brand Names
+          maxLength: 255
           minLength: 1
-          type: string
-        text:
-          description: The text to match in the input. Case-insensitive matching is used during synthesis.
-          example: Telnyx
-          maxLength: 200
-          minLength: 1
-          type: string
-        type:
-          description: The item type.
-          enum:
-          - alias
-          example: alias
           type: string
       required:
-      - text
-      - type
-      - alias
+      - name
+      - items
       type: object
     PronunciationDictData:
       description: A pronunciation dictionary record.
@@ -445,30 +451,24 @@ components:
       oneOf:
       - $ref: '#/components/schemas/PronunciationDictAliasItem'
       - $ref: '#/components/schemas/PronunciationDictPhonemeItem'
-    PronunciationDictResponse:
-      description: Response containing a single pronunciation dictionary.
+    pronunciation-dicts_ErrorResponse:
+      description: Standard Telnyx error response.
       properties:
-        data:
-          $ref: '#/components/schemas/PronunciationDictData'
-      type: object
-    UpdatePronunciationDictRequest:
-      description: Request body for updating a pronunciation dictionary. At least one field must be provided.
-      minProperties: 1
-      properties:
-        items:
-          description: Updated list of pronunciation items (alias or phoneme type).
+        errors:
           items:
-            $ref: '#/components/schemas/PronunciationDictItem'
-          maxItems: 100
-          minItems: 1
+            $ref: '#/components/schemas/ErrorObject'
           type: array
-        name:
-          description: Updated dictionary name.
-          example: Updated Brand Names
-          maxLength: 255
-          minLength: 1
-          type: string
       type: object
+  parameters:
+    pronunciation_dict_id:
+      description: The UUID of the pronunciation dictionary.
+      in: path
+      name: id
+      required: true
+      schema:
+        example: c215a3e1-be41-4701-97e8-1d3c22f9a5b7
+        format: uuid
+        type: string
   securitySchemes:
     bearerAuth:
       scheme: bearer
