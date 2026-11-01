@@ -72,7 +72,7 @@ Telnyx is a carrier-owned, private-IP cloud communications and AI infrastructure
 
 Everything profiled for Telnyx is published on APIs.io rather than in this repository. Start at the provider page — **[apis.io/providers/telnyx/](https://apis.io/providers/telnyx/)** — or go straight to one of the APIs or properties below.
 
-### APIs (237)
+### APIs (169)
 
 - [Telnyx Access Tokens API](https://apis.io/apis/telnyx/telnyx-access-tokens-api/) — Access Tokens creation
 - [Telnyx Addresses API](https://apis.io/apis/telnyx/telnyx-addresses-api/) — Operations to work with Address records. Address records are emergency-validated addresses meant to be associated with phone numbers. They are validated for…
@@ -243,74 +243,6 @@ Everything profiled for Telnyx is published on APIs.io rather than in this repos
 - [Telnyx x402 Payment Transactions API](https://apis.io/apis/telnyx/telnyx-x402-payment-transactions-api/) — Operations for x402 cryptocurrency payment transactions. Fund your Telnyx account using USDC stablecoin payments via the x402 protocol.
 - [Telnyx Callbacks API](https://apis.io/apis/telnyx/telnyx-callbacks-api/) — Callbacks
 - [Telnyx I Ps API](https://apis.io/apis/telnyx/telnyx-ips-api/) — IP operations
-- [Telnyx Actions API](https://apis.io/apis/telnyx/telnyx-actions-api/) — Execute browser actions: navigate, observe, click, fill, select, press, scroll, wait_for, screenshot, batch.
-- [Telnyx AI Collections API](https://apis.io/apis/telnyx/telnyx-ai-collections-api/) — Create and manage logical collections of your Telnyx data, tune retrieval settings, manage sources, and run collection-scoped semantic search.
-- [Telnyx AI Gateway API](https://apis.io/apis/telnyx/telnyx-ai-gateway-api/) — Manage and report AI Gateway traffic.
-- [Telnyx AI Tests API](https://apis.io/apis/telnyx/telnyx-ai-tests-api/) — Test agents, evaluator scenarios, metrics, and run results for the AI test framework.
-- [Telnyx Anthropic Messages API](https://apis.io/apis/telnyx/telnyx-anthropic-messages-api/) — The Anthropic Messages API from Telnyx — 1 operation(s) for anthropic messages.
-- [Telnyx Artifacts API](https://apis.io/apis/telnyx/telnyx-artifacts-api/) — Download screenshots and other artifacts.
-- [Telnyx Avatars API](https://apis.io/apis/telnyx/telnyx-avatars-api/) — Create and manage real-time AI avatars
-- [Telnyx Bot Signup API](https://apis.io/apis/telnyx/telnyx-bot-signup-api/) — Agentic (bot) signup for Telnyx accounts. An AI agent solves a reverse-CAPTCHA challenge designed to be easy for LLMs and hard for humans, registers an…
-- [Telnyx Browser Sessions API](https://apis.io/apis/telnyx/telnyx-browser-sessions-api/) — Create, list, get, and close browser sessions.
-- [Telnyx cloudfs filesystems API](https://apis.io/apis/telnyx/telnyx-cloudfs-filesystems-api/) — Manage CloudFS filesystems — JuiceFS-compatible filesystems backed by Telnyx Cloud Storage
-- [Telnyx Comments API](https://apis.io/apis/telnyx/telnyx-comments-api/) — Read messages from the Telnyx vetting team and reply with clarifying information.
-- [Telnyx Contents API](https://apis.io/apis/telnyx/telnyx-contents-api/) — Page content retrieval for URLs.
-- [Telnyx Conversation Histories API](https://apis.io/apis/telnyx/telnyx-conversation-histories-api/) — Semantic vector search over ingested conversation history records with multi-region fan-out.
-- [Telnyx Decision Models API](https://apis.io/apis/telnyx/telnyx-decision-models-api/) — Beta API for evaluating shared context with typed questions and structured answers using Flash or Pro.
-- [Telnyx Dedicated IPs API](https://apis.io/apis/telnyx/telnyx-dedicated-ips-api/) — Purchase and manage dedicated sending IP addresses for your Telnyx email traffic.
-- [Telnyx DIR References API](https://apis.io/apis/telnyx/telnyx-dir-references-api/) — Submit and manage the two business references and one financial reference that vouch for a DIR. References are contacted to confirm the business identity…
-- [Telnyx Display Identity Records API](https://apis.io/apis/telnyx/telnyx-display-identity-records-api/) — A Display Identity Record (DIR) is the verified calling identity (display name, logo, call reasons) shown to recipients on outbound calls.
-- [Telnyx Email Domain DNS Records API](https://apis.io/apis/telnyx/telnyx-email-domain-dns-records-api/) — DNS verification records for email domains
-- [Telnyx Email Domains API](https://apis.io/apis/telnyx/telnyx-email-domains-api/) — Email domain CRUD operations
-- [Telnyx Email Drafts API](https://apis.io/apis/telnyx/telnyx-email-drafts-api/) — Create, list, retrieve, update, delete, and send unsent draft messages belonging to an agent inbox.
-- [Telnyx Email Events API](https://apis.io/apis/telnyx/telnyx-email-events-api/) — Retrieve account-level email events and event statistics.
-- [Telnyx Email Inboxes API](https://apis.io/apis/telnyx/telnyx-email-inboxes-api/) — Create and manage agent inboxes, retrieve inbound messages and threads, and reply to or forward messages.
-- [Telnyx Email Messages API](https://apis.io/apis/telnyx/telnyx-email-messages-api/) — Send and manage email messages. Legacy `/v2/emails` routes are aliases for these endpoints.
-- [Telnyx Email Suppression Imports API](https://apis.io/apis/telnyx/telnyx-email-suppression-imports-api/) — Async CSV import of competitor suppression lists.
-- [Telnyx Email Suppressions API](https://apis.io/apis/telnyx/telnyx-email-suppressions-api/) — Recipient suppression records (`/v2/email_blocks`).
-- [Telnyx Email Templates API](https://apis.io/apis/telnyx/telnyx-email-templates-api/) — Create, list, retrieve, update, delete, and render Liquid email templates.
-- [Telnyx Email Threads API](https://apis.io/apis/telnyx/telnyx-email-threads-api/) — Account-wide conversation threads across every inbox, for agents operating many inboxes at once.
-- [Telnyx Email Unsubscribe Groups API](https://apis.io/apis/telnyx/telnyx-email-unsubscribe-groups-api/) — Named groups and group-scoped suppressions.
-- [Telnyx Email Validations API](https://apis.io/apis/telnyx/telnyx-email-validations-api/) — Validate email addresses synchronously or in asynchronous batches.
-- [Telnyx Email Verification API](https://apis.io/apis/telnyx/telnyx-email-verification-api/) — Verify ownership of a DIR's authorizer email. A short code is emailed and confirmed; the email must be verified before references can be submitted.
-- [Telnyx Email Webhooks API](https://apis.io/apis/telnyx/telnyx-email-webhooks-api/) — Per-domain webhook endpoints with event subscriptions
-- [Telnyx Functions API](https://apis.io/apis/telnyx/telnyx-functions-api/) — The functions API from Telnyx — 6 operation(s) for functions.
-- [Telnyx Infringement Claims API](https://apis.io/apis/telnyx/telnyx-infringement-claims-api/) — Trademark or impersonation claims filed against your DIR. Customers may contest a claim with supporting evidence.
-- [Telnyx IP Pools API](https://apis.io/apis/telnyx/telnyx-ip-pools-api/) — Group dedicated IPs into pools for sending.
-- [Telnyx kv keys API](https://apis.io/apis/telnyx/telnyx-kv-keys-api/) — Read and write keys within a KV namespace
-- [Telnyx kv namespaces API](https://apis.io/apis/telnyx/telnyx-kv-namespaces-api/) — Manage KV storage namespaces
-- [Telnyx Machine Payments API](https://apis.io/apis/telnyx/telnyx-machine-payments-api/) — Machine payment (MPP) account-credit operations. Fund your Telnyx account programmatically from a machine or agent using the Machine Payment Protocol, an…
-- [Telnyx Meeting Session Actions API](https://apis.io/apis/telnyx/telnyx-meeting-session-actions-api/) — Send real-time speech and chat actions to an active meeting session.
-- [Telnyx Meeting Session Artifacts API](https://apis.io/apis/telnyx/telnyx-meeting-session-artifacts-api/) — Create and retrieve asynchronous summaries and action-item artifacts.
-- [Telnyx Meeting Session Data API](https://apis.io/apis/telnyx/telnyx-meeting-session-data-api/) — Read lifecycle events, transcript segments, and recordings for a meeting session.
-- [Telnyx Meeting Session Webhooks API](https://apis.io/apis/telnyx/telnyx-meeting-session-webhooks-api/) — Outbound webhook deliveries for meeting session events.
-- [Telnyx Meeting Sessions API](https://apis.io/apis/telnyx/telnyx-meeting-sessions-api/) — Create, list, retrieve, update, and stop meeting sessions.
-- [Telnyx Memory API](https://apis.io/apis/telnyx/telnyx-memory-api/) — Write memories into a profile and recall them.
-- [Telnyx Namespaces API](https://apis.io/apis/telnyx/telnyx-namespaces-api/) — The Namespaces API from Telnyx — 2 operation(s) for namespaces.
-- [Telnyx Network Routes API](https://apis.io/apis/telnyx/telnyx-network-routes-api/) — Routes on a Network that send a CIDR to a next hop, such as a tunnel.
-- [Telnyx Noise Suppression Engines API](https://apis.io/apis/telnyx/telnyx-noise-suppression-engines-api/) — Noise suppression engines that can be selected when configuring noise suppression on voice connections.
-- [Telnyx Operations API](https://apis.io/apis/telnyx/telnyx-operations-api/) — Whether a write has finished.
-- [Telnyx Pay Connectors API](https://apis.io/apis/telnyx/telnyx-pay-connectors-api/) — Generic payment connector configuration.
-- [Telnyx Phone Number Batches API](https://apis.io/apis/telnyx/telnyx-phone-number-batches-api/) — Phone numbers are submitted to Telnyx for vetting in batches. Batches group all numbers added in a single request under the same Letter of Authorization.
-- [Telnyx Phone Numbers API](https://apis.io/apis/telnyx/telnyx-phone-numbers-api/) — Associate phone numbers with a verified DIR so calls from those numbers carry the DIR's display identity.
-- [Telnyx Pricing API](https://apis.io/apis/telnyx/telnyx-pricing-api/) — Public pricing operations
-- [Telnyx RCS Agents API](https://apis.io/apis/telnyx/telnyx-rcs-agents-api/) — Manage RCS agent registration, testing, verification, and launch.
-- [Telnyx RCS Brands API](https://apis.io/apis/telnyx/telnyx-rcs-brands-api/) — Manage the legal business entities that operate RCS agents.
-- [Telnyx Reference Data API](https://apis.io/apis/telnyx/telnyx-reference-data-api/) — Static reference values the API accepts: call reasons, document types, rejection types.
-- [Telnyx Reputation API](https://apis.io/apis/telnyx/telnyx-reputation-api/) — Phone-number reputation monitoring (spam-score lookup and tracking).
-- [Telnyx Research API](https://apis.io/apis/telnyx/telnyx-research-api/) — Deep research with citations and async task polling.
-- [Telnyx Settings API](https://apis.io/apis/telnyx/telnyx-settings-api/) — How a namespace's summaries are written.
-- [Telnyx Sources API](https://apis.io/apis/telnyx/telnyx-sources-api/) — What a profile stored, and what its memories came from.
-- [Telnyx Speech To Text Capabilities API](https://apis.io/apis/telnyx/telnyx-speech-to-text-capabilities-api/) — Discover available speech-to-text providers, models, and supported languages.
-- [Telnyx Spend Limits API](https://apis.io/apis/telnyx/telnyx-spend-limits-api/) — Daily and monthly spend limits per product. A limit applies to the organization of the authenticated user, or to the user's own account when they belong to…
-- [Telnyx sql databases API](https://apis.io/apis/telnyx/telnyx-sql-databases-api/) — Manage SQL databases and run SQL against them
-- [Telnyx stateful actors API](https://apis.io/apis/telnyx/telnyx-stateful-actors-api/) — Inspect Stateful Actor types
-- [Telnyx Tailscale Subnet Routers API](https://apis.io/apis/telnyx/telnyx-tailscale-subnet-routers-api/) — Tailscale Subnet Router operations
-- [Telnyx Tunnels API](https://apis.io/apis/telnyx/telnyx-tunnels-api/) — Tunnels connect a Network to hosts behind a tunnel process within the user's network.
-- [Telnyx Voice SDK Stats API](https://apis.io/apis/telnyx/telnyx-voice-sdk-stats-api/) — Retrieve raw Voice SDK call report stats payloads for WebRTC call troubleshooting.
-- [Telnyx Web Search API](https://apis.io/apis/telnyx/telnyx-web-search-api/) — Real-time web search returning structured, LLM-ready JSON results.
-- [Telnyx Whatsapp Signup API](https://apis.io/apis/telnyx/telnyx-whatsapp-signup-api/) — The Whatsapp Signup API from Telnyx — 4 operation(s) for whatsapp signup.
-- [Telnyx X402 API](https://apis.io/apis/telnyx/telnyx-x402-api/) — The x402 API from Telnyx — 3 operation(s) for x402.
 
 ### Published properties
 
@@ -334,7 +266,7 @@ Which operations an agent can call, which act, and which need a human in the loo
 
 - [Telnyx Agentic Access](https://apis.io/agentic-access/telnyx/telnyx-agentic-access/)
 
-#### JSON Schema (397)
+#### JSON Schema (236)
 
 The data models the API reads and writes.
 
@@ -345,7 +277,6 @@ The data models the API reads and writes.
 - [AccessIPRangeListResponseSchema](https://apis.io/schemas/telnyx/telnyx-access-iprange-list-response-schema/)
 - [AccessIPRangePOST](https://apis.io/schemas/telnyx/telnyx-access-iprange-post/)
 - [AccessIPRangeResponseSchema](https://apis.io/schemas/telnyx/telnyx-access-iprange-response-schema/)
-- [ActionsParticipantsRequest](https://apis.io/schemas/telnyx/telnyx-actions-participants-request/)
 - [AddressCreate](https://apis.io/schemas/telnyx/telnyx-address-create/)
 - [AddressSuggestionResponse](https://apis.io/schemas/telnyx/telnyx-address-suggestion-response/)
 - [AdvancedOrderRequest](https://apis.io/schemas/telnyx/telnyx-advanced-order-request/)
@@ -363,7 +294,8 @@ The data models the API reads and writes.
 - [AutoRespConfigCreateSchema](https://apis.io/schemas/telnyx/telnyx-auto-resp-config-create-schema/)
 - [AutorespConfigResponseSchema](https://apis.io/schemas/telnyx/telnyx-autoresp-config-response-schema/)
 - [AutorespConfigsResponseSchema](https://apis.io/schemas/telnyx/telnyx-autoresp-configs-response-schema/)
-- …and 372 more published on APIs.io
+- [BillingBundleResponse](https://apis.io/schemas/telnyx/telnyx-billing-bundle-response/)
+- …and 211 more published on APIs.io
 
 #### JSON-LD (1)
 
@@ -375,38 +307,38 @@ Linked-data contexts for the provider's vocabulary.
 
 Postman and Open Collection request collections.
 
-- [Open Telnyx](https://apis.io/collections/telnyx/open-telnyx/)
-- [Open Telnyx Access Tokens Api](https://apis.io/collections/telnyx/open-telnyx-access-tokens-api/)
-- [Open Telnyx Addresses Api](https://apis.io/collections/telnyx/open-telnyx-addresses-api/)
-- [Open Telnyx Advanced Number Orders Api](https://apis.io/collections/telnyx/open-telnyx-advanced-number-orders-api/)
-- [Open Telnyx Assistants Api](https://apis.io/collections/telnyx/open-telnyx-assistants-api/)
-- [Open Telnyx Audio Api](https://apis.io/collections/telnyx/open-telnyx-audio-api/)
-- [Open Telnyx Audit Logs Api](https://apis.io/collections/telnyx/open-telnyx-audit-logs-api/)
-- [Open Telnyx Authentication Providers Api](https://apis.io/collections/telnyx/open-telnyx-authentication-providers-api/)
-- [Open Telnyx Autorechargepreferences Api](https://apis.io/collections/telnyx/open-telnyx-autorechargepreferences-api/)
-- [Open Telnyx Billing Api](https://apis.io/collections/telnyx/open-telnyx-billing-api/)
-- [Open Telnyx Billing Groups Api](https://apis.io/collections/telnyx/open-telnyx-billing-groups-api/)
-- [Open Telnyx Brands Api](https://apis.io/collections/telnyx/open-telnyx-brands-api/)
-- [Open Telnyx Bucket Ssl Certificate Api](https://apis.io/collections/telnyx/open-telnyx-bucket-ssl-certificate-api/)
-- [Open Telnyx Bucket Usage Api](https://apis.io/collections/telnyx/open-telnyx-bucket-usage-api/)
-- [Open Telnyx Bulk Phone Number Campaigns Api](https://apis.io/collections/telnyx/open-telnyx-bulk-phone-number-campaigns-api/)
-- [Open Telnyx Bulk Phone Number Operations Api](https://apis.io/collections/telnyx/open-telnyx-bulk-phone-number-operations-api/)
-- [Open Telnyx Bundles Api](https://apis.io/collections/telnyx/open-telnyx-bundles-api/)
-- [Open Telnyx Call Commands Api](https://apis.io/collections/telnyx/open-telnyx-call-commands-api/)
-- [Open Telnyx Call Control Applications Api](https://apis.io/collections/telnyx/open-telnyx-call-control-applications-api/)
-- [Open Telnyx Call Information Api](https://apis.io/collections/telnyx/open-telnyx-call-information-api/)
-- [Open Telnyx Call Recordings Api](https://apis.io/collections/telnyx/open-telnyx-call-recordings-api/)
-- [Open Telnyx Campaign Api](https://apis.io/collections/telnyx/open-telnyx-campaign-api/)
-- [Open Telnyx Cdr Reports Api](https://apis.io/collections/telnyx/open-telnyx-cdr-reports-api/)
-- [Open Telnyx Cdr Usage Reports Api](https://apis.io/collections/telnyx/open-telnyx-cdr-usage-reports-api/)
-- [Open Telnyx Charges Breakdown Api](https://apis.io/collections/telnyx/open-telnyx-charges-breakdown-api/)
+- [Telnyx API](https://apis.io/collections/telnyx/open-telnyx/)
+- [Telnyx Access Tokens API](https://apis.io/collections/telnyx/open-telnyx-access-tokens-api/)
+- [Telnyx Access Tokens Addresses API](https://apis.io/collections/telnyx/open-telnyx-addresses-api/)
+- [Telnyx Access Tokens Advanced Number Orders API](https://apis.io/collections/telnyx/open-telnyx-advanced-number-orders-api/)
+- [Telnyx Access Tokens Assistants API](https://apis.io/collections/telnyx/open-telnyx-assistants-api/)
+- [Telnyx Access Tokens Audio API](https://apis.io/collections/telnyx/open-telnyx-audio-api/)
+- [Telnyx Access Tokens Audit Logs API](https://apis.io/collections/telnyx/open-telnyx-audit-logs-api/)
+- [Telnyx Access Tokens Authentication Providers API](https://apis.io/collections/telnyx/open-telnyx-authentication-providers-api/)
+- [Telnyx Access Tokens AutoRechargePreferences API](https://apis.io/collections/telnyx/open-telnyx-autorechargepreferences-api/)
+- [Telnyx Access Tokens Billing API](https://apis.io/collections/telnyx/open-telnyx-billing-api/)
+- [Telnyx Access Tokens Billing Groups API](https://apis.io/collections/telnyx/open-telnyx-billing-groups-api/)
+- [Telnyx Access Tokens Brands API](https://apis.io/collections/telnyx/open-telnyx-brands-api/)
+- [Telnyx Access Tokens Bucket SSL Certificate API](https://apis.io/collections/telnyx/open-telnyx-bucket-ssl-certificate-api/)
+- [Telnyx Access Tokens Bucket Usage API](https://apis.io/collections/telnyx/open-telnyx-bucket-usage-api/)
+- [Telnyx Access Tokens Bulk Phone Number Campaigns API](https://apis.io/collections/telnyx/open-telnyx-bulk-phone-number-campaigns-api/)
+- [Telnyx Access Tokens Bulk Phone Number Operations API](https://apis.io/collections/telnyx/open-telnyx-bulk-phone-number-operations-api/)
+- [Telnyx Access Tokens Bundles API](https://apis.io/collections/telnyx/open-telnyx-bundles-api/)
+- [Telnyx Access Tokens Call Commands API](https://apis.io/collections/telnyx/open-telnyx-call-commands-api/)
+- [Telnyx Access Tokens Call Control Applications API](https://apis.io/collections/telnyx/open-telnyx-call-control-applications-api/)
+- [Telnyx Access Tokens Call Information API](https://apis.io/collections/telnyx/open-telnyx-call-information-api/)
+- [Telnyx Access Tokens Call Recordings API](https://apis.io/collections/telnyx/open-telnyx-call-recordings-api/)
+- [Telnyx Access Tokens Campaign API](https://apis.io/collections/telnyx/open-telnyx-campaign-api/)
+- [Telnyx Access Tokens CDR Reports API](https://apis.io/collections/telnyx/open-telnyx-cdr-reports-api/)
+- [Telnyx Access Tokens CDR Usage Reports API](https://apis.io/collections/telnyx/open-telnyx-cdr-usage-reports-api/)
+- [Telnyx Access Tokens Charges Breakdown API](https://apis.io/collections/telnyx/open-telnyx-charges-breakdown-api/)
 - …and 144 more published on APIs.io
 
 #### Governance rules (1)
 
 Spectral rulesets for the provider's contracts.
 
-- [Telnyx Rules](https://apis.io/rules/telnyx/telnyx-rules/)
+- [Telnyx API Rules](https://apis.io/rules/telnyx/telnyx-rules/)
 
 #### Security (4)
 
