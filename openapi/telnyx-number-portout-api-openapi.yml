@@ -1,0 +1,1589 @@
+openapi: 3.2.0
+info:
+  title: Telnyx Number Portout API
+  version: 2.0.0
+  contact:
+    email: support@telnyx.com
+  x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Number Portout across 3 of this provider''s published API definitions: telnyx-openapi.json, telnyx-openapi.yml, telnyx-openapi_2.json. Each path carries the servers of the definition it was published in.'
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Number Portout
+  description: Number portout operations
+paths:
+  /portouts:
+    get:
+      summary: List portout requests
+      description: Returns the portout requests according to filters
+      operationId: ListPortoutRequest
+      tags:
+      - Number Portout
+      parameters:
+      - $ref: '#/components/parameters/PageConsolidated'
+      - name: filter
+        in: query
+        style: deepObject
+        explode: true
+        description: 'Consolidated filter parameter (deepObject style). Originally: filter[carrier_name], filter[country_code], filter[country_code_in], filter[foc_date], filter[inserted_at], filter[phone_number], filter[pon], filter[ported_out_at], filter[spid], filter[status], filter[status_in], filter[support_key]'
+        schema:
+          type: object
+          properties:
+            carrier_name:
+              type: string
+              description: Filter by new carrier name.
+            pon:
+              type: string
+              description: Filter by Port Order Number (PON).
+            spid:
+              type: string
+              description: Filter by new carrier spid.
+            status:
+              type: string
+              enum:
+              - pending
+              - authorized
+              - ported
+              - rejected
+              - rejected-pending
+              - canceled
+              description: Filter by portout status.
+            status_in:
+              type: array
+              items:
+                type: string
+                enum:
+                - pending
+                - authorized
+                - ported
+                - rejected
+                - rejected-pending
+                - canceled
+              description: Filter by a list of portout statuses
+            country_code:
+              type: string
+              description: Filter by 2-letter country code
+              example: US
+            country_code_in:
+              type: array
+              items:
+                type: string
+              example:
+              - CA
+              - US
+              description: Filter by a list of 2-letter country codes
+            ported_out_at:
+              type: object
+              description: Filter by ported_out_at date range using nested operations
+              properties:
+                gte:
+                  type: string
+                  format: date-time
+                  example: '2024-09-04T00:00:00.000Z'
+                  description: Filter by ported_out_at date greater than or equal.
+                lte:
+                  type: string
+                  format: date-time
+                  example: '2024-09-04T00:00:00.000Z'
+                  description: Filter by ported_out_at date less than or equal.
+            inserted_at:
+              type: object
+              description: Filter by inserted_at date range using nested operations
+              properties:
+                gte:
+                  type: string
+                  format: date-time
+                  example: '2024-09-04T00:00:00.000Z'
+                  description: Filter by inserted_at date greater than or equal.
+                lte:
+                  type: string
+                  format: date-time
+                  example: '2024-09-04T00:00:00.000Z'
+                  description: Filter by inserted_at date less than or equal.
+            foc_date:
+              type: string
+              format: date-time
+              example: '2024-09-04T00:00:00.000Z'
+              description: Filter by foc_date. Matches all portouts with the same date
+            phone_number:
+              type: string
+              example: '+13035551212'
+              description: Filter by a phone number on the portout. Matches all portouts with the phone number
+            support_key:
+              type: string
+              example: PO_abc123
+              description: Filter by the portout's support_key
+      responses:
+        '200':
+          description: Portout Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PortoutDetails'
+                  meta:
+                    $ref: '#/components/schemas/Metadata'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Resource not found
+        '422':
+          description: Unprocessable entity. Check message field in response for details.
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /portouts/events:
+    get:
+      summary: List all port-out events
+      tags:
+      - Number Portout
+      description: Returns a paginated list of port-out events on your account, such as status changes on port-out requests, with support for filtering.
+      operationId: listPortoutEvents
+      parameters:
+      - $ref: '#/components/parameters/PageConsolidated'
+      - name: filter
+        in: query
+        style: deepObject
+        explode: true
+        description: 'Consolidated filter parameter (deepObject style). Originally: filter[event_type], filter[portout_id], filter[created_at]'
+        schema:
+          type: object
+          properties:
+            event_type:
+              type: string
+              enum:
+              - portout.status_changed
+              - portout.new_comment
+              - portout.foc_date_changed
+              example: portout.status_changed
+              description: Filter by event type.
+            portout_id:
+              type: string
+              format: uuid
+              example: 34dc46a9-53ed-4e01-9454-26227ea13326
+              description: Filter by port-out order ID.
+            created_at:
+              type: object
+              description: Filter by created_at date range using nested operations
+              properties:
+                gte:
+                  type: string
+                  format: date-time
+                  example: '2021-01-01T00:00:00Z'
+                  description: Filter by created at greater than or equal to.
+                lte:
+                  type: string
+                  format: date-time
+                  example: '2021-01-01T00:00:00Z'
+                  description: Filter by created at less than or equal to.
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PortoutEvent'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '422':
+          description: Unprocessable entity. Check message field in response for details.
+        '500':
+          description: Internal server error
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /portouts/events/{id}:
+    get:
+      summary: Show a port-out event
+      tags:
+      - Number Portout
+      description: Returns the details of a single port-out event, including its type and payload.
+      operationId: showPortoutEvent
+      parameters:
+      - name: id
+        description: Identifies the port-out event.
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PortoutEvent'
+        '404':
+          description: Not found
+        '500':
+          description: Internal server error
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /portouts/events/{id}/republish:
+    post:
+      summary: Republish a port-out event
+      tags:
+      - Number Portout
+      description: Republishes the specified port-out event, triggering re-delivery of the corresponding webhook to your account.
+      operationId: republishPortoutEvent
+      parameters:
+      - name: id
+        description: Identifies the port-out event.
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: No content
+        '404':
+          description: Not found
+        '500':
+          description: Internal server error
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /portouts/rejections/{portout_id}:
+    get:
+      tags:
+      - Number Portout
+      summary: List eligible port-out rejection codes for a specific order
+      description: Given a port-out ID, list rejection codes that are eligible for that port-out
+      operationId: ListPortoutRejections
+      parameters:
+      - name: portout_id
+        description: Identifies a port out order.
+        in: path
+        required: true
+        schema:
+          type: string
+          example: 329d6658-8f93-405d-862f-648776e8afd7
+      - name: filter
+        in: query
+        style: deepObject
+        explode: true
+        description: 'Consolidated filter parameter (deepObject style). Originally: filter[code], filter[code][in]'
+        schema:
+          type: object
+          properties:
+            code:
+              oneOf:
+              - type: integer
+                example: 1002
+                description: Filter rejections of a specific code
+              - type: array
+                items:
+                  type: integer
+                example:
+                - 1002
+                - 1003
+                description: Filter rejections in a list of codes
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PortoutRejection'
+        '404':
+          description: Resource not found
+        '422':
+          description: Unprocessable entity. Check message field in response for details.
+        '500':
+          description: Internal server error
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /portouts/reports:
+    get:
+      tags:
+      - Number Portout
+      summary: List port-out related reports
+      description: List the reports generated about port-out operations.
+      operationId: ListPortoutReports
+      parameters:
+      - $ref: '#/components/parameters/PageConsolidated'
+      - name: filter
+        in: query
+        style: deepObject
+        explode: true
+        description: 'Consolidated filter parameter (deepObject style). Originally: filter[report_type], filter[status]'
+        schema:
+          type: object
+          properties:
+            report_type:
+              type: string
+              enum:
+              - export_portouts_csv
+              example: export_portouts_csv
+              description: Filter reports of a specific type
+            status:
+              type: string
+              enum:
+              - pending
+              - completed
+              example: completed
+              description: Filter reports of a specific status
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PortoutReport'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '422':
+          description: Unprocessable entity. Check message field in response for details.
+        '500':
+          description: Internal server error
+    post:
+      tags:
+      - Number Portout
+      summary: Create a port-out related report
+      description: Generate reports about port-out operations.
+      operationId: CreatePortoutReport
+      requestBody:
+        $ref: '#/components/requestBodies/CreatePortoutReport'
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PortoutReport'
+        '422':
+          description: Unprocessable entity. Check message field in response for details.
+        '500':
+          description: Internal server error
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /portouts/reports/{id}:
+    get:
+      tags:
+      - Number Portout
+      summary: Retrieve a report
+      description: Returns the details of a previously requested port-out report, including its status and parameters.
+      operationId: GetPortoutReport
+      parameters:
+      - name: id
+        description: Identifies a report.
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PortoutReport'
+        '404':
+          description: Resource not found
+        '500':
+          description: Internal server error
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /portouts/{id}:
+    get:
+      summary: Get a portout request
+      description: Returns the portout request based on the ID provided
+      operationId: FindPortoutRequest
+      tags:
+      - Number Portout
+      parameters:
+      - name: id
+        in: path
+        description: Portout id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Portout Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PortoutDetails'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Resource not found
+        '422':
+          description: Unprocessable entity. Check message field in response for details.
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /portouts/{id}/comments:
+    get:
+      summary: List all comments for a portout request
+      description: Returns a list of comments for a portout request.
+      operationId: FindPortoutComments
+      tags:
+      - Number Portout
+      parameters:
+      - name: id
+        in: path
+        description: Portout id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Portout Comments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PortoutComment'
+                  meta:
+                    $ref: '#/components/schemas/Metadata'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Resource not found
+        '422':
+          description: Unprocessable entity. Check message field in response for details.
+    post:
+      summary: Create a comment on a portout request
+      description: Creates a comment on the specified port-out request and returns the created comment.
+      operationId: PostPortRequestComment
+      tags:
+      - Number Portout
+      parameters:
+      - name: id
+        in: path
+        description: Portout id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body:
+                  type: string
+                  description: Comment to post on this portout request
+            example:
+              body: string
+      responses:
+        '201':
+          description: Portout Comment Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PortoutComment'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Resource not found
+        '422':
+          description: Unprocessable entity. Check message field in response for details.
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /portouts/{id}/supporting_documents:
+    get:
+      summary: List supporting documents on a portout request
+      description: List every supporting documents for a portout request.
+      operationId: GetPortRequestSupportingDocuments
+      tags:
+      - Number Portout
+      parameters:
+      - name: id
+        in: path
+        description: Portout id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '201':
+          description: Portout Supporting Documents
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PortOutSupportingDocument'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Resource not found
+    post:
+      summary: Create a list of supporting documents on a portout request
+      description: Creates a list of supporting documents on a portout request.
+      operationId: PostPortRequestSupportingDocuments
+      tags:
+      - Number Portout
+      parameters:
+      - name: id
+        in: path
+        description: Portout id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                documents:
+                  type: array
+                  description: List of supporting documents parameters
+                  minItems: 1
+                  maxItems: 10
+                  items:
+                    type: object
+                    required:
+                    - type
+                    - document_id
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                        - loa
+                        - invoice
+                        description: Identifies the type of the document
+                        example: loa
+                      document_id:
+                        format: uuid
+                        type: string
+                        description: Identifies the associated document
+                        example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+      responses:
+        '201':
+          description: Portout Supporting Documents
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PortOutSupportingDocument'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Resource not found
+        '422':
+          description: Unprocessable entity. Check message field in response for details.
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /portouts/{id}/{status}:
+    patch:
+      summary: Update Status
+      description: Updates the status of the specified port-out request, using the status path segment to authorize or reject the port-out.
+      operationId: UpdatePortoutStatus
+      tags:
+      - Number Portout
+      parameters:
+      - name: id
+        in: path
+        description: Portout id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: status
+        description: Updated portout status
+        in: path
+        required: true
+        schema:
+          type: string
+          enum:
+          - authorized
+          - rejected-pending
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason
+              properties:
+                reason:
+                  description: Provide a reason if rejecting the port out request
+                  type: string
+                  example: I do not recognize this transaction
+                host_messaging:
+                  description: Indicates whether messaging services should be maintained with Telnyx after the port out completes
+                  type: boolean
+                  default: false
+                  example: false
+      responses:
+        '200':
+          description: Portout Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PortoutDetails'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Resource not found
+        '422':
+          description: Unprocessable entity. Check message field in response for details.
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+components:
+  schemas:
+    ExportPortoutsCSVReport:
+      description: The parameters for generating a port-outs CSV report.
+      type: object
+      required:
+      - filters
+      properties:
+        filters:
+          type: object
+          description: The filters to apply to the export port-out CSV report.
+          properties:
+            status__in:
+              type: array
+              description: The status of the port-outs to include in the report.
+              items:
+                type: string
+                enum:
+                - pending
+                - authorized
+                - ported
+                - rejected
+                - rejected-pending
+                - canceled
+            customer_reference__in:
+              type: array
+              description: The customer reference of the port-outs to include in the report.
+              items:
+                type: string
+                example: my-customer-reference
+            end_user_name:
+              type: string
+              description: The end user name of the port-outs to include in the report.
+              example: McPortersen
+            phone_numbers__overlaps:
+              type: array
+              description: A list of phone numbers that the port-outs phone numbers must overlap with.
+              items:
+                type: string
+                example: '+1234567890'
+            created_at__lt:
+              type: string
+              description: The date and time the port-out was created before.
+              format: date-time
+            created_at__gt:
+              type: string
+              description: The date and time the port-out was created after.
+              format: date-time
+    PortoutReport:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Uniquely identifies the report.
+          format: uuid
+          example: eef3340b-8903-4466-b445-89b697315a3a
+        report_type:
+          type: string
+          description: Identifies the type of report
+          enum:
+          - export_portouts_csv
+          example: export_portouts_csv
+        status:
+          type: string
+          description: The current status of the report generation.
+          enum:
+          - pending
+          - completed
+          example: completed
+        params:
+          oneOf:
+          - $ref: '#/components/schemas/ExportPortoutsCSVReport'
+        document_id:
+          type: string
+          format: uuid
+          description: Identifies the document that was uploaded when report was generated. This field is only populated when the report is under completed status.
+          example: f1486bae-f067-460c-ad43-73a92848f902
+        record_type:
+          type: string
+          example: portout_report
+          description: Identifies the type of the resource.
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was created.
+          example: '2021-03-19T10:07:15.527000Z'
+        updated_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was updated.
+          example: '2021-03-19T10:07:15.527000Z'
+    PaginationMeta:
+      type: object
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 55
+        page_number:
+          type: integer
+          example: 2
+        page_size:
+          type: integer
+          example: 25
+    PortoutDetails:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+        record_type:
+          type: string
+          description: Identifies the type of the resource.
+          readOnly: true
+          example: portout
+        phone_numbers:
+          description: Phone numbers associated with this portout
+          type: array
+          items:
+            type: string
+            description: E164 formatted phone number
+          example:
+          - '+35312345678'
+        authorized_name:
+          type: string
+          description: Name of person authorizing the porting order
+          example: McPortersen
+        carrier_name:
+          type: string
+          description: Carrier the number will be ported out to
+          example: test
+        current_carrier:
+          type: string
+          description: The current carrier
+          example: telnyx
+        end_user_name:
+          type: string
+          description: Person name or company name requesting the port
+          example: McPortersen
+        city:
+          type: string
+          description: City or municipality of billing address
+          example: Chicago
+        state:
+          type: string
+          description: State, province, or similar of billing address
+          example: IL
+        zip:
+          type: string
+          description: Postal Code of billing address
+          example: '00000'
+        lsr:
+          type: array
+          description: The Local Service Request
+          items:
+            type: string
+            format: uri
+            description: A link to the Local Service Request
+          example:
+          - https://example.com/files/lsr.pdf
+        pon:
+          type: string
+          description: Port order number assigned by the carrier the number will be ported out to
+          example: '00000000'
+        reason:
+          type:
+          - string
+          - 'null'
+          description: The reason why the order is being rejected by the user. If the order is authorized, this field can be left null
+          example: null
+        rejection_code:
+          type: integer
+          description: The rejection code for one of the valid rejections to reject a port out order
+          example: 1002
+        service_address:
+          type: string
+          description: First line of billing address (street address)
+          example: 000 Example Street
+        foc_date:
+          type: string
+          description: ISO 8601 formatted Date/Time of the FOC date
+          example: '2018-02-02T22:25:27.521Z'
+        requested_foc_date:
+          type: string
+          description: ISO 8601 formatted Date/Time of the user requested FOC date
+          example: '2018-02-02T22:25:27.521Z'
+        spid:
+          type: string
+          description: New service provider spid
+          example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+        support_key:
+          type: string
+          description: A key to reference this port out request when contacting Telnyx customer support
+          example: PO_764725
+        status:
+          type: string
+          description: Status of portout request
+          enum:
+          - pending
+          - authorized
+          - ported
+          - rejected
+          - rejected-pending
+          - canceled
+          example: rejected
+        already_ported:
+          type: boolean
+          description: Is true when the number is already ported
+          example: false
+        user_id:
+          type: string
+          format: uuid
+          description: Identifies the user (or organization) who requested the port out
+          example: 7865816a-ee85-4e50-b19e-52983dcc6d4a
+        vendor:
+          type: string
+          description: Telnyx partner providing network coverage
+          format: uuid
+          example: 0e66ed3b-37e6-4fed-93d6-a30ce2493661
+        created_at:
+          type: string
+          description: ISO 8601 formatted date of when the portout was created
+          example: '2018-02-02T22:25:27.521Z'
+        inserted_at:
+          type: string
+          description: ISO 8601 formatted date of when the portout was created
+          example: '2018-02-02T22:25:27.521Z'
+        updated_at:
+          type: string
+          description: ISO 8601 formatted date of when the portout was last updated
+          example: '2018-02-02T22:25:27.521Z'
+        host_messaging:
+          type: boolean
+          description: Indicates whether messaging services should be maintained with Telnyx after the port out completes
+          default: false
+          example: false
+    WebhookPortoutFocDateChanged:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Uniquely identifies the event.
+          format: uuid
+          example: eef3340b-8903-4466-b445-89b697315a3a
+        event_type:
+          type: string
+          description: Identifies the event type
+          enum:
+          - portout.status_changed
+          - portout.foc_date_changed
+          - portout.new_comment
+          example: portout.status_changed
+        portout_id:
+          type: string
+          format: uuid
+          description: Identifies the port-out order associated with the event.
+          example: 9471c873-e3eb-4ca1-957d-f9a451334d52
+        available_notification_methods:
+          type: array
+          items:
+            type: string
+            enum:
+            - email
+            - webhook
+          description: Indicates the notification methods used.
+        payload_status:
+          type: string
+          description: The status of the payload generation.
+          enum:
+          - created
+          - completed
+          example: created
+        payload:
+          type: object
+          description: The webhook payload for the portout.foc_date_changed event
+          properties:
+            id:
+              type: string
+              format: uuid
+              example: 96dfa9e4-c753-4fd3-97cd-42d66f26cf0c
+              description: Identifies the port-out order that have the FOC date changed.
+            user_id:
+              type: string
+              description: Identifies the organization that port-out order belongs to.
+              example: 0e19c89e-f0ce-458a-a36c-3c60bc2014b1
+            foc_date:
+              type: string
+              description: ISO 8601 formatted date indicating the new FOC date.
+              example: '2021-03-19T10:07:15.527Z'
+              format: date-time
+        record_type:
+          type: string
+          example: portout_event
+          description: Identifies the type of the resource.
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was created.
+          example: '2021-03-19T10:07:15.527000Z'
+        updated_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was updated.
+          example: '2021-03-19T10:07:15.527000Z'
+    PortoutRejection:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 1002
+        description:
+          type: string
+          example: Invalid PIN
+        reason_required:
+          type: boolean
+          example: false
+    PortOutSupportingDocument:
+      required:
+      - id
+      - record_type
+      - type
+      - portout_id
+      - document_id
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 5a16902a-2ee9-4882-a247-420fc6627b62
+        record_type:
+          type: string
+          description: Identifies the type of the resource.
+          readOnly: true
+          example: supporting_document
+        type:
+          type: string
+          enum:
+          - loa
+          - invoice
+          description: Identifies the type of the document
+          readOnly: true
+          example: loa
+        portout_id:
+          type: string
+          format: uuid
+          description: Identifies the associated port request
+          readOnly: true
+          example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+        document_id:
+          format: uuid
+          type: string
+          description: Identifies the associated document
+          example: f1c5e079-9d82-4f50-95bc-ae2f6b8d84d7
+        created_at:
+          type: string
+          description: Supporting document creation timestamp in ISO 8601 format
+          example: '2018-02-02T22:25:27.521Z'
+        updated_at:
+          type: string
+          description: Supporting document last changed timestamp in ISO 8601 format
+          example: '2018-02-02T22:25:27.521Z'
+      example:
+        id: 5a16902a-2ee9-4882-a247-420fc6627b62
+        record_type: supporting_document
+        type: loa
+        portout_id: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+        document_id: f1c5e079-9d82-4f50-95bc-ae2f6b8d84d7
+        created_at: '2018-02-02T22:25:27.521Z'
+        updated_at: '2018-02-02T22:25:27.521Z'
+      type: object
+    WebhookPortoutNewComment:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Uniquely identifies the event.
+          format: uuid
+          example: eef3340b-8903-4466-b445-89b697315a3a
+        event_type:
+          type: string
+          description: Identifies the event type
+          enum:
+          - portout.status_changed
+          - portout.foc_date_changed
+          - portout.new_comment
+          example: portout.status_changed
+        portout_id:
+          type: string
+          format: uuid
+          description: Identifies the port-out order associated with the event.
+          example: 9471c873-e3eb-4ca1-957d-f9a451334d52
+        available_notification_methods:
+          type: array
+          items:
+            type: string
+            enum:
+            - email
+            - webhook
+          description: Indicates the notification methods used.
+        payload_status:
+          type: string
+          description: The status of the payload generation.
+          enum:
+          - created
+          - completed
+          example: created
+        payload:
+          type: object
+          description: The webhook payload for the portout.new_comment event
+          properties:
+            id:
+              type: string
+              format: uuid
+              example: 96dfa9e4-c753-4fd3-97cd-42d66f26cf0c
+              description: Identifies the comment that was added to the port-out order.
+            portout_id:
+              type: string
+              format: uuid
+              example: d26109e5-0605-4671-a235-d3c649cc8406
+              description: Identifies the port-out order that the comment was added to.
+            user_id:
+              type: string
+              format: uuid
+              example: 1c45c968-c2e0-4559-b1dd-db073962fc61
+              description: Identifies the user that added the comment.
+            comment:
+              type: string
+              description: The body of the comment.
+              example: This is a comment.
+        record_type:
+          type: string
+          example: portout_event
+          description: Identifies the type of the resource.
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was created.
+          example: '2021-03-19T10:07:15.527000Z'
+        updated_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was updated.
+          example: '2021-03-19T10:07:15.527000Z'
+    PortoutComment:
+      required:
+      - id
+      - body
+      - user_id
+      - created_at
+      properties:
+        id:
+          type: string
+          example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+        record_type:
+          type: string
+          description: Identifies the type of the resource.
+          readOnly: true
+          example: portout
+        body:
+          type: string
+          description: Comment body
+          example: This is a comment
+        portout_id:
+          type: string
+          description: Identifies the associated port request
+          default: null
+          example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+        user_id:
+          type: string
+          description: Identifies the user who created the comment. Will be null if created by Telnyx Admin
+          example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+        created_at:
+          type: string
+          description: Comment creation timestamp in ISO 8601 format
+          example: '2018-02-02T22:25:27.521Z'
+      example:
+        id: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+        record_type: portout
+        body: This is a comment
+        portout_id: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+        user_id: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+        created_at: '2018-02-02T22:25:27.521Z'
+      type: object
+    Metadata:
+      type: object
+      title: Metadata
+      properties:
+        total_pages:
+          type: number
+          description: Total number of pages based on pagination settings
+          example: 13
+          format: integer
+        total_results:
+          type: number
+          description: Total number of results
+          example: 13
+          format: integer
+        page_number:
+          type: number
+          description: Current Page based on pagination settings (included when defaults are used.)
+          example: 3
+          format: integer
+        page_size:
+          type: number
+          description: Number of results to return per page based on pagination settings (included when defaults are used.)
+          example: 1
+          format: integer
+    WebhookPortoutStatusChanged:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Uniquely identifies the event.
+          format: uuid
+          example: eef3340b-8903-4466-b445-89b697315a3a
+        event_type:
+          type: string
+          description: Identifies the event type
+          enum:
+          - portout.status_changed
+          - portout.foc_date_changed
+          - portout.new_comment
+          example: portout.status_changed
+        portout_id:
+          type: string
+          format: uuid
+          description: Identifies the port-out order associated with the event.
+          example: 9471c873-e3eb-4ca1-957d-f9a451334d52
+        available_notification_methods:
+          type: array
+          items:
+            type: string
+            enum:
+            - email
+            - webhook
+          description: Indicates the notification methods used.
+        payload_status:
+          type: string
+          description: The status of the payload generation.
+          enum:
+          - created
+          - completed
+          example: created
+        payload:
+          type: object
+          description: The webhook payload for the portout.status_changed event
+          properties:
+            id:
+              type: string
+              format: uuid
+              example: 96dfa9e4-c753-4fd3-97cd-42d66f26cf0c
+              description: Identifies the port out that was moved.
+            status:
+              type: string
+              description: The new status of the port out.
+              enum:
+              - pending
+              - authorized
+              - ported
+              - rejected
+              - rejected-pending
+              - canceled
+              example: authorized
+            phone_numbers:
+              type: array
+              description: Phone numbers associated with this port-out order
+              items:
+                type: string
+                description: E164 formatted phone number
+              example:
+              - '+35312345678'
+            carrier_name:
+              type: string
+              description: Carrier the number will be ported out to
+              example: Testing Carrier
+            spid:
+              type: string
+              description: The new carrier SPID.
+              example: 987H
+            user_id:
+              type: string
+              format: uuid
+              description: Identifies the user that the port-out order belongs to.
+              example: 96dfa9e4-c753-4fd3-97cd-42d66f26cf0c
+            subscriber_name:
+              type: string
+              description: The name of the port-out's end user.
+              example: John Doe
+            rejection_reason:
+              type:
+              - string
+              - 'null'
+              description: The reason why the order is being rejected by the user. If the order is authorized, this field can be left null
+              example: null
+            attempted_pin:
+              type: string
+              description: The PIN that was attempted to be used to authorize the port out.
+              example: '1234'
+        record_type:
+          type: string
+          example: portout_event
+          description: Identifies the type of the resource.
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was created.
+          example: '2021-03-19T10:07:15.527000Z'
+        updated_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was updated.
+          example: '2021-03-19T10:07:15.527000Z'
+    PortoutEvent:
+      type: object
+      oneOf:
+      - $ref: '#/components/schemas/WebhookPortoutStatusChanged'
+      - $ref: '#/components/schemas/WebhookPortoutNewComment'
+      - $ref: '#/components/schemas/WebhookPortoutFocDateChanged'
+      discriminator:
+        propertyName: event_type
+        mapping:
+          portout.status_changed: '#/components/schemas/WebhookPortoutStatusChanged'
+          portout.new_comment: '#/components/schemas/WebhookPortoutNewComment'
+          portout.foc_date_changed: '#/components/schemas/WebhookPortoutFocDateChanged'
+  requestBodies:
+    CreatePortoutReport:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            description: The parameters for generating a new port-out related report.
+            required:
+            - report_type
+            - params
+            properties:
+              report_type:
+                type: string
+                description: Identifies the type of report
+                enum:
+                - export_portouts_csv
+                example: export_portouts_csv
+              params:
+                oneOf:
+                - $ref: '#/components/schemas/ExportPortoutsCSVReport'
+  parameters:
+    PageConsolidated:
+      name: page
+      in: query
+      style: deepObject
+      explode: true
+      description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
+      schema:
+        type: object
+        properties:
+          number:
+            type: integer
+            minimum: 1
+            default: 1
+            description: The page number to load
+          size:
+            type: integer
+            minimum: 1
+            maximum: 250
+            default: 20
+            description: The size of the page
+  responses:
+    ListPortoutComments:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PortoutComment'
+                type: array
+              meta:
+                $ref: '#/components/schemas/Metadata'
+            type: object
+      description: Portout Comments
+    PortOutListSupportingDocumentsResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PortOutSupportingDocument'
+                type: array
+            type: object
+      description: Portout Supporting Documents
+    PortoutResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/PortoutDetails'
+            type: object
+      description: Portout Response
+    ListPortoutEventsResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PortoutEvent'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful response
+    ListPortoutReports:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PortoutReport'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful response
+    CreatePortOutSupportingDocumentsResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PortOutSupportingDocument'
+                type: array
+            type: object
+      description: Portout Supporting Documents
+    ListPortoutResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PortoutDetails'
+                type: array
+              meta:
+                $ref: '#/components/schemas/Metadata'
+            type: object
+      description: Portout Response
+    CreatePortoutReport:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/PortoutReport'
+            type: object
+      description: Successful response
+    PortoutCommentResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/PortoutComment'
+            type: object
+      description: Portout Comment Response
+    ShowPortoutEventResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/PortoutEvent'
+            type: object
+      description: Successful response
+    ListPortoutRejections:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PortoutRejection'
+                type: array
+            type: object
+      description: Successful response
+    ShowPortoutReport:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/PortoutReport'
+            type: object
+      description: Successful response
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    pay-connectors_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key, not the processor bearer token.
+    telnyxApiKey:
+      type: http
+      scheme: bearer
+      description: Management-only Telnyx account credential.
+x-refined-from:
+- telnyx-openapi.json
+- telnyx-openapi.yml
+- telnyx-openapi_2.json
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

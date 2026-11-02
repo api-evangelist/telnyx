@@ -1,0 +1,593 @@
+openapi: 3.2.0
+info:
+  title: Telnyx Pronunciation Dictionaries API
+  version: 2.0.0
+  contact:
+    email: support@telnyx.com
+  x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Pronunciation Dictionaries across 3 of this provider''s published API definitions: telnyx-openapi.json, telnyx-openapi.yml, telnyx-openapi_2.json. Each path carries the servers of the definition it was published in.'
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Pronunciation Dictionaries
+  description: Manage pronunciation dictionaries for text-to-speech synthesis. Dictionaries contain alias items (text replacement) and phoneme items (IPA pronunciation notation) that control how specific words are spoken.
+paths:
+  /pronunciation_dicts:
+    get:
+      summary: List pronunciation dictionaries
+      description: List all pronunciation dictionaries for the authenticated organization. Results are paginated using offset-based pagination.
+      operationId: ListPronunciationDicts
+      tags:
+      - Pronunciation Dictionaries
+      parameters:
+      - name: page[number]
+        in: query
+        required: false
+        description: Page number (1-based). Defaults to 1.
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: page[size]
+        in: query
+        required: false
+        description: Number of results per page. Defaults to 20, maximum 250.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 250
+          default: 20
+      responses:
+        '200':
+          description: A paginated list of pronunciation dictionaries.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PronunciationDictListResponse'
+        '400':
+          description: Invalid pagination parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/pronunciation-dicts_ErrorResponse'
+        '401':
+          description: Unauthorized. Invalid or missing API key.
+    post:
+      summary: Create a pronunciation dictionary
+      description: 'Create a new pronunciation dictionary for the authenticated organization. Each dictionary contains a list of items that control how specific words are spoken. Items can be alias type (text replacement) or phoneme type (IPA pronunciation notation).
+
+
+        As an alternative to providing items directly as JSON, you can upload a dictionary file (PLS/XML or plain text format, max 1MB) using multipart/form-data. PLS files use the standard W3C Pronunciation Lexicon Specification XML format. Text files use a line-based format: `word=alias` for aliases, `word:/phoneme/` for IPA phonemes.
+
+
+        Limits:
+
+        - Maximum 50 dictionaries per organization
+
+        - Maximum 100 items per dictionary
+
+        - Text: max 200 characters
+
+        - Alias/phoneme value: max 500 characters
+
+        - File upload: max 1MB (1,048,576 bytes)'
+      operationId: CreatePronunciationDict
+      tags:
+      - Pronunciation Dictionaries
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePronunciationDictRequest'
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - name
+              - file
+              properties:
+                name:
+                  type: string
+                  description: Human-readable name. Must be unique within the organization.
+                  minLength: 1
+                  maxLength: 255
+                  example: Brand Names
+                file:
+                  type: string
+                  format: binary
+                  description: 'Dictionary file to upload. Supported formats: PLS/XML (.pls, .xml) and plain text (.txt). Max size: 1MB (1,048,576 bytes).'
+      responses:
+        '201':
+          description: Pronunciation dictionary created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PronunciationDictResponse'
+        '401':
+          description: Unauthorized. Invalid or missing API key.
+        '422':
+          description: Validation error or organization limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/pronunciation-dicts_ErrorResponse'
+              examples:
+                validation_error:
+                  summary: Validation failed
+                  value:
+                    errors:
+                    - code: '90202'
+                      title: Validation failed
+                      detail: items must have at least one item
+                      source:
+                        pointer: /items
+                limit_exceeded:
+                  summary: Organization limit exceeded
+                  value:
+                    errors:
+                    - code: '90203'
+                      title: Limit exceeded
+                      detail: Maximum number of pronunciation dictionaries (50) reached
+                      source:
+                        pointer: /
+                duplicate_name:
+                  summary: Duplicate dictionary name
+                  value:
+                    errors:
+                    - code: '90202'
+                      title: Validation failed
+                      detail: organization_id, name a dictionary with this name already exists
+                      source:
+                        pointer: /organization_id, name
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /pronunciation_dicts/{id}:
+    delete:
+      summary: Delete a pronunciation dictionary
+      description: Permanently delete a pronunciation dictionary.
+      operationId: DeletePronunciationDict
+      tags:
+      - Pronunciation Dictionaries
+      parameters:
+      - $ref: '#/components/parameters/pronunciation_dict_id'
+      responses:
+        '204':
+          description: Dictionary deleted successfully. No content returned.
+        '401':
+          description: Unauthorized. Invalid or missing API key.
+        '404':
+          description: Pronunciation dictionary not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/pronunciation-dicts_ErrorResponse'
+    get:
+      summary: Get a pronunciation dictionary
+      description: Retrieve a single pronunciation dictionary by ID.
+      operationId: GetPronunciationDict
+      tags:
+      - Pronunciation Dictionaries
+      parameters:
+      - $ref: '#/components/parameters/pronunciation_dict_id'
+      responses:
+        '200':
+          description: The requested pronunciation dictionary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PronunciationDictResponse'
+        '401':
+          description: Unauthorized. Invalid or missing API key.
+        '404':
+          description: Pronunciation dictionary not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/pronunciation-dicts_ErrorResponse'
+              example:
+                errors:
+                - code: '90201'
+                  title: Pronunciation dictionary not found
+                  detail: The requested pronunciation dictionary does not exist
+    patch:
+      summary: Update a pronunciation dictionary
+      description: Update the name and/or items of an existing pronunciation dictionary. Uses optimistic locking — if the dictionary was modified concurrently, the request returns 409 Conflict.
+      operationId: UpdatePronunciationDict
+      tags:
+      - Pronunciation Dictionaries
+      parameters:
+      - $ref: '#/components/parameters/pronunciation_dict_id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePronunciationDictRequest'
+      responses:
+        '200':
+          description: Pronunciation dictionary updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PronunciationDictResponse'
+        '401':
+          description: Unauthorized. Invalid or missing API key.
+        '404':
+          description: Pronunciation dictionary not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/pronunciation-dicts_ErrorResponse'
+        '409':
+          description: Conflict. The dictionary was modified concurrently. Re-fetch and retry.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/pronunciation-dicts_ErrorResponse'
+              example:
+                errors:
+                - code: '90200'
+                  title: Pronunciation dictionary error
+                  detail: Dictionary was modified concurrently, please retry
+        '422':
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/pronunciation-dicts_ErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+components:
+  schemas:
+    PronunciationDictData:
+      type: object
+      description: A pronunciation dictionary record.
+      properties:
+        record_type:
+          type: string
+          description: Identifies the resource type.
+          enum:
+          - pronunciation_dict
+          example: pronunciation_dict
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the pronunciation dictionary.
+          example: c215a3e1-be41-4701-97e8-1d3c22f9a5b7
+        name:
+          type: string
+          description: Human-readable name for the dictionary. Must be unique within the organization.
+          example: Brand Names
+        items:
+          type: array
+          description: List of pronunciation items (alias or phoneme type).
+          items:
+            $ref: '#/components/schemas/PronunciationDictItem'
+        version:
+          type: integer
+          description: Auto-incrementing version number. Increases by 1 on each update. Used for optimistic concurrency control and cache invalidation.
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp with millisecond precision.
+          example: '2026-03-25T12:00:00.000Z'
+        updated_at:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp with millisecond precision.
+          example: '2026-03-25T12:00:00.000Z'
+    pronunciation-dicts_PaginationMeta:
+      type: object
+      description: Pagination metadata returned with list responses.
+      properties:
+        page_number:
+          type: integer
+          description: Current page number (1-based).
+          example: 1
+        page_size:
+          type: integer
+          description: Number of results per page.
+          example: 20
+        total_results:
+          type: integer
+          description: Total number of results across all pages.
+          example: 3
+        total_pages:
+          type: integer
+          description: Total number of pages.
+          example: 1
+    PronunciationDictPhonemeItem:
+      type: object
+      description: A phoneme pronunciation item. When the `text` value is found in input, it is pronounced using the specified IPA phoneme notation.
+      required:
+      - text
+      - type
+      - phoneme
+      - alphabet
+      additionalProperties: false
+      properties:
+        text:
+          type: string
+          description: The text to match in the input. Case-insensitive matching is used during synthesis.
+          minLength: 1
+          maxLength: 200
+          example: Telnyx
+        type:
+          type: string
+          description: The item type.
+          enum:
+          - phoneme
+          example: phoneme
+        phoneme:
+          type: string
+          description: The phoneme notation representing the desired pronunciation.
+          minLength: 1
+          maxLength: 500
+          example: ˈtɛl.nɪks
+        alphabet:
+          type: string
+          description: The phonetic alphabet used for the phoneme notation.
+          enum:
+          - ipa
+          example: ipa
+    PronunciationDictListResponse:
+      type: object
+      description: Paginated list of pronunciation dictionaries.
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PronunciationDictData'
+          description: Array of pronunciation dictionary objects.
+        meta:
+          $ref: '#/components/schemas/pronunciation-dicts_PaginationMeta'
+    pronunciation-dicts_ErrorObject:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code.
+          example: '90202'
+        title:
+          type: string
+          description: Short human-readable error title.
+          example: Validation failed
+        detail:
+          type: string
+          description: Detailed error description.
+          example: items must have at least one item
+        source:
+          type: object
+          description: Source of the error.
+          properties:
+            pointer:
+              type: string
+              description: JSON pointer to the field that caused the error.
+              example: /items
+    PronunciationDictResponse:
+      type: object
+      description: Response containing a single pronunciation dictionary.
+      properties:
+        data:
+          $ref: '#/components/schemas/PronunciationDictData'
+    PronunciationDictAliasItem:
+      type: object
+      description: An alias pronunciation item. When the `text` value is found in input, it is replaced with the `alias` before speech synthesis.
+      required:
+      - text
+      - type
+      - alias
+      additionalProperties: false
+      properties:
+        text:
+          type: string
+          description: The text to match in the input. Case-insensitive matching is used during synthesis.
+          minLength: 1
+          maxLength: 200
+          example: Telnyx
+        type:
+          type: string
+          description: The item type.
+          enum:
+          - alias
+          example: alias
+        alias:
+          type: string
+          description: The replacement text that will be spoken instead.
+          minLength: 1
+          maxLength: 500
+          example: tel-nicks
+    pronunciation-dicts_ErrorResponse:
+      type: object
+      description: Standard Telnyx error response.
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/pronunciation-dicts_ErrorObject'
+    PronunciationDictItem:
+      description: A single pronunciation dictionary item. Use type 'alias' to replace matched text with a spoken alias, or type 'phoneme' to specify exact pronunciation using IPA notation.
+      oneOf:
+      - $ref: '#/components/schemas/PronunciationDictAliasItem'
+      - $ref: '#/components/schemas/PronunciationDictPhonemeItem'
+      discriminator:
+        propertyName: type
+        mapping:
+          alias: '#/components/schemas/PronunciationDictAliasItem'
+          phoneme: '#/components/schemas/PronunciationDictPhonemeItem'
+    CreatePronunciationDictRequest:
+      type: object
+      description: Request body for creating a pronunciation dictionary.
+      required:
+      - name
+      - items
+      properties:
+        name:
+          type: string
+          description: Human-readable name. Must be unique within the organization.
+          minLength: 1
+          maxLength: 255
+          example: Brand Names
+        items:
+          type: array
+          description: List of pronunciation items (alias or phoneme type). At least one item is required.
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/PronunciationDictItem'
+    UpdatePronunciationDictRequest:
+      type: object
+      description: Request body for updating a pronunciation dictionary. At least one field must be provided.
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          description: Updated dictionary name.
+          minLength: 1
+          maxLength: 255
+          example: Updated Brand Names
+        items:
+          type: array
+          description: Updated list of pronunciation items (alias or phoneme type).
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/PronunciationDictItem'
+    ErrorObject:
+      properties:
+        code:
+          description: Machine-readable error code.
+          example: '90202'
+          type: string
+        detail:
+          description: Detailed error description.
+          example: items must have at least one item
+          type: string
+        source:
+          description: Source of the error.
+          properties:
+            pointer:
+              description: JSON pointer to the field that caused the error.
+              example: /items
+              type: string
+          type: object
+        title:
+          description: Short human-readable error title.
+          example: Validation failed
+          type: string
+      type: object
+    pronunciation-dicts_ErrorResponse_2:
+      description: Standard Telnyx error response.
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/ErrorObject'
+          type: array
+      type: object
+  parameters:
+    pronunciation_dict_id:
+      name: id
+      in: path
+      required: true
+      description: The UUID of the pronunciation dictionary.
+      schema:
+        type: string
+        format: uuid
+        example: c215a3e1-be41-4701-97e8-1d3c22f9a5b7
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    pay-connectors_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key, not the processor bearer token.
+    telnyxApiKey:
+      type: http
+      scheme: bearer
+      description: Management-only Telnyx account credential.
+x-refined-from:
+- telnyx-openapi.json
+- telnyx-openapi.yml
+- telnyx-openapi_2.json
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

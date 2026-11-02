@@ -1,0 +1,784 @@
+openapi: 3.2.0
+info:
+  title: Telnyx OAuth Protocol API
+  version: 2.0.0
+  contact:
+    email: support@telnyx.com
+  x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged OAuth Protocol across 3 of this provider''s published API definitions: telnyx-openapi.json, telnyx-openapi.yml, telnyx-openapi_2.json. Each path carries the servers of the definition it was published in.'
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: OAuth Protocol
+paths:
+  /oauth/authorize:
+    get:
+      operationId: AuthorizeOAuth
+      tags:
+      - OAuth Protocol
+      summary: OAuth authorization endpoint
+      description: OAuth 2.0 authorization endpoint for the authorization code flow
+      security: []
+      parameters:
+      - name: response_type
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - code
+        description: OAuth response type
+      - name: client_id
+        in: query
+        required: true
+        schema:
+          type: string
+        description: OAuth client identifier
+      - name: redirect_uri
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uri
+        description: Redirect URI
+      - name: scope
+        in: query
+        schema:
+          type: string
+        description: Space-separated list of requested scopes
+        example: admin
+      - name: state
+        in: query
+        schema:
+          type: string
+        description: State parameter for CSRF protection
+      - name: code_challenge
+        in: query
+        schema:
+          type: string
+        description: PKCE code challenge
+      - name: code_challenge_method
+        in: query
+        schema:
+          type: string
+          enum:
+          - plain
+          - S256
+        description: PKCE code challenge method
+      responses:
+        '200':
+          description: Consent page displayed (when consent UI is embedded)
+          content:
+            text/html:
+              schema:
+                type: string
+              example: <!DOCTYPE html><html><head><title>Authorize application</title></head><body><h1>Authorize My App</h1><p>My App is requesting access to your Telnyx account.</p><button>Allow</button> <button>Deny</button></body></html>
+        '302':
+          description: Redirect to consent page or client with authorization code/error
+        '400':
+          description: Invalid request
+          content:
+            text/html:
+              schema:
+                type: string
+              example: <html><body>Authorization consent page</body></html>
+        '404':
+          description: Client not found
+          content:
+            text/html:
+              schema:
+                type: string
+        '422':
+          description: Invalid redirect URI
+          content:
+            text/html:
+              schema:
+                type: string
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /oauth/consent/{consent_token}:
+    get:
+      operationId: GetOAuthConsentToken
+      tags:
+      - OAuth Protocol
+      summary: Get OAuth consent token
+      description: Retrieve details about an OAuth consent token
+      parameters:
+      - name: consent_token
+        in: path
+        required: true
+        schema:
+          type: string
+        description: OAuth consent token
+      responses:
+        '200':
+          description: Consent token details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentTokenResponse'
+              example:
+                data:
+                  client_id: string
+                  name: string
+                  requested_scopes:
+                  - id: string
+                    name: string
+                    description: string
+                  redirect_uri: https://example.com
+                  verified: false
+        '422':
+          description: Invalid consent token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/oauth_oauth_Error'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /oauth/grants:
+    post:
+      operationId: CreateOAuthGrant
+      tags:
+      - OAuth Protocol
+      summary: Create OAuth grant
+      description: Creates an OAuth authorization grant and returns the grant response for completing the authorization flow.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOAuthGrantRequest'
+            example:
+              allowed: false
+              consent_token: string
+      responses:
+        '200':
+          description: Grant created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateGrantResponse'
+              example:
+                redirect_uri: https://example.com
+        '422':
+          description: Invalid consent token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/oauth_oauth_Error'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /oauth/introspect:
+    post:
+      operationId: IntrospectOAuthToken
+      tags:
+      - OAuth Protocol
+      summary: Token introspection
+      description: Introspect an OAuth access token to check its validity and metadata
+      security:
+      - oauthClientAuth: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/IntrospectRequest'
+            example:
+              token: string
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IntrospectRequest'
+            example:
+              token: string
+      responses:
+        '200':
+          description: Introspection response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntrospectResponse'
+              example:
+                active: false
+                scope: string
+                client_id: string
+                exp: 0
+                iat: 0
+                iss: string
+                aud: string
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/oauth_oauth_Error'
+              example:
+                error: invalid_request
+        '401':
+          description: Invalid client credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/oauth_oauth_Error'
+              example:
+                error: invalid_client
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /oauth/jwks:
+    get:
+      operationId: GetOAuthJWKS
+      tags:
+      - OAuth Protocol
+      summary: JSON Web Key Set
+      description: Retrieve the JSON Web Key Set for token verification
+      security: []
+      responses:
+        '200':
+          description: JSON Web Key Set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JWKSet'
+              example:
+                keys:
+                - kty: string
+                  use: string
+                  alg: string
+                  kid: string
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/oauth_oauth_Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/oauth_oauth_Error'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /oauth/register:
+    post:
+      operationId: RegisterOAuthClient
+      tags:
+      - OAuth Protocol
+      summary: Dynamic client registration
+      description: Register a new OAuth client dynamically (RFC 7591)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OAuthDynamicRegistrationRequest'
+      responses:
+        '201':
+          description: Client registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthDynamicRegistrationResponse'
+        '400':
+          description: Invalid client metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: invalid_client_metadata
+                  error_description:
+                    type: string
+                    example: The client metadata was invalid
+                  invalid_fields:
+                    type: object
+                    additionalProperties:
+                      type: array
+                      items:
+                        type: string
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /oauth/token:
+    post:
+      operationId: ExchangeOAuthToken
+      tags:
+      - OAuth Protocol
+      summary: OAuth token endpoint
+      description: Exchange authorization code, client credentials, or refresh token for access token
+      security:
+      - oauthClientAuth: []
+      - {}
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRequest'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRequest'
+      responses:
+        '200':
+          description: Token response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+              example:
+                access_token: string
+                token_type: Bearer
+                expires_in: 0
+                scope: string
+                refresh_token: string
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/oauth_oauth_Error'
+              examples:
+                invalid_request:
+                  value:
+                    error: invalid_request
+                invalid_grant:
+                  value:
+                    error: invalid_grant
+                unsupported_grant_type:
+                  value:
+                    error: unsupported_grant_type
+                invalid_scope:
+                  value:
+                    error: invalid_scope
+        '401':
+          description: Invalid client credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/oauth_oauth_Error'
+              example:
+                error: invalid_client
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+components:
+  schemas:
+    TokenRequest:
+      type: object
+      properties:
+        grant_type:
+          type: string
+          enum:
+          - client_credentials
+          - authorization_code
+          - refresh_token
+          description: OAuth 2.0 grant type
+        scope:
+          type: string
+          description: Space-separated list of requested scopes (for client_credentials)
+          example: admin
+        code:
+          type: string
+          description: Authorization code (for authorization_code flow)
+        redirect_uri:
+          type: string
+          format: uri
+          description: Redirect URI (for authorization_code flow)
+        code_verifier:
+          type: string
+          description: PKCE code verifier (for authorization_code flow)
+        refresh_token:
+          type: string
+          description: Refresh token (for refresh_token flow)
+        client_id:
+          type: string
+          description: OAuth client ID (if not using HTTP Basic auth)
+        client_secret:
+          type: string
+          description: OAuth client secret (if not using HTTP Basic auth)
+      required:
+      - grant_type
+    CreateGrantResponse:
+      type: object
+      properties:
+        redirect_uri:
+          type: string
+          format: uri
+          description: Redirect URI with authorization code or error
+      required:
+      - redirect_uri
+    IntrospectResponse:
+      type: object
+      properties:
+        active:
+          type: boolean
+          description: Whether the token is active
+        scope:
+          type: string
+          description: Space-separated list of scopes
+        client_id:
+          type: string
+          description: Client identifier
+        exp:
+          type: integer
+          description: Expiration timestamp
+        iat:
+          type: integer
+          description: Issued at timestamp
+        iss:
+          type: string
+          description: Issuer
+        aud:
+          type: string
+          description: Audience
+      required:
+      - active
+    IntrospectRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          description: The token to introspect
+      required:
+      - token
+    OAuthDynamicRegistrationResponse:
+      type: object
+      properties:
+        client_id:
+          type: string
+          description: Unique client identifier
+          example: abc123def456
+        client_secret:
+          type: string
+          description: Client secret (only for confidential clients)
+        redirect_uris:
+          type: array
+          items:
+            type: string
+            format: uri
+          description: Array of redirection URIs
+        client_name:
+          type: string
+          description: Human-readable client name
+        grant_types:
+          type: array
+          items:
+            type: string
+          description: Array of allowed grant types
+        response_types:
+          type: array
+          items:
+            type: string
+          description: Array of allowed response types
+        scope:
+          type: string
+          description: Space-separated scope values
+        token_endpoint_auth_method:
+          type: string
+          description: Token endpoint authentication method
+        client_id_issued_at:
+          type: integer
+          description: Unix timestamp of when the client ID was issued
+        logo_uri:
+          type: string
+          format: uri
+          description: URL of the client logo
+        tos_uri:
+          type: string
+          format: uri
+          description: URL of the client's terms of service
+        policy_uri:
+          type: string
+          format: uri
+          description: URL of the client's privacy policy
+      required:
+      - client_id
+      - client_id_issued_at
+    oauth_oauth_Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error code
+        error_description:
+          type: string
+          description: Human-readable error description
+      required:
+      - error
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: The access token
+        token_type:
+          type: string
+          enum:
+          - Bearer
+          description: Token type
+        expires_in:
+          type: integer
+          description: Token lifetime in seconds
+        scope:
+          type: string
+          description: Space-separated list of granted scopes
+        refresh_token:
+          type: string
+          description: Refresh token (if applicable)
+      required:
+      - access_token
+      - token_type
+      - expires_in
+    OAuthDynamicRegistrationRequest:
+      type: object
+      properties:
+        redirect_uris:
+          type: array
+          items:
+            type: string
+            format: uri
+          description: Array of redirection URI strings for use in redirect-based flows
+          example:
+          - https://example.com/callback
+        client_name:
+          type: string
+          description: Human-readable string name of the client to be presented to the end-user
+          example: My OAuth Application
+        grant_types:
+          type: array
+          items:
+            type: string
+            enum:
+            - authorization_code
+            - client_credentials
+            - refresh_token
+          description: Array of OAuth 2.0 grant type strings that the client may use
+          default:
+          - authorization_code
+        response_types:
+          type: array
+          items:
+            type: string
+          description: Array of the OAuth 2.0 response type strings that the client may use
+          default:
+          - code
+        scope:
+          type: string
+          description: Space-separated string of scope values that the client may use
+          example: admin
+        token_endpoint_auth_method:
+          type: string
+          enum:
+          - none
+          - client_secret_basic
+          - client_secret_post
+          description: Authentication method for the token endpoint
+          default: client_secret_basic
+        logo_uri:
+          type: string
+          format: uri
+          description: URL of the client logo
+        tos_uri:
+          type: string
+          format: uri
+          description: URL of the client's terms of service
+        policy_uri:
+          type: string
+          format: uri
+          description: URL of the client's privacy policy
+      additionalProperties: false
+    JWKSet:
+      type: object
+      properties:
+        keys:
+          type: array
+          items:
+            type: object
+            properties:
+              kty:
+                type: string
+                description: Key type
+              use:
+                type: string
+                description: Key use
+              alg:
+                type: string
+                description: Algorithm
+              kid:
+                type: string
+                description: Key ID
+    CreateOAuthGrantRequest:
+      type: object
+      properties:
+        allowed:
+          type: boolean
+          description: Whether the grant is allowed
+        consent_token:
+          type: string
+          description: Consent token
+      required:
+      - allowed
+      - consent_token
+      additionalProperties: false
+    ConsentTokenResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            client_id:
+              type: string
+              description: Client ID
+            name:
+              type: string
+              description: Client name
+            requested_scopes:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: Scope ID
+                  name:
+                    type: string
+                    description: Scope name
+                  description:
+                    type: string
+                    description: Scope description
+            logo_uri:
+              type:
+              - string
+              - 'null'
+              format: uri
+              description: URL of the client logo
+            tos_uri:
+              type:
+              - string
+              - 'null'
+              format: uri
+              description: URL of the client's terms of service
+            policy_uri:
+              type:
+              - string
+              - 'null'
+              format: uri
+              description: URL of the client's privacy policy
+            redirect_uri:
+              type: string
+              format: uri
+              description: The redirect URI for this authorization
+            verified:
+              type: boolean
+              description: Whether the client is verified
+    oauth_Error:
+      properties:
+        error:
+          description: Error code
+          type: string
+        error_description:
+          description: Human-readable error description
+          type: string
+      required:
+      - error
+      type: object
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    pay-connectors_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key, not the processor bearer token.
+    telnyxApiKey:
+      type: http
+      scheme: bearer
+      description: Management-only Telnyx account credential.
+x-refined-from:
+- telnyx-openapi.json
+- telnyx-openapi.yml
+- telnyx-openapi_2.json
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

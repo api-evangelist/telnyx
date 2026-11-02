@@ -1,0 +1,713 @@
+openapi: 3.2.0
+info:
+  title: Telnyx Voice Designs API
+  version: 2.0.0
+  contact:
+    email: support@telnyx.com
+  x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Voice Designs across 3 of this provider''s published API definitions: telnyx-openapi.json, telnyx-openapi.yml, telnyx-openapi_2.json. Each path carries the servers of the definition it was published in.'
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Voice Designs
+  description: Create and manage AI-generated voice designs using natural language prompts.
+paths:
+  /voice_designs:
+    get:
+      summary: List voice designs
+      description: Returns a paginated list of voice designs belonging to the authenticated account.
+      operationId: listVoiceDesigns
+      tags:
+      - Voice Designs
+      parameters:
+      - $ref: '#/components/parameters/voice-designs_PageNumber'
+      - $ref: '#/components/parameters/voice-designs_PageSize'
+      - $ref: '#/components/parameters/FilterName'
+      - $ref: '#/components/parameters/voice-designs_Sort'
+      responses:
+        '200':
+          description: A paginated list of voice designs.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceDesignListResponse'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/voice-designs_ErrorResponse'
+    post:
+      summary: Create or add a version to a voice design
+      description: Creates a new voice design (version 1) when `voice_design_id` is omitted. When `voice_design_id` is provided, adds a new version to the existing design instead. A design can have at most 50 versions.
+      operationId: createVoiceDesign
+      tags:
+      - Voice Designs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoiceDesignRequest'
+      responses:
+        '201':
+          description: Voice design created or new version added successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceDesignResponse'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/voice-designs_ErrorResponse'
+        '404':
+          description: Voice design not found — the specified `voice_design_id` does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/voice-designs_ErrorResponse'
+        '409':
+          description: Conflict — the voice design has reached the maximum of 50 versions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/voice-designs_ErrorResponse'
+        '422':
+          description: Unprocessable entity — validation error in the request body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/voice-designs_ErrorResponse'
+        '502':
+          description: Bad gateway — upstream voice synthesis service is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/voice-designs_ErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /voice_designs/{id}:
+    delete:
+      summary: Delete a voice design
+      description: Permanently deletes a voice design and all of its versions. This action cannot be undone.
+      operationId: deleteVoiceDesign
+      tags:
+      - Voice Designs
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: The voice design UUID or name.
+        schema:
+          type: string
+      responses:
+        '204':
+          description: Voice design deleted successfully.
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/voice-designs_ErrorResponse'
+        '404':
+          description: Voice design not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/voice-designs_ErrorResponse'
+    get:
+      summary: Get a voice design
+      description: Returns the latest version of a voice design, or a specific version when `?version=N` is provided. The `id` parameter accepts either a UUID or the design name.
+      operationId: getVoiceDesign
+      tags:
+      - Voice Designs
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: The voice design UUID or name.
+        schema:
+          type: string
+      - name: version
+        in: query
+        required: false
+        description: Specific version number to retrieve. Defaults to the latest version.
+        schema:
+          type: integer
+          minimum: 1
+      responses:
+        '200':
+          description: The requested voice design.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceDesignResponse'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/voice-designs_ErrorResponse'
+        '404':
+          description: Voice design not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/voice-designs_ErrorResponse'
+    patch:
+      summary: Rename a voice design
+      description: Updates the name of a voice design. All versions retain their other properties.
+      operationId: updateVoiceDesign
+      tags:
+      - Voice Designs
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: The voice design UUID or name.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoiceDesignUpdateRequest'
+      responses:
+        '200':
+          description: Voice design renamed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceDesignUpdatedResponse'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/voice-designs_ErrorResponse'
+        '404':
+          description: Voice design not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/voice-designs_ErrorResponse'
+        '422':
+          description: Unprocessable entity — validation error in the request body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/voice-designs_ErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /voice_designs/{id}/sample:
+    get:
+      summary: Download voice design audio sample
+      description: Downloads the WAV audio sample for the voice design. Returns the latest version's sample by default, or a specific version when `?version=N` is provided. The `id` parameter accepts either a UUID or the design name.
+      operationId: getVoiceDesignSample
+      tags:
+      - Voice Designs
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: The voice design UUID or name.
+        schema:
+          type: string
+      - name: version
+        in: query
+        required: false
+        description: Specific version number to download the sample for. Defaults to the latest version.
+        schema:
+          type: integer
+          minimum: 1
+      responses:
+        '200':
+          description: WAV audio sample binary.
+          content:
+            audio/wav:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/voice-designs_ErrorResponse'
+        '404':
+          description: Voice design or version not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/voice-designs_ErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /voice_designs/{id}/versions/{version}:
+    delete:
+      summary: Delete a specific version of a voice design
+      description: Permanently deletes a specific version of a voice design. The version number must be a positive integer.
+      operationId: deleteVoiceDesignVersion
+      tags:
+      - Voice Designs
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: The voice design UUID or name.
+        schema:
+          type: string
+      - name: version
+        in: path
+        required: true
+        description: The version number to delete.
+        schema:
+          type: integer
+          minimum: 1
+      responses:
+        '204':
+          description: Voice design version deleted successfully.
+        '400':
+          description: Bad request — invalid version number.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/voice-designs_ErrorResponse'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/voice-designs_ErrorResponse'
+        '404':
+          description: Voice design or version not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/voice-designs_ErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+components:
+  schemas:
+    voice-designs_PaginationMeta:
+      type: object
+      description: Pagination metadata returned with list responses.
+      properties:
+        page_number:
+          type: integer
+          description: Current page number (1-based).
+        page_size:
+          type: integer
+          description: Number of results per page.
+        total_results:
+          type: integer
+          description: Total number of results across all pages.
+        total_pages:
+          type: integer
+          description: Total number of pages.
+      example:
+        page_number: 1
+        page_size: 20
+        total_results: 42
+        total_pages: 3
+    VoiceDesignSummaryData:
+      type: object
+      description: A summarized voice design object (without version-specific fields).
+      properties:
+        record_type:
+          type: string
+          enum:
+          - voice_design
+          description: Identifies the resource type.
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the voice design.
+        name:
+          type: string
+          description: Name of the voice design.
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the voice design was first created.
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the voice design was last updated.
+        provider:
+          type:
+          - string
+          - 'null'
+          enum:
+          - telnyx
+          - minimax
+          - Telnyx
+          - Minimax
+          - null
+          description: Voice synthesis provider used for this design.
+        provider_supported_models:
+          type: array
+          items:
+            type: string
+          description: List of TTS model identifiers supported by this design's provider.
+    VoiceDesignResponse:
+      type: object
+      description: Response envelope for a single voice design with full version detail.
+      properties:
+        data:
+          $ref: '#/components/schemas/VoiceDesignData'
+      example:
+        data:
+          record_type: voice_design
+          id: 550e8400-e29b-41d4-a716-446655440000
+          name: friendly-narrator
+          version: 1
+          text: Hello, welcome.
+          prompt: Speak in a warm tone
+          voice_sample_size: 48000
+          version_created_at: '2024-01-01T00:00:00Z'
+          created_at: '2024-01-01T00:00:00Z'
+          updated_at: '2024-01-01T00:00:00Z'
+          provider: Telnyx
+          provider_supported_models:
+          - Qwen3TTS
+          provider_voice_id: 550e8400-e29b-41d4-a716-446655440000
+    VoiceDesignData:
+      type: object
+      description: A voice design object with full version detail.
+      properties:
+        record_type:
+          type: string
+          enum:
+          - voice_design
+          description: Identifies the resource type.
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the voice design.
+        name:
+          type: string
+          description: Name of the voice design.
+        version:
+          type: integer
+          description: Version number of this voice design.
+        text:
+          type: string
+          description: Sample text used to synthesize this version.
+        prompt:
+          type: string
+          description: Natural language prompt used to define the voice style for this version.
+        voice_sample_size:
+          type: integer
+          description: Size of the voice sample audio in bytes.
+        version_created_at:
+          type: string
+          format: date-time
+          description: Timestamp when this specific version was created.
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the voice design was first created.
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the voice design was last updated.
+        provider:
+          type:
+          - string
+          - 'null'
+          enum:
+          - telnyx
+          - minimax
+          - Telnyx
+          - Minimax
+          - null
+          description: Voice synthesis provider used for this design.
+        provider_supported_models:
+          type: array
+          items:
+            type: string
+          description: List of TTS model identifiers supported by this design's provider (e.g. `Qwen3TTS`, `speech-02-turbo`).
+        provider_voice_id:
+          type:
+          - string
+          - 'null'
+          description: Provider-specific voice identifier. For Telnyx designs this is the design version ID; for Minimax it is the Minimax-assigned voice ID.
+    voice-designs_ErrorResponse:
+      type: object
+      description: Standard error response envelope.
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/voice-designs_ErrorObject'
+      example:
+        errors:
+        - code: '10005'
+          title: Resource not found
+          detail: Voice design not found
+    VoiceDesignUpdatedResponse:
+      type: object
+      description: Response envelope for a voice design after a rename operation (no version-specific fields).
+      properties:
+        data:
+          $ref: '#/components/schemas/VoiceDesignSummaryData'
+      example:
+        data:
+          record_type: voice_design
+          id: 550e8400-e29b-41d4-a716-446655440000
+          name: updated-narrator
+          created_at: '2024-01-01T00:00:00Z'
+          updated_at: '2024-01-02T00:00:00Z'
+    VoiceDesignUpdateRequest:
+      type: object
+      description: Request body for renaming a voice design.
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: New name for the voice design.
+      example:
+        name: updated-narrator
+    voice-designs_ErrorObject:
+      type: object
+      description: A single error object.
+      properties:
+        code:
+          type: string
+          description: Telnyx-specific error code.
+        title:
+          type: string
+          description: Short, human-readable summary of the error.
+        detail:
+          type: string
+          description: Detailed, human-readable explanation of the error.
+        source:
+          type: object
+          description: Reference to the source of the error.
+          properties:
+            pointer:
+              type: string
+              description: A JSON Pointer (RFC 6901) to the field that caused the error.
+    VoiceDesignRequest:
+      type: object
+      description: Request body for creating a new voice design or adding a version to an existing one. Omit `voice_design_id` to create a new design; include it to add a new version.
+      required:
+      - text
+      - prompt
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Name for the voice design. Required when creating a new design (`voice_design_id` is not provided); ignored when adding a version. Cannot be a UUID.
+        voice_design_id:
+          type: string
+          format: uuid
+          description: ID of an existing voice design to add a new version to. When provided, a new version is created instead of a new design.
+        text:
+          type: string
+          description: Sample text to synthesize for this voice design.
+        prompt:
+          type: string
+          description: Natural language description of the voice style, e.g. 'Speak in a warm, friendly tone with a slight British accent'.
+        language:
+          type: string
+          default: Auto
+          description: 'Language for synthesis. Supported values: Auto, Chinese, English, Japanese, Korean, German, French, Russian, Portuguese, Spanish, Italian. Defaults to Auto.'
+        temperature:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 2
+          description: 'Sampling temperature controlling randomness. Higher values produce more varied output. Default: 0.9.'
+        top_k:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          description: 'Top-k sampling parameter — limits the token vocabulary considered at each step. Default: 50.'
+        top_p:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: 'Top-p (nucleus) sampling parameter — cumulative probability cutoff for token selection. Default: 1.0.'
+        repetition_penalty:
+          type: number
+          format: float
+          minimum: 1
+          maximum: 2
+          description: 'Repetition penalty to reduce repeated patterns in generated audio. Default: 1.05.'
+        max_new_tokens:
+          type: integer
+          minimum: 100
+          maximum: 4096
+          description: 'Maximum number of tokens to generate. Default: 2048.'
+        provider:
+          type: string
+          enum:
+          - telnyx
+          - minimax
+          - Telnyx
+          - Minimax
+          default: telnyx
+          description: Voice synthesis provider. `telnyx` uses the Qwen3TTS model; `minimax` uses the Minimax speech models. Case-insensitive. Defaults to `telnyx`.
+      example:
+        name: friendly-narrator
+        text: Hello, welcome to our service.
+        prompt: Speak in a warm, friendly tone
+        language: Auto
+        provider: telnyx
+    VoiceDesignListResponse:
+      type: object
+      description: Paginated list of voice designs.
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/VoiceDesignSummaryData'
+          description: Array of voice design summary objects.
+        meta:
+          $ref: '#/components/schemas/voice-designs_PaginationMeta'
+  parameters:
+    FilterName:
+      name: filter[name]
+      in: query
+      required: false
+      description: Case-insensitive substring filter on the name field.
+      schema:
+        type: string
+    voice-designs_Sort:
+      name: sort
+      in: query
+      required: false
+      description: Sort order. Prefix with `-` for descending. Defaults to `-created_at`.
+      schema:
+        type: string
+        enum:
+        - name
+        - -name
+        - created_at
+        - -created_at
+        default: -created_at
+    voice-designs_PageSize:
+      name: page[size]
+      in: query
+      required: false
+      description: Number of results per page.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 250
+        default: 20
+    voice-designs_PageNumber:
+      name: page[number]
+      in: query
+      required: false
+      description: Page number for pagination (1-based).
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    pay-connectors_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key, not the processor bearer token.
+    telnyxApiKey:
+      type: http
+      scheme: bearer
+      description: Management-only Telnyx account credential.
+x-refined-from:
+- telnyx-openapi.json
+- telnyx-openapi.yml
+- telnyx-openapi_2.json
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

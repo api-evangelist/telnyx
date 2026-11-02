@@ -1,0 +1,2665 @@
+openapi: 3.2.0
+info:
+  title: Telnyx Phone Number Configurations API
+  version: 2.0.0
+  contact:
+    email: support@telnyx.com
+  x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Phone Number Configurations across 3 of this provider''s published API definitions: telnyx-openapi.json, telnyx-openapi.yml, telnyx-openapi_2.json. Each path carries the servers of the definition it was published in.'
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Phone Number Configurations
+  description: Configure your phone numbers
+paths:
+  /phone_numbers:
+    get:
+      summary: List phone numbers
+      operationId: ListPhoneNumbers
+      tags:
+      - Phone Number Configurations
+      x-group-parameters: 'true'
+      x-endpoint-cost: medium
+      parameters:
+      - $ref: '#/components/parameters/numbers_PageConsolidated_73c9788e53'
+      - name: sort
+        in: query
+        description: Specifies the sort order for results. If not given, results are sorted by created_at in descending order.
+        required: false
+        schema:
+          type: string
+          enum:
+          - purchased_at
+          - phone_number
+          - connection_name
+          - usage_payment_method
+          example: connection_name
+      - name: filter
+        in: query
+        style: deepObject
+        explode: true
+        description: 'Consolidated filter parameter (deepObject style). Originally: filter[tag], filter[phone_number], filter[status], filter[country_iso_alpha2], filter[connection_id], filter[voice.connection_name], filter[voice.usage_payment_method], filter[billing_group_id], filter[emergency_address_id], filter[customer_reference], filter[number_type], filter[source]'
+        schema:
+          type: object
+          properties:
+            tag:
+              type: string
+              description: Filter by phone number tags.
+            without_tags:
+              type: string
+              description: When set to 'true', filters for phone numbers that do not have any tags applied. All other values are ignored.
+              enum:
+              - 'true'
+              - 'false'
+            phone_number:
+              type: string
+              description: "Filter by phone number. Requires at least three digits.\n             Non-numerical characters will result in no values being returned."
+            status:
+              type: string
+              enum:
+              - purchase-pending
+              - purchase-failed
+              - port-pending
+              - active
+              - deleted
+              - port-failed
+              - emergency-only
+              - ported-out
+              - port-out-pending
+              example: active
+              description: Filter by phone number status.
+            country_iso_alpha2:
+              oneOf:
+              - type: string
+                example: US
+              - type: array
+                items:
+                  type: string
+                example:
+                - US
+                - CA
+              description: Filter by phone number country ISO alpha-2 code. Can be a single value or an array of values.
+            connection_id:
+              type: string
+              example: '1521916448077776306'
+              description: Filter by connection_id.
+            voice.connection_name:
+              type: object
+              description: Filter by voice connection name pattern matching.
+              properties:
+                contains:
+                  type: string
+                  example: test
+                  description: Filter contains connection name. Requires at least three characters.
+                starts_with:
+                  type: string
+                  example: test
+                  description: Filter starts with connection name. Requires at least three characters.
+                ends_with:
+                  type: string
+                  example: test
+                  description: Filter ends with connection name. Requires at least three characters.
+                eq:
+                  type: string
+                  example: test
+                  description: Filter by connection name.
+              additionalProperties: false
+            voice.usage_payment_method:
+              type: string
+              enum:
+              - pay-per-minute
+              - channel
+              example: channel
+              description: Filter by usage_payment_method.
+            billing_group_id:
+              type: string
+              example: 62e4bf2e-c278-4282-b524-488d9c9c43b2
+              description: Filter by the billing_group_id associated with phone numbers. To filter to only phone numbers that have no billing group associated them, set the value of this filter to the string 'null'.
+            emergency_address_id:
+              type: string
+              example: '9102160989215728032'
+              description: Filter by the emergency_address_id associated with phone numbers. To filter only phone numbers that have no emergency address associated with them, set the value of this filter to the string 'null'.
+            customer_reference:
+              type: string
+              description: Filter numbers via the customer_reference set.
+            number_type:
+              type: object
+              description: Filter phone numbers by phone number type.
+              properties:
+                eq:
+                  type: string
+                  enum:
+                  - local
+                  - national
+                  - toll_free
+                  - mobile
+                  - shared_cost
+                  description: Filter phone numbers by phone number type.
+              additionalProperties: false
+            source:
+              type: string
+              enum:
+              - ported
+              - purchased
+              description: Filter phone numbers by their source. Use 'ported' for numbers ported from other carriers, or 'purchased' for numbers bought directly from Telnyx.
+      - name: handle_messaging_profile_error
+        in: query
+        description: Although it is an infrequent occurrence, due to the highly distributed nature of the Telnyx platform, it is possible that there will be an issue when loading in Messaging Profile information. As such, when this parameter is set to `true` and an error in fetching this information occurs, messaging profile related fields will be omitted in the response and an error message will be included instead of returning a 503 error.
+        schema:
+          type: string
+          enum:
+          - 'true'
+          - 'false'
+          example: 'false'
+          default: 'false'
+      responses:
+        '200':
+          description: Successful response with a list of phone numbers.
+          content:
+            application/json:
+              schema:
+                type: object
+                title: List Phone Numbers Response
+                required:
+                - data
+                - meta
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/numbers_PhoneNumberDetailed'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+                  errors:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/numbers_Error_73c9788e53'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse_73c9788e53'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse_73c9788e53'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+      description: Returns phone numbers associated with the account. Results support pagination, sorting, and filters for number attributes, status, source, connections, billing groups, emergency addresses, tags, and customer references.
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /phone_numbers/actions/verify_ownership:
+    post:
+      summary: Verify ownership of phone numbers
+      description: Verifies ownership of the provided phone numbers and returns a mapping of numbers to their IDs, plus a list of numbers not found in the account.
+      operationId: VerifyPhoneNumberOwnership
+      tags:
+      - Phone Number Configurations
+      x-endpoint-cost: light
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhoneNumberVerifyOwnershipRequest'
+      responses:
+        '200':
+          description: Phone number ownership verification completed.
+          content:
+            application/json:
+              schema:
+                type: object
+                title: Phone Number Verify Ownership Response
+                properties:
+                  data:
+                    $ref: '#/components/schemas/numbers_PhoneNumberVerifyOwnershipResponse'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse_73c9788e53'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse_73c9788e53'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /phone_numbers/slim:
+    get:
+      summary: Slim List phone numbers
+      description: List phone numbers, This endpoint is a lighter version of the /phone_numbers endpoint having higher performance and rate limit.
+      operationId: SlimListPhoneNumbers
+      tags:
+      - Phone Number Configurations
+      x-group-parameters: 'true'
+      x-endpoint-cost: medium
+      parameters:
+      - $ref: '#/components/parameters/numbers_PageConsolidated_73c9788e53'
+      - name: include_connection
+        in: query
+        description: Include the connection associated with the phone number.
+        required: false
+        schema:
+          type: boolean
+          default: false
+      - name: include_tags
+        in: query
+        description: Include the tags associated with the phone number.
+        required: false
+        schema:
+          type: boolean
+          default: false
+      - name: sort
+        in: query
+        description: Specifies the sort order for results. If not given, results are sorted by created_at in descending order.
+        required: false
+        schema:
+          type: string
+          enum:
+          - purchased_at
+          - phone_number
+          - connection_name
+          - usage_payment_method
+          example: connection_name
+      - name: filter
+        in: query
+        style: deepObject
+        explode: true
+        description: 'Consolidated filter parameter (deepObject style). Originally: filter[tag], filter[phone_number], filter[status], filter[country_iso_alpha2], filter[connection_id], filter[voice.connection_name], filter[voice.usage_payment_method], filter[billing_group_id], filter[emergency_address_id], filter[customer_reference], filter[number_type], filter[source]'
+        schema:
+          type: object
+          properties:
+            tag:
+              type: string
+              description: Filter by phone number tags. (This requires the include_tags param)
+            phone_number:
+              type: string
+              description: "Filter by phone number. Requires at least three digits.\n             Non-numerical characters will result in no values being returned."
+            status:
+              type: string
+              enum:
+              - purchase-pending
+              - purchase-failed
+              - port_pending
+              - active
+              - deleted
+              - port-failed
+              - emergency-only
+              - ported-out
+              - port-out-pending
+              example: active
+              description: Filter by phone number status.
+            country_iso_alpha2:
+              oneOf:
+              - type: string
+                example: US
+              - type: array
+                items:
+                  type: string
+                example:
+                - US
+                - CA
+              description: Filter by phone number country ISO alpha-2 code. Can be a single value or an array of values.
+            connection_id:
+              type: string
+              example: '1521916448077776306'
+              description: Filter by connection_id.
+            voice.connection_name:
+              type: object
+              description: Filter by voice connection name pattern matching (requires include_connection param).
+              properties:
+                contains:
+                  type: string
+                  example: test
+                  description: Filter contains connection name. Requires at least three characters and the include_connection param.
+                starts_with:
+                  type: string
+                  example: test
+                  description: Filter starts with connection name. Requires at least three characters and the include_connection param.
+                ends_with:
+                  type: string
+                  example: test
+                  description: Filter ends with connection name. Requires at least three characters and the include_connection param.
+                eq:
+                  type: string
+                  example: test
+                  description: Filter by connection name.
+              additionalProperties: false
+            voice.usage_payment_method:
+              type: string
+              enum:
+              - pay-per-minute
+              - channel
+              example: channel
+              description: Filter by usage_payment_method.
+            billing_group_id:
+              type: string
+              example: 62e4bf2e-c278-4282-b524-488d9c9c43b2
+              description: Filter by the billing_group_id associated with phone numbers. To filter to only phone numbers that have no billing group associated them, set the value of this filter to the string 'null'.
+            emergency_address_id:
+              type: string
+              example: '9102160989215728032'
+              description: Filter by the emergency_address_id associated with phone numbers. To filter only phone numbers that have no emergency address associated with them, set the value of this filter to the string 'null'.
+            customer_reference:
+              type: string
+              description: Filter numbers via the customer_reference set.
+            number_type:
+              type: object
+              description: Filter phone numbers by phone number type.
+              properties:
+                eq:
+                  type: string
+                  enum:
+                  - local
+                  - national
+                  - toll_free
+                  - mobile
+                  - shared_cost
+                  description: Filter phone numbers by phone number type.
+              additionalProperties: false
+            source:
+              type: string
+              enum:
+              - ported
+              - purchased
+              description: Filter phone numbers by their source. Use 'ported' for numbers ported from other carriers, or 'purchased' for numbers bought directly from Telnyx.
+      responses:
+        '200':
+          description: Successful response with a list of phone numbers.
+          content:
+            application/json:
+              schema:
+                type: object
+                title: List Phone Numbers Response
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/numbers_SlimPhoneNumberDetailed'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse_73c9788e53'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse_73c9788e53'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /phone_numbers/voice:
+    get:
+      summary: List phone numbers with voice settings
+      operationId: ListPhoneNumbersWithVoiceSettings
+      tags:
+      - Phone Number Configurations
+      x-group-parameters: 'true'
+      x-endpoint-cost: medium
+      parameters:
+      - $ref: '#/components/parameters/numbers_PageConsolidated_73c9788e53'
+      - name: sort
+        in: query
+        description: Specifies the sort order for results. If not given, results are sorted by created_at in descending order.
+        required: false
+        schema:
+          type: string
+          enum:
+          - purchased_at
+          - phone_number
+          - connection_name
+          - usage_payment_method
+          example: connection_name
+      - name: filter
+        in: query
+        style: deepObject
+        explode: true
+        description: 'Consolidated filter parameter (deepObject style). Originally: filter[phone_number], filter[connection_name], filter[customer_reference], filter[voice.usage_payment_method]'
+        schema:
+          type: object
+          properties:
+            phone_number:
+              type: string
+              description: "Filter by phone number. Requires at least three digits.\n             Non-numerical characters will result in no values being returned."
+            connection_name:
+              type: object
+              description: Filter by connection name pattern matching.
+              properties:
+                contains:
+                  type: string
+                  example: test
+                  description: Filter contains connection name. Requires at least three characters.
+              additionalProperties: false
+            customer_reference:
+              type: string
+              description: Filter numbers via the customer_reference set.
+            voice.usage_payment_method:
+              type: string
+              enum:
+              - pay-per-minute
+              - channel
+              example: channel
+              description: Filter by usage_payment_method.
+      responses:
+        '200':
+          description: Successful response with a list of phone numbers with voice settings.
+          content:
+            application/json:
+              schema:
+                type: object
+                title: List Phone Numbers With Voice Settings Response
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PhoneNumberWithVoiceSettings'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse_73c9788e53'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse_73c9788e53'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+      description: Returns account phone numbers together with their voice settings. Results support pagination, sorting, and filters for number, connection name, customer reference, and voice usage payment method.
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /phone_numbers/{id}:
+    delete:
+      summary: Delete a phone number
+      operationId: DeletePhoneNumber
+      tags:
+      - Phone Number Configurations
+      x-endpoint-cost: medium
+      parameters:
+      - $ref: '#/components/parameters/IntId'
+      responses:
+        '200':
+          description: Successful response with details about a phone number.
+          content:
+            application/json:
+              schema:
+                type: object
+                title: Phone Number Response
+                properties:
+                  data:
+                    $ref: '#/components/schemas/numbers_PhoneNumberDeletedDetailed'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse_73c9788e53'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse_73c9788e53'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+      description: Deletes the specified phone number from the account. The response contains the phone number's final deleted representation.
+    get:
+      summary: Retrieve a phone number
+      operationId: RetrievePhoneNumber
+      tags:
+      - Phone Number Configurations
+      x-endpoint-cost: medium
+      parameters:
+      - $ref: '#/components/parameters/IntId'
+      responses:
+        '200':
+          description: Successful response with details about a phone number.
+          content:
+            application/json:
+              schema:
+                type: object
+                title: Phone Number Response
+                properties:
+                  data:
+                    $ref: '#/components/schemas/numbers_PhoneNumberDetailed'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse_73c9788e53'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse_73c9788e53'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+      description: Returns the detailed configuration and current state of the phone number identified by `id`.
+    patch:
+      summary: Update a phone number
+      operationId: UpdatePhoneNumber
+      tags:
+      - Phone Number Configurations
+      x-endpoint-cost: medium
+      parameters:
+      - $ref: '#/components/parameters/IntId'
+      requestBody:
+        description: Updated settings for the phone number.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePhoneNumberRequest'
+      responses:
+        '200':
+          description: Successful response with details about a phone number.
+          content:
+            application/json:
+              schema:
+                type: object
+                title: Phone Number Response
+                properties:
+                  data:
+                    $ref: '#/components/schemas/numbers_PhoneNumberDetailed'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse_73c9788e53'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse_73c9788e53'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+      description: Updates the configurable settings of the specified phone number. The response contains the complete updated phone-number representation.
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /phone_numbers/{id}/actions/bundle_status_change:
+    patch:
+      summary: Change the bundle status for a phone number (set to being in a bundle or remove…
+      operationId: PhoneNumberBundleStatusChange
+      tags:
+      - Phone Number Configurations
+      x-endpoint-cost: medium
+      parameters:
+      - $ref: '#/components/parameters/IntId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhoneNumberBundleStatusChangeRequest'
+      responses:
+        '200':
+          description: Phone number bundle status change success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: Phone Number Bundle Status Change
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PhoneNumberWithVoiceSettings'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse_73c9788e53'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse_73c9788e53'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+      description: Adds the specified phone number to a bundle or removes it from a bundle according to the requested status change. The response contains the phone number with its updated bundle state.
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /phone_numbers/{id}/actions/enable_emergency:
+    post:
+      summary: Enable emergency for a phone number
+      operationId: EnablePhoneNumberEmergency
+      tags:
+      - Phone Number Configurations
+      x-endpoint-cost: medium
+      parameters:
+      - $ref: '#/components/parameters/IntId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhoneNumberEnableEmergencyRequest'
+      responses:
+        '200':
+          description: Phone number emergency enabled.
+          content:
+            application/json:
+              schema:
+                type: object
+                title: Phone Number Enable Emergency
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PhoneNumberWithVoiceSettings'
+        '202':
+          description: Phone number emergency requested.
+          content:
+            application/json:
+              schema:
+                type: object
+                title: Phone Number Enable Emergency
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PhoneNumberWithVoiceSettings'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse_73c9788e53'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse_73c9788e53'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+      description: Associates emergency-service settings with the specified phone number. The operation returns the updated phone-number configuration when completed immediately or an accepted state when processing continues asynchronously.
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /phone_numbers/{id}/voice:
+    get:
+      summary: Retrieve a phone number with voice settings
+      operationId: GetPhoneNumberVoiceSettings
+      tags:
+      - Phone Number Configurations
+      x-endpoint-cost: medium
+      parameters:
+      - $ref: '#/components/parameters/IntId'
+      responses:
+        '200':
+          description: Successful response with details about a phone number including voice settings.
+          content:
+            application/json:
+              schema:
+                type: object
+                title: Retrieve Phone Number Voice Response
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PhoneNumberWithVoiceSettings'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse_73c9788e53'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse_73c9788e53'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+      description: Returns the specified phone number together with its current voice configuration.
+    patch:
+      summary: Update a phone number with voice settings
+      operationId: UpdatePhoneNumberVoiceSettings
+      tags:
+      - Phone Number Configurations
+      x-endpoint-cost: medium
+      parameters:
+      - $ref: '#/components/parameters/IntId'
+      requestBody:
+        description: Updated voice settings for the phone number.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePhoneNumberVoiceSettingsRequest'
+      responses:
+        '200':
+          description: Successful response with details about a phone number including voice settings.
+          content:
+            application/json:
+              schema:
+                type: object
+                title: Retrieve Phone Number Voice Response
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PhoneNumberWithVoiceSettings'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse_73c9788e53'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse_73c9788e53'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+      description: Updates the voice configuration for the specified phone number. The response contains the phone number with its updated voice settings.
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+components:
+  schemas:
+    EmergencySettings:
+      description: The emergency services settings for a phone number.
+      type: object
+      properties:
+        emergency_enabled:
+          type: boolean
+          default: false
+          description: Allows you to enable or disable emergency services on the phone number. In order to enable emergency services, you must also set an emergency_address_id.
+        emergency_address_id:
+          type: string
+          description: Identifies the address to be used with emergency services.
+        emergency_status:
+          type: string
+          description: Represents the state of the number regarding emergency activation.
+          default: disabled
+          enum:
+          - disabled
+          - active
+          - provisioning
+          - deprovisioning
+          - provisioning-failed
+      example:
+        emergency_enabled: true
+        emergency_address_id: '1315261609962112019'
+        emergency_status: active
+    UpdatePhoneNumberRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Identifies the type of resource.
+          readOnly: true
+        tags:
+          type: array
+          description: A list of user-assigned tags to help organize phone numbers.
+          items:
+            type: string
+        external_pin:
+          type: string
+          description: If someone attempts to port your phone number away from Telnyx and your phone number has an external PIN set, we will attempt to verify that you provided the correct external PIN to the winning carrier. Note that not all carriers cooperate with this security mechanism.
+        hd_voice_enabled:
+          type: boolean
+          description: Indicates whether HD voice is enabled for this number.
+          example: true
+        customer_reference:
+          type: string
+          description: A customer reference string for customer look ups.
+          example: MY REF 001
+        address_id:
+          type: string
+          description: Identifies the address associated with the phone number.
+        connection_id:
+          type: string
+          description: Identifies the connection associated with the phone number.
+        billing_group_id:
+          type: string
+          description: Identifies the billing group associated with the phone number.
+      example:
+        id: dc8e4d67-33a0-4cbb-af74-7b58f05bd494
+        tags:
+        - tag
+        address_id: dc8f39ac-953d-4520-b93b-786ae87db0da
+        external_pin: '1234'
+        customer_reference: customer-reference
+        connection_id: dc8e4d67-33a0-4cbb-af74-7b58f05bd494
+        billing_group_id: dc8e4d67-33a0-4cbb-af74-7b58f05bd494
+        hd_voice_enabled: true
+    UpdatePhoneNumberVoiceSettingsRequest:
+      type: object
+      properties:
+        tech_prefix_enabled:
+          type: boolean
+          default: false
+          description: Controls whether a tech prefix is enabled for this phone number.
+        translated_number:
+          type: string
+          description: This field allows you to rewrite the destination number of an inbound call before the call is routed to you. The value of this field may be any alphanumeric value, and the value will replace the number originally dialed.
+        caller_id_name_enabled:
+          type: boolean
+          default: false
+          description: Controls whether the caller ID name is enabled for this phone number.
+        call_forwarding:
+          $ref: '#/components/schemas/CallForwarding'
+        cnam_listing:
+          $ref: '#/components/schemas/CnamListing'
+        usage_payment_method:
+          type: string
+          enum:
+          - pay-per-minute
+          - channel
+          default: pay-per-minute
+          description: Controls whether a number is billed per minute or uses your concurrent channels.
+        media_features:
+          $ref: '#/components/schemas/MediaFeatures'
+        call_recording:
+          $ref: '#/components/schemas/CallRecording'
+        inbound_call_screening:
+          type: string
+          enum:
+          - disabled
+          - reject_calls
+          - flag_calls
+          default: disabled
+          description: The inbound_call_screening setting is a phone number configuration option variable that allows users to configure their settings to block or flag fraudulent calls. It can be set to disabled, reject_calls, or flag_calls. This feature has an additional per-number monthly cost associated with it.
+      example:
+        tech_prefix_enabled: true
+        translated_number: '+13035559999'
+        caller_id_name_enabled: true
+        call_forwarding:
+          call_forwarding_enabled: true
+          forwards_to: '+13035559123'
+          forwarding_type: always
+        cnam_listing:
+          cnam_listing_enabled: true
+          cnam_listing_details: example
+        usage_payment_method: pay-per-minute
+        media_features:
+          rtp_auto_adjust_enabled: true
+          accept_any_rtp_packets_enabled: true
+          t38_fax_gateway_enabled: true
+        call_recording:
+          inbound_call_recording_enabled: true
+          inbound_call_recording_format: wav
+          inbound_call_recording_channels: single
+        inbound_call_screening: disabled
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
+    PhoneNumberEnableEmergencyRequest:
+      type: object
+      required:
+      - emergency_enabled
+      - emergency_address_id
+      properties:
+        emergency_enabled:
+          type: boolean
+          description: Indicates whether to enable emergency services on this number.
+        emergency_address_id:
+          type: string
+          description: Identifies the address to be used with emergency services.
+      example:
+        emergency_enabled: true
+        emergency_address_id: '53829456729313'
+    numbers_Error_73c9788e53:
+      properties:
+        code:
+          type: string
+          example: '10007'
+        title:
+          type: string
+          example: Unexpected error
+        detail:
+          type: string
+          example: An unexpected error occured.
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              example: /base
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties:
+            url:
+              type: string
+              description: URL with additional information on the error.
+              example: https://developers.telnyx.com/docs/overview/errors/10015
+      type: object
+    CallForwarding:
+      description: The call forwarding settings for a phone number.
+      type: object
+      properties:
+        call_forwarding_enabled:
+          type: boolean
+          default: true
+          description: Indicates if call forwarding will be enabled for this number if forwards_to and forwarding_type are filled in. Defaults to true for backwards compatibility with APIV1 use of numbers endpoints.
+          example: true
+        forwards_to:
+          type: string
+          description: The phone number to which inbound calls to this number are forwarded. Inbound calls will not be forwarded if this field is left blank. If set, must be a +E.164-formatted phone number.
+        forwarding_type:
+          type: string
+          description: Call forwarding type. 'forwards_to' must be set for this to have an effect.
+          enum:
+          - always
+          - on-failure
+          example: always
+      example:
+        call_forwarding_enabled: true
+        forwards_to: '+13035559123'
+        forwarding_type: always
+    numbers_SlimPhoneNumberDetailed:
+      type: object
+      example:
+        id: '1293384261075731499'
+        record_type: phone_number
+        phone_number: '+19705555098'
+        country_iso_alpha2: US
+        status: active
+        external_pin: '1234'
+        connection_id: '1293384261075731499'
+        customer_reference: customer-reference
+        billing_group_id: 86f58db9-0fe3-4adc-9d1f-46e66e6e9323
+        emergency_enabled: true
+        emergency_address_id: '1315261609962112019'
+        emergency_status: active
+        call_forwarding_enabled: true
+        cnam_listing_enabled: true
+        caller_id_name_enabled: true
+        call_recording_enabled: true
+        t38_fax_gateway_enabled: true
+        phone_number_type: local
+        inbound_call_screening: disabled
+        purchased_at: '2019-10-23T18:10:00.000Z'
+        created_at: '2019-10-23T18:10:00.000Z'
+        updated_at: '2019-10-24T18:10:00.000Z'
+        hd_voice_enabled: true
+        activated_at: '2019-10-23T18:10:00.000Z'
+      properties:
+        id:
+          $ref: '#/components/schemas/numbers_IntId_73c9788e53'
+        record_type:
+          type: string
+          example: phone_number_slim
+          description: Identifies the type of the resource.
+          readOnly: true
+        phone_number:
+          type: string
+          description: The +E.164-formatted phone number associated with this record.
+          readOnly: true
+        country_iso_alpha2:
+          type: string
+          description: The ISO 3166-1 alpha-2 country code of the phone number.
+          example: US
+          readOnly: true
+        status:
+          type: string
+          description: The phone number's current status.
+          enum:
+          - purchase-pending
+          - purchase-failed
+          - port-pending
+          - port-failed
+          - active
+          - deleted
+          - emergency-only
+          - ported-out
+          - port-out-pending
+          - requirement-info-pending
+          - requirement-info-under-review
+          - requirement-info-exception
+          - provision-pending
+          readOnly: true
+        external_pin:
+          type: string
+          description: If someone attempts to port your phone number away from Telnyx and your phone number has an external PIN set, Telnyx will attempt to verify that you provided the correct external PIN to the winning carrier. Note that not all carriers cooperate with this security mechanism.
+        connection_id:
+          type: string
+          description: Identifies the connection associated with the phone number.
+        customer_reference:
+          type: string
+          description: A customer reference string for customer look ups.
+          example: MY REF 001
+        billing_group_id:
+          type: string
+          description: Identifies the billing group associated with the phone number.
+        emergency_enabled:
+          type: boolean
+          description: Indicates whether emergency services are enabled for this number.
+          readOnly: true
+        emergency_address_id:
+          type: string
+          description: Identifies the emergency address associated with the phone number.
+          readOnly: true
+        emergency_status:
+          type: string
+          description: Indicates the status of the provisioning of emergency services for the phone number. This field contains information about activity that may be ongoing for a number where it either is being provisioned or deprovisioned but is not yet enabled/disabled.
+          enum:
+          - active
+          - deprovisioning
+          - disabled
+          - provisioning
+          - provisioning-failed
+        call_forwarding_enabled:
+          type: boolean
+          default: true
+          description: Indicates if call forwarding will be enabled for this number if forwards_to and forwarding_type are filled in. Defaults to true for backwards compatibility with APIV1 use of numbers endpoints.
+          readOnly: true
+        cnam_listing_enabled:
+          type: boolean
+          description: Indicates whether a CNAM listing is enabled for this number.
+          readOnly: true
+        caller_id_name_enabled:
+          type: boolean
+          description: Indicates whether caller ID is enabled for this number.
+          readOnly: true
+        call_recording_enabled:
+          type: boolean
+          description: Indicates whether call recording is enabled for this number.
+          readOnly: true
+        t38_fax_gateway_enabled:
+          type: boolean
+          description: Indicates whether T38 Fax Gateway for inbound calls to this number.
+          readOnly: true
+        purchased_at:
+          type: string
+          description: ISO 8601 formatted date indicating when the resource was purchased.
+          readOnly: true
+        created_at:
+          type: string
+          description: ISO 8601 formatted date indicating when the resource was created.
+          readOnly: true
+        phone_number_type:
+          type: string
+          description: 'The phone number''s type.
+
+            Note: For numbers purchased prior to July 2023 or when fetching a number''s details immediately after a purchase completes, the legacy values `tollfree`, `shortcode` or `longcode` may be returned instead.'
+          enum:
+          - local
+          - toll_free
+          - mobile
+          - national
+          - shared_cost
+          - landline
+          - tollfree
+          - shortcode
+          - longcode
+          readOnly: true
+        updated_at:
+          type: string
+          description: ISO 8601 formatted date indicating when the resource was updated.
+          readOnly: true
+        hd_voice_enabled:
+          type: boolean
+          description: Indicates whether HD voice is enabled for this number.
+          readOnly: true
+        inbound_call_screening:
+          type: string
+          enum:
+          - disabled
+          - reject_calls
+          - flag_calls
+          default: disabled
+          description: The inbound_call_screening setting is a phone number configuration option variable that allows users to configure their settings to block or flag fraudulent calls. It can be set to disabled, reject_calls, or flag_calls. This feature has an additional per-number monthly cost associated with it.
+        activated_at:
+          description: ISO 8601 formatted date indicating when the phone number was first activated (transitioned from purchase-pending or port-pending to active). Will be null for numbers that have not yet been activated, or for legacy numbers activated before this field was tracked.
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          readOnly: true
+    PaginationMeta:
+      type: object
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 55
+        page_number:
+          type: integer
+          example: 2
+        page_size:
+          type: integer
+          example: 25
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    CallRecording:
+      description: The call recording settings for a phone number.
+      type: object
+      properties:
+        inbound_call_recording_enabled:
+          type: boolean
+          default: false
+          description: When enabled, any inbound call to this number will be recorded.
+        inbound_call_recording_format:
+          type: string
+          enum:
+          - wav
+          - mp3
+          default: wav
+          description: The audio file format for calls being recorded.
+        inbound_call_recording_channels:
+          type: string
+          enum:
+          - single
+          - dual
+          default: single
+          description: When using 'dual' channels, final audio file will be stereo recorded with the first leg on channel A, and the rest on channel B.
+      example:
+        inbound_call_recording_enabled: true
+        inbound_call_recording_format: wav
+        inbound_call_recording_channels: single
+    numbers_PhoneNumberDeletedDetailed:
+      type: object
+      example:
+        id: '1293384261075731499'
+        record_type: phone_number
+        phone_number: '+19705555098'
+        status: deleted
+        tags:
+        - tag_1
+        - tag_2
+        external_pin: '1234'
+        connection_id: '1293384261075731499'
+        connection_name: connection-name
+        customer_reference: customer-reference
+        messaging_profile_id: abc85f64-5717-4562-b3fc-2c9600000000
+        messaging_profile_name: regional-customers
+        billing_group_id: 86f58db9-0fe3-4adc-9d1f-46e66e6e9323
+        emergency_enabled: true
+        emergency_address_id: '1315261609962112019'
+        call_forwarding_enabled: true
+        cnam_listing_enabled: true
+        caller_id_name_enabled: true
+        call_recording_enabled: true
+        t38_fax_gateway_enabled: true
+        phone_number_type: local
+        purchased_at: '2019-10-23T18:10:00.000Z'
+        created_at: '2019-10-23T18:10:00.000Z'
+        updated_at: '2019-10-24T18:10:00.000Z'
+        hd_voice_enabled: true
+        deletion_lock_enabled: false
+        activated_at: '2019-10-23T18:10:00.000Z'
+      properties:
+        id:
+          $ref: '#/components/schemas/numbers_IntId_73c9788e53'
+        record_type:
+          type: string
+          example: phone_number
+          description: Identifies the type of the resource.
+          readOnly: true
+        phone_number:
+          type: string
+          description: The +E.164-formatted phone number associated with this record.
+          readOnly: true
+        status:
+          type: string
+          description: The phone number's current status.
+          enum:
+          - purchase-pending
+          - purchase-failed
+          - port-pending
+          - port-failed
+          - active
+          - deleted
+          - emergency-only
+          - ported-out
+          - port-out-pending
+          readOnly: true
+        tags:
+          type: array
+          description: A list of user-assigned tags to help manage the phone number.
+          items:
+            type: string
+        external_pin:
+          type: string
+          description: If someone attempts to port your phone number away from Telnyx and your phone number has an external PIN set, Telnyx will attempt to verify that you provided the correct external PIN to the winning carrier. Note that not all carriers cooperate with this security mechanism.
+        connection_name:
+          type: string
+          description: The user-assigned name of the connection to be associated with this phone number.
+          readOnly: true
+        connection_id:
+          type: string
+          description: Identifies the connection associated with the phone number.
+        customer_reference:
+          type: string
+          description: A customer reference string for customer look ups.
+          example: MY REF 001
+        messaging_profile_id:
+          type: string
+          description: Identifies the messaging profile associated with the phone number.
+        messaging_profile_name:
+          type: string
+          description: The name of the messaging profile associated with the phone number.
+          example: regional-customers
+        billing_group_id:
+          type: string
+          description: Identifies the billing group associated with the phone number.
+        emergency_enabled:
+          type: boolean
+          description: Indicates whether emergency services are enabled for this number.
+          readOnly: true
+        emergency_address_id:
+          type: string
+          description: Identifies the emergency address associated with the phone number.
+          readOnly: true
+        call_forwarding_enabled:
+          type: boolean
+          default: true
+          description: Indicates if call forwarding will be enabled for this number if forwards_to and forwarding_type are filled in. Defaults to true for backwards compatibility with APIV1 use of numbers endpoints.
+          readOnly: true
+        cnam_listing_enabled:
+          type: boolean
+          description: Indicates whether a CNAM listing is enabled for this number.
+          readOnly: true
+        caller_id_name_enabled:
+          type: boolean
+          description: Indicates whether caller ID is enabled for this number.
+          readOnly: true
+        call_recording_enabled:
+          type: boolean
+          description: Indicates whether call recording is enabled for this number.
+          readOnly: true
+        t38_fax_gateway_enabled:
+          type: boolean
+          description: Indicates whether T38 Fax Gateway for inbound calls to this number.
+          readOnly: true
+        purchased_at:
+          type: string
+          description: ISO 8601 formatted date indicating the time the request was made to purchase the number.
+          readOnly: true
+        created_at:
+          type: string
+          description: ISO 8601 formatted date indicating when the time it took to activate after the purchase.
+          readOnly: true
+        updated_at:
+          type: string
+          description: ISO 8601 formatted date indicating when the resource was updated.
+          readOnly: true
+        hd_voice_enabled:
+          type: boolean
+          description: Indicates whether HD voice is enabled for this number.
+          readOnly: true
+        phone_number_type:
+          type: string
+          description: The phone number's type.
+          enum:
+          - local
+          - toll_free
+          - mobile
+          - national
+          - shared_cost
+          - landline
+          readOnly: true
+        deletion_lock_enabled:
+          type: boolean
+          description: Indicates whether deletion lock is enabled for this number. When enabled, this prevents the phone number from being deleted via the API or Telnyx portal.
+          readOnly: true
+        activated_at:
+          description: ISO 8601 formatted date indicating when the phone number was first activated (transitioned from purchase-pending or port-pending to active). Will be null for numbers that have not yet been activated, or for legacy numbers activated before this field was tracked.
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          readOnly: true
+    PhoneNumberWithVoiceSettings:
+      type: object
+      properties:
+        id:
+          type: string
+          example: '1293384261075731499'
+          description: Identifies the type of resource.
+          readOnly: true
+        record_type:
+          type: string
+          example: voice_settings
+          description: Identifies the type of the resource.
+          readOnly: true
+        phone_number:
+          type: string
+          example: '+13035551234'
+          description: The phone number in +E164 format.
+          readOnly: true
+        connection_id:
+          type: string
+          example: 1d0e6cb8-8668-462e-94c6-49ae0f0ed48b
+          description: Identifies the connection associated with this phone number.
+        customer_reference:
+          type: string
+          description: A customer reference string for customer look ups.
+          example: MY REF 001
+        tech_prefix_enabled:
+          type: boolean
+          default: false
+          example: false
+          description: Controls whether a tech prefix is enabled for this phone number.
+        translated_number:
+          type: string
+          example: '+13035559999'
+          default: ''
+          description: This field allows you to rewrite the destination number of an inbound call before the call is routed to you. The value of this field may be any alphanumeric value, and the value will replace the number originally dialed.
+        call_forwarding:
+          $ref: '#/components/schemas/CallForwarding'
+        cnam_listing:
+          $ref: '#/components/schemas/CnamListing'
+        emergency:
+          $ref: '#/components/schemas/EmergencySettings'
+        usage_payment_method:
+          type: string
+          enum:
+          - pay-per-minute
+          - channel
+          default: pay-per-minute
+          example: pay-per-minute
+          description: Controls whether a number is billed per minute or uses your concurrent channels.
+        media_features:
+          $ref: '#/components/schemas/MediaFeatures'
+        call_recording:
+          $ref: '#/components/schemas/CallRecording'
+        inbound_call_screening:
+          type: string
+          enum:
+          - disabled
+          - reject_calls
+          - flag_calls
+          default: disabled
+          description: The inbound_call_screening setting is a phone number configuration option variable that allows users to configure their settings to block or flag fraudulent calls. It can be set to disabled, reject_calls, or flag_calls. This feature has an additional per-number monthly cost associated with it.
+      example:
+        id: '1293384261075731499'
+        record_type: voice_settings
+        connection_id: 1d0e6cb8-8668-462e-94c6-49ae0f0ed48b
+        customer_reference: customer-reference
+        tech_prefix_enabled: false
+        translated_number: '+13035559999'
+        call_forwarding:
+          call_forwarding_enabled: true
+          forwards_to: '+13035559123'
+          forwarding_type: always
+        cnam_listing:
+          cnam_listing_enabled: true
+          cnam_listing_details: example
+        emergency:
+          emergency_enabled: true
+          emergency_address_id: '1315261609962112019'
+          emergency_status: active
+        usage_payment_method: pay-per-minute
+        media_features:
+          rtp_auto_adjust_enabled: true
+          accept_any_rtp_packets_enabled: true
+          t38_fax_gateway_enabled: true
+        call_recording:
+          inbound_call_recording_enabled: true
+          inbound_call_recording_format: wav
+          inbound_call_recording_channels: single
+        inbound_call_screening: disabled
+    CnamListing:
+      description: The CNAM listing settings for a phone number.
+      type: object
+      properties:
+        cnam_listing_enabled:
+          type: boolean
+          default: false
+          description: Enables CNAM listings for this number. Requires cnam_listing_details to also be set.
+        cnam_listing_details:
+          type: string
+          description: The CNAM listing details for this number. Must be alphanumeric characters or spaces with a maximum length of 15. Requires cnam_listing_enabled to also be set to true.
+      example:
+        cnam_listing_enabled: true
+        cnam_listing_details: example
+    PhoneNumberBundleStatusChangeRequest:
+      type: object
+      required:
+      - bundle_id
+      properties:
+        bundle_id:
+          type:
+          - string
+          - 'null'
+          description: The new bundle_id setting for the number. If you are assigning the number to a bundle, this is the unique ID of the bundle you wish to use. If you are removing the number from a bundle, this must be null. You cannot assign a number from one bundle to another directly. You must first remove it from a bundle, and then assign it to a new bundle.
+      example:
+        bundle_id: 5194d8fc-87e6-4188-baa9-1c434bbe861b
+    numbers_IntId_73c9788e53:
+      type: string
+      description: Identifies the resource.
+      example: '1293384261075731499'
+      readOnly: true
+    numbers_PhoneNumberVerifyOwnershipResponse:
+      type: object
+      properties:
+        found:
+          type: array
+          description: The list of phone numbers which you own and are in an editable state
+          items:
+            type: object
+            properties:
+              number_val_e164:
+                type: string
+                description: The phone number in E.164 format
+                example: '+15551234567'
+              id:
+                $ref: '#/components/schemas/numbers_IntId_73c9788e53'
+        not_found:
+          type: array
+          description: Phone numbers that are not found in the account
+          items:
+            type: string
+            description: Phone number in E.164 format
+            example: '+15551234568'
+        record_type:
+          type: string
+          example: number_ownership_verification
+          description: Identifies the type of the resource.
+          readOnly: true
+    numbers_PhoneNumberDetailed:
+      type: object
+      example:
+        id: '1293384261075731499'
+        record_type: phone_number
+        phone_number: '+19705555098'
+        country_iso_alpha2: US
+        status: active
+        tags:
+        - tag_1
+        - tag_2
+        external_pin: '1234'
+        connection_id: '1293384261075731499'
+        connection_name: connection-name
+        customer_reference: customer-reference
+        messaging_profile_id: abc85f64-5717-4562-b3fc-2c9600000000
+        messaging_profile_name: regional-customers
+        billing_group_id: 86f58db9-0fe3-4adc-9d1f-46e66e6e9323
+        emergency_enabled: true
+        emergency_address_id: '1315261609962112019'
+        emergency_status: active
+        call_forwarding_enabled: true
+        cnam_listing_enabled: true
+        caller_id_name_enabled: true
+        call_recording_enabled: true
+        t38_fax_gateway_enabled: true
+        phone_number_type: local
+        inbound_call_screening: disabled
+        purchased_at: '2019-10-23T18:10:00.000Z'
+        created_at: '2019-10-23T18:10:00.000Z'
+        updated_at: '2019-10-24T18:10:00.000Z'
+        hd_voice_enabled: true
+        source_type: number_order
+        deletion_lock_enabled: false
+        activated_at: '2019-10-23T18:10:00.000Z'
+      properties:
+        id:
+          $ref: '#/components/schemas/numbers_IntId_73c9788e53'
+        record_type:
+          type: string
+          example: phone_number
+          description: Identifies the type of the resource.
+          readOnly: true
+        phone_number:
+          type: string
+          description: The +E.164-formatted phone number associated with this record.
+          readOnly: true
+        country_iso_alpha2:
+          type: string
+          description: The ISO 3166-1 alpha-2 country code of the phone number.
+          example: US
+          readOnly: true
+        status:
+          type: string
+          description: The phone number's current status.
+          enum:
+          - purchase-pending
+          - purchase-failed
+          - port-pending
+          - port-failed
+          - active
+          - deleted
+          - emergency-only
+          - ported-out
+          - port-out-pending
+          - requirement-info-pending
+          - requirement-info-under-review
+          - requirement-info-exception
+          - provision-pending
+          readOnly: true
+        tags:
+          type: array
+          description: A list of user-assigned tags to help manage the phone number.
+          items:
+            type: string
+        external_pin:
+          type:
+          - string
+          - 'null'
+          description: If someone attempts to port your phone number away from Telnyx and your phone number has an external PIN set, Telnyx will attempt to verify that you provided the correct external PIN to the winning carrier. Note that not all carriers cooperate with this security mechanism.
+        connection_name:
+          type:
+          - string
+          - 'null'
+          description: The user-assigned name of the connection to be associated with this phone number.
+          readOnly: true
+        connection_id:
+          type:
+          - string
+          - 'null'
+          description: Identifies the connection associated with the phone number.
+        customer_reference:
+          type:
+          - string
+          - 'null'
+          description: A customer reference string for customer look ups.
+          example: MY REF 001
+        messaging_profile_id:
+          type:
+          - string
+          - 'null'
+          description: Identifies the messaging profile associated with the phone number. If the messaging profile details could not be retrieved, this value is the string `UNAVAILABLE`.
+        messaging_profile_name:
+          type:
+          - string
+          - 'null'
+          description: The name of the messaging profile associated with the phone number. If the messaging profile details could not be retrieved, this value is the string `UNAVAILABLE`.
+          example: regional-customers
+        messaging_campaign_id:
+          type:
+          - string
+          - 'null'
+          description: Identifies the messaging campaign associated with the phone number's messaging profile. If the messaging profile details could not be retrieved, this value is the string `UNAVAILABLE`.
+        billing_group_id:
+          type:
+          - string
+          - 'null'
+          description: Identifies the billing group associated with the phone number.
+        emergency_enabled:
+          type: boolean
+          description: Indicates whether emergency services are enabled for this number.
+          readOnly: true
+        emergency_address_id:
+          type:
+          - string
+          - 'null'
+          description: Identifies the emergency address associated with the phone number.
+          readOnly: true
+        emergency_status:
+          type: string
+          description: Indicates the status of the provisioning of emergency services for the phone number. This field contains information about activity that may be ongoing for a number where it either is being provisioned or deprovisioned but is not yet enabled/disabled.
+          enum:
+          - active
+          - deprovisioning
+          - disabled
+          - provisioning
+          - provisioning-failed
+        call_forwarding_enabled:
+          type: boolean
+          default: true
+          description: Indicates if call forwarding will be enabled for this number if forwards_to and forwarding_type are filled in. Defaults to true for backwards compatibility with APIV1 use of numbers endpoints.
+          readOnly: true
+        cnam_listing_enabled:
+          type: boolean
+          description: Indicates whether a CNAM listing is enabled for this number.
+          readOnly: true
+        caller_id_name_enabled:
+          type: boolean
+          description: Indicates whether caller ID is enabled for this number.
+          readOnly: true
+        call_recording_enabled:
+          type: boolean
+          description: Indicates whether call recording is enabled for this number.
+          readOnly: true
+        t38_fax_gateway_enabled:
+          type: boolean
+          description: Indicates whether T38 Fax Gateway for inbound calls to this number.
+          readOnly: true
+        purchased_at:
+          type: string
+          description: ISO 8601 formatted date indicating when the resource was purchased.
+          readOnly: true
+        created_at:
+          type: string
+          description: ISO 8601 formatted date indicating when the resource was created.
+          readOnly: true
+          format: date-time
+        phone_number_type:
+          type: string
+          description: 'The phone number''s type.
+
+            Note: For numbers purchased prior to July 2023 or when fetching a number''s details immediately after a purchase completes, the legacy values `tollfree`, `shortcode` or `longcode` may be returned instead.'
+          enum:
+          - local
+          - toll_free
+          - mobile
+          - national
+          - shared_cost
+          - landline
+          - tollfree
+          - shortcode
+          - longcode
+          readOnly: true
+        inbound_call_screening:
+          type: string
+          enum:
+          - disabled
+          - reject_calls
+          - flag_calls
+          default: disabled
+          description: The inbound_call_screening setting is a phone number configuration option variable that allows users to configure their settings to block or flag fraudulent calls. It can be set to disabled, reject_calls, or flag_calls. This feature has an additional per-number monthly cost associated with it.
+        updated_at:
+          type: string
+          description: ISO 8601 formatted date indicating when the resource was updated.
+          readOnly: true
+        hd_voice_enabled:
+          type: boolean
+          description: Indicates whether HD voice is enabled for this number.
+          readOnly: true
+        source_type:
+          description: Indicates if the phone number was purchased or ported in. For some numbers this information may not be available.
+          anyOf:
+          - type: string
+            enum:
+            - number_order
+            - port_request
+          - type: 'null'
+          readOnly: true
+        deletion_lock_enabled:
+          type: boolean
+          description: Indicates whether deletion lock is enabled for this number. When enabled, this prevents the phone number from being deleted via the API or Telnyx portal.
+        activated_at:
+          description: ISO 8601 formatted date indicating when the phone number was first activated (transitioned from purchase-pending or port-pending to active). Will be null for numbers that have not yet been activated, or for legacy numbers activated before this field was tracked.
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          readOnly: true
+      required:
+      - id
+      - record_type
+      - phone_number
+      - country_iso_alpha2
+      - status
+      - tags
+      - external_pin
+      - created_at
+      - phone_number_type
+      - purchased_at
+      - deletion_lock_enabled
+    PhoneNumberVerifyOwnershipRequest:
+      type: object
+      required:
+      - phone_numbers
+      properties:
+        phone_numbers:
+          type: array
+          description: Array of phone numbers to verify ownership for
+          items:
+            type: string
+            description: Phone number in E.164 format
+            example: '+15551234567'
+          minItems: 1
+          maxItems: 1000
+    MediaFeatures:
+      description: The media features settings for a phone number.
+      type: object
+      properties:
+        rtp_auto_adjust_enabled:
+          type: boolean
+          default: true
+          description: When RTP Auto-Adjust is enabled, the destination RTP address port will be automatically changed to match the source of the incoming RTP packets.
+        accept_any_rtp_packets_enabled:
+          type: boolean
+          default: false
+          description: When enabled, Telnyx will accept RTP packets from any customer-side IP address and port, not just those to which Telnyx is sending RTP.
+        t38_fax_gateway_enabled:
+          type: boolean
+          default: false
+          description: Controls whether Telnyx will accept a T.38 re-INVITE for this phone number. Note that Telnyx will not send a T.38 re-INVITE; this option only controls whether one will be accepted.
+      example:
+        rtp_auto_adjust_enabled: true
+        accept_any_rtp_packets_enabled: true
+        t38_fax_gateway_enabled: true
+    PhoneNumberDeletedDetailed:
+      example:
+        billing_group_id: 86f58db9-0fe3-4adc-9d1f-46e66e6e9323
+        call_forwarding_enabled: true
+        call_recording_enabled: true
+        caller_id_name_enabled: true
+        cnam_listing_enabled: true
+        connection_id: '1293384261075731499'
+        connection_name: connection-name
+        created_at: '2019-10-23T18:10:00.000Z'
+        customer_reference: customer-reference
+        deletion_lock_enabled: false
+        emergency_address_id: '1315261609962112019'
+        emergency_enabled: true
+        external_pin: '1234'
+        hd_voice_enabled: true
+        id: '1293384261075731499'
+        messaging_profile_id: abc85f64-5717-4562-b3fc-2c9600000000
+        messaging_profile_name: regional-customers
+        phone_number: '+19705555098'
+        phone_number_type: local
+        purchased_at: '2019-10-23T18:10:00.000Z'
+        record_type: phone_number
+        status: deleted
+        t38_fax_gateway_enabled: true
+        tags:
+        - tag_1
+        - tag_2
+        updated_at: '2019-10-24T18:10:00.000Z'
+      properties:
+        billing_group_id:
+          description: Identifies the billing group associated with the phone number.
+          type: string
+        call_forwarding_enabled:
+          default: true
+          description: Indicates if call forwarding will be enabled for this number if forwards_to and forwarding_type are filled in. Defaults to true for backwards compatibility with APIV1 use of numbers endpoints.
+          readOnly: true
+          type: boolean
+        call_recording_enabled:
+          description: Indicates whether call recording is enabled for this number.
+          readOnly: true
+          type: boolean
+        caller_id_name_enabled:
+          description: Indicates whether caller ID is enabled for this number.
+          readOnly: true
+          type: boolean
+        cnam_listing_enabled:
+          description: Indicates whether a CNAM listing is enabled for this number.
+          readOnly: true
+          type: boolean
+        connection_id:
+          description: Identifies the connection associated with the phone number.
+          type: string
+        connection_name:
+          description: The user-assigned name of the connection to be associated with this phone number.
+          readOnly: true
+          type: string
+        created_at:
+          description: ISO 8601 formatted date indicating when the time it took to activate after the purchase.
+          readOnly: true
+          type: string
+        customer_reference:
+          description: A customer reference string for customer look ups.
+          example: MY REF 001
+          type: string
+        deletion_lock_enabled:
+          description: Indicates whether deletion lock is enabled for this number. When enabled, this prevents the phone number from being deleted via the API or Telnyx portal.
+          readOnly: true
+          type: boolean
+        emergency_address_id:
+          description: Identifies the emergency address associated with the phone number.
+          readOnly: true
+          type: string
+        emergency_enabled:
+          description: Indicates whether emergency services are enabled for this number.
+          readOnly: true
+          type: boolean
+        external_pin:
+          description: If someone attempts to port your phone number away from Telnyx and your phone number has an external PIN set, Telnyx will attempt to verify that you provided the correct external PIN to the winning carrier. Note that not all carriers cooperate with this security mechanism.
+          type: string
+        hd_voice_enabled:
+          description: Indicates whether HD voice is enabled for this number.
+          readOnly: true
+          type: boolean
+        id:
+          $ref: '#/components/schemas/numbers_IntId'
+        messaging_profile_id:
+          description: Identifies the messaging profile associated with the phone number.
+          type: string
+        messaging_profile_name:
+          description: The name of the messaging profile associated with the phone number.
+          example: regional-customers
+          type: string
+        phone_number:
+          description: The +E.164-formatted phone number associated with this record.
+          readOnly: true
+          type: string
+        phone_number_type:
+          description: The phone number's type.
+          enum:
+          - local
+          - toll_free
+          - mobile
+          - national
+          - shared_cost
+          - landline
+          readOnly: true
+          type: string
+        purchased_at:
+          description: ISO 8601 formatted date indicating the time the request was made to purchase the number.
+          readOnly: true
+          type: string
+        record_type:
+          description: Identifies the type of the resource.
+          example: phone_number
+          readOnly: true
+          type: string
+        status:
+          description: The phone number's current status.
+          enum:
+          - purchase-pending
+          - purchase-failed
+          - port-pending
+          - port-failed
+          - active
+          - deleted
+          - emergency-only
+          - ported-out
+          - port-out-pending
+          readOnly: true
+          type: string
+        t38_fax_gateway_enabled:
+          description: Indicates whether T38 Fax Gateway for inbound calls to this number.
+          readOnly: true
+          type: boolean
+        tags:
+          description: A list of user-assigned tags to help manage the phone number.
+          items:
+            type: string
+          type: array
+        updated_at:
+          description: ISO 8601 formatted date indicating when the resource was updated.
+          readOnly: true
+          type: string
+      type: object
+    numbers_Error:
+      properties:
+        code:
+          example: '10007'
+          type: string
+        detail:
+          example: An unexpected error occured.
+          type: string
+        meta:
+          properties:
+            url:
+              description: URL with additional information on the error.
+              example: https://developers.telnyx.com/docs/overview/errors/10015
+              type: string
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              example: /base
+              type: string
+          type: object
+        title:
+          example: Unexpected error
+          type: string
+      type: object
+    numbers_IntId:
+      description: Identifies the resource.
+      example: '1293384261075731499'
+      readOnly: true
+      type: string
+    numbers_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/numbers_Error'
+          type: array
+      type: object
+    PhoneNumberVerifyOwnershipResponse:
+      properties:
+        found:
+          description: The list of phone numbers which you own and are in an editable state
+          items:
+            properties:
+              id:
+                $ref: '#/components/schemas/numbers_IntId'
+              number_val_e164:
+                description: The phone number in E.164 format
+                example: '+15551234567'
+                type: string
+            type: object
+          type: array
+        not_found:
+          description: Phone numbers that are not found in the account
+          items:
+            description: Phone number in E.164 format
+            example: '+15551234568'
+            type: string
+          type: array
+        record_type:
+          description: Identifies the type of the resource.
+          example: number_ownership_verification
+          readOnly: true
+          type: string
+      type: object
+    PhoneNumberDetailed:
+      example:
+        billing_group_id: 86f58db9-0fe3-4adc-9d1f-46e66e6e9323
+        call_forwarding_enabled: true
+        call_recording_enabled: true
+        caller_id_name_enabled: true
+        cnam_listing_enabled: true
+        connection_id: '1293384261075731499'
+        connection_name: connection-name
+        country_iso_alpha2: US
+        created_at: '2019-10-23T18:10:00.000Z'
+        customer_reference: customer-reference
+        deletion_lock_enabled: false
+        emergency_address_id: '1315261609962112019'
+        emergency_enabled: true
+        emergency_status: active
+        external_pin: '1234'
+        hd_voice_enabled: true
+        id: '1293384261075731499'
+        inbound_call_screening: disabled
+        messaging_profile_id: abc85f64-5717-4562-b3fc-2c9600000000
+        messaging_profile_name: regional-customers
+        phone_number: '+19705555098'
+        phone_number_type: local
+        purchased_at: '2019-10-23T18:10:00.000Z'
+        record_type: phone_number
+        source_type: number_order
+        status: active
+        t38_fax_gateway_enabled: true
+        tags:
+        - tag_1
+        - tag_2
+        updated_at: '2019-10-24T18:10:00.000Z'
+      properties:
+        billing_group_id:
+          description: Identifies the billing group associated with the phone number.
+          type:
+          - string
+          - 'null'
+        call_forwarding_enabled:
+          default: true
+          description: Indicates if call forwarding will be enabled for this number if forwards_to and forwarding_type are filled in. Defaults to true for backwards compatibility with APIV1 use of numbers endpoints.
+          readOnly: true
+          type: boolean
+        call_recording_enabled:
+          description: Indicates whether call recording is enabled for this number.
+          readOnly: true
+          type: boolean
+        caller_id_name_enabled:
+          description: Indicates whether caller ID is enabled for this number.
+          readOnly: true
+          type: boolean
+        cnam_listing_enabled:
+          description: Indicates whether a CNAM listing is enabled for this number.
+          readOnly: true
+          type: boolean
+        connection_id:
+          description: Identifies the connection associated with the phone number.
+          type:
+          - string
+          - 'null'
+        connection_name:
+          description: The user-assigned name of the connection to be associated with this phone number.
+          readOnly: true
+          type:
+          - string
+          - 'null'
+        country_iso_alpha2:
+          description: The ISO 3166-1 alpha-2 country code of the phone number.
+          example: US
+          readOnly: true
+          type: string
+        created_at:
+          description: ISO 8601 formatted date indicating when the resource was created.
+          format: date-time
+          readOnly: true
+          type: string
+        customer_reference:
+          description: A customer reference string for customer look ups.
+          example: MY REF 001
+          type:
+          - string
+          - 'null'
+        deletion_lock_enabled:
+          description: Indicates whether deletion lock is enabled for this number. When enabled, this prevents the phone number from being deleted via the API or Telnyx portal.
+          type: boolean
+        emergency_address_id:
+          description: Identifies the emergency address associated with the phone number.
+          readOnly: true
+          type:
+          - string
+          - 'null'
+        emergency_enabled:
+          description: Indicates whether emergency services are enabled for this number.
+          readOnly: true
+          type: boolean
+        emergency_status:
+          description: Indicates the status of the provisioning of emergency services for the phone number. This field contains information about activity that may be ongoing for a number where it either is being provisioned or deprovisioned but is not yet enabled/disabled.
+          enum:
+          - active
+          - deprovisioning
+          - disabled
+          - provisioning
+          - provisioning-failed
+          type: string
+        external_pin:
+          description: If someone attempts to port your phone number away from Telnyx and your phone number has an external PIN set, Telnyx will attempt to verify that you provided the correct external PIN to the winning carrier. Note that not all carriers cooperate with this security mechanism.
+          type:
+          - string
+          - 'null'
+        hd_voice_enabled:
+          description: Indicates whether HD voice is enabled for this number.
+          readOnly: true
+          type: boolean
+        id:
+          $ref: '#/components/schemas/numbers_IntId'
+        inbound_call_screening:
+          default: disabled
+          description: The inbound_call_screening setting is a phone number configuration option variable that allows users to configure their settings to block or flag fraudulent calls. It can be set to disabled, reject_calls, or flag_calls. This feature has an additional per-number monthly cost associated with it.
+          enum:
+          - disabled
+          - reject_calls
+          - flag_calls
+          type: string
+        messaging_profile_id:
+          description: Identifies the messaging profile associated with the phone number.
+          type:
+          - string
+          - 'null'
+        messaging_profile_name:
+          description: The name of the messaging profile associated with the phone number.
+          example: regional-customers
+          type:
+          - string
+          - 'null'
+        phone_number:
+          description: The +E.164-formatted phone number associated with this record.
+          readOnly: true
+          type: string
+        phone_number_type:
+          description: 'The phone number''s type.
+
+            Note: For numbers purchased prior to July 2023 or when fetching a number''s details immediately after a purchase completes, the legacy values `tollfree`, `shortcode` or `longcode` may be returned instead.'
+          enum:
+          - local
+          - toll_free
+          - mobile
+          - national
+          - shared_cost
+          - landline
+          - tollfree
+          - shortcode
+          - longcode
+          readOnly: true
+          type: string
+        purchased_at:
+          description: ISO 8601 formatted date indicating when the resource was purchased.
+          readOnly: true
+          type: string
+        record_type:
+          description: Identifies the type of the resource.
+          example: phone_number
+          readOnly: true
+          type: string
+        source_type:
+          anyOf:
+          - enum:
+            - number_order
+            - port_request
+            type: string
+          - type: 'null'
+          description: Indicates if the phone number was purchased or ported in. For some numbers this information may not be available.
+          readOnly: true
+        status:
+          description: The phone number's current status.
+          enum:
+          - purchase-pending
+          - purchase-failed
+          - port-pending
+          - port-failed
+          - active
+          - deleted
+          - emergency-only
+          - ported-out
+          - port-out-pending
+          - requirement-info-pending
+          - requirement-info-under-review
+          - requirement-info-exception
+          - provision-pending
+          readOnly: true
+          type: string
+        t38_fax_gateway_enabled:
+          description: Indicates whether T38 Fax Gateway for inbound calls to this number.
+          readOnly: true
+          type: boolean
+        tags:
+          description: A list of user-assigned tags to help manage the phone number.
+          items:
+            type: string
+          type: array
+        updated_at:
+          description: ISO 8601 formatted date indicating when the resource was updated.
+          readOnly: true
+          type: string
+      required:
+      - id
+      - record_type
+      - phone_number
+      - country_iso_alpha2
+      - status
+      - tags
+      - external_pin
+      - created_at
+      - phone_number_type
+      - purchased_at
+      - deletion_lock_enabled
+      type: object
+    PhoneNumberBundleStatusChangeRequest_2:
+      example:
+        bundle_id: 5194d8fc-87e6-4188-baa9-1c434bbe861b
+      properties:
+        bundle_id:
+          description: The new bundle_id setting for the number. If you are assigning the number to a bundle, this is the unique ID of the bundle you wish to use. If you are removing the number from a bundle, this must be null. You cannot assign a number from one bundle to another directly. You must first remove it from a bundle, and then assign it to a new bundle.
+          type: string
+      required:
+      - bundle_id
+      type: object
+    SlimPhoneNumberDetailed:
+      example:
+        billing_group_id: 86f58db9-0fe3-4adc-9d1f-46e66e6e9323
+        call_forwarding_enabled: true
+        call_recording_enabled: true
+        caller_id_name_enabled: true
+        cnam_listing_enabled: true
+        connection_id: '1293384261075731499'
+        country_iso_alpha2: US
+        created_at: '2019-10-23T18:10:00.000Z'
+        customer_reference: customer-reference
+        emergency_address_id: '1315261609962112019'
+        emergency_enabled: true
+        emergency_status: active
+        external_pin: '1234'
+        hd_voice_enabled: true
+        id: '1293384261075731499'
+        inbound_call_screening: disabled
+        phone_number: '+19705555098'
+        phone_number_type: local
+        purchased_at: '2019-10-23T18:10:00.000Z'
+        record_type: phone_number
+        status: active
+        t38_fax_gateway_enabled: true
+        updated_at: '2019-10-24T18:10:00.000Z'
+      properties:
+        billing_group_id:
+          description: Identifies the billing group associated with the phone number.
+          type: string
+        call_forwarding_enabled:
+          default: true
+          description: Indicates if call forwarding will be enabled for this number if forwards_to and forwarding_type are filled in. Defaults to true for backwards compatibility with APIV1 use of numbers endpoints.
+          readOnly: true
+          type: boolean
+        call_recording_enabled:
+          description: Indicates whether call recording is enabled for this number.
+          readOnly: true
+          type: boolean
+        caller_id_name_enabled:
+          description: Indicates whether caller ID is enabled for this number.
+          readOnly: true
+          type: boolean
+        cnam_listing_enabled:
+          description: Indicates whether a CNAM listing is enabled for this number.
+          readOnly: true
+          type: boolean
+        connection_id:
+          description: Identifies the connection associated with the phone number.
+          type: string
+        country_iso_alpha2:
+          description: The ISO 3166-1 alpha-2 country code of the phone number.
+          example: US
+          readOnly: true
+          type: string
+        created_at:
+          description: ISO 8601 formatted date indicating when the resource was created.
+          readOnly: true
+          type: string
+        customer_reference:
+          description: A customer reference string for customer look ups.
+          example: MY REF 001
+          type: string
+        emergency_address_id:
+          description: Identifies the emergency address associated with the phone number.
+          readOnly: true
+          type: string
+        emergency_enabled:
+          description: Indicates whether emergency services are enabled for this number.
+          readOnly: true
+          type: boolean
+        emergency_status:
+          description: Indicates the status of the provisioning of emergency services for the phone number. This field contains information about activity that may be ongoing for a number where it either is being provisioned or deprovisioned but is not yet enabled/disabled.
+          enum:
+          - active
+          - deprovisioning
+          - disabled
+          - provisioning
+          - provisioning-failed
+          type: string
+        external_pin:
+          description: If someone attempts to port your phone number away from Telnyx and your phone number has an external PIN set, Telnyx will attempt to verify that you provided the correct external PIN to the winning carrier. Note that not all carriers cooperate with this security mechanism.
+          type: string
+        hd_voice_enabled:
+          description: Indicates whether HD voice is enabled for this number.
+          readOnly: true
+          type: boolean
+        id:
+          $ref: '#/components/schemas/numbers_IntId'
+        inbound_call_screening:
+          default: disabled
+          description: The inbound_call_screening setting is a phone number configuration option variable that allows users to configure their settings to block or flag fraudulent calls. It can be set to disabled, reject_calls, or flag_calls. This feature has an additional per-number monthly cost associated with it.
+          enum:
+          - disabled
+          - reject_calls
+          - flag_calls
+          type: string
+        phone_number:
+          description: The +E.164-formatted phone number associated with this record.
+          readOnly: true
+          type: string
+        phone_number_type:
+          description: 'The phone number''s type.
+
+            Note: For numbers purchased prior to July 2023 or when fetching a number''s details immediately after a purchase completes, the legacy values `tollfree`, `shortcode` or `longcode` may be returned instead.'
+          enum:
+          - local
+          - toll_free
+          - mobile
+          - national
+          - shared_cost
+          - landline
+          - tollfree
+          - shortcode
+          - longcode
+          readOnly: true
+          type: string
+        purchased_at:
+          description: ISO 8601 formatted date indicating when the resource was purchased.
+          readOnly: true
+          type: string
+        record_type:
+          description: Identifies the type of the resource.
+          example: phone_number_slim
+          readOnly: true
+          type: string
+        status:
+          description: The phone number's current status.
+          enum:
+          - purchase-pending
+          - purchase-failed
+          - port-pending
+          - port-failed
+          - active
+          - deleted
+          - emergency-only
+          - ported-out
+          - port-out-pending
+          - requirement-info-pending
+          - requirement-info-under-review
+          - requirement-info-exception
+          - provision-pending
+          readOnly: true
+          type: string
+        t38_fax_gateway_enabled:
+          description: Indicates whether T38 Fax Gateway for inbound calls to this number.
+          readOnly: true
+          type: boolean
+        updated_at:
+          description: ISO 8601 formatted date indicating when the resource was updated.
+          readOnly: true
+          type: string
+      type: object
+    Errors_2:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+      type: object
+    Error:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+          x-format: int64
+        title:
+          type: string
+        detail:
+          type: string
+          description: A human-readable explanation of the error.
+        description:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          additionalProperties: true
+      example:
+        title: Invalid street address
+        source:
+          pointer: /street_address
+        code: '20207'
+        description: The street address provided is invalid.
+      type: object
+  responses:
+    numbers_UnauthorizedResponse_73c9788e53:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          examples:
+            Authentication Failed:
+              value:
+                errors:
+                - code: '10009'
+                  title: Authentication failed
+                  detail: Could not understand the provided credentials.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+    numbers_UnprocessableEntity_73c9788e53:
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    numbers_NotFoundResponse_73c9788e53:
+      description: The requested resource doesn't exist.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    numbers_BadRequestResponse_73c9788e53:
+      description: Bad request, the request was unacceptable, often due to missing a required parameter.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    PhoneNumberWithVoiceSettingsResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/PhoneNumberWithVoiceSettings'
+            title: Retrieve Phone Number Voice Response
+            type: object
+      description: Successful response with details about a phone number including voice settings.
+    numbers_NotFoundResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: The requested resource doesn't exist.
+    ListPhoneNumbersResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PhoneNumberDetailed'
+                type: array
+              errors:
+                items:
+                  $ref: '#/components/schemas/numbers_Error'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            required:
+            - data
+            - meta
+            title: List Phone Numbers Response
+            type: object
+      description: Successful response with a list of phone numbers.
+    numbers_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+    DeletePhoneNumberResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/PhoneNumberDeletedDetailed'
+            title: Phone Number Response
+            type: object
+      description: Successful response with details about a phone number.
+    PhoneNumberResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/PhoneNumberDetailed'
+            title: Phone Number Response
+            type: object
+      description: Successful response with details about a phone number.
+    SlimListPhoneNumbersResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/SlimPhoneNumberDetailed'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            title: List Phone Numbers Response
+            type: object
+      description: Successful response with a list of phone numbers.
+    numbers_BadRequestResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Bad request, the request was unacceptable, often due to missing a required parameter.
+    numbers_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Unexpected error
+    numbers_UnauthorizedResponse:
+      content:
+        application/json:
+          examples:
+            Authentication Failed:
+              value:
+                errors:
+                - code: '10009'
+                  detail: Could not understand the provided credentials.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+                  title: Authentication failed
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Unauthorized
+    ListPhoneNumbersWithVoiceSettingsResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PhoneNumberWithVoiceSettings'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            title: List Phone Numbers With Voice Settings Response
+            type: object
+      description: Successful response with a list of phone numbers with voice settings.
+  parameters:
+    IntId:
+      name: id
+      description: Identifies the resource.
+      in: path
+      required: true
+      schema:
+        type: string
+        example: '1293384261075731499'
+    numbers_PageConsolidated_73c9788e53:
+      name: page
+      in: query
+      style: deepObject
+      explode: true
+      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
+      schema:
+        type: object
+        properties:
+          size:
+            type: integer
+            minimum: 1
+            maximum: 250
+            default: 20
+            description: The size of the page
+          number:
+            type: integer
+            minimum: 1
+            default: 1
+            description: The page number to load
+    numbers_PageConsolidated:
+      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
+      explode: true
+      in: query
+      name: page
+      schema:
+        properties:
+          number:
+            default: 1
+            description: The page number to load
+            minimum: 1
+            type: integer
+          size:
+            default: 20
+            description: The size of the page
+            maximum: 250
+            minimum: 1
+            type: integer
+        type: object
+      style: deepObject
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    pay-connectors_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key, not the processor bearer token.
+    telnyxApiKey:
+      type: http
+      scheme: bearer
+      description: Management-only Telnyx account credential.
+x-refined-from:
+- telnyx-openapi.json
+- telnyx-openapi.yml
+- telnyx-openapi_2.json
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

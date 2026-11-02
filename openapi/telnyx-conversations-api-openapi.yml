@@ -1,0 +1,1987 @@
+openapi: 3.2.0
+info:
+  title: Telnyx Conversations API
+  version: 2.0.0
+  contact:
+    email: support@telnyx.com
+  x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Conversations across 3 of this provider''s published API definitions: telnyx-openapi.json, telnyx-openapi.yml, telnyx-openapi_2.json. Each path carries the servers of the definition it was published in.'
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Conversations
+  description: Manage historical AI assistant conversations
+paths:
+  /ai/conversations:
+    get:
+      tags:
+      - Conversations
+      summary: List conversations
+      description: Retrieve a list of all AI conversations configured by the user. Supports PostgREST-style query parameters for filtering. Examples are included for the standard metadata fields, but you can filter on any field in the metadata JSON object. For example, to filter by a custom field `metadata->custom_field`, use `metadata->custom_field=eq.value`.
+      operationId: get_conversations_public_conversations_get
+      parameters:
+      - name: id
+        in: query
+        description: Filter by conversation ID (e.g. id=eq.123)
+        required: false
+        schema:
+          type: string
+      - name: name
+        in: query
+        description: Filter by conversation Name (e.g. `name=like.Voice%`)
+        required: false
+        schema:
+          type: string
+      - name: created_at
+        in: query
+        description: Filter by creation datetime (e.g., `created_at=gte.2025-01-01`)
+        required: false
+        schema:
+          type: string
+      - name: last_message_at
+        in: query
+        description: Filter by last message datetime (e.g., `last_message_at=lte.2025-06-01`)
+        required: false
+        schema:
+          type: string
+      - name: metadata->assistant_id
+        in: query
+        description: Filter by assistant ID (e.g., `metadata->assistant_id=eq.assistant-123`)
+        required: false
+        schema:
+          type: string
+      - name: metadata->call_control_id
+        in: query
+        description: Filter by call control ID (e.g., `metadata->call_control_id=eq.v3:123`)
+        required: false
+        schema:
+          type: string
+      - name: metadata->telnyx_agent_target
+        in: query
+        description: Filter by the phone number, SIP URI, or other identifier for the agent (e.g., `metadata->telnyx_agent_target=eq.+13128675309`)
+        required: false
+        schema:
+          type: string
+      - name: metadata->telnyx_end_user_target
+        in: query
+        description: Filter by the phone number, SIP URI, or other identifier for the end user (e.g., `metadata->telnyx_end_user_target=eq.+13128675309`)
+        required: false
+        schema:
+          type: string
+      - name: metadata->telnyx_conversation_channel
+        in: query
+        description: Filter by conversation channel (e.g., `metadata->telnyx_conversation_channel=eq.phone_call`)
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        description: Limit the number of returned conversations (e.g., `limit=10`)
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+      - name: order
+        in: query
+        description: Order the results by specific fields (e.g., `order=created_at.desc` or `order=last_message_at.asc`)
+        required: false
+        schema:
+          type: string
+      - name: or
+        in: query
+        description: Apply OR conditions using PostgREST syntax (e.g., `or=(created_at.gte.2025-04-01,last_message_at.gte.2025-04-01)`)
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationsListData'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      tags:
+      - Conversations
+      summary: Create a conversation
+      description: Creates a new AI conversation, the container for messages exchanged with an assistant, and returns the created conversation.
+      operationId: create_new_conversation_public_conversations_post
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateConversationRequest'
+            example:
+              name: string
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+        '400':
+          description: Bad Request / Validation Failed (10015). Invalid, duplicate, empty, malformed, or overlong Idempotency-Key headers are rejected by Edge with HTTP 400 and error code 10015.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inference-embedding_ErrorResponse'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflictResponse'
+        '413':
+          description: Payload Too Large. A request sent with an Idempotency-Key whose body exceeds the endpoint's Edge replay-protection limit (256 KB) is rejected before it reaches the service. Requests sent without the header are not subject to this limit.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inference-embedding_ErrorResponse'
+        '422':
+          description: Validation Error. Reusing an Idempotency-Key with a different request body also returns 422 with error code 10027.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/inference-embedding_ErrorResponse'
+        '503':
+          description: Service unavailable (10016), including unavailable Edge idempotency protection for a keyed request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inference-embedding_ErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /ai/conversations/conversation-insights/aggregates:
+    get:
+      tags:
+      - Conversations
+      summary: Aggregate Conversation Insights
+      description: Aggregate conversation insights by specified fields
+      operationId: aggregate_conversation_insights
+      parameters:
+      - name: group_by
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+          description: 'Fields to group by (can be comma-separated or multiple parameters). Prefix a field with ''metadata.'' (e.g. ''metadata.assistant_id'') to group by the conversation''s metadata instead of the insight result.
+
+
+            Common fields used for over-time charts:
+
+            - `score` — Group by the insight''s score value (e.g. for Agent Instruction Following, User Satisfaction).
+
+            - `metadata.assistant_id` — Group by the assistant that handled the conversation.
+
+            - `metadata.assistant_version_id` — Group by the assistant version, useful for comparing performance across versions in the portal''s ''Insights Over Time'' chart.
+
+            - `metadata.telnyx_conversation_channel` — Group by conversation channel (phone_call, web_chat, etc.).'
+          title: Group By
+        description: 'Fields to group by (can be comma-separated or multiple parameters). Prefix a field with ''metadata.'' (e.g. ''metadata.assistant_id'') to group by the conversation''s metadata instead of the insight result.
+
+
+          Common fields used for over-time charts:
+
+          - `score` — Group by the insight''s score value (e.g. for Agent Instruction Following, User Satisfaction).
+
+          - `metadata.assistant_id` — Group by the assistant that handled the conversation.
+
+          - `metadata.assistant_version_id` — Group by the assistant version, useful for comparing performance across versions in the portal''s ''Insights Over Time'' chart.
+
+          - `metadata.telnyx_conversation_channel` — Group by conversation channel (phone_call, web_chat, etc.).'
+      - name: show
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+          description: Fields to include in the result (can be comma-separated or multiple parameters). Supports the same 'metadata.<key>' prefix as group_by. Each returned row will contain the grouped field values plus a `record_count` indicating how many conversation insights match that combination.
+          title: Show
+        description: Fields to include in the result (can be comma-separated or multiple parameters). Supports the same 'metadata.<key>' prefix as group_by. Each returned row will contain the grouped field values plus a `record_count` indicating how many conversation insights match that combination.
+      - name: insight_id
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+          description: Optional insight ID to filter conversation insights. Only insights matching this ID will be included in the aggregation.
+          title: Insight Id
+        description: Optional insight ID to filter conversation insights. Only insights matching this ID will be included in the aggregation.
+      - name: created_at
+        in: query
+        required: false
+        schema:
+          type: string
+          description: Filter by creation datetime to scope the aggregation window. Supports range operators (e.g., `created_at=gte.2025-01-01T00:00:00Z` for the start of the range, `created_at=lt.2025-01-02T00:00:00Z` for the end). To build per-day time series (as the portal does for the 'Insights Over Time' chart), issue one request per day bounded by `created_at=gte.<day_start>` and `created_at=lt.<next_day_start>`.
+          title: Created At
+        description: Filter by creation datetime to scope the aggregation window. Supports range operators (e.g., `created_at=gte.2025-01-01T00:00:00Z` for the start of the range, `created_at=lt.2025-01-02T00:00:00Z` for the end). To build per-day time series (as the portal does for the 'Insights Over Time' chart), issue one request per day bounded by `created_at=gte.<day_start>` and `created_at=lt.<next_day_start>`.
+      - name: metadata.assistant_id
+        in: query
+        required: false
+        schema:
+          type: string
+          description: Filter by assistant ID (e.g., `metadata.assistant_id=eq.<assistant_id>`). When provided, only conversation insights for the specified assistant are aggregated. Used by the portal to scope the 'Insights Over Time' chart to a single assistant.
+          title: Metadata Assistant Id
+        description: Filter by assistant ID (e.g., `metadata.assistant_id=eq.<assistant_id>`). When provided, only conversation insights for the specified assistant are aggregated. Used by the portal to scope the 'Insights Over Time' chart to a single assistant.
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationInsightAggregateResp'
+              example:
+                data:
+                - record_count: 0
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /ai/conversations/insight-groups:
+    get:
+      tags:
+      - Conversations
+      summary: Get Insight Template Groups
+      description: Returns a paginated list of your insight template groups. Groups organize related insight templates that are applied together when analyzing conversations.
+      operationId: get_all_insight_groups
+      parameters:
+      - name: page
+        in: query
+        style: deepObject
+        explode: true
+        description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
+        schema:
+          type: object
+          properties:
+            number:
+              type: integer
+              minimum: 1
+              description: Page number (0-based)
+              default: 1
+              title: Page[Number]
+            size:
+              type: integer
+              exclusiveMaximum: 100
+              minimum: 0
+              description: Number of items per page
+              default: 20
+              title: Page[Size]
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetInsightTemplateGroupsRespData'
+              example:
+                data:
+                - id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  name: Name
+                  description: Description
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  insights:
+                  - id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                    instructions: Instructions
+                    created_at: '2024-01-23T18:10:02.574Z'
+                    insight_type: custom
+                    name: ''
+                    webhook: ''
+                    json_schema: string
+                  webhook: ''
+                meta:
+                  total_pages: 0
+                  total_results: 0
+                  page_number: 0
+                  page_size: 0
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      tags:
+      - Conversations
+      summary: Create Insight Template Group
+      description: Creates a new insight template group for organizing related insight templates, and returns the created group.
+      operationId: create_insight_group
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InsightTemplateGroupCreateReq'
+            example:
+              name: Name
+              description: Description
+              webhook: ''
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InsightTemplateGroupDetailRespData'
+              example:
+                data:
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  name: Name
+                  description: Description
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  insights:
+                  - id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                    instructions: Instructions
+                    created_at: '2024-01-23T18:10:02.574Z'
+                    insight_type: custom
+                    name: ''
+                    webhook: ''
+                    json_schema: string
+                  webhook: ''
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+        '400':
+          description: Bad Request / Validation Failed (10015). Invalid, duplicate, empty, malformed, or overlong Idempotency-Key headers are rejected by Edge with HTTP 400 and error code 10015.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inference-embedding_ErrorResponse'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflictResponse'
+        '413':
+          description: Payload Too Large. A request sent with an Idempotency-Key whose body exceeds the endpoint's Edge replay-protection limit (256 KB) is rejected before it reaches the service. Requests sent without the header are not subject to this limit.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inference-embedding_ErrorResponse'
+        '422':
+          description: Validation Error. Reusing an Idempotency-Key with a different request body also returns 422 with error code 10027.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/inference-embedding_ErrorResponse'
+        '503':
+          description: Service unavailable (10016), including unavailable Edge idempotency protection for a keyed request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inference-embedding_ErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /ai/conversations/insight-groups/{group_id}:
+    delete:
+      tags:
+      - Conversations
+      summary: Delete Insight Template Group
+      description: Permanently deletes the specified insight template group by its ID.
+      operationId: delete_insight_group_by_id
+      parameters:
+      - name: group_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          description: The ID of the insight group
+          title: Group Id
+        description: The ID of the insight group
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+              example:
+                detail:
+                - loc:
+                  - string
+                  msg: Message
+                  type: Error Type
+    get:
+      tags:
+      - Conversations
+      summary: Get Insight Template Group
+      description: Returns the details of a single insight template group, including the insight templates assigned to it.
+      operationId: get_insight_group_by_id
+      parameters:
+      - name: group_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          description: The ID of the insight group
+          title: Group Id
+        description: The ID of the insight group
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InsightTemplateGroupDetailRespData'
+              example:
+                data:
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  name: Name
+                  description: Description
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  insights:
+                  - id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                    instructions: Instructions
+                    created_at: '2024-01-23T18:10:02.574Z'
+                    insight_type: custom
+                    name: ''
+                    webhook: ''
+                    json_schema: string
+                  webhook: ''
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    put:
+      tags:
+      - Conversations
+      summary: Update Insight Template Group
+      description: Updates the specified insight template group and returns the updated group.
+      operationId: update_insight_group_by_id
+      parameters:
+      - name: group_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          description: The ID of the insight group
+          title: Group Id
+        description: The ID of the insight group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InsightTemplateGroupUpdateReq'
+            example:
+              name: Name
+              description: Description
+              webhook: Webhook
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InsightTemplateGroupDetailRespData'
+              example:
+                data:
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  name: Name
+                  description: Description
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  insights:
+                  - id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                    instructions: Instructions
+                    created_at: '2024-01-23T18:10:02.574Z'
+                    insight_type: custom
+                    name: ''
+                    webhook: ''
+                    json_schema: string
+                  webhook: ''
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /ai/conversations/insight-groups/{group_id}/insights/{insight_id}/assign:
+    post:
+      tags:
+      - Conversations
+      summary: Assign Insight Template To Group
+      description: Assigns the specified insight template to the specified insight template group.
+      operationId: assign_insight_to_group
+      parameters:
+      - name: group_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          description: The ID of the insight group
+          title: Group Id
+        description: The ID of the insight group
+      - name: insight_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          description: The ID of the insight
+          title: Insight Id
+        description: The ID of the insight
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+              example:
+                detail:
+                - loc:
+                  - string
+                  msg: Message
+                  type: Error Type
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /ai/conversations/insight-groups/{group_id}/insights/{insight_id}/unassign:
+    delete:
+      tags:
+      - Conversations
+      summary: Unassign Insight Template From Group
+      description: Removes the specified insight template from the specified group. The insight template itself is not deleted.
+      operationId: unassign_insight_from_group
+      parameters:
+      - name: group_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          description: The ID of the insight group
+          title: Group Id
+        description: The ID of the insight group
+      - name: insight_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          description: The ID of the insight
+          title: Insight Id
+        description: The ID of the insight
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+              example:
+                detail:
+                - loc:
+                  - string
+                  msg: Message
+                  type: Error Type
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /ai/conversations/insights:
+    get:
+      tags:
+      - Conversations
+      summary: Get Insight Templates
+      description: Returns a paginated list of your insight templates. Insight templates define analyses that run over AI conversations to extract structured findings.
+      operationId: get_all_insights
+      parameters:
+      - name: page
+        in: query
+        style: deepObject
+        explode: true
+        description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
+        schema:
+          type: object
+          properties:
+            number:
+              type: integer
+              minimum: 1
+              description: Page number (0-based)
+              default: 1
+              title: Page[Number]
+            size:
+              type: integer
+              exclusiveMaximum: 100
+              minimum: 0
+              description: Number of items per page
+              default: 20
+              title: Page[Size]
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetInsightTemplatesRespData'
+              example:
+                data:
+                - id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  instructions: Instructions
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  insight_type: custom
+                  name: ''
+                  webhook: ''
+                  json_schema: string
+                meta:
+                  total_pages: 0
+                  total_results: 0
+                  page_number: 0
+                  page_size: 0
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      tags:
+      - Conversations
+      summary: Create Insight Template
+      description: Creates a new insight template defining an analysis to run over conversations, and returns the created template.
+      operationId: create_insight
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InsightTemplateCreateReq'
+            example:
+              instructions: Instructions
+              name: Name
+              webhook: ''
+              json_schema: string
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InsightTemplateDetailRespData'
+              example:
+                data:
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  instructions: Instructions
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  insight_type: custom
+                  name: ''
+                  webhook: ''
+                  json_schema: string
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+        '400':
+          description: Bad Request / Validation Failed (10015). Invalid, duplicate, empty, malformed, or overlong Idempotency-Key headers are rejected by Edge with HTTP 400 and error code 10015.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inference-embedding_ErrorResponse'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflictResponse'
+        '413':
+          description: Payload Too Large. A request sent with an Idempotency-Key whose body exceeds the endpoint's Edge replay-protection limit (256 KB) is rejected before it reaches the service. Requests sent without the header are not subject to this limit.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inference-embedding_ErrorResponse'
+        '422':
+          description: Validation Error. Reusing an Idempotency-Key with a different request body also returns 422 with error code 10027.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/inference-embedding_ErrorResponse'
+        '503':
+          description: Service unavailable (10016), including unavailable Edge idempotency protection for a keyed request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inference-embedding_ErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /ai/conversations/insights/{insight_id}:
+    delete:
+      tags:
+      - Conversations
+      summary: Delete Insight Template
+      description: Permanently deletes the specified insight template by its ID.
+      operationId: delete_insight_by_id
+      parameters:
+      - name: insight_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          description: The ID of the insight
+          title: Insight Id
+        description: The ID of the insight
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+              example:
+                detail:
+                - loc:
+                  - string
+                  msg: Message
+                  type: Error Type
+    get:
+      tags:
+      - Conversations
+      summary: Get Insight Template
+      description: Returns the details of a single insight template by its ID, including its configuration.
+      operationId: get_insight_by_id
+      parameters:
+      - name: insight_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          description: The ID of the insight
+          title: Insight Id
+        description: The ID of the insight
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InsightTemplateDetailRespData'
+              example:
+                data:
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  instructions: Instructions
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  insight_type: custom
+                  name: ''
+                  webhook: ''
+                  json_schema: string
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    put:
+      tags:
+      - Conversations
+      summary: Update Insight Template
+      description: Updates the specified insight template and returns the updated template.
+      operationId: update_insight_by_id
+      parameters:
+      - name: insight_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          description: The ID of the insight
+          title: Insight Id
+        description: The ID of the insight
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InsightTemplateUpdateReq'
+            example:
+              instructions: Instructions
+              name: Name
+              webhook: Webhook
+              json_schema: string
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InsightTemplateDetailRespData'
+              example:
+                data:
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  instructions: Instructions
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  insight_type: custom
+                  name: ''
+                  webhook: ''
+                  json_schema: string
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /ai/conversations/{conversation_id}:
+    delete:
+      tags:
+      - Conversations
+      summary: Delete a conversation
+      description: Delete a specific conversation by its ID.
+      operationId: delete_conversation_by_id_public_conversations_delete
+      parameters:
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: The ID of the conversation to delete
+      responses:
+        '200':
+          description: Successful Response
+        '404':
+          description: Conversation Not Found
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+              example:
+                detail:
+                - loc:
+                  - string
+                  msg: Message
+                  type: Error Type
+    get:
+      tags:
+      - Conversations
+      summary: Get a conversation
+      description: Retrieve a specific AI conversation by its ID.
+      operationId: get_conversation_by_id_public_conversations_get
+      parameters:
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: The ID of the conversation to retrieve
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Conversation'
+        '404':
+          description: Conversation Not Found
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    put:
+      tags:
+      - Conversations
+      summary: Update conversation metadata
+      description: Update metadata for a specific conversation.
+      operationId: update_conversation_by_id_public_conversations_put
+      parameters:
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: The ID of the conversation to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateConversationRequest'
+            example:
+              metadata:
+                ai_disabled: 'true'
+      responses:
+        '200':
+          description: Successful Update
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Conversation'
+        '404':
+          description: Conversation Not Found
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /ai/conversations/{conversation_id}/conversations-insights:
+    get:
+      tags:
+      - Conversations
+      summary: Get insights for a conversation
+      description: Retrieve insights for a specific conversation
+      operationId: get_conversations_public__conversation_id__insights_get
+      parameters:
+      - name: conversation_id
+        in: path
+        description: Unique identifier of the conversation.
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationInsightListData'
+              example:
+                data:
+                - id: string
+                  status: pending
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  conversation_insights:
+                  - result: string
+                    insight_id: string
+                meta:
+                  total_pages: 0
+                  total_results: 0
+                  page_number: 0
+                  page_size: 0
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /ai/conversations/{conversation_id}/message:
+    post:
+      tags:
+      - Conversations
+      summary: Create Message
+      description: Add a new message to the conversation. Used to insert a new messages to a conversation manually ( without using chat endpoint )
+      operationId: add_new_message
+      parameters:
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          description: The ID of the conversation
+          title: Conversation Id
+        description: The ID of the conversation
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMsgReq'
+            example:
+              role: Role
+              content: ''
+              name: Name
+              tool_choice: string
+              tool_calls: []
+              tool_call_id: Tool Call Id
+              sent_at: '2024-01-23T18:10:02.574Z'
+      responses:
+        '200':
+          description: Successful Response
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+        '400':
+          description: Bad Request / Validation Failed (10015). Invalid, duplicate, empty, malformed, or overlong Idempotency-Key headers are rejected by Edge with HTTP 400 and error code 10015.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inference-embedding_ErrorResponse'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflictResponse'
+        '413':
+          description: Payload Too Large. A request sent with an Idempotency-Key whose body exceeds the endpoint's Edge replay-protection limit (256 KB) is rejected before it reaches the service. Requests sent without the header are not subject to this limit.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inference-embedding_ErrorResponse'
+        '422':
+          description: Validation Error. Reusing an Idempotency-Key with a different request body also returns 422 with error code 10027.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/HTTPValidationError'
+                - $ref: '#/components/schemas/inference-embedding_ErrorResponse'
+              example:
+                detail:
+                - loc:
+                  - string
+                  msg: Message
+                  type: Error Type
+        '503':
+          description: Service unavailable (10016), including unavailable Edge idempotency protection for a keyed request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inference-embedding_ErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /ai/conversations/{conversation_id}/messages:
+    get:
+      tags:
+      - Conversations
+      summary: Get conversation messages
+      description: Retrieve messages for a specific conversation, including tool calls made by the assistant.
+      operationId: get_conversations_public__conversation_id__messages_get
+      parameters:
+      - name: conversation_id
+        in: path
+        description: Unique identifier of the conversation.
+        required: true
+        schema:
+          type: string
+      - name: page[size]
+        in: query
+        description: The number of messages to return per page.
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 20
+      - name: page[number]
+        in: query
+        description: The page number to retrieve.
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationMessageListData'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /ai/conversations/{conversation_id}/conversations-insights/{insight_id}:
+    delete:
+      tags:
+      - Conversations
+      summary: Delete a conversation's insight generation results
+      description: Delete one insight generation request for a conversation. Generation results are stored per conversation and per insight template; deleting a request permanently removes the stored result but does not stop insight generation from running again. To remove every insight result for the conversation, delete the conversation itself. A successful delete returns an empty response.
+      operationId: delete_conversation_insight
+      parameters:
+      - name: conversation_id
+        in: path
+        description: Unique identifier of the conversation.
+        required: true
+        schema:
+          type: string
+      - name: insight_id
+        in: path
+        description: Unique identifier of the insight generation request to delete, as returned as `data.id` by the insight generation and insights-list operations. Note that the nested `conversation_insights[].insight_id` field returned in the insights-list response is the insight template ID, not the ID accepted here.
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful Response. The stored insight generation result is permanently deleted.
+        '404':
+          description: Conversation Insight Not Found
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+components:
+  schemas:
+    ConversationInsight:
+      type: object
+      required:
+      - id
+      - status
+      - created_at
+      - conversation_insights
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the conversation insight.
+        status:
+          type: string
+          enum:
+          - pending
+          - in_progress
+          - completed
+          - failed
+          description: Current status of the insight generation for the conversation.
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp of when the object was created.
+        conversation_insights:
+          type: array
+          description: List of insights extracted from the conversation.
+          items:
+            type: object
+            required:
+            - result
+            - insight_id
+            properties:
+              result:
+                type: string
+                description: Insight result from the conversation. If the insight has a JSON schema, this will be stringified JSON object.
+              insight_id:
+                type: string
+                description: Unique identifier for the insight configuration.
+    CreateConversationRequest:
+      properties:
+        name:
+          type: string
+        metadata:
+          type: object
+          description: Metadata associated with the conversation. Set `ai_disabled` to `true` to create the conversation with AI message responses disabled.
+          additionalProperties:
+            type: string
+      type: object
+      title: CreateConversationRequest
+    ErrorObject:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Telnyx error code. Send admission errors include account daily quota 10011 and sender-domain ramp code domain_graduation_limit_exceeded. Edge idempotency errors use 10027 or 10036. Fallback 404/500 responses from the framework may use string status codes ('404', '500') instead.
+          enum:
+          - '10001'
+          - '10006'
+          - '10007'
+          - '10011'
+          - '10015'
+          - '10016'
+          - '10019'
+          - domain_graduation_limit_exceeded
+          - recipient_suppressed
+          - reputation_suspended
+          - '404'
+          - '500'
+          - '10027'
+          - '10036'
+        title:
+          type: string
+        detail:
+          description: Human-readable error detail. Changeset responses may return a structured object.
+          oneOf:
+          - type: string
+          - type: object
+            additionalProperties: true
+        source:
+          type: object
+          additionalProperties: true
+          nullable: true
+        meta:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: Additional metadata. Present on 401 errors with a documentation URL.
+      required:
+      - code
+      - title
+      - detail
+    ValidationError:
+      title: ValidationError
+      required:
+      - loc
+      - msg
+      - type
+      type: object
+      properties:
+        loc:
+          title: Location
+          type: array
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+    ConversationInsightListData:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/ConversationInsight'
+          type: array
+          title: Data
+        meta:
+          $ref: '#/components/schemas/Meta'
+      type: object
+      required:
+      - data
+      - meta
+      title: ConversationInsightListData
+    ConversationsListData:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/Conversation'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: ConversationsListData
+    InsightTemplateDetailRespData:
+      properties:
+        data:
+          $ref: '#/components/schemas/InsightTemplateResp'
+      type: object
+      required:
+      - data
+      title: InsightTemplateDetailRespData
+    ConversationInsightAggregateResp:
+      properties:
+        data:
+          items:
+            additionalProperties: true
+            type: object
+            description: An aggregation row. Contains the grouped field values (keyed by the group_by field names) and a `record_count` integer. For example, when grouping by `score`, each row has a `score` value and a `record_count` of conversations with that score. When also splitting by `metadata.assistant_version_id`, each row includes both `score` and `metadata.assistant_version_id` plus their combined `record_count`.
+            properties:
+              record_count:
+                type: integer
+                description: Number of conversation insights that match this combination of grouped field values.
+            required:
+            - record_count
+          type: array
+          title: Data
+          description: Aggregation result rows. Each row contains the grouped field values and a `record_count`.
+      type: object
+      required:
+      - data
+      title: ConversationInsightAggregateResp
+      description: Aggregated conversation insight counts grouped by the specified fields. Each item in `data` contains the grouped field values and a `record_count` indicating how many conversation insights match that combination.
+    GetInsightTemplateGroupsRespData:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/InsightTemplateGroupResp'
+          type: array
+          title: Data
+        meta:
+          $ref: '#/components/schemas/Meta'
+      type: object
+      required:
+      - data
+      - meta
+      title: GetInsightTemplateGroupsRespData
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+      example:
+        detail:
+        - loc:
+          - body
+          - name
+          msg: Field required
+          type: missing
+    inference-embedding_ErrorObject:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Telnyx error code. Edge idempotency errors use 10015, 10027, or 10036; idempotency protection outages use 10016; replay-cap 413s surface 10007. Fallback 404/500 responses from the framework may use string status codes ('404', '500') instead.
+          enum:
+          - '10007'
+          - '10015'
+          - '10016'
+          - '10027'
+          - '10036'
+          - '404'
+          - '500'
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              type: string
+      required:
+      - code
+      - title
+    TemplateType:
+      type: string
+      enum:
+      - custom
+      - default
+      title: TemplateType
+    CreateMsgReq:
+      properties:
+        role:
+          type: string
+          title: Role
+        content:
+          type: string
+          title: Content
+          default: ''
+        name:
+          type: string
+          title: Name
+        tool_choice:
+          anyOf:
+          - type: string
+          - type: object
+            title: ToolChoiceObject
+          title: Tool Choice
+        tool_calls:
+          items:
+            type: object
+            additionalProperties: true
+          type: array
+          title: Tool Calls
+        tool_call_id:
+          type: string
+          title: Tool Call Id
+        sent_at:
+          type: string
+          format: date-time
+          title: Sent At
+        metadata:
+          type: object
+          additionalProperties:
+            anyOf:
+            - type: string
+            - type: integer
+            - type: boolean
+            - items:
+                anyOf:
+                - type: string
+                - type: integer
+                - type: boolean
+              type: array
+          title: Metadata
+      type: object
+      required:
+      - role
+      title: CreateMsgReq
+    UpdateConversationRequest:
+      properties:
+        metadata:
+          type: object
+          description: Metadata associated with the conversation. Set `ai_disabled` to `true` to stop AI from responding to messages (e.g., when a human agent takes over). Set to `false` to re-enable AI responses.
+          additionalProperties:
+            type: string
+      type: object
+      title: UpdateConversationRequest
+    email_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorObject'
+        suppressed:
+          type: array
+          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
+      required:
+      - errors
+    Meta:
+      properties:
+        total_pages:
+          type: integer
+        total_results:
+          type: integer
+        page_number:
+          type: integer
+        page_size:
+          type: integer
+      type: object
+      required:
+      - total_pages
+      - total_results
+      - page_number
+      - page_size
+      title: Meta
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        name:
+          type: string
+          example: ''
+        created_at:
+          type: string
+          description: The datetime the conversation was created.
+          format: date-time
+          example: '2025-04-15T13:07:28.764Z'
+        metadata:
+          type: object
+          description: Metadata associated with the conversation. Telnyx provides several pieces of metadata, but customers can also add their own. The reserved field `ai_disabled` (boolean) can be set to `true` to prevent AI-generated responses on this conversation. When `ai_disabled` is `true`, calls to the chat endpoint will return a 400 error. Set to `false` or remove the field to re-enable AI responses. This is useful when a human agent needs to take over the conversation mid-stream (e.g., a technician stepping in while AI was messaging a resident).
+          additionalProperties:
+            type: string
+          example:
+            telnyx_conversation_channel: sms
+            telnyx_agent_target: '+13128675309'
+            telnyx_end_user_target: '+13128675309'
+            assistant_id: assistant-123
+        last_message_at:
+          type: string
+          description: The datetime of the latest message in the conversation.
+          format: date-time
+          example: '2025-04-15T13:07:28.764Z'
+      required:
+      - id
+      - created_at
+      - metadata
+      - last_message_at
+    InsightTemplateGroupCreateReq:
+      properties:
+        name:
+          type: string
+          title: Name
+        description:
+          type: string
+          title: Description
+        webhook:
+          type: string
+          title: Webhook
+          default: ''
+      type: object
+      required:
+      - name
+      title: InsightTemplateGroupCreateReq
+    GetInsightTemplatesRespData:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/InsightTemplateResp'
+          type: array
+          title: Data
+        meta:
+          $ref: '#/components/schemas/Meta'
+      type: object
+      required:
+      - data
+      - meta
+      title: GetInsightTemplatesRespData
+    SuppressedRecipient:
+      type: object
+      properties:
+        to:
+          type: string
+          format: email
+          description: Suppressed recipient email address.
+        reason:
+          type: string
+          description: Suppression reason returned by the recipient suppression service.
+        scope:
+          type: string
+          description: Scope at which the suppression applies.
+        override_allowed:
+          type: boolean
+          description: Whether an authorized send may override this suppression.
+      required:
+      - to
+      - reason
+      - scope
+      - override_allowed
+    InsightTemplateResp:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        instructions:
+          type: string
+          title: Instructions
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        insight_type:
+          $ref: '#/components/schemas/TemplateType'
+          default: custom
+        name:
+          type: string
+          title: Name
+          default: ''
+        webhook:
+          type: string
+          title: Webhook
+          default: ''
+        json_schema:
+          anyOf:
+          - type: string
+          - type: object
+            title: JsonSchemaObject
+          title: Json Schema
+          description: If specified, the output will follow the JSON schema.
+      type: object
+      required:
+      - id
+      - instructions
+      - created_at
+      title: InsightTemplateResp
+    inference-embedding_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/inference-embedding_ErrorObject'
+      required:
+      - errors
+    InsightTemplateGroupDetailRespData:
+      properties:
+        data:
+          $ref: '#/components/schemas/InsightTemplateGroupResp'
+      type: object
+      required:
+      - data
+      title: InsightTemplateGroupDetailRespData
+    InsightTemplateGroupResp:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        name:
+          type: string
+          title: Name
+        description:
+          type: string
+          title: Description
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        insights:
+          items:
+            $ref: '#/components/schemas/InsightTemplateResp'
+          type: array
+          title: Insights
+        webhook:
+          type: string
+          title: Webhook
+          default: ''
+      type: object
+      required:
+      - id
+      - name
+      - created_at
+      title: InsightTemplateGroupResp
+    InsightTemplateGroupUpdateReq:
+      properties:
+        name:
+          type: string
+          title: Name
+        description:
+          type: string
+          title: Description
+        webhook:
+          type: string
+          title: Webhook
+      type: object
+      title: InsightTemplateGroupUpdateReq
+    ConversationMessageListData:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/ConversationMessage'
+          type: array
+          title: Data
+        meta:
+          $ref: '#/components/schemas/Meta'
+      type: object
+      required:
+      - data
+      - meta
+      title: ConversationMessageListData
+    ConversationMessage:
+      type: object
+      required:
+      - role
+      - text
+      properties:
+        role:
+          type: string
+          enum:
+          - user
+          - assistant
+          - tool
+          description: The role of the message sender.
+        text:
+          type: string
+          description: The message content. Can be null for tool calls.
+        tool_calls:
+          type: array
+          description: Optional tool calls made by the assistant.
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                description: Unique identifier for the tool call.
+              type:
+                type: string
+                enum:
+                - function
+                description: Type of the tool call.
+              function:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: Name of the function to call.
+                  arguments:
+                    type: string
+                    description: JSON-formatted arguments to pass to the function.
+                required:
+                - name
+                - arguments
+            required:
+            - id
+            - type
+            - function
+        created_at:
+          type: string
+          description: The datetime the message was created on the conversation. This does not necesarily correspond to the time the message was sent. The best field to use to determine the time the end user experienced the message is `sent_at`.
+          format: date-time
+          example: '2025-04-15T13:07:28.764Z'
+        sent_at:
+          type: string
+          description: The datetime the message was sent to the end user.
+          format: date-time
+          example: '2025-04-15T13:07:28.764Z'
+        metadata:
+          additionalProperties:
+            anyOf:
+            - type: string
+            - type: integer
+            - type: boolean
+            - items:
+                anyOf:
+                - type: string
+                - type: integer
+                - type: boolean
+              type: array
+          type: object
+          title: Metadata
+    InsightTemplateUpdateReq:
+      properties:
+        instructions:
+          type: string
+          title: Instructions
+        name:
+          type: string
+          title: Name
+        webhook:
+          type: string
+          title: Webhook
+        json_schema:
+          anyOf:
+          - type: string
+          - type: object
+            title: JsonSchemaObject
+          title: Json Schema
+      type: object
+      title: InsightTemplateUpdateReq
+    InsightTemplateCreateReq:
+      properties:
+        instructions:
+          type: string
+          title: Instructions
+        name:
+          type: string
+          title: Name
+        webhook:
+          type: string
+          title: Webhook
+          default: ''
+        json_schema:
+          anyOf:
+          - type: string
+          - type: object
+            title: JsonSchemaObject
+          title: Json Schema
+          description: If specified, the output will follow the JSON schema.
+      type: object
+      required:
+      - instructions
+      - name
+      title: InsightTemplateCreateReq
+    HTTPValidationError_2:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    ConversationMessage_2:
+      properties:
+        created_at:
+          description: The datetime the message was created on the conversation. This does not necesarily correspond to the time the message was sent. The best field to use to determine the time the end user experienced the message is `sent_at`.
+          example: '2025-04-15T13:07:28.764Z'
+          format: date-time
+          type: string
+        role:
+          description: The role of the message sender.
+          enum:
+          - user
+          - assistant
+          - tool
+          type: string
+        sent_at:
+          description: The datetime the message was sent to the end user.
+          example: '2025-04-15T13:07:28.764Z'
+          format: date-time
+          type: string
+        text:
+          description: The message content. Can be null for tool calls.
+          type: string
+        tool_calls:
+          description: Optional tool calls made by the assistant.
+          items:
+            properties:
+              function:
+                properties:
+                  arguments:
+                    description: JSON-formatted arguments to pass to the function.
+                    type: string
+                  name:
+                    description: Name of the function to call.
+                    type: string
+                required:
+                - name
+                - arguments
+                type: object
+              id:
+                description: Unique identifier for the tool call.
+                type: string
+              type:
+                description: Type of the tool call.
+                enum:
+                - function
+                type: string
+            required:
+            - id
+            - type
+            - function
+            type: object
+          type: array
+      required:
+      - role
+      - text
+      type: object
+  headers:
+    IdempotentReplayed:
+      description: Present with value `true` when Edge replayed a stored successful response for the supplied Idempotency-Key. Omitted for first-time requests and error responses.
+      schema:
+        type: boolean
+        enum:
+        - true
+        example: true
+  responses:
+    IdempotencyConflictResponse:
+      description: A request with the same Idempotency-Key is still being processed (10036). Retry later with the same key and request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10036'
+              title: Resource is being processed
+              detail: A request with this Idempotency-Key is already being processed.
+              source:
+                pointer: /header/Idempotency-Key
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Optional opaque, unquoted key for safely retrying the same logical request. Keys must contain 1 to 255 letters, numbers, hyphens, or underscores. Generate a unique UUID v4 for each operation and reuse it only when retrying that operation with the same request. Invalid headers—including duplicate, empty, malformed, or overlong values—return 400 with error code 10015. A request already in progress with the same key returns 409; reusing the key with a different request returns 422. Only successful responses are replayed, for up to 24 hours. Do not include sensitive data in the key.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+        pattern: ^[A-Za-z0-9_-]{1,255}$
+      example: 8e03978e-40d5-43e8-bc93-6894a57f9326
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    pay-connectors_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key, not the processor bearer token.
+    telnyxApiKey:
+      type: http
+      scheme: bearer
+      description: Management-only Telnyx account credential.
+x-refined-from:
+- telnyx-openapi.json
+- telnyx-openapi.yml
+- telnyx-openapi_2.json
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

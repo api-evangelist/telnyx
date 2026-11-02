@@ -1,0 +1,782 @@
+openapi: 3.2.0
+info:
+  title: Telnyx Room Sessions API
+  version: 2.0.0
+  contact:
+    email: support@telnyx.com
+  x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Room Sessions across 3 of this provider''s published API definitions: telnyx-openapi.json, telnyx-openapi.yml, telnyx-openapi_2.json. Each path carries the servers of the definition it was published in.'
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Room Sessions
+  description: Rooms Sessions operations.
+paths:
+  /room_sessions:
+    get:
+      summary: View a list of room sessions
+      description: Returns a paginated list of room sessions across the account. Filter sessions by room, creation, update, or end date and active status, and use `include_participants` to include participant records.
+      operationId: ListRoomSessions
+      x-endpoint-cost: medium
+      tags:
+      - Room Sessions
+      parameters:
+      - name: include_participants
+        in: query
+        description: To decide if room participants should be included in the response.
+        schema:
+          type: boolean
+          example: true
+      - name: filter
+        in: query
+        style: deepObject
+        explode: true
+        required: false
+        description: 'Consolidated filter parameter (deepObject style). Originally: filter[date_created_at][eq], filter[date_created_at][gte], filter[date_created_at][lte], filter[date_updated_at][eq], filter[date_updated_at][gte], filter[date_updated_at][lte], filter[date_ended_at][eq], filter[date_ended_at][gte], filter[date_ended_at][lte], filter[room_id], filter[active]'
+        schema:
+          type: object
+          properties:
+            date_created_at:
+              type: object
+              properties:
+                eq:
+                  type: string
+                  format: date
+                  example: '2021-04-25'
+                  description: ISO 8601 date for filtering room sessions created on that date.
+                gte:
+                  type: string
+                  format: date
+                  example: '2021-04-25'
+                  description: ISO 8601 date for filtering room sessions created on or after that date.
+                lte:
+                  type: string
+                  format: date
+                  example: '2021-04-25'
+                  description: ISO 8601 date for filtering room sessions created on or before that date.
+            date_updated_at:
+              type: object
+              properties:
+                eq:
+                  type: string
+                  format: date
+                  example: '2021-04-25'
+                  description: ISO 8601 date for filtering room sessions updated on that date.
+                gte:
+                  type: string
+                  format: date
+                  example: '2021-04-25'
+                  description: ISO 8601 date for filtering room sessions updated on or after that date.
+                lte:
+                  type: string
+                  format: date
+                  example: '2021-04-25'
+                  description: ISO 8601 date for filtering room sessions updated on or before that date.
+            date_ended_at:
+              type: object
+              properties:
+                eq:
+                  type: string
+                  format: date
+                  example: '2021-04-25'
+                  description: ISO 8601 date for filtering room sessions ended on that date.
+                gte:
+                  type: string
+                  format: date
+                  example: '2021-04-25'
+                  description: ISO 8601 date for filtering room sessions ended on or after that date.
+                lte:
+                  type: string
+                  format: date
+                  example: '2021-04-25'
+                  description: ISO 8601 date for filtering room sessions ended on or before that date.
+            room_id:
+              type: string
+              example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+              description: Room_id for filtering room sessions.
+            active:
+              type: boolean
+              example: true
+              description: Filter active or inactive room sessions.
+      - $ref: '#/components/parameters/video_PageConsolidated'
+      responses:
+        '200':
+          description: List room sessions response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RoomSession'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        4XX:
+          $ref: '#/components/responses/video_GenericErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /room_sessions/{room_session_id}:
+    get:
+      summary: View a room session
+      operationId: ViewRoomSession
+      tags:
+      - Room Sessions
+      x-endpoint-cost: light
+      parameters:
+      - name: room_session_id
+        in: path
+        description: The unique identifier of a room session.
+        required: true
+        schema:
+          type: string
+          format: uuid
+          example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+      - name: include_participants
+        in: query
+        description: To decide if room participants should be included in the response.
+        schema:
+          type: boolean
+          example: true
+      responses:
+        '200':
+          description: Get room session response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RoomSession'
+        '404':
+          $ref: '#/components/responses/video_ResourceNotFound'
+      description: Returns the room session identified by `room_session_id`, including its room, active status, and lifecycle timestamps. Use `include_participants` to include its participant records.
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /room_sessions/{room_session_id}/actions/end:
+    post:
+      summary: End a room session
+      description: 'Note: this will also kick all participants currently present in the room'
+      operationId: EndSession
+      x-endpoint-cost: medium
+      tags:
+      - Room Sessions
+      security: []
+      parameters:
+      - name: room_session_id
+        in: path
+        description: The unique identifier of a room session.
+        required: true
+        schema:
+          type: string
+          format: uuid
+          example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+      responses:
+        '200':
+          description: Success Action Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      result:
+                        type: string
+                        example: ok
+        4XX:
+          $ref: '#/components/responses/video_GenericErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /room_sessions/{room_session_id}/actions/kick:
+    post:
+      summary: Kick participants from a room session
+      description: Removes the selected participants from the specified room session. Apply the action to a list of participant IDs or to `all`, with optional participant IDs excluded from the action.
+      operationId: KickParticipantInSession
+      x-endpoint-cost: medium
+      tags:
+      - Room Sessions
+      security: []
+      parameters:
+      - name: room_session_id
+        in: path
+        description: The unique identifier of a room session.
+        required: true
+        schema:
+          type: string
+          format: uuid
+          example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+      requestBody:
+        description: Parameters that can be defined during Kick action.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActionsParticipantsRequest'
+      responses:
+        '200':
+          description: Success Action Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      result:
+                        type: string
+                        example: ok
+        4XX:
+          $ref: '#/components/responses/video_GenericErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /room_sessions/{room_session_id}/actions/mute:
+    post:
+      summary: Mute participants in room session
+      description: Mutes the selected participants in the specified room session. Apply the action to a list of participant IDs or to `all`, with optional participant IDs excluded from the action.
+      operationId: MuteParticipantInSession
+      x-endpoint-cost: medium
+      tags:
+      - Room Sessions
+      security: []
+      parameters:
+      - name: room_session_id
+        in: path
+        description: The unique identifier of a room session.
+        required: true
+        schema:
+          type: string
+          format: uuid
+          example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+      requestBody:
+        description: Parameters that can be defined during Mute action.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActionsParticipantsRequest'
+      responses:
+        '200':
+          description: Success Action Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      result:
+                        type: string
+                        example: ok
+        4XX:
+          $ref: '#/components/responses/video_GenericErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /room_sessions/{room_session_id}/actions/unmute:
+    post:
+      summary: Unmute participants in room session
+      description: Unmutes the selected participants in the specified room session. Apply the action to a list of participant IDs or to `all`, with optional participant IDs excluded from the action.
+      operationId: UnmuteParticipantInSession
+      x-endpoint-cost: medium
+      tags:
+      - Room Sessions
+      security: []
+      parameters:
+      - name: room_session_id
+        in: path
+        description: The unique identifier of a room session.
+        required: true
+        schema:
+          type: string
+          format: uuid
+          example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+      requestBody:
+        description: Parameters that can be defined during Unmute action.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActionsParticipantsRequest'
+      responses:
+        '200':
+          description: Success Action Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      result:
+                        type: string
+                        example: ok
+        4XX:
+          $ref: '#/components/responses/video_GenericErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /room_sessions/{room_session_id}/participants:
+    get:
+      summary: View a list of room participants
+      description: Returns a paginated list of participants for the specified room session. Filter participants by join, update, or leave date and by participant context.
+      operationId: RetrieveListRoomParticipants
+      x-endpoint-cost: medium
+      tags:
+      - Room Sessions
+      parameters:
+      - name: room_session_id
+        in: path
+        description: The unique identifier of a room session.
+        required: true
+        schema:
+          type: string
+          format: uuid
+          example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+      - name: filter
+        in: query
+        style: deepObject
+        explode: true
+        required: false
+        description: 'Consolidated filter parameter (deepObject style). Originally: filter[date_joined_at][eq], filter[date_joined_at][gte], filter[date_joined_at][lte], filter[date_updated_at][eq], filter[date_updated_at][gte], filter[date_updated_at][lte], filter[date_left_at][eq], filter[date_left_at][gte], filter[date_left_at][lte], filter[context]'
+        schema:
+          type: object
+          properties:
+            date_joined_at:
+              type: object
+              properties:
+                eq:
+                  type: string
+                  format: date
+                  example: '2021-04-25'
+                  description: ISO 8601 date for filtering room participants that joined on that date.
+                gte:
+                  type: string
+                  format: date
+                  example: '2021-04-25'
+                  description: ISO 8601 date for filtering room participants that joined on or after that date.
+                lte:
+                  type: string
+                  format: date
+                  example: '2021-04-25'
+                  description: ISO 8601 date for filtering room participants that joined on or before that date.
+            date_updated_at:
+              type: object
+              properties:
+                eq:
+                  type: string
+                  format: date
+                  example: '2021-04-25'
+                  description: ISO 8601 date for filtering room participants updated on that date.
+                gte:
+                  type: string
+                  format: date
+                  example: '2021-04-25'
+                  description: ISO 8601 date for filtering room participants updated on or after that date.
+                lte:
+                  type: string
+                  format: date
+                  example: '2021-04-25'
+                  description: ISO 8601 date for filtering room participants updated on or before that date.
+            date_left_at:
+              type: object
+              properties:
+                eq:
+                  type: string
+                  format: date
+                  example: '2021-04-25'
+                  description: ISO 8601 date for filtering room participants that left on that date.
+                gte:
+                  type: string
+                  format: date
+                  example: '2021-04-25'
+                  description: ISO 8601 date for filtering room participants that left on or after that date.
+                lte:
+                  type: string
+                  format: date
+                  example: '2021-04-25'
+                  description: ISO 8601 date for filtering room participants that left on or before that date.
+            context:
+              type: string
+              example: Alice
+              description: Filter room participants based on the context.
+      - $ref: '#/components/parameters/video_PageConsolidated'
+      responses:
+        '200':
+          description: List room participants response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RoomParticipant'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        4XX:
+          $ref: '#/components/responses/video_GenericErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+components:
+  schemas:
+    PaginationMeta:
+      type: object
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 55
+        page_number:
+          type: integer
+          example: 2
+        page_size:
+          type: integer
+          example: 25
+    ActionsParticipantsRequest:
+      type: object
+      properties:
+        participants:
+          description: Either a list of participant id to perform the action on, or the keyword "all" to perform the action on all participant.
+          oneOf:
+          - type: string
+            example: all
+            enum:
+            - all
+          - type: array
+            items:
+              type: string
+              format: uuid
+              example: 7b61621f-62e0-4aad-ab11-9fd19e272e73
+        exclude:
+          description: List of participant id to exclude from the action.
+          type: array
+          items:
+            type: string
+            format: uuid
+            example: 7b61621f-62e0-4aad-ab11-9fd19e272e73
+    RoomSession:
+      type: object
+      properties:
+        id:
+          description: A unique identifier for the room session.
+          type: string
+          format: uuid
+          example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+        room_id:
+          description: Identify the room hosting that room session.
+          type: string
+          format: uuid
+          example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777b0
+        active:
+          description: Shows if the room session is active or not.
+          type: boolean
+          example: false
+        created_at:
+          description: ISO 8601 timestamp when the room session was created.
+          type: string
+          format: date-time
+          example: '2021-03-26T17:51:59.588408Z'
+        updated_at:
+          description: ISO 8601 timestamp when the room session was updated.
+          type: string
+          format: date-time
+          example: '2021-03-26T17:51:59.588408Z'
+        ended_at:
+          description: ISO 8601 timestamp when the room session has ended.
+          type: string
+          format: date-time
+          example: '2021-03-26T17:51:59.588408Z'
+        participants:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoomParticipant'
+        record_type:
+          type: string
+          example: room_session
+          readOnly: true
+      example:
+        id: 7b61621f-62e0-4aad-ab11-9fd19e272e73
+        room_id: 7b61621f-5fe4-4aad-ab11-9fd19e272e73
+        active: false
+        created_at: '2021-04-16T09:46:20.954863Z'
+        updated_at: '2021-04-16T10:24:55.962200Z'
+        ended_at: '2021-04-16T10:24:55.962200Z'
+        participants: []
+        record_type: room_session
+    video_Error:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          additionalProperties: true
+      type: object
+    RoomParticipant:
+      type: object
+      properties:
+        id:
+          description: A unique identifier for the room participant.
+          type: string
+          format: uuid
+          example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+        session_id:
+          description: Identify the room session that participant is part of.
+          type: string
+          format: uuid
+          example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777b0
+        context:
+          description: Context provided to the given participant through the client SDK
+          type: string
+          example: Alice
+        joined_at:
+          description: ISO 8601 timestamp when the participant joined the session.
+          type: string
+          format: date-time
+          example: '2021-03-26T17:51:59.588408Z'
+        updated_at:
+          description: ISO 8601 timestamp when the participant was updated.
+          type: string
+          format: date-time
+          example: '2021-03-26T17:51:59.588408Z'
+        left_at:
+          description: ISO 8601 timestamp when the participant left the session.
+          type: string
+          format: date-time
+          example: '2021-03-26T17:51:59.588408Z'
+        record_type:
+          type: string
+          example: room_participant
+          readOnly: true
+      example:
+        id: 7b61621f-62e0-4aad-ab11-9fd19e272e73
+        session_id: 7b61621f-5fe4-4aad-ab11-9fd19e272e73
+        context: Alice
+        joined_at: '2021-04-16T09:46:20.954863Z'
+        updated_at: '2021-04-16T10:24:55.962200Z'
+        left_at: '2021-04-16T10:24:55.962200Z'
+        record_type: room_participant
+  responses:
+    video_ResourceNotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/video_Error'
+          example:
+            code: string
+            title: string
+            detail: string
+            source:
+              pointer: string
+              parameter: string
+    video_GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: Error
+    ListRoomSessionsResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/RoomSession'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: List room sessions response.
+    ActionSuccessResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                properties:
+                  result:
+                    example: ok
+                    type: string
+                type: object
+            type: object
+      description: Success Action Response
+    video_ResourceNotFound_2:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/video_Error'
+      description: Resource not found
+    GetRoomSessionResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/RoomSession'
+            type: object
+      description: Get room session response.
+    ListRoomParticipantsResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/RoomParticipant'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: List room participants response.
+  parameters:
+    video_PageConsolidated:
+      name: page
+      in: query
+      style: deepObject
+      explode: true
+      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
+      schema:
+        type: object
+        properties:
+          size:
+            type: integer
+            minimum: 1
+            maximum: 250
+            default: 20
+            description: The size of the page.
+          number:
+            type: integer
+            minimum: 1
+            default: 1
+            description: The page number to load.
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    pay-connectors_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key, not the processor bearer token.
+    telnyxApiKey:
+      type: http
+      scheme: bearer
+      description: Management-only Telnyx account credential.
+x-refined-from:
+- telnyx-openapi.json
+- telnyx-openapi.yml
+- telnyx-openapi_2.json
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

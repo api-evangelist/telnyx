@@ -1,0 +1,752 @@
+openapi: 3.2.0
+info:
+  title: Telnyx SIM Card Orders API
+  version: 2.0.0
+  contact:
+    email: support@telnyx.com
+  x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged SIM Card Orders across 3 of this provider''s published API definitions: telnyx-openapi.json, telnyx-openapi.yml, telnyx-openapi_2.json. Each path carries the servers of the definition it was published in.'
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: SIM Card Orders
+  description: SIM Card Orders operations
+paths:
+  /sim_card_order_preview:
+    post:
+      summary: Preview SIM card orders
+      description: Previews a SIM card order purchase, returning estimated costs and details before you place the order. The preview is processed asynchronously.
+      operationId: PreviewSimCardOrders
+      tags:
+      - SIM Card Orders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - quantity
+              - address_id
+              properties:
+                quantity:
+                  type: integer
+                  minimum: 1
+                  description: The amount of SIM cards that the user would like to purchase in the SIM card order.
+                  example: 21
+                address_id:
+                  type: string
+                  description: Uniquely identifies the address for the order.
+                  example: '1293384261075731499'
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SIMCardOrderPreview'
+        '422':
+          $ref: '#/components/responses/wireless_UnprocessableEntity_c5290d5308'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /sim_card_orders:
+    get:
+      summary: Get all SIM card orders
+      description: Get all SIM card orders according to filters.
+      operationId: GetSimCardOrders
+      tags:
+      - SIM Card Orders
+      parameters:
+      - $ref: '#/components/parameters/FilterSIMCardOrdersConsolidated'
+      - $ref: '#/components/parameters/wireless_PageConsolidated_c5290d5308'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SIMCardOrder'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+          description: Successful Response
+        '401':
+          description: Unauthorized
+        default:
+          $ref: '#/components/responses/wireless_GenericErrorResponse_c5290d5308'
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimCardOrderCreate'
+        required: true
+      tags:
+      - SIM Card Orders
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SIMCardOrder'
+          description: Successful Response
+        '401':
+          description: Unauthorized
+        default:
+          $ref: '#/components/responses/wireless_GenericErrorResponse_c5290d5308'
+      summary: Create a SIM card order
+      description: Creates a new order for physical SIM cards, including quantity and shipping details, and returns the created order.
+      operationId: CreateSimCardOrder
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /sim_card_orders/{id}:
+    get:
+      summary: Get a single SIM card order
+      description: Returns the details of a single SIM card order by its ID, including its status.
+      operationId: GetSimCardOrder
+      tags:
+      - SIM Card Orders
+      parameters:
+      - $ref: '#/components/parameters/ResourceId'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SIMCardOrder'
+          description: Successful Response
+        '404':
+          $ref: '#/components/responses/ResourceNotFound'
+        default:
+          $ref: '#/components/responses/wireless_GenericErrorResponse_c5290d5308'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+components:
+  schemas:
+    PaginationMeta:
+      type: object
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 55
+        page_number:
+          type: integer
+          example: 2
+        page_size:
+          type: integer
+          example: 25
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
+    SimCardOrderCreate:
+      title: SimCardOrderCreate
+      type: object
+      properties:
+        address_id:
+          type: string
+          description: Uniquely identifies the address for the order.
+          example: '1293384261075731499'
+        quantity:
+          description: The amount of SIM cards to order.
+          type: integer
+          minimum: 1
+          example: 23
+      required:
+      - address_id
+      - quantity
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    documents_Error:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          additionalProperties: true
+      type: object
+    SIMCardOrderPreview:
+      title: SIMCardOrderPreview
+      type: object
+      properties:
+        total_cost:
+          type: object
+          properties:
+            amount:
+              type: string
+              description: A string representing the cost amount.
+              example: '2.32'
+            currency:
+              type: string
+              description: ISO 4217 currency string.
+              example: USD
+        shipping_cost:
+          type: object
+          properties:
+            amount:
+              type: string
+              description: A string representing the cost amount.
+              example: '2.32'
+            currency:
+              type: string
+              description: ISO 4217 currency string.
+              example: USD
+        sim_cards_cost:
+          type: object
+          properties:
+            amount:
+              type: string
+              description: A string representing the cost amount.
+              example: '2.32'
+            currency:
+              type: string
+              description: ISO 4217 currency string.
+              example: USD
+        record_type:
+          type: string
+          description: Identifies the type of the resource.
+          example: sim_card_order_preview
+          readOnly: true
+        quantity:
+          type: integer
+          description: The amount of SIM cards requested in the SIM card order.
+          example: 21
+    SIMCardOrder:
+      title: SIMCardOrder
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identifies the resource.
+          readOnly: true
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+        record_type:
+          type: string
+          description: Identifies the type of the resource.
+          readOnly: true
+          example: sim_card_order
+        quantity:
+          type: integer
+          minimum: 1
+          description: The amount of SIM cards requested in the SIM card order.
+          example: 21
+        cost:
+          type: object
+          description: An object representing the total cost of the order.
+          properties:
+            amount:
+              type: string
+              description: A string representing the cost amount.
+              example: '2.32'
+            currency:
+              type: string
+              description: Filter by ISO 4217 currency string.
+              example: USD
+          example:
+            amount: '2.52'
+            currency: USD
+        order_address:
+          type: object
+          properties:
+            id:
+              type: string
+              description: Uniquely identifies the address for the order.
+              example: '1293384261075731499'
+            first_name:
+              type: string
+              description: The first name of the shipping recipient.
+              example: John
+            last_name:
+              type: string
+              description: The last name of the shipping recipient.
+              example: Smith
+            business_name:
+              type: string
+              description: The name of the business where the address is located.
+              example: Telnyx LLC
+            street_address:
+              type: string
+              description: The name of the street where the address is located.
+              example: 600 Congress Avenue
+            extended_address:
+              type: string
+              description: Supplemental field for address information.
+              example: 14th Floor
+            locality:
+              type: string
+              description: The name of the city where the address is located.
+              example: Austin
+            administrative_area:
+              type: string
+              description: State or province where the address is located.
+              example: TX
+            country_code:
+              type: string
+              description: The mobile operator two-character (ISO 3166-1 alpha-2) origin country code.
+              example: US
+            postal_code:
+              type: string
+              description: Postal code for the address.
+              example: '78701'
+          description: An object representing the address information from when the order was submitted.
+          readOnly: true
+          example:
+            id: '1293384261075731499'
+            street_address: 600 Congress Avenue
+            extended_address: 14th Floor
+            locality: Austin
+            administrative_area: TX
+            country_code: US
+            postal_code: '78701'
+        tracking_url:
+          type: string
+          format: uri
+          description: The URL used to get tracking information about the order.
+          example: http://www.example.com/
+        status:
+          type: string
+          description: The current status of the SIM Card order.<ul> <li><code>pending</code> - the order is waiting to be processed.</li> <li><code>processing</code> - the order is currently being processed.</li> <li><code>ready_to_ship</code> - the order is ready to be shipped to the specified <b>address</b>.</li> <li><code>shipped</code> - the order was shipped and is on its way to be delivered to the specified <b>address</b>.</li> <li><code>delivered</code> - the order was delivered to the specified <b>address</b>.</li> <li><code>canceled</code> - the order was canceled.</li> </ul>
+          enum:
+          - pending
+          - processing
+          - ready_to_ship
+          - shipped
+          - delivered
+          - canceled
+          example: pending
+        created_at:
+          type: string
+          description: ISO 8601 formatted date-time indicating when the resource was last created.
+          readOnly: true
+          example: '2018-02-02T22:25:27.521Z'
+        updated_at:
+          type: string
+          description: ISO 8601 formatted date-time indicating when the resource was last updated.
+          readOnly: true
+          example: '2018-02-02T22:25:27.521Z'
+    wireless_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/wireless_Error'
+          type: array
+      type: object
+    wireless_Error:
+      properties:
+        code:
+          type: string
+        detail:
+          type: string
+        meta:
+          additionalProperties: true
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+          type: object
+        title:
+          type: string
+      required:
+      - code
+      - title
+      type: object
+    Errors_2:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+      type: object
+    Error:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+          x-format: int64
+        title:
+          type: string
+        detail:
+          type: string
+          description: A human-readable explanation of the error.
+        description:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          additionalProperties: true
+      example:
+        title: Invalid street address
+        source:
+          pointer: /street_address
+        code: '20207'
+        description: The street address provided is invalid.
+      type: object
+  parameters:
+    wireless_PageConsolidated_c5290d5308:
+      name: page
+      in: query
+      explode: true
+      description: 'Consolidated pagination parameter (deepObject style). Originally: page[number], page[size]'
+      schema:
+        type: object
+        properties:
+          number:
+            type: integer
+            minimum: 1
+            default: 1
+            description: The page number to load.
+          size:
+            type: integer
+            minimum: 1
+            maximum: 250
+            default: 20
+            description: The size of the page.
+    FilterSIMCardOrdersConsolidated:
+      name: filter
+      in: query
+      explode: true
+      description: 'Consolidated filter parameter for SIM card orders (deepObject style). Originally: filter[created_at], filter[updated_at], filter[quantity], filter[cost.amount], filter[cost.currency], filter[address.id], filter[address.street_address], filter[address.extended_address], filter[address.locality], filter[address.administrative_area], filter[address.country_code], filter[address.postal_code]'
+      schema:
+        type: object
+        properties:
+          created_at:
+            type: string
+            format: date-time
+            example: '2018-02-02T22:25:27.521Z'
+            description: Filter by ISO 8601 formatted date-time string matching resource creation date-time.
+          updated_at:
+            type: string
+            format: date-time
+            example: '2018-02-02T22:25:27.521Z'
+            description: Filter by ISO 8601 formatted date-time string matching resource last update date-time.
+          quantity:
+            type: integer
+            example: 21
+            description: Filter orders by how many SIM cards were ordered.
+          cost.amount:
+            description: The total monetary amount of the order.
+            type: string
+            example: '2.53'
+          cost.currency:
+            description: Filter by ISO 4217 currency string.
+            type: string
+            example: USD
+          address.id:
+            type: string
+            example: '1293384261075731499'
+            description: Uniquely identifies the address for the order.
+          address.street_address:
+            type: string
+            example: 600 Congress Avenue
+            description: Returns entries with matching name of the street where the address is located.
+          address.extended_address:
+            type: string
+            example: 14th Floor
+            description: Returns entries with matching name of the supplemental field for address information.
+          address.locality:
+            type: string
+            example: Austin
+            description: Filter by the name of the city where the address is located.
+          address.administrative_area:
+            type: string
+            example: TX
+            description: Filter by state or province where the address is located.
+          address.country_code:
+            type: string
+            example: US
+            description: Filter by the mobile operator two-character (ISO 3166-1 alpha-2) origin country code.
+          address.postal_code:
+            type: string
+            example: '78701'
+            description: Filter by postal code for the address.
+    ResourceId:
+      name: id
+      description: Identifies the resource.
+      in: path
+      required: true
+      schema:
+        format: uuid
+        type: string
+        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+    wireless_PageConsolidated:
+      description: 'Consolidated pagination parameter (deepObject style). Originally: page[number], page[size]'
+      explode: true
+      in: query
+      name: page
+      schema:
+        properties:
+          number:
+            default: 1
+            description: The page number to load.
+            minimum: 1
+            type: integer
+          size:
+            default: 20
+            description: The size of the page.
+            maximum: 250
+            minimum: 1
+            type: integer
+        type: object
+  responses:
+    wireless_UnprocessableEntity_c5290d5308:
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          examples:
+            unprocessableEntity:
+              summary: Request could not be processed
+              value:
+                errors:
+                - code: '10027'
+                  title: Unprocessable Entity
+                  detail: The server understood the syntax of the request but was unable to process the instructions.
+    wireless_GenericErrorResponse_c5290d5308:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          examples:
+            unexpectedError:
+              summary: Unexpected API error
+              value:
+                errors:
+                - code: '10007'
+                  title: Unexpected error
+                  detail: An unexpected error occured.
+    ResourceNotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/documents_Error'
+    wireless_ResourceNotFound:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/wireless_Error'
+      description: Resource not found
+    wireless_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/wireless_Errors'
+      description: Unexpected error
+    GetAllSimCardOrdersResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/SIMCardOrder'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful Response
+    CreateSimCardOrderResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/SIMCardOrder'
+            type: object
+      description: Successful Response
+    SIMCardOrdersPreviewResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/SIMCardOrderPreview'
+            type: object
+      description: Successful Response
+    GetSimCardOrderResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/SIMCardOrder'
+            type: object
+      description: Successful Response
+    wireless_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/wireless_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    pay-connectors_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key, not the processor bearer token.
+    telnyxApiKey:
+      type: http
+      scheme: bearer
+      description: Management-only Telnyx account credential.
+x-refined-from:
+- telnyx-openapi.json
+- telnyx-openapi.yml
+- telnyx-openapi_2.json
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

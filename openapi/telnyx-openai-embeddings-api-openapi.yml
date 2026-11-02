@@ -1,0 +1,350 @@
+openapi: 3.2.0
+info:
+  title: Telnyx OpenAI Embeddings API
+  version: 2.0.0
+  contact:
+    email: support@telnyx.com
+  x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged OpenAI Embeddings across 3 of this provider''s published API definitions: telnyx-openapi.json, telnyx-openapi.yml, telnyx-openapi_2.json. Each path carries the servers of the definition it was published in.'
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: OpenAI Embeddings
+  description: OpenAI-compatible embeddings endpoints for generating vector representations of text
+paths:
+  /ai/openai/embeddings:
+    post:
+      tags:
+      - OpenAI Embeddings
+      summary: Create embeddings
+      description: Creates an embedding vector representing the input text. This endpoint is compatible with the OpenAI Embeddings API and may be used with the OpenAI JS or Python SDK by setting the base URL to `https://api.telnyx.com/v2/ai/openai`.
+      operationId: create_openai_embeddings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenAIEmbeddingRequest'
+            example:
+              input: The quick brown fox jumps over the lazy dog
+              model: thenlper/gte-large
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenAIEmbeddingResponse'
+              example:
+                object: list
+                data:
+                - object: embedding
+                  embedding:
+                  - 0
+                  index: 0
+                model: string
+                usage:
+                  prompt_tokens: 0
+                  total_tokens: 0
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /ai/openai/embeddings/models:
+    get:
+      tags:
+      - OpenAI Embeddings
+      summary: List embedding models
+      description: Returns a list of available embedding models. This endpoint is compatible with the OpenAI Models API format.
+      operationId: list_openai_embedding_models
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenAIEmbeddingModelsResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+components:
+  schemas:
+    OpenAIEmbeddingData:
+      type: object
+      properties:
+        object:
+          type: string
+          default: embedding
+          description: The object type, always 'embedding'
+        embedding:
+          type: array
+          items:
+            type: number
+          description: The embedding vector
+        index:
+          type: integer
+          description: The index of the embedding in the list of embeddings
+      required:
+      - object
+      - embedding
+      - index
+      title: OpenAIEmbeddingData
+    OpenAIEmbeddingResponse:
+      type: object
+      properties:
+        object:
+          type: string
+          default: list
+          description: The object type, always 'list'
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OpenAIEmbeddingData'
+          description: List of embedding objects
+        model:
+          type: string
+          description: The model used for embedding
+        usage:
+          $ref: '#/components/schemas/OpenAIEmbeddingUsage'
+      required:
+      - object
+      - data
+      - model
+      - usage
+      title: OpenAIEmbeddingResponse
+    OpenAIEmbeddingModelsResponse:
+      type: object
+      properties:
+        object:
+          type: string
+          default: list
+          description: The object type, always 'list'
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OpenAIEmbeddingModelMetadata'
+          description: List of available embedding models
+      required:
+      - object
+      - data
+      title: OpenAIEmbeddingModelsResponse
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+      example:
+        detail:
+        - loc:
+          - body
+          - name
+          msg: Field required
+          type: missing
+    OpenAIEmbeddingRequest:
+      type: object
+      properties:
+        input:
+          oneOf:
+          - type: string
+            description: A single text string to embed
+          - type: array
+            items:
+              type: string
+            description: An array of text strings to embed
+          description: Input text to embed. Can be a string or array of strings.
+        model:
+          type: string
+          description: ID of the model to use. Use the List embedding models endpoint to see available models.
+          example: thenlper/gte-large
+        encoding_format:
+          type: string
+          enum:
+          - float
+          - base64
+          default: float
+          description: The format to return the embeddings in.
+        dimensions:
+          type: integer
+          description: The number of dimensions the resulting output embeddings should have. Only supported in some models.
+        user:
+          type: string
+          description: A unique identifier representing your end-user for monitoring and abuse detection.
+      required:
+      - input
+      - model
+      title: OpenAIEmbeddingRequest
+    OpenAIEmbeddingModelMetadata:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The model identifier
+          example: thenlper/gte-large
+        object:
+          type: string
+          default: model
+          description: The object type, always 'model'
+        created:
+          type: integer
+          description: Unix timestamp of when the model was created
+        owned_by:
+          type: string
+          description: The organization that owns the model
+          example: telnyx
+      required:
+      - id
+      - object
+      - created
+      - owned_by
+      title: OpenAIEmbeddingModelMetadata
+    OpenAIEmbeddingUsage:
+      type: object
+      properties:
+        prompt_tokens:
+          type: integer
+          description: Number of tokens in the input
+        total_tokens:
+          type: integer
+          description: Total number of tokens used
+      required:
+      - prompt_tokens
+      - total_tokens
+      title: OpenAIEmbeddingUsage
+    ValidationError:
+      title: ValidationError
+      required:
+      - loc
+      - msg
+      - type
+      type: object
+      properties:
+        loc:
+          title: Location
+          type: array
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+    HTTPValidationError_2:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    pay-connectors_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key, not the processor bearer token.
+    telnyxApiKey:
+      type: http
+      scheme: bearer
+      description: Management-only Telnyx account credential.
+x-refined-from:
+- telnyx-openapi.json
+- telnyx-openapi.yml
+- telnyx-openapi_2.json
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

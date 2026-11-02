@@ -1,0 +1,960 @@
+openapi: 3.2.0
+info:
+  title: Telnyx Detail Records API
+  version: 2.0.0
+  contact:
+    email: support@telnyx.com
+  x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Detail Records across 3 of this provider''s published API definitions: telnyx-openapi.json, telnyx-openapi.yml, telnyx-openapi_2.json. Each path carries the servers of the definition it was published in.'
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Detail Records
+  description: Detail Records operations
+paths:
+  /detail_records:
+    get:
+      tags:
+      - Detail Records
+      summary: Search detail records
+      description: Search for any detail record across the Telnyx Platform
+      operationId: SearchDetailRecords
+      parameters:
+      - name: filter
+        in: query
+        style: deepObject
+        explode: true
+        description: 'Filter records on a given record attribute and value. <br/>Example: filter[status]=delivered. <br/>Required: filter[record_type] must be specified. <br/>The valid filter fields depend on the record_type: filtering by a field that does not exist for the selected record_type is rejected with a 400 error. Call-control and sip-trunking records use started_at, finished_at and answered_at (they have no created_at); messaging records use created_at. To list the fields available for a record_type, use the /v2/detail_records/options endpoint.'
+        required: false
+        schema:
+          type: object
+          properties:
+            record_type:
+              type: string
+              enum:
+              - ai-voice-assistant
+              - amd
+              - call-control
+              - conference
+              - conference-participant
+              - embedding
+              - fax
+              - inference
+              - inference-speech-to-text
+              - media_storage
+              - media-streaming
+              - messaging
+              - noise-suppression
+              - recording
+              - sip-trunking
+              - siprec-client
+              - stt
+              - tts
+              - verify
+              - webrtc
+              - wireless
+              description: Filter by the given record type.
+            date_range:
+              type: string
+              enum:
+              - yesterday
+              - today
+              - tomorrow
+              - last_week
+              - this_week
+              - next_week
+              - last_month
+              - this_month
+              - next_month
+              description: 'Filter by the given user-friendly date range. You can specify one of the following enum values, or a dynamic one using this format: last_N_days.'
+          required:
+          - record_type
+          additionalProperties: true
+        examples:
+          filter[record_type]=messaging:
+            value:
+              record_type: messaging
+            summary: Searches for messaging detail records
+          filter[record_type]=verify:
+            value:
+              record_type: verify
+            summary: Searches for verify detail records
+          filter[date_range]=today:
+            value:
+              record_type: messaging
+              date_range: today
+            summary: Searches for records with timestamp starting at `00:00:00` of the current day
+          filter[date_range]=yesterday:
+            value:
+              record_type: messaging
+              date_range: yesterday
+            summary: Searches for records with timestamp starting at `00:00:00` of yesterday
+          filter[date_range]=last_month:
+            value:
+              record_type: messaging
+              date_range: last_month
+            summary: Searches for records with timestamp starting at `00:00:00` on the first day of the month
+          filter[created_at][gte]=2021-06-22:
+            value:
+              record_type: messaging
+              created_at:
+                gte: '2021-06-22'
+            summary: Searches for records with `created_at` starting at `2021-06-22`
+          filter[created_at][lt]=2021-06-23:
+            value:
+              record_type: messaging
+              created_at:
+                lt: '2021-06-23'
+            summary: Searches for records with `created_at` ending at `2021-06-22`
+          filter[direction]=inbound:
+            value:
+              record_type: messaging
+              direction: inbound
+            summary: Searches for records which have the property `direction` equal to `inbound`
+          filter[cld][contains]=456:
+            value:
+              record_type: messaging
+              cld:
+                contains: '456'
+            summary: Searches for records which have the property `cld` containing the pattern `456`
+          filter[cld][starts_with]=123:
+            value:
+              record_type: messaging
+              cld:
+                starts_with: '123'
+            summary: Searches for records which have the property `cld` starting with the prefix `123`
+          filter[cld][ends_with]=789:
+            value:
+              record_type: messaging
+              cld:
+                ends_with: '789'
+            summary: Searches for records which have the property `cld` ending with the suffix `789`
+      - name: sort
+        description: 'Specifies the sort order for results. <br/>Example: sort=-created_at <br/>The valid sort fields depend on the record_type: sort by a field that does not exist for the selected record_type is rejected with a 400 error. Call-control and sip-trunking records use started_at, finished_at and answered_at (they have no created_at); messaging records use created_at. To list the fields available for a record_type, use the /v2/detail_records/options endpoint.'
+        in: query
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          sort=created_at:
+            value:
+            - created_at
+            summary: Sorts search results using the `created_at` date-time in ascending order
+          sort=-created_at:
+            value:
+            - -created_at
+            summary: Sorts search results using the `created_at` date-time in descending order
+      - name: page
+        in: query
+        style: deepObject
+        explode: true
+        description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
+        schema:
+          type: object
+          properties:
+            number:
+              type: integer
+              format: int32
+              default: 1
+              minimum: 1
+              description: Page number
+            size:
+              type: integer
+              format: int32
+              default: 20
+              minimum: 1
+              maximum: 50
+              description: Page size
+        examples:
+          page[number]=1&page[size]=20:
+            value:
+              number: 1
+              size: 20
+            summary: Default pagination with first page and 20 items per page
+          page[number]=2&page[size]=20:
+            value:
+              number: 2
+              size: 20
+            summary: Second page with 20 items per page
+          page[number]=1&page[size]=50:
+            value:
+              number: 1
+              size: 50
+            summary: First page with maximum 50 items per page
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailRecordsSearchResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/detail-records_ErrorResponse'
+      x-latency-category: interactive
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+components:
+  schemas:
+    ConferenceParticipantDetailRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Participant id
+          example: 3ca7bd3d-7d82-4e07-9df4-009123068320
+        user_id:
+          type: string
+          description: User id
+          example: 3ca7bd3d-7d82-4e07-9df4-009123068320
+        conference_id:
+          type: string
+          description: Conference id
+          example: 3ca7bd3d-7d82-4e07-9df4-009123068320
+        joined_at:
+          type: string
+          description: Participant join time
+          format: date-time
+          example: '2020-07-01T00:00:00-06:00'
+        left_at:
+          type: string
+          description: Participant leave time
+          format: date-time
+          example: '2020-07-01T00:00:00-06:00'
+        destination_number:
+          type: string
+          description: Number called by the participant to join the conference
+          example: '+18005550199'
+        originating_number:
+          type: string
+          description: Participant origin number used in the conference call
+          example: '+18005550199'
+        call_leg_id:
+          type: string
+          description: Telnyx UUID that identifies the conference call leg
+          example: 3ca7bd3d-7d82-4e07-9df4-009123068320
+        call_session_id:
+          type: string
+          description: Telnyx UUID that identifies with conference call session
+          example: 3ca7bd3d-7d82-4e07-9df4-009123068320
+        call_sec:
+          type: integer
+          description: Duration of the conference call in seconds
+          example: 100
+        billed_sec:
+          type: integer
+          description: Duration of the conference call for billing purposes
+          example: 120
+        is_telnyx_billable:
+          type: boolean
+          description: Indicates whether Telnyx billing charges might be applicable
+          example: true
+        rate:
+          type: string
+          description: Currency amount per billing unit used to calculate the Telnyx billing cost
+          example: '0.002'
+        rate_measured_in:
+          type: string
+          description: Billing unit used to calculate the Telnyx billing cost
+          example: minutes
+        cost:
+          type: string
+          description: Currency amount for Telnyx billing cost
+          example: '0.004'
+        currency:
+          type: string
+          description: Telnyx account currency used to describe monetary values, including billing cost
+          example: USD
+        record_type:
+          type: string
+          example: conference_participant_detail_record
+          default: conference_participant_detail_record
+      required:
+      - record_type
+    detail-records_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/detail-records_Error'
+    SimCardUsageDetailRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for this SIM Card Usage
+          example: 3ca7bd3d-7d82-4e07-9df4-009123068320
+          format: uuid
+        created_at:
+          type: string
+          description: Event creation time
+          format: date-time
+          example: '2020-07-01T00:00:00Z'
+        closed_at:
+          type: string
+          description: Event close time
+          format: date-time
+          example: '2020-07-01T00:00:00Z'
+        ip_address:
+          type: string
+          description: Ip address that generated the event
+          example: 100.64.1.2
+        downlink_data:
+          type: number
+          description: Number of megabytes downloaded
+          example: 0.124
+        imsi:
+          type: string
+          description: International Mobile Subscriber Identity
+          example: '311210393720093'
+        mcc:
+          type: string
+          description: Mobile country code
+          example: '204'
+        mnc:
+          type: string
+          description: Mobile network code
+          example: '69'
+        currency:
+          type: string
+          description: Telnyx account currency used to describe monetary values, including billing cost
+          example: USD
+        data_unit:
+          type: string
+          description: Unit of wireless link consumption
+          example: MB
+        data_rate:
+          type: string
+          description: Currency amount per billing unit used to calculate the Telnyx billing cost
+          example: '0.06000'
+        sim_group_name:
+          type: string
+          description: Sim group name for sim card
+          example: SIMBillingInfo test - otheraccount
+        sim_card_id:
+          type: string
+          description: Unique identifier for SIM card
+          example: 7aa66686-b39f-456d-8edc-5b6cffb1432a
+        sim_group_id:
+          type: string
+          description: Unique identifier for SIM group
+          example: 6c07e2e9-cbc0-49ba-ac0d-c59b59646bb1
+        sim_card_tags:
+          type: string
+          description: User-provided tags
+          example: mytag
+        phone_number:
+          type: string
+          description: Telephone number associated to SIM card
+          example: '+15188490209'
+        uplink_data:
+          type: number
+          description: Number of megabytes uploaded
+          example: 0.7653
+        data_cost:
+          type: number
+          description: Data cost
+          example: 0.029283
+        record_type:
+          type: string
+          example: sim_card_usage
+          default: sim_card_usage
+      required:
+      - record_type
+    AmdDetailRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Feature invocation id
+          example: 3ca7bd3d-7d82-4e07-9df4-009123068320
+        invoked_at:
+          type: string
+          description: Feature invocation time
+          format: date-time
+          example: '2020-07-01T00:00:00Z'
+        feature:
+          type: string
+          description: Feature name
+          enum:
+          - PREMIUM
+        tags:
+          type: string
+          description: User-provided tags
+          example: tag1,tag2
+        billing_group_id:
+          type: string
+          description: Billing Group id
+          example: 01977831-abdd-4894-84f3-244385621424
+        billing_group_name:
+          type: string
+          description: Name of the Billing Group specified in billing_group_id
+          example: Billing group name
+        connection_id:
+          type: string
+          description: Connection id
+          example: '1684947189014463919'
+        connection_name:
+          type: string
+          description: Connection name
+          example: Name of the connection with id specified in connection_id field
+        call_leg_id:
+          type: string
+          description: Telnyx UUID that identifies the related call leg
+          example: 3ca7bd3d-7d82-4e07-9df4-009123068320
+        call_session_id:
+          type: string
+          description: Telnyx UUID that identifies the related call session
+          example: 3ca7bd3d-7d82-4e07-9df4-009123068320
+        is_telnyx_billable:
+          type: boolean
+          description: Indicates whether Telnyx billing charges might be applicable
+          example: true
+        rate:
+          type: string
+          description: Currency amount per billing unit used to calculate the Telnyx billing cost
+          example: '0.002'
+        rate_measured_in:
+          type: string
+          description: Billing unit used to calculate the Telnyx billing cost
+          example: invocations
+        cost:
+          type: string
+          description: Currency amount for Telnyx billing cost
+          example: '0.004'
+        currency:
+          type: string
+          description: Telnyx account currency used to describe monetary values, including billing cost
+          example: USD
+        record_type:
+          type: string
+          example: amd_detail_record
+          default: amd_detail_record
+      required:
+      - record_type
+    MessageDetailRecord:
+      type: object
+      properties:
+        uuid:
+          type: string
+          description: Unique identifier of the message
+          example: 3ca7bd3d-7d82-4e07-9df4-009123068320
+        user_id:
+          type: string
+          description: Identifier of the Telnyx account who owns the message
+          example: 3ca7bd3d-7d82-4e07-9df4-009123068320
+        completed_at:
+          type: string
+          description: Message completion time
+          format: date-time
+          example: '2020-07-01T00:00:00Z'
+        created_at:
+          type: string
+          description: Message creation time
+          format: date-time
+          example: '2020-07-01T00:00:00Z'
+        updated_at:
+          type: string
+          description: Message updated time
+          format: date-time
+          example: '2020-07-01T00:00:00Z'
+        sent_at:
+          type: string
+          description: Time when the message was sent
+          format: date-time
+          example: '2020-07-01T00:00:00Z'
+        carrier:
+          type: string
+          description: Country-specific carrier used to send or receive the message
+          example: T-Mobile USA
+        carrier_fee:
+          type: string
+          description: Fee charged by certain carriers in order to deliver certain message types. Telnyx passes this fee on to the customer according to our pricing table
+          example: '0.003'
+        cld:
+          type: string
+          description: The recipient of the message (to parameter in the Messaging API)
+          example: '+1555123456'
+        cli:
+          type: string
+          description: The sender of the message (from parameter in the Messaging API). For Alphanumeric ID messages, this is the sender ID value
+          example: '+1555123456'
+        country_code:
+          type: string
+          description: Two-letter representation of the country of the cld property using the ISO 3166-1 alpha-2 format
+          example: US
+        delivery_status:
+          type: string
+          description: Final webhook delivery status
+          example: 'success: webhook succeeded'
+        delivery_status_failover_url:
+          type: string
+          description: Failover customer-provided URL which Telnyx posts delivery status webhooks to
+          example: https://api.example.com/sms/telnyx/inbound
+        delivery_status_webhook_url:
+          type: string
+          description: Primary customer-provided URL which Telnyx posts delivery status webhooks to
+          example: https://api.example.com/sms/telnyx/inbound
+        direction:
+          type: string
+          description: Logical direction of the message from the Telnyx customer's perspective. It's inbound when the Telnyx customer receives the message, or outbound otherwise
+          example: outbound
+          enum:
+          - inbound
+          - outbound
+        fteu:
+          type: boolean
+          description: Indicates whether this is a Free-To-End-User (FTEU) short code message
+          example: false
+        mcc:
+          type: string
+          description: Mobile country code. Only available for certain products, such as Global Outbound-Only from Alphanumeric Sender ID
+          example: '204'
+        mnc:
+          type: string
+          description: Mobile network code. Only available for certain products, such as Global Outbound-Only from Alphanumeric Sender ID
+          example: '01'
+        message_type:
+          type: string
+          description: 'Describes the Messaging service used to send the message. Available services are: Short Message Service (SMS), Multimedia Messaging Service (MMS), and Rich Communication Services (RCS)'
+          example: SMS
+          enum:
+          - SMS
+          - MMS
+          - RCS
+        on_net:
+          type: boolean
+          description: Indicates whether both sender and recipient numbers are Telnyx-managed
+          example: true
+        profile_id:
+          type: string
+          description: Unique identifier of the Messaging Profile used to send or receive the message
+          example: 30ef55db-c4a2-4c4a-9804-a68077973d07
+        profile_name:
+          type: string
+          description: Name of the Messaging Profile used to send or receive the message
+          example: My Messaging Profile
+        source_country_code:
+          type: string
+          description: Two-letter representation of the country of the cli property using the ISO 3166-1 alpha-2 format
+          example: US
+        status:
+          type: string
+          description: Final status of the message after the delivery attempt
+          example: delivered
+          enum:
+          - gw_timeout
+          - delivered
+          - dlr_unconfirmed
+          - dlr_timeout
+          - received
+          - gw_reject
+          - failed
+        tags:
+          type: string
+          description: Comma-separated tags assigned to the Telnyx number associated with the message
+          example: tag1,tag2,tag3
+        rate:
+          type: string
+          description: Currency amount per billing unit used to calculate the Telnyx billing cost
+          example: '0.003'
+        currency:
+          type: string
+          description: Telnyx account currency used to describe monetary values, including billing cost
+          example: USD
+        cost:
+          type: string
+          description: Amount, in the user currency, for the Telnyx billing cost
+          example: '0.003'
+        errors:
+          type: array
+          description: Telnyx API error codes returned by the Telnyx gateway
+          items:
+            type: string
+            example: '40001'
+        parts:
+          type: integer
+          description: Number of message parts. The message is broken down in multiple parts when its length surpasses the limit of 160 characters
+          example: 2
+        record_type:
+          type: string
+          description: Identifies the record schema
+          example: message_detail_record
+          default: message_detail_record
+      required:
+      - record_type
+    VerifyDetailRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 0add777f-1549-46f7-84e9-ad7350f6aa97
+          description: Unique ID of the verification
+        verify_profile_id:
+          type: string
+          format: uuid
+          example: 49000176-1ab2-8bc1-352e-4009f6c37f82
+        delivery_status:
+          type: string
+          example: pending
+        verification_status:
+          type: string
+          example: pending
+        destination_phone_number:
+          type: string
+          description: E.164 formatted phone number
+          example: '+13124515883'
+        verify_channel_type:
+          description: 'Depending on the type of verification, the `verify_channel_id`
+
+            points to one of the following channel ids;
+
+            ---
+
+            verify_channel_type | verify_channel_id
+
+            ------------------- | -----------------
+
+            sms, psd2           | messaging_id
+
+            call, flashcall     | call_control_id
+
+            ---
+
+            '
+          type: string
+          enum:
+          - sms
+          - psd2
+          - call
+          - flashcall
+        verify_channel_id:
+          type: string
+          format: uuid
+          example: 5b7a8365-91f3-420a-befc-498d1efd6c20
+        created_at:
+          type: string
+          format: date-time
+          example: '2021-07-08T00:00:41.000000+00:00'
+        updated_at:
+          type: string
+          format: date-time
+          example: '2021-07-08T00:00:41.000000+00:00'
+        rate:
+          type: string
+          example: '0.002'
+          description: Currency amount per billing unit used to calculate the Telnyx billing costs
+        rate_measured_in:
+          type: string
+          example: number of occurrences
+          description: Billing unit used to calculate the Telnyx billing costs
+        verify_usage_fee:
+          type: string
+          example: '0.002'
+          description: Currency amount for Verify Usage Fee
+        currency:
+          type: string
+          example: USD
+          description: Telnyx account currency used to describe monetary values, including billing costs
+        record_type:
+          type: string
+          example: verification_detail_record
+          default: verification_detail_record
+      required:
+      - record_type
+    DetailRecordsSearchResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DetailRecord'
+        meta:
+          $ref: '#/components/schemas/detail-records_PaginationMeta'
+    MediaStorageDetailRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the Media Storage Event
+          example: 3ca7bd3d-7d82-4e07-9df4-009123068320
+        created_at:
+          type: string
+          description: Event creation time
+          format: date-time
+          example: '2020-07-01T00:00:00Z'
+        asset_id:
+          type: string
+          description: Asset id
+          example: a46f4764-4ce4-4391-804c-02f00bc4ff9b
+        user_id:
+          type: string
+          description: User id
+          example: 3ca7bd3d-7d82-4e07-9df4-009123068320
+        org_id:
+          type: string
+          description: Organization owner id
+          example: 3ca7bd3d-7d82-4e07-9df4-009123068320
+        action_type:
+          type: string
+          description: Type of action performed against the Media Storage API
+          example: upload
+        link_channel_type:
+          type: string
+          description: Link channel type
+          example: message
+        link_channel_id:
+          type: string
+          description: Link channel id
+          example: 2065f482-64b9-4680-a3a9-c6d3142efdf7
+        status:
+          type: string
+          description: Request status
+          example: failed
+        webhook_id:
+          type: string
+          description: Webhook id
+          example: b46f4764-4ce4-4391-804c-02f00bc4ff9b
+        rate:
+          type: string
+          description: Currency amount per billing unit used to calculate the Telnyx billing cost
+          example: '0.0001'
+        rate_measured_in:
+          type: string
+          description: Billing unit used to calculate the Telnyx billing cost
+          example: events
+        cost:
+          type: string
+          description: Currency amount for Telnyx billing cost
+          example: '0.004'
+        currency:
+          type: string
+          description: Telnyx account currency used to describe monetary values, including billing cost
+          example: USD
+        record_type:
+          type: string
+          example: media_storage
+          default: media_storage
+      required:
+      - record_type
+    DetailRecord:
+      type: object
+      description: An object following one of the schemas published in https://developers.telnyx.com/docs/api/v2/detail-records
+      oneOf:
+      - $ref: '#/components/schemas/MessageDetailRecord'
+        title: Message
+      - $ref: '#/components/schemas/ConferenceDetailRecord'
+        title: Conference
+      - $ref: '#/components/schemas/ConferenceParticipantDetailRecord'
+        title: Conference Participant
+      - $ref: '#/components/schemas/AmdDetailRecord'
+        title: AMD
+      - $ref: '#/components/schemas/VerifyDetailRecord'
+        title: Verify 2FA
+      - $ref: '#/components/schemas/SimCardUsageDetailRecord'
+        title: Sim Card Usage
+      - $ref: '#/components/schemas/MediaStorageDetailRecord'
+        title: Media Storage
+      required:
+      - record_type
+      discriminator:
+        propertyName: record_type
+    ConferenceDetailRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Conference id
+          example: 3ca7bd3d-7d82-4e07-9df4-009123068320
+        name:
+          type: string
+          description: Conference name
+          example: My Conference
+        user_id:
+          type: string
+          description: User id
+          example: 3ca7bd3d-7d82-4e07-9df4-009123068320
+        started_at:
+          type: string
+          description: Conference start time
+          format: date-time
+          example: '2020-07-01T00:00:00-06:00'
+        ended_at:
+          type: string
+          description: Conference end time
+          format: date-time
+          example: '2020-07-01T00:00:00-06:00'
+        expires_at:
+          type: string
+          description: Conference expiry time
+          format: date-time
+          example: '2020-07-01T00:00:00-06:00'
+        region:
+          type: string
+          description: Region where the conference is hosted
+          example: ch1
+        call_leg_id:
+          type: string
+          description: Telnyx UUID that identifies the conference call leg
+          example: 3ca7bd3d-7d82-4e07-9df4-009123068320
+        call_session_id:
+          type: string
+          description: Telnyx UUID that identifies with conference call session
+          example: 3ca7bd3d-7d82-4e07-9df4-009123068320
+        connection_id:
+          type: string
+          description: Connection id
+          example: '1583941447772537867'
+        call_sec:
+          type: integer
+          description: Duration of the conference call in seconds
+          example: 100
+        participant_count:
+          type: integer
+          description: Number of participants that joined the conference call
+          example: 5
+        participant_call_sec:
+          type: integer
+          description: Sum of the conference call duration for all participants in seconds
+          example: 100
+        is_telnyx_billable:
+          type: boolean
+          description: Indicates whether Telnyx billing charges might be applicable
+          example: false
+        record_type:
+          type: string
+          example: conference_detail_record
+          default: conference_detail_record
+      required:
+      - record_type
+    detail-records_PaginationMeta:
+      type: object
+      properties:
+        total_pages:
+          type: integer
+          format: int32
+          example: 3
+        total_results:
+          type: integer
+          format: int32
+          example: 55
+        page_number:
+          type: integer
+          format: int32
+          example: 2
+        page_size:
+          type: integer
+          format: int32
+          example: 25
+    detail-records_Error:
+      type: object
+      properties:
+        code:
+          type: string
+          example: '10011'
+        title:
+          type: string
+          example: Bad Request
+        detail:
+          type: string
+          example: No matching record type was found matching given record type wirelessxx
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    pay-connectors_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key, not the processor bearer token.
+    telnyxApiKey:
+      type: http
+      scheme: bearer
+      description: Management-only Telnyx account credential.
+x-refined-from:
+- telnyx-openapi.json
+- telnyx-openapi.yml
+- telnyx-openapi_2.json
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

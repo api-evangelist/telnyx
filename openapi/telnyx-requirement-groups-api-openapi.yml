@@ -1,0 +1,1118 @@
+openapi: 3.2.0
+info:
+  title: Telnyx Requirement Groups API
+  version: 2.0.0
+  contact:
+    email: support@telnyx.com
+  x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Requirement Groups across 3 of this provider''s published API definitions: telnyx-openapi.json, telnyx-openapi.yml, telnyx-openapi_2.json. Each path carries the servers of the definition it was published in.'
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Requirement Groups
+  description: Requirement Groups
+paths:
+  /external_requirements/{regulatory_requirement_id}/sub_number_orders/{sub_number_order_id}:
+    get:
+      summary: Get action requirement details for a sub number order
+      description: Returns the input fields an action requirement needs and the current requirement action for a sub number order. Action requirements are fulfilled by an external step rather than by uploading documents. Australia mobile ID verification is currently the only action requirement. Once a verification link has been generated, it is returned in `requirement_action.value`.
+      operationId: getExternalRequirement
+      tags:
+      - Requirement Groups
+      parameters:
+      - name: regulatory_requirement_id
+        in: path
+        required: true
+        description: The ID of the regulatory (action) requirement. For Australia mobile ID verification this is `b7c72fb8-fa08-4529-aaf6-b9117d3f3698`.
+        schema:
+          type: string
+          format: uuid
+      - name: sub_number_order_id
+        in: path
+        required: true
+        description: The ID of the sub number order the requirement belongs to.
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Action requirement details retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      regulatory_requirement_id:
+                        type: string
+                        format: uuid
+                      fields_required:
+                        type: array
+                        description: The fields the end user must provide to fulfill this requirement.
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                              description: The field name to send inside the `requirement` object on the POST.
+                              example: first_name
+                            type:
+                              type: string
+                              example: string
+                            description:
+                              type: string
+                              example: First Name
+                            value:
+                              type:
+                              - string
+                              - 'null'
+                              description: The value already stored for this field, or null if not yet provided.
+                      requirement_action:
+                        type: object
+                        properties:
+                          type:
+                            type: string
+                            description: The type of action the end user must complete.
+                          value:
+                            type:
+                            - string
+                            - 'null'
+                            description: The action value. For ID verification this is the verification link URL, or null until it has been generated.
+              example:
+                data:
+                  regulatory_requirement_id: a5b8f1d2-3c4e-4f6a-8b9c-0d1e2f3a4b5c
+                  fields_required:
+                  - name: first_name
+                    type: string
+                    description: First Name
+                    value: null
+                  - name: last_name
+                    type: string
+                    description: Last Name
+                    value: null
+                  requirement_action:
+                    type: id_verification
+                    value: null
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+    post:
+      summary: Fulfill an action requirement for a sub number order
+      description: Submits the end user's details to the external verification provider and returns the requirement action. Australia mobile ID verification is currently the only action requirement. It generates a unique Onfido verification link, returned in `requirement_action.value`, which you share with the end user. The end user's `first_name` and `last_name` must be nested inside a `requirement` object; sending them at the top level is rejected.
+      operationId: createExternalRequirement
+      tags:
+      - Requirement Groups
+      parameters:
+      - name: regulatory_requirement_id
+        in: path
+        required: true
+        description: The ID of the regulatory (action) requirement. For Australia mobile ID verification this is `b7c72fb8-fa08-4529-aaf6-b9117d3f3698`.
+        schema:
+          type: string
+          format: uuid
+      - name: sub_number_order_id
+        in: path
+        required: true
+        description: The ID of the sub number order the requirement belongs to.
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - requirement
+              properties:
+                requirement:
+                  type: object
+                  description: The end user's identity details for the action requirement. Australia mobile ID verification is currently the only action requirement. It requires `first_name` and `last_name`, the same fields the corresponding GET lists in `fields_required`.
+                  required:
+                  - first_name
+                  - last_name
+                  properties:
+                    first_name:
+                      type: string
+                      description: The end user's first name.
+                    last_name:
+                      type: string
+                      description: The end user's last name.
+            example:
+              requirement:
+                first_name: Jane
+                last_name: Doe
+      responses:
+        '200':
+          description: Action requirement submitted successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      sub_order_id:
+                        type: string
+                        format: uuid
+                      regulatory_requirement_id:
+                        type: string
+                        format: uuid
+                      requirement_action:
+                        type: object
+                        properties:
+                          type:
+                            type: string
+                          value:
+                            type:
+                            - string
+                            - 'null'
+                            description: For Australia mobile ID verification, the unique Onfido verification link to share with the end user.
+              example:
+                data:
+                  sub_order_id: 5f8e6b1a-2d3c-4e5f-9a0b-1c2d3e4f5a6b
+                  regulatory_requirement_id: a5b8f1d2-3c4e-4f6a-8b9c-0d1e2f3a4b5c
+                  requirement_action:
+                    type: id_verification
+                    value: https://verify.onfido.com/v/8f3c2a1b-9d4e-4f6a-8b9c-0d1e2f3a4b5c
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse_73c9788e53'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse_73c9788e53'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /number_order_phone_numbers/{id}/requirement_group:
+    post:
+      summary: Update requirement group for a phone number order
+      operationId: updateNumberOrderPhoneNumberRequirementGroup
+      tags:
+      - Requirement Groups
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: The unique identifier of the number order phone number
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - requirement_group_id
+              properties:
+                requirement_group_id:
+                  type: string
+                  format: uuid
+                  description: The ID of the requirement group to associate
+            example:
+              requirement_group_id: a4b201f9-8646-4e54-a7d2-b2e403eeaf8c
+      responses:
+        '200':
+          description: Successful response with updated phone number order details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/NumberOrderPhoneNumberRequirementGroupResponse'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse_73c9788e53'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse_73c9788e53'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+      description: Associates an existing requirement group with a phone number in a number order. The response contains the updated number-order phone-number details.
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /requirement_groups:
+    get:
+      summary: List requirement groups
+      operationId: GetRequirementGroups
+      tags:
+      - Requirement Groups
+      parameters:
+      - name: filter
+        in: query
+        style: deepObject
+        explode: true
+        description: 'Consolidated filter parameter (deepObject style). Originally: filter[country_code], filter[phone_number_type], filter[action], filter[status], filter[customer_reference]'
+        schema:
+          type: object
+          properties:
+            country_code:
+              type: string
+              description: Filter requirement groups by country code (iso alpha 2)
+            phone_number_type:
+              type: string
+              enum:
+              - local
+              - toll_free
+              - mobile
+              - national
+              - shared_cost
+              description: Filter requirement groups by phone number type.
+            action:
+              type: string
+              enum:
+              - ordering
+              - porting
+              - action
+              description: Filter requirement groups by action type
+            status:
+              type: string
+              enum:
+              - approved
+              - unapproved
+              - pending-approval
+              - declined
+              - expired
+              description: Filter requirement groups by status
+            customer_reference:
+              type: string
+              description: Filter requirement groups by customer reference
+      responses:
+        '200':
+          description: List requirement groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RequirementGroup'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse_73c9788e53'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+      description: Returns regulatory requirement groups for the account. Results can be filtered by country, number type, action, approval status, and customer reference.
+    post:
+      summary: Create a new requirement group
+      operationId: CreateRequirementGroup
+      tags:
+      - Requirement Groups
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                country_code:
+                  type: string
+                  description: ISO alpha 2 country code
+                  example: US
+                phone_number_type:
+                  type: string
+                  enum:
+                  - local
+                  - toll_free
+                  - mobile
+                  - national
+                  - shared_cost
+                  example: local
+                action:
+                  type: string
+                  enum:
+                  - ordering
+                  - porting
+                  example: ordering
+                customer_reference:
+                  type: string
+                  example: My Requirement Group
+                regulatory_requirements:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      requirement_id:
+                        type: string
+                      field_value:
+                        type: string
+              required:
+              - country_code
+              - phone_number_type
+              - action
+      responses:
+        '200':
+          description: Requirement group created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequirementGroup'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse_73c9788e53'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+      description: Creates a regulatory requirement group for a country, number type, and ordering or porting action. Optional customer-reference and requirement values are retained on the created group.
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /requirement_groups/{id}:
+    delete:
+      summary: Delete a requirement group by ID
+      operationId: DeleteRequirementGroup
+      tags:
+      - Requirement Groups
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+        description: ID of the requirement group
+      responses:
+        '200':
+          description: Deleted requirement group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequirementGroup'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse_73c9788e53'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse_73c9788e53'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+      description: Deletes the regulatory requirement group identified by `id`. The response contains the deleted requirement-group representation.
+    get:
+      summary: Get a single requirement group by ID
+      operationId: GetRequirementGroup
+      tags:
+      - Requirement Groups
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+        description: ID of the requirement group to retrieve
+      responses:
+        '200':
+          description: A single requirement group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequirementGroup'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse_73c9788e53'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse_73c9788e53'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+      description: Returns the regulatory requirement group identified by `id`, including its requirement values and current approval status.
+    patch:
+      summary: Update requirement values in requirement group
+      operationId: UpdateRequirementGroup
+      tags:
+      - Requirement Groups
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+        description: ID of the requirement group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_reference:
+                  type: string
+                  example: '0002'
+                  description: Reference for the customer
+                regulatory_requirements:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      requirement_id:
+                        type: string
+                        example: 53970723-fbff-4f46-a975-f62be6c1a585
+                        description: Unique identifier for the regulatory requirement
+                      field_value:
+                        type: string
+                        example: new requirement value
+                        description: New value for the regulatory requirement
+      responses:
+        '200':
+          description: Updated requirement group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequirementGroup'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse_73c9788e53'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse_73c9788e53'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+      description: Updates the customer reference or regulatory requirement values on the specified requirement group. The response contains the updated group.
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /requirement_groups/{id}/submit_for_approval:
+    post:
+      summary: Submit a Requirement Group for Approval
+      operationId: SubmitRequirementGroup
+      tags:
+      - Requirement Groups
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+        description: ID of the requirement group to submit
+      responses:
+        '200':
+          description: A single requirement group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequirementGroup'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse_73c9788e53'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse_73c9788e53'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+      description: Submits the specified regulatory requirement group for approval. The response contains the requirement group with its resulting approval status.
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /sub_number_orders/{id}/requirement_group:
+    post:
+      summary: Update requirement group for a sub number order
+      operationId: updateSubNumberOrderRequirementGroup
+      tags:
+      - Requirement Groups
+      parameters:
+      - name: id
+        in: path
+        description: The ID of the sub number order
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - requirement_group_id
+              properties:
+                requirement_group_id:
+                  type: string
+                  format: uuid
+                  description: The ID of the requirement group to associate
+            example:
+              requirement_group_id: a4b201f9-8646-4e54-a7d2-b2e403eeaf8c
+      responses:
+        '200':
+          description: Sub number order requirement group updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubNumberOrderRequirementGroupResponse'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse_73c9788e53'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse_73c9788e53'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+      description: Associates an existing requirement group with the specified sub number order. The response contains the updated sub number order requirement-group relationship.
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+components:
+  schemas:
+    RegulatoryRequirement:
+      type: object
+      properties:
+        record_type:
+          type: string
+        requirement_id:
+          type: string
+          format: uuid
+        field_type:
+          type: string
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    SubNumberOrderPhoneNumber:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        phone_number:
+          type: string
+        country_code:
+          type: string
+        phone_number_type:
+          type: string
+        requirements_met:
+          type: boolean
+        requirements_status:
+          type: string
+        status:
+          type: string
+        record_type:
+          type: string
+        bundle_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        regulatory_requirements:
+          type: array
+          items:
+            type: object
+            properties:
+              requirement_id:
+                type: string
+                format: uuid
+              field_type:
+                type: string
+              field_value:
+                type: string
+              status:
+                type: string
+    UserRequirement:
+      type: object
+      properties:
+        requirement_id:
+          type: string
+        field_value:
+          type: string
+        field_type:
+          type: string
+        status:
+          type: string
+          enum:
+          - approved
+          - unapproved
+          - pending-approval
+          - declined
+          - expired
+        expires_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    NumberOrderPhoneNumberRequirementGroupResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: pending
+        order_request_id:
+          type: string
+          format: uuid
+          example: a11d58fe-88a4-494a-b752-8dea411993c6
+        country_code:
+          type: string
+          example: AT
+        is_block_number:
+          type: boolean
+          example: false
+        regulatory_requirements:
+          type: array
+          items:
+            type: object
+            properties:
+              requirement_id:
+                type: string
+                format: uuid
+              field_value:
+                type: string
+                example: '1234567890'
+              field_type:
+                type: string
+                example: textual
+              status:
+                type: string
+                example: pending-approval
+        locality:
+          type: string
+          example: AUSTRIA
+        phone_number_type:
+          type: string
+          example: toll_free
+        bundle_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        sub_number_order_id:
+          type: string
+          format: uuid
+          example: f826ed66-b27c-4340-9dc0-57dc3459f1bd
+        deadline:
+          type: string
+          format: date-time
+        requirements_status:
+          type: string
+          example: requirement-info-under-review
+        id:
+          type: string
+          format: uuid
+          example: 613d517a-0432-4bae-a785-c11033bd0985
+        phone_number:
+          type: string
+          example: '+43800300238'
+        requirements_met:
+          type: boolean
+          example: false
+        record_type:
+          type: string
+          example: number_order_phone_number
+    RequirementGroup:
+      type: object
+      properties:
+        id:
+          type: string
+        country_code:
+          type: string
+        phone_number_type:
+          type: string
+        status:
+          type: string
+          enum:
+          - approved
+          - unapproved
+          - pending-approval
+          - declined
+          - expired
+        action:
+          type: string
+        customer_reference:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        record_type:
+          type: string
+          example: requirement_group
+        regulatory_requirements:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserRequirement'
+    SubNumberOrderRequirementGroupResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            order_request_id:
+              type: string
+              format: uuid
+            country_code:
+              type: string
+            phone_number_type:
+              type: string
+            phone_numbers_count:
+              type: integer
+            requirements_met:
+              type: boolean
+            is_block_sub_number_order:
+              type: boolean
+            status:
+              type: string
+            customer_reference:
+              type: string
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+            record_type:
+              type: string
+            regulatory_requirements:
+              type: array
+              items:
+                $ref: '#/components/schemas/RegulatoryRequirement'
+            phone_numbers:
+              type: array
+              items:
+                $ref: '#/components/schemas/SubNumberOrderPhoneNumber'
+      example:
+        data:
+          country_code: AT
+          created_at: '2018-01-01T00:00:00.000000Z'
+          updated_at: '2018-01-01T00:00:00.000000Z'
+          regulatory_requirements:
+          - record_type: phone_number_regulatory_requirement
+            requirement_id: 2708e569-696a-4fc7-9305-5fdb3eb9c7dd
+            field_type: textual
+          phone_numbers_count: 1
+          phone_numbers:
+          - country_code: AT
+            regulatory_requirements:
+            - field_value: '4804570924'
+              requirement_id: 2708e569-696a-4fc7-9305-5fdb3eb9c7dd
+              field_type: textual
+              status: pending-approval
+            bundle_id: a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d
+            requirements_status: requirement-info-under-review
+            phone_number_type: toll_free
+            requirements_met: false
+            record_type: number_order_phone_number
+            status: pending
+            id: 613d517a-0432-4bae-a785-c11033bd0985
+            phone_number: '+43800300238'
+          is_block_sub_number_order: false
+          phone_number_type: toll_free
+          requirements_met: false
+          id: f826ed66-b27c-4340-9dc0-57dc3459f1bd
+          order_request_id: a11d58fe-88a4-494a-b752-8dea411993c6
+          status: pending
+          customer_reference: missing
+          record_type: sub_number_order
+    numbers_Error:
+      properties:
+        code:
+          example: '10007'
+          type: string
+        detail:
+          example: An unexpected error occured.
+          type: string
+        meta:
+          properties:
+            url:
+              description: URL with additional information on the error.
+              example: https://developers.telnyx.com/docs/overview/errors/10015
+              type: string
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              example: /base
+              type: string
+          type: object
+        title:
+          example: Unexpected error
+          type: string
+      type: object
+    numbers_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/numbers_Error'
+          type: array
+      type: object
+    Errors_2:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+      type: object
+    Error:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+          x-format: int64
+        title:
+          type: string
+        detail:
+          type: string
+          description: A human-readable explanation of the error.
+        description:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          additionalProperties: true
+      example:
+        title: Invalid street address
+        source:
+          pointer: /street_address
+        code: '20207'
+        description: The street address provided is invalid.
+      type: object
+  responses:
+    numbers_NotFoundResponse_73c9788e53:
+      description: The requested resource doesn't exist.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    numbers_UnauthorizedResponse_73c9788e53:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          examples:
+            Authentication Failed:
+              value:
+                errors:
+                - code: '10009'
+                  title: Authentication failed
+                  detail: Could not understand the provided credentials.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+    numbers_BadRequestResponse_73c9788e53:
+      description: Bad request, the request was unacceptable, often due to missing a required parameter.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    numbers_UnprocessableEntity_73c9788e53:
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    numbers_NotFoundResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: The requested resource doesn't exist.
+    numbers_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+    numbers_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Unexpected error
+    numbers_UnauthorizedResponse:
+      content:
+        application/json:
+          examples:
+            Authentication Failed:
+              value:
+                errors:
+                - code: '10009'
+                  detail: Could not understand the provided credentials.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+                  title: Authentication failed
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Unauthorized
+    numbers_BadRequestResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Bad request, the request was unacceptable, often due to missing a required parameter.
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    pay-connectors_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key, not the processor bearer token.
+    telnyxApiKey:
+      type: http
+      scheme: bearer
+      description: Management-only Telnyx account credential.
+x-refined-from:
+- telnyx-openapi.json
+- telnyx-openapi.yml
+- telnyx-openapi_2.json
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

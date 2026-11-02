@@ -1,0 +1,570 @@
+openapi: 3.2.0
+info:
+  title: Telnyx Usage Reports (BETA) API
+  version: 2.0.0
+  contact:
+    email: support@telnyx.com
+  x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Usage Reports (BETA) across 3 of this provider''s published API definitions: telnyx-openapi.json, telnyx-openapi.yml, telnyx-openapi_2.json. Each path carries the servers of the definition it was published in.'
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Usage Reports (BETA)
+  description: Usage data reporting across Telnyx products
+paths:
+  /usage_reports:
+    get:
+      tags:
+      - Usage Reports (BETA)
+      summary: Get Telnyx product usage data (BETA)
+      description: Get Telnyx usage data by product, broken out by the specified dimensions
+      operationId: GetUsageReports
+      parameters:
+      - name: product
+        in: query
+        description: Telnyx product
+        required: true
+        schema:
+          type: string
+        examples:
+          product=wireless:
+            value: wireless
+            summary: wireless
+          product=messaging:
+            value: messaging
+            summary: messaging
+      - name: dimensions
+        in: query
+        description: Breakout by specified product dimensions
+        required: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          dimensions=direction,currency,message_type:
+            value:
+            - direction
+            - currency
+            - message_type
+            summary: Dimensions aggregation list
+      - name: metrics
+        in: query
+        description: Specified product usage values
+        required: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          metrics=cost,billed_sec:
+            value:
+            - cost
+            - billed_sec
+            summary: Metrics aggregation list
+      - name: start_date
+        in: query
+        description: 'The start date for the time range you are interested in. The maximum time range is 31 days. Format: YYYY-MM-DDTHH:mm:ssZ'
+        required: false
+        schema:
+          type: string
+        examples:
+          start_date=2024-02-01T00:00:00Z:
+            value: '2024-02-01T00:00:00Z'
+            summary: Aggregate for records with timestamp starting at specified date and time.
+      - name: end_date
+        in: query
+        description: 'The end date for the time range you are interested in. The maximum time range is 31 days. Format: YYYY-MM-DDTHH:mm:ssZ'
+        required: false
+        schema:
+          type: string
+        examples:
+          end_date=2024-03-01T00:00:00Z:
+            value: '2024-03-01T00:00:00Z'
+            summary: Aggregate for records with timestamp ending at specified date and time.
+      - name: date_range
+        in: query
+        description: A more user-friendly way to specify the timespan you want to filter by. More options can be found in the Telnyx API Reference docs.
+        required: false
+        schema:
+          type: string
+        examples:
+          date_range=today:
+            value: today
+            summary: today - Searches for records with timestamp starting at `00:00:00` of the current day
+          date_range=last_3_days:
+            value: last_3_days
+            summary: last_3_days - Searches for records with timestamp starting at `00:00:00` since 3 days ago
+      - name: filter
+        in: query
+        description: Filter records on dimensions
+        required: false
+        schema:
+          type: string
+        examples:
+          filter[currency]=USD:
+            value: filter[currency]=USD
+            summary: Filter currency on USD
+          filter[direction]=inbound:
+            value: filter[direction]=inbound
+            summary: Filter direction on Inbound
+          filter[country_code]=NLD:
+            value: filter[country_code]=NLD
+            summary: Filter country code on NLD
+      - name: managed_accounts
+        in: query
+        description: Return the aggregations for all Managed Accounts under the user making the request.
+        required: false
+        schema:
+          type: boolean
+        examples:
+          managed_accounts=true:
+            value: false
+            summary: Fetch aggregations for all Managed Accounts
+      - name: sort
+        description: Specifies the sort order for results
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          sort=created_at:
+            value:
+            - created_at
+            summary: Sorts search results using the `created_at` date-time in ascending order
+          sort=-created_at:
+            value:
+            - -created_at
+            summary: Sorts search results using the `-created_at` date-time in descending order
+      - name: format
+        in: query
+        description: Specify the response format (csv or json). JSON is returned by default, even if not specified.
+        required: false
+        schema:
+          type: string
+          enum:
+          - csv
+          - json
+        examples:
+          format=json:
+            value: json
+            summary: Get the response in JSON format
+          format=csv:
+            value: csv
+            summary: Get the response in CSV format
+      - name: authorization_bearer
+        in: header
+        description: Bearer token used to authenticate the request.
+        schema:
+          type: string
+          description: Authenticates the request with your Telnyx API V2 KEY
+      - name: page
+        in: query
+        style: deepObject
+        explode: true
+        description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
+        schema:
+          type: object
+          properties:
+            number:
+              title: Page[Number]
+              minimum: 1
+              type: integer
+              default: 1
+            size:
+              title: Page[Size]
+              maximum: 5000
+              type: integer
+              default: 20
+        examples:
+          page[number]=1&page[size]=20:
+            value:
+              number: 1
+              size: 20
+            summary: Returns the first page with 20 records per page (default pagination)
+          page[number]=2&page[size]=20:
+            value:
+              number: 2
+              size: 20
+            summary: Returns the second page with 20 records per page
+          page[number]=1&page[size]=50:
+            value:
+              number: 1
+              size: 50
+            summary: Returns the first page with 50 records per page (larger page size)
+          page[number]=5&page[size]=100:
+            value:
+              number: 5
+              size: 100
+            summary: Returns the fifth page with 100 records per page
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageReportsResponse'
+            text/csv:
+              schema:
+                type: string
+                description: CSV formatted data
+                example: 'user_id,direction,product,cost,billed_sec
+
+                  3ca7bd3d-7d82-4e07-9df4-009123068320,inbound,forking,0.000800,17.000000
+
+                  ...'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/usage_reports_usage_reports_ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/usage_reports_usage_reports_ErrorResponse'
+      x-latency-category: interactive
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /usage_reports/options:
+    get:
+      tags:
+      - Usage Reports (BETA)
+      summary: Get Usage Reports query options (BETA)
+      description: Get the Usage Reports options for querying usage, including the products available and their respective metrics and dimensions
+      operationId: ListUsageReportsOptions
+      parameters:
+      - name: product
+        in: query
+        description: Options (dimensions and metrics) for a given product. If none specified, all products will be returned.
+        required: false
+        schema:
+          type: string
+        examples:
+          product=wireless:
+            value: wireless
+            summary: Specify a product if you know what you're looking for
+      - name: authorization_bearer
+        in: header
+        description: Bearer token used to authenticate the request.
+        schema:
+          type: string
+          description: Authenticates the request with your Telnyx API V2 KEY
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageReportsOptionsResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/usage_reports_usage_reports_ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/usage_reports_usage_reports_ErrorResponse'
+      x-latency-category: interactive
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+components:
+  schemas:
+    ErrorRecord:
+      type: object
+      properties:
+        code:
+          type: string
+          description: an application-specific error code, expressed as a stringified 5-digit integer
+          example: '10003'
+        title:
+          type: string
+          description: a short, human-readable summary of the problem, with NO punctuation, that SHOULD NOT CHANGE from occurrence to occurrence of the problem, except for purposes of localization
+          example: Metrics invalid values
+        detail:
+          type: string
+          description: a human-readable explanation specific to this occurrence of the problem. Like title, this field’s value can be localized
+          example: 'Available metrics values for sip-trunking: connected,cost,completed,call_sec,attempted,billed_sec.'
+        source:
+          $ref: '#/components/schemas/legacy_published_account_billing_usage_reports_SourceResponse'
+        meta:
+          $ref: '#/components/schemas/MetaResponse'
+    usage_reports_usage_reports_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorRecord'
+    UsageReportsOptionsResponse:
+      type: object
+      description: An object following one of the schemas published in https://developers.telnyx.com/docs/api/v2/detail-records
+      properties:
+        data:
+          type: array
+          description: Collection of product description
+          items:
+            $ref: '#/components/schemas/UsageReportsOptionsRecord'
+    usage-reports_RecordType:
+      type: object
+      description: An object following one of the schemas published in https://developers.telnyx.com/docs/api/v2/detail-records
+      properties:
+        record_type:
+          type: string
+          description: Telnyx Product type
+          example: conversation_event
+        product_dimensions:
+          type: array
+          description: Telnyx Product Dimensions
+          example:
+          - direction
+          - currency
+          - message_type
+          items:
+            type: string
+        product_metrics:
+          type: array
+          description: Telnyx Product Metrics
+          example:
+          - cost
+          - billed_sec
+          items:
+            type: string
+    PaginationData:
+      type: object
+      properties:
+        total_pages:
+          type: integer
+          description: Total number of pages.
+          example: 5
+        total_results:
+          type: integer
+          description: Total number of results.
+          example: 100
+        page_number:
+          type: integer
+          description: Selected page number.
+          example: 1
+        page_size:
+          type: integer
+          description: Records per single page
+          example: 20
+    legacy_published_account_billing_usage_reports_SourceResponse:
+      type: object
+      properties:
+        pointer:
+          type: string
+          description: A JSON Pointer [RFC6901] to the associated entity in the request document
+          example: /title
+        parameter:
+          type: string
+          description: a string indicating which URI query parameter caused the error
+          example: metrics
+    UsageReportsOptionsRecord:
+      type: object
+      description: An object following one of the schemas published in https://developers.telnyx.com/docs/api/v2/detail-records
+      properties:
+        product:
+          type: string
+          description: Telnyx Product
+          example: wireless
+        product_dimensions:
+          type: array
+          description: Telnyx Product Dimensions
+          example:
+          - mnc
+          - mcc
+          - sim_card_id
+          - sim_group_name
+          items:
+            type: string
+        product_metrics:
+          type: array
+          description: Telnyx Product Metrics
+          example:
+          - uplink_data_bytes
+          - downlink_data
+          - downlink_data_bytes
+          - uplink_data
+          - data_cost
+          items:
+            type: string
+        record_types:
+          type: array
+          description: Subproducts if applicable
+          items:
+            $ref: '#/components/schemas/usage-reports_RecordType'
+    UsageReportsResponse:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/PaginationData'
+        data:
+          type: array
+          example:
+          - product: messaging
+            cost: 0.012
+            parts: 12
+            count: 8
+            customer_carrier_fee: 0
+            product_name: long_code
+            country_iso: LC
+            direction: outbound
+          - product: messaging
+            cost: 0.021
+            parts: 21
+            count: 12
+            customer_carrier_fee: 0
+            product_name: long_code
+            country_iso: MP
+            direction: outbound
+          items:
+            type: object
+            additionalProperties: true
+    MetaResponse:
+      type: object
+      properties:
+        url:
+          type: string
+          description: This should likely be a URL to the relevant documentation
+          example: https://developers.telnyx.com/docs/overview/errors/10001
+    ErrorRecord_2:
+      properties:
+        code:
+          description: an application-specific error code, expressed as a stringified 5-digit integer
+          example: '10003'
+          type: string
+        detail:
+          description: a human-readable explanation specific to this occurrence of the problem. Like title, this field’s value can be localized
+          example: 'Available metrics values for sip-trunking: connected,cost,completed,call_sec,attempted,billed_sec.'
+          type: string
+        meta:
+          $ref: '#/components/schemas/MetaResponse'
+        source:
+          $ref: '#/components/schemas/SourceResponse'
+        title:
+          description: a short, human-readable summary of the problem, with NO punctuation, that SHOULD NOT CHANGE from occurrence to occurrence of the problem, except for purposes of localization
+          example: Metrics invalid values
+          type: string
+      type: object
+    SourceResponse:
+      properties:
+        parameter:
+          description: a string indicating which URI query parameter caused the error
+          example: metrics
+          type: string
+        pointer:
+          description: A JSON Pointer [RFC6901] to the associated entity in the request document
+          example: /title
+          type: string
+      type: object
+    usage-reports_ErrorResponse:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/ErrorRecord_2'
+          type: array
+      type: object
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    pay-connectors_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key, not the processor bearer token.
+    telnyxApiKey:
+      type: http
+      scheme: bearer
+      description: Management-only Telnyx account credential.
+x-refined-from:
+- telnyx-openapi.json
+- telnyx-openapi.yml
+- telnyx-openapi_2.json
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

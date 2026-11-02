@@ -1,0 +1,614 @@
+openapi: 3.2.0
+info:
+  title: Telnyx Phone Number Blocks Background Jobs API
+  version: 2.0.0
+  contact:
+    email: support@telnyx.com
+  x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Phone Number Blocks Background Jobs across 3 of this provider''s published API definitions: telnyx-openapi.json, telnyx-openapi.yml, telnyx-openapi_2.json. Each path carries the servers of the definition it was published in.'
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Phone Number Blocks Background Jobs
+  description: Background jobs performed over a phone-numbers block's phone numbers
+paths:
+  /phone_number_blocks/jobs:
+    get:
+      summary: Lists the phone number blocks jobs
+      operationId: ListPhoneNumberBlocksJobs
+      tags:
+      - Phone Number Blocks Background Jobs
+      x-group-parameters: 'true'
+      parameters:
+      - $ref: '#/components/parameters/numbers_PageConsolidated_73c9788e53'
+      - name: sort
+        in: query
+        description: Specifies the sort order for results. If not given, results are sorted by created_at in descending order.
+        required: false
+        schema:
+          type: string
+          enum:
+          - created_at
+          example: created_at
+      - name: filter
+        in: query
+        style: deepObject
+        explode: true
+        description: 'Consolidated filter parameter (deepObject style). Originally: filter[type], filter[status]'
+        schema:
+          type: object
+          properties:
+            type:
+              type: string
+              enum:
+              - delete_phone_number_block
+              example: delete_phone_number_block
+              description: Identifies the type of the background job.
+            status:
+              type: string
+              enum:
+              - pending
+              - in_progress
+              - completed
+              - failed
+              example: in_progress
+              description: Identifies the status of the background job.
+      responses:
+        '200':
+          description: Successful response with a list of phone number blocks background jobs.
+          content:
+            application/json:
+              schema:
+                type: object
+                title: List Phone Number Blocks Background Jobs Response
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PhoneNumberBlocksJob'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse_73c9788e53'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse_73c9788e53'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+      description: Returns background jobs that operate on phone-number blocks. Results can be filtered by job type and status, sorted by creation time, and include pagination metadata.
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /phone_number_blocks/jobs/delete_phone_number_block:
+    post:
+      x-latency-category: background
+      summary: Deletes all numbers associated with a phone number block
+      description: Creates a new background job to delete all the phone numbers associated with the given block. We will only consider the phone number block as deleted after all phone numbers associated with it are removed, so multiple executions of this job may be necessary in case some of the phone numbers present errors during the deletion process.
+      operationId: CreatePhoneNumberBlockDeletionJob
+      tags:
+      - Phone Number Blocks Background Jobs
+      x-group-parameters: 'true'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhoneNumberBlocksJobDeletePhoneNumberBlockRequest'
+      responses:
+        '202':
+          description: Block deletion job accepted. The response contains a background job; poll GET /phone_numbers/jobs/{id} with the job id until it completes.
+          content:
+            application/json:
+              schema:
+                type: object
+                title: Phone Number Blocks Job Delete Phone Number Block
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PhoneNumberBlocksJob'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse_73c9788e53'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse_73c9788e53'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /phone_number_blocks/jobs/{id}:
+    get:
+      summary: Retrieves a phone number blocks job
+      operationId: GetPhoneNumberBlocksJob
+      tags:
+      - Phone Number Blocks Background Jobs
+      parameters:
+      - name: id
+        in: path
+        description: Identifies the Phone Number Blocks Job.
+        required: true
+        schema:
+          type: string
+      x-group-parameters: 'true'
+      responses:
+        '200':
+          description: Phone number blocks job details.
+          content:
+            application/json:
+              schema:
+                type: object
+                title: Phone Number Blocks Job
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PhoneNumberBlocksJob'
+        '400':
+          $ref: '#/components/responses/numbers_BadRequestResponse_73c9788e53'
+        '401':
+          $ref: '#/components/responses/numbers_UnauthorizedResponse_73c9788e53'
+        '404':
+          $ref: '#/components/responses/numbers_NotFoundResponse_73c9788e53'
+        '422':
+          $ref: '#/components/responses/numbers_UnprocessableEntity_73c9788e53'
+        '500':
+          $ref: '#/components/responses/GenericErrorResponse'
+      description: Returns the status and details of the phone-number-block background job identified by `id`.
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+components:
+  responses:
+    numbers_NotFoundResponse_73c9788e53:
+      description: The requested resource doesn't exist.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    numbers_BadRequestResponse_73c9788e53:
+      description: Bad request, the request was unacceptable, often due to missing a required parameter.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    numbers_UnauthorizedResponse_73c9788e53:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          examples:
+            Authentication Failed:
+              value:
+                errors:
+                - code: '10009'
+                  title: Authentication failed
+                  detail: Could not understand the provided credentials.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+    numbers_UnprocessableEntity_73c9788e53:
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    numbers_NotFoundResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: The requested resource doesn't exist.
+    numbers_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+    numbers_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Unexpected error
+    numbers_UnauthorizedResponse:
+      content:
+        application/json:
+          examples:
+            Authentication Failed:
+              value:
+                errors:
+                - code: '10009'
+                  detail: Could not understand the provided credentials.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+                  title: Authentication failed
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Unauthorized
+    numbers_BadRequestResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Bad request, the request was unacceptable, often due to missing a required parameter.
+    ListPhoneNumberBlocksJobsResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PhoneNumberBlocksJob'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            title: List Phone Number Blocks Background Jobs Response
+            type: object
+      description: Successful response with a list of phone number blocks background jobs.
+  schemas:
+    PaginationMeta:
+      type: object
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 55
+        page_number:
+          type: integer
+          example: 2
+        page_size:
+          type: integer
+          example: 25
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    numbers_Error:
+      properties:
+        code:
+          type: string
+          example: '10007'
+        title:
+          type: string
+          example: Unexpected error
+        detail:
+          type: string
+          example: An unexpected error occured.
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              example: /base
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties:
+            url:
+              type: string
+              description: URL with additional information on the error.
+              example: https://developers.telnyx.com/docs/overview/errors/10015
+      type: object
+    PhoneNumberBlocksJobDeletePhoneNumberBlockRequest:
+      type: object
+      required:
+      - phone_number_block_id
+      properties:
+        phone_number_block_id:
+          type: string
+      example:
+        phone_number_block_id: f3946371-7199-4261-9c3d-81a0d7935146
+    PhoneNumberBlocksJobSuccessfulOperation:
+      properties:
+        phone_number:
+          type: string
+          description: The phone number in e164 format.
+        id:
+          type: string
+          description: The phone number's ID
+      type: object
+    PhoneNumberBlocksJobFailedOperation:
+      properties:
+        phone_number:
+          type: string
+          description: The phone number in e164 format.
+        id:
+          type: string
+          description: The phone number's ID
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/numbers_Error'
+      type: object
+    PhoneNumberBlocksJob:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 42587e44-3a3e-46de-9255-0c9a7a1d1ec7
+          description: Identifies the resource.
+          readOnly: true
+        record_type:
+          type: string
+          example: phone_number_block_job
+          description: Identifies the type of the resource.
+          readOnly: true
+        status:
+          type: string
+          enum:
+          - pending
+          - in_progress
+          - completed
+          - failed
+          default: pending
+          example: pending
+          description: Indicates the completion status of the background operation.
+          readOnly: true
+        type:
+          type: string
+          enum:
+          - delete_phone_number_block
+          example: delete_phone_number_block
+          description: Identifies the type of the background job.
+          readOnly: true
+        etc:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the estimated time of completion of the background job.
+          readOnly: true
+        created_at:
+          type: string
+          description: ISO 8601 formatted date indicating when the resource was created.
+          readOnly: true
+        updated_at:
+          type: string
+          description: ISO 8601 formatted date indicating when the resource was updated.
+          readOnly: true
+        successful_operations:
+          type: array
+          items:
+            description: The phone numbers successfully updated.
+            $ref: '#/components/schemas/PhoneNumberBlocksJobSuccessfulOperation'
+          readOnly: true
+        failed_operations:
+          type: array
+          items:
+            $ref: '#/components/schemas/PhoneNumberBlocksJobFailedOperation'
+          readOnly: true
+      example:
+        id: 42587e44-3a3e-46de-9255-0c9a7a1d1ec7
+        record_type: phone_numbers_job
+        status: pending
+        type: delete_phone_number_block
+        etc: '2020-10-30T18:10:00.000Z'
+        created_at: '2020-10-23T18:10:00.000Z'
+        updated_at: '2020-10-23T18:10:01.000Z'
+        successful_operations: []
+        failed_operations: []
+    numbers_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/numbers_Error'
+          type: array
+      type: object
+    Errors_2:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+      type: object
+    Error:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+          x-format: int64
+        title:
+          type: string
+        detail:
+          type: string
+          description: A human-readable explanation of the error.
+        description:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          additionalProperties: true
+      example:
+        title: Invalid street address
+        source:
+          pointer: /street_address
+        code: '20207'
+        description: The street address provided is invalid.
+      type: object
+  parameters:
+    numbers_PageConsolidated_73c9788e53:
+      name: page
+      in: query
+      style: deepObject
+      explode: true
+      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
+      schema:
+        type: object
+        properties:
+          size:
+            type: integer
+            minimum: 1
+            maximum: 250
+            default: 20
+            description: The size of the page
+          number:
+            type: integer
+            minimum: 1
+            default: 1
+            description: The page number to load
+    numbers_PageConsolidated:
+      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
+      explode: true
+      in: query
+      name: page
+      schema:
+        properties:
+          number:
+            default: 1
+            description: The page number to load
+            minimum: 1
+            type: integer
+          size:
+            default: 20
+            description: The size of the page
+            maximum: 250
+            minimum: 1
+            type: integer
+        type: object
+      style: deepObject
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    pay-connectors_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key, not the processor bearer token.
+    telnyxApiKey:
+      type: http
+      scheme: bearer
+      description: Management-only Telnyx account credential.
+x-refined-from:
+- telnyx-openapi.json
+- telnyx-openapi.yml
+- telnyx-openapi_2.json
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

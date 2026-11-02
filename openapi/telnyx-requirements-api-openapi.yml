@@ -1,0 +1,901 @@
+openapi: 3.2.0
+info:
+  title: Telnyx Requirements API
+  version: 2.0.0
+  contact:
+    email: support@telnyx.com
+  x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Requirements across 3 of this provider''s published API definitions: telnyx-openapi.json, telnyx-openapi.yml, telnyx-openapi_2.json. Each path carries the servers of the definition it was published in.'
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Requirements
+  description: Requirements for international numbers and porting orders
+paths:
+  /requirements:
+    get:
+      summary: List all requirements
+      description: List all requirements with filtering, sorting, and pagination
+      operationId: ListRequirements
+      x-latency-category: responsive
+      tags:
+      - Requirements
+      parameters:
+      - $ref: '#/components/parameters/FilterRequirementsConsolidated'
+      - $ref: '#/components/parameters/SortRequirementsConsolidated'
+      - $ref: '#/components/parameters/documents_PageConsolidated'
+      - $ref: '#/components/parameters/RequirementVersion'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DocReqsRequirementList'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '422':
+          description: Unprocessable entity. Check the 'detail' field in response for details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10027'
+                  title: Unprocessable Entity
+                  detail: The server understood the syntax of the request but was unable to process the instructions.
+        default:
+          $ref: '#/components/responses/documents_GenericErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /requirements/{id}:
+    get:
+      summary: Retrieve a document requirement
+      description: Returns a single document requirement record by its identifier, describing the documentation needed for number-related actions. A specific requirement version can be requested.
+      operationId: RetrieveDocumentRequirements
+      x-latency-category: responsive
+      tags:
+      - Requirements
+      parameters:
+      - $ref: '#/components/parameters/DocReqsRequirementId'
+      - $ref: '#/components/parameters/RequirementVersion'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DocReqsRequirement'
+        '422':
+          description: Unprocessable entity. Check the 'detail' field in response for details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10027'
+                  title: Unprocessable Entity
+                  detail: The server understood the syntax of the request but was unable to process the instructions.
+        default:
+          $ref: '#/components/responses/documents_GenericErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /requirements/{id}/versions:
+    post:
+      summary: Schedule a future requirement version
+      description: Create a new pending version of a requirement with a future effective start date. Only one pending version may exist per requirement at a time.
+      operationId: CreateRequirementVersion
+      x-hidden: true
+      x-latency-category: responsive
+      tags:
+      - Requirements
+      parameters:
+      - $ref: '#/components/parameters/DocReqsRequirementId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRequirementVersionRequest'
+      responses:
+        '201':
+          description: Pending version created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DocReqsRequirement'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10005'
+                  title: Resource not found
+                  detail: The requested resource or URL could not be found.
+        '422':
+          description: Unprocessable entity. Check the 'detail' field in response for details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10027'
+                  title: Unprocessable Entity
+                  detail: The server understood the syntax of the request but was unable to process the instructions.
+        default:
+          $ref: '#/components/responses/documents_GenericErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /requirements/{id}/versions/pending:
+    delete:
+      summary: Cancel a pending requirement version
+      description: Cancel a pending requirement version. The pending version is marked as cancelled and the previously active version is restored with effective_end_at set to NULL.
+      operationId: CancelPendingRequirementVersion
+      x-hidden: true
+      x-latency-category: responsive
+      tags:
+      - Requirements
+      parameters:
+      - $ref: '#/components/parameters/DocReqsRequirementId'
+      responses:
+        '200':
+          description: Pending version cancelled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelPendingVersionResponse'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10005'
+                  title: Resource not found
+                  detail: The requested resource or URL could not be found.
+        '422':
+          description: Unprocessable entity. The specified requirement is not a pending version.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10027'
+                  title: Unprocessable Entity
+                  detail: The server understood the syntax of the request but was unable to process the instructions.
+        default:
+          $ref: '#/components/responses/documents_GenericErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+components:
+  parameters:
+    DocReqsRequirementId:
+      name: id
+      in: path
+      description: Uniquely identifies the requirement_type record
+      example: a9dad8d5-fdbd-49d7-aa23-39bb08a5ebaa
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RequirementVersion:
+      name: version
+      in: query
+      description: Filter by requirement version number. When omitted, returns the currently-active version.
+      required: false
+      schema:
+        type: integer
+    SortRequirementsConsolidated:
+      name: sort
+      in: query
+      required: false
+      description: 'Consolidated sort parameter for requirements (deepObject style). Originally: sort[]'
+      schema:
+        type: array
+        items:
+          type: string
+          enum:
+          - created_at
+          - updated_at
+          - country_code
+          - phone_number_type
+          - -created_at
+          - -updated_at
+          - -country_code
+          - -phone_number_type
+        example:
+        - country_code
+        description: Specifies the sort order for results. If you want to sort by a field in ascending order, include it as a sort parameter. If you want to sort in descending order, prepend a `-` in front of the field name.
+    FilterRequirementsConsolidated:
+      name: filter
+      in: query
+      style: deepObject
+      explode: true
+      required: false
+      description: 'Consolidated filter parameter for requirements (deepObject style). Originally: filter[country_code], filter[phone_number_type], filter[action]'
+      schema:
+        type: object
+        additionalProperties: false
+        properties:
+          country_code:
+            type: string
+            example: US
+            description: Filters results to those applying to a 2-character (ISO 3166-1 alpha-2) country code
+          phone_number_type:
+            type: string
+            enum:
+            - local
+            - national
+            - toll_free
+            example: local
+            description: Filters results to those applying to a specific phone_number_type
+          action:
+            type: string
+            enum:
+            - branded_calling
+            - ordering
+            - porting
+            example: porting
+            description: Filters requirements to those applying to a specific action.
+    documents_PageConsolidated:
+      name: page
+      in: query
+      style: deepObject
+      explode: true
+      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
+      schema:
+        type: object
+        properties:
+          size:
+            type: integer
+            minimum: 1
+            maximum: 250
+            default: 20
+            description: The size of the page
+          number:
+            type: integer
+            minimum: 1
+            default: 1
+            description: The page number to load
+    FilterRequirementsConsolidated_2:
+      name: filter
+      in: query
+      style: deepObject
+      explode: true
+      required: false
+      description: 'Consolidated filter parameter for requirements (deepObject style). Originally: filter[country_code], filter[phone_number_type], filter[action]'
+      schema:
+        type: object
+        additionalProperties: false
+        properties:
+          country_code:
+            type: string
+            example: US
+            description: Filters results to those applying to a 2-character (ISO 3166-1 alpha-2) country code
+          phone_number_type:
+            type: string
+            enum:
+            - local
+            - mobile
+            - multipurpose
+            - national
+            - shared_cost
+            - toll_free
+            example: local
+            description: Filters results to those applying to a specific phone_number_type
+          action:
+            type: string
+            enum:
+            - branded_calling
+            - ordering
+            - porting
+            example: porting
+            description: Filters requirements to those applying to a specific action.
+  schemas:
+    PaginationMeta:
+      type: object
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 55
+        page_number:
+          type: integer
+          example: 2
+        page_size:
+          type: integer
+          example: 25
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
+    DocReqsRequirementType:
+      type: object
+      properties:
+        acceptance_criteria:
+          description: Specifies objective criteria for acceptance
+          type: object
+          properties:
+            time_limit:
+              description: Specifies time-based acceptance criteria
+              example: Current and not expired
+              type: string
+              readOnly: false
+            locality_limit:
+              description: Specifies geography-based acceptance criteria
+              example: Issued by the same country that the phone number belongs to
+              type: string
+              readOnly: false
+            acceptable_values:
+              description: Specifies the list of strictly possible values for the requirement. Ignored when empty
+              type: array
+              items:
+                type: string
+                example: US
+              readOnly: false
+            max_length:
+              description: Maximum length allowed for the value
+              type: integer
+              example: 20
+              readOnly: false
+            min_length:
+              description: Minimum length allowed for the value
+              type: integer
+              example: 16
+              readOnly: false
+            acceptable_characters:
+              description: Specifies the allowed characters as a string
+              type: string
+              example: abcdef0123456789
+              readOnly: false
+        description:
+          description: Describes the requirement type
+          example: Proves the customer has a physical address in the same locality as the phone number
+          type: string
+          readOnly: false
+        example:
+          description: Provides one or more examples of acceptable documents
+          example: Utility bill, internet bill, phone bill, or lease
+          type: string
+          readOnly: false
+        type:
+          description: Defines the type of this requirement type
+          example: document
+          type: string
+          enum:
+          - document
+          - address
+          - textual
+          readOnly: false
+        name:
+          description: A short descriptive name for this requirement_type
+          example: Proof of Address
+          type: string
+          readOnly: true
+        record_type:
+          description: Identifies the type of the resource
+          example: requirement_type
+          type: string
+          readOnly: true
+        id:
+          description: Identifies the associated document
+          type: string
+          format: uuid
+          readOnly: true
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+        created_at:
+          type: string
+          description: ISO 8601 formatted date-time indicating when the resource was created.
+          readOnly: true
+          example: '2021-04-09T22:25:27.521Z'
+        updated_at:
+          type: string
+          description: ISO 8601 formatted date-time indicating when the resource was last updated.
+          readOnly: true
+          example: '2021-04-12T20:20:20.020Z'
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    DocReqsRequirementList:
+      type: array
+      items:
+        $ref: '#/components/schemas/DocReqsRequirement'
+    CreateRequirementVersionRequest:
+      type: object
+      required:
+      - effective_start_at
+      - requirement_type_ids
+      properties:
+        effective_start_at:
+          description: ISO 8601 formatted date-time indicating when the new version should become active. Must be a future date-time.
+          type: string
+          format: date-time
+          example: '2026-08-01T00:00:00.000Z'
+        requirement_type_ids:
+          description: List of requirement type UUIDs that apply to the new version. Replaces the existing requirement types for the new version.
+          type: array
+          items:
+            type: string
+            format: uuid
+          example:
+          - a38c217a-8019-48f8-bff6-0fdd9939075b
+    DocReqsRequirement:
+      type: object
+      properties:
+        record_type:
+          description: Identifies the type of the resource.
+          type: string
+          readOnly: true
+          example: requirement
+        country_code:
+          description: The 2-character (ISO 3166-1 alpha-2) country code where this requirement applies
+          type: string
+          readOnly: false
+          example: FR
+        locality:
+          description: The locality where this requirement applies
+          type: string
+          readOnly: false
+          example: Nice
+        phone_number_type:
+          description: Indicates the phone_number_type this requirement applies to. Leave blank if this requirement applies to all number_types.
+          type: string
+          enum:
+          - local
+          - national
+          - toll_free
+          example: local
+          readOnly: false
+        action:
+          description: Indicates whether this requirement applies to branded_calling, ordering, porting, or both ordering and porting
+          type: string
+          enum:
+          - both
+          - branded_calling
+          - ordering
+          - porting
+          example: ordering
+          readOnly: false
+        requirement_types:
+          description: Lists the requirement types necessary to fulfill this requirement
+          type: array
+          items:
+            $ref: '#/components/schemas/DocReqsRequirementType'
+          readOnly: true
+        id:
+          description: Identifies the associated document
+          type: string
+          format: uuid
+          readOnly: true
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+        created_at:
+          type: string
+          description: ISO 8601 formatted date-time indicating when the resource was created.
+          readOnly: true
+          example: '2021-04-09T22:25:27.521Z'
+        updated_at:
+          type: string
+          description: ISO 8601 formatted date-time indicating when the resource was last updated.
+          readOnly: true
+          example: '2021-04-12T20:20:20.020Z'
+        version:
+          type: integer
+          readOnly: true
+          description: Version number. Increments with each new version. Defaults to 1.
+        effective_start_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          readOnly: true
+          description: When this version became (or will become) active.
+        effective_end_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          readOnly: true
+          description: When this version was superseded. NULL means this is the active or pending version.
+    CancelPendingVersionResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            cancelled:
+              $ref: '#/components/schemas/DocReqsRequirement'
+            restored:
+              $ref: '#/components/schemas/DocReqsRequirement'
+    documents_Error:
+      properties:
+        code:
+          type: string
+        detail:
+          type: string
+        meta:
+          additionalProperties: true
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+          type: object
+        title:
+          type: string
+      required:
+      - code
+      - title
+      type: object
+    documents_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/documents_Error'
+          type: array
+      type: object
+    DocReqsRequirement_2:
+      properties:
+        action:
+          description: Indicates whether this requirement applies to branded_calling, ordering, porting, or both ordering and porting
+          enum:
+          - both
+          - branded_calling
+          - ordering
+          - porting
+          example: ordering
+          readOnly: false
+          type: string
+        country_code:
+          description: The 2-character (ISO 3166-1 alpha-2) country code where this requirement applies
+          example: FR
+          readOnly: false
+          type: string
+        created_at:
+          description: ISO 8601 formatted date-time indicating when the resource was created.
+          example: '2021-04-09T22:25:27.521Z'
+          readOnly: true
+          type: string
+        id:
+          description: Identifies the associated document
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+          format: uuid
+          readOnly: true
+          type: string
+        locality:
+          description: The locality where this requirement applies
+          example: Nice
+          readOnly: false
+          type: string
+        phone_number_type:
+          description: Indicates the phone_number_type this requirement applies to. Leave blank if this requirement applies to all number_types.
+          enum:
+          - local
+          - national
+          - toll_free
+          example: local
+          readOnly: false
+          type: string
+        record_type:
+          description: Identifies the type of the resource.
+          example: requirement
+          readOnly: true
+          type: string
+        requirements_types:
+          description: Lists the requirement types necessary to fulfill this requirement
+          items:
+            $ref: '#/components/schemas/DocReqsRequirementType'
+          readOnly: true
+          type: array
+        updated_at:
+          description: ISO 8601 formatted date-time indicating when the resource was last updated.
+          example: '2021-04-12T20:20:20.020Z'
+          readOnly: true
+          type: string
+      type: object
+    Errors_2:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+      type: object
+    Error:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+          x-format: int64
+        title:
+          type: string
+        detail:
+          type: string
+          description: A human-readable explanation of the error.
+        description:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          additionalProperties: true
+      example:
+        title: Invalid street address
+        source:
+          pointer: /street_address
+        code: '20207'
+        description: The street address provided is invalid.
+      type: object
+    DocReqsRequirement_3:
+      type: object
+      properties:
+        record_type:
+          description: Identifies the type of the resource.
+          type: string
+          readOnly: true
+          example: requirement
+        country_code:
+          description: The 2-character (ISO 3166-1 alpha-2) country code where this requirement applies
+          type: string
+          readOnly: false
+          example: FR
+        locality:
+          description: The locality where this requirement applies
+          type: string
+          readOnly: false
+          example: Nice
+        phone_number_type:
+          description: Indicates the phone_number_type this requirement applies to. Leave blank if this requirement applies to all number_types.
+          type: string
+          enum:
+          - local
+          - mobile
+          - multipurpose
+          - national
+          - shared_cost
+          - toll_free
+          example: local
+          readOnly: false
+        action:
+          description: Indicates whether this requirement applies to branded_calling, ordering, porting, or both ordering and porting
+          type: string
+          enum:
+          - both
+          - branded_calling
+          - ordering
+          - porting
+          example: ordering
+          readOnly: false
+        requirement_types:
+          description: Lists the requirement types necessary to fulfill this requirement
+          type: array
+          items:
+            $ref: '#/components/schemas/DocReqsRequirementType'
+          readOnly: true
+        id:
+          description: Identifies the associated document
+          type: string
+          format: uuid
+          readOnly: true
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+        created_at:
+          type: string
+          description: ISO 8601 formatted date-time indicating when the resource was created.
+          readOnly: true
+          example: '2021-04-09T22:25:27.521Z'
+        updated_at:
+          type: string
+          description: ISO 8601 formatted date-time indicating when the resource was last updated.
+          readOnly: true
+          example: '2021-04-12T20:20:20.020Z'
+        version:
+          type: integer
+          readOnly: true
+          description: Version number. Increments with each new version. Defaults to 1.
+        effective_start_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          readOnly: true
+          description: When this version became (or will become) active.
+        effective_end_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          readOnly: true
+          description: When this version was superseded. NULL means this is the active or pending version.
+  responses:
+    documents_GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          example:
+            errors:
+            - code: '10007'
+              title: Unexpected error
+              detail: An unexpected error occured.
+    DocReqsRequirementResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/DocReqsRequirement_2'
+            type: object
+      description: Successful response
+    ListRequirementsResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/DocReqsRequirementList'
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful response
+    documents_GenericErrorResponse_2:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/documents_Errors'
+      description: Unexpected error
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    pay-connectors_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key, not the processor bearer token.
+    telnyxApiKey:
+      type: http
+      scheme: bearer
+      description: Management-only Telnyx account credential.
+x-refined-from:
+- telnyx-openapi.json
+- telnyx-openapi.yml
+- telnyx-openapi_2.json
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

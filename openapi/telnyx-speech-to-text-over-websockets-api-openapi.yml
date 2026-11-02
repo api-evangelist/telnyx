@@ -1,0 +1,540 @@
+openapi: 3.2.0
+info:
+  title: Telnyx Speech To Text over WebSockets API
+  version: 2.0.0
+  contact:
+    email: support@telnyx.com
+  x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Speech To Text over WebSockets across 3 of this provider''s published API definitions: telnyx-openapi.json, telnyx-openapi.yml, telnyx-openapi_2.json. Each path carries the servers of the definition it was published in.'
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Speech To Text over WebSockets
+  description: Speech to text command operations
+paths:
+  /speech-to-text/transcription:
+    get:
+      summary: Speech to text over WebSocket
+      description: 'Open a WebSocket connection to stream audio and receive transcriptions in real-time. Authentication is provided via the standard `Authorization: Bearer ` header.
+
+
+        Supported engines: `Azure`, `Deepgram`, `Google`, `Telnyx`, `xAI`, `Speechmatics`, `Soniox`, `Parakeet`, `Humain`, `Reson8`, `Cohere`.
+
+
+        **Connection flow:**
+
+        1. Open WebSocket with query parameters specifying engine, input format, and language.
+
+        2. Send binary audio frames (mp3, wav, linear16, or linear32 format, per `input_format`).
+
+        3. Receive JSON transcript frames with `transcript`, `is_final`, and `confidence` fields.
+
+        4. Close connection when done.'
+      operationId: TranscriptionOverWs
+      servers:
+      - url: wss://api.telnyx.com/v2
+        description: Telnyx API v2 (WebSocket)
+      tags:
+      - Speech To Text over WebSockets
+      parameters:
+      - $ref: '#/components/parameters/transcription_engine'
+      - $ref: '#/components/parameters/input_format'
+      - $ref: '#/components/parameters/sample_rate'
+      - $ref: '#/components/parameters/language'
+      - $ref: '#/components/parameters/interim_results'
+      - $ref: '#/components/parameters/model'
+      - $ref: '#/components/parameters/endpointing'
+      - $ref: '#/components/parameters/redact'
+      - $ref: '#/components/parameters/keyterm'
+      - $ref: '#/components/parameters/keywords'
+      requestBody:
+        description: Client sends binary audio frames (mp3, wav, linear16, or linear32 format, per `input_format`) over the WebSocket. See `SttClientEvent` schema.
+        content:
+          application/octet-stream:
+            schema:
+              $ref: '#/components/schemas/SttClientEvent'
+      responses:
+        '101':
+          description: 'WebSocket connection established. Communication proceeds via binary audio frames (client) and JSON transcript frames (server).
+
+
+            **Client → Server:** Binary audio data (mp3, wav, linear16, or linear32, per `input_format`).
+
+            **Server → Client:** See `TranscriptFrame` and `SttErrorFrame` schemas.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SttServerEvent'
+        '200':
+          description: WebSocket upgrade successful — this response is not returned directly. See 101 for frame documentation.
+        '400':
+          description: Invalid parameters — engine not supported or missing required fields.
+        '401':
+          description: Authentication failed — missing or invalid Authorization header.
+        '422':
+          $ref: '#/components/responses/speech-to-text_UnprocessableEntityResponse'
+      x-latency-category: interactive
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+components:
+  schemas:
+    SttErrorFrame:
+      type: object
+      description: Server-to-client frame indicating an error during transcription. The connection may be closed shortly after.
+      properties:
+        type:
+          type: string
+          const: error
+          description: Frame type identifier.
+        error:
+          type: string
+          description: Error message describing what went wrong.
+      required:
+      - type
+      - error
+    azure_models:
+      type: string
+      enum:
+      - fast
+    xai_models:
+      type: string
+      enum:
+      - xai/grok-stt
+    SttClientEvent:
+      type: string
+      format: binary
+      description: Binary audio data in mp3, wav, linear16, or linear32 format, per `input_format`.
+    telnyx_models:
+      type: string
+      enum:
+      - openai/whisper-tiny
+      - openai/whisper-large-v3-turbo
+    parakeet_models:
+      type: string
+      enum:
+      - nvidia/parakeet-v3
+      - omi-health/omi-med-stt-v1
+    google_models:
+      type: string
+      enum:
+      - latest_long
+      - latest_short
+      - command_and_search
+      - phone_call
+      - video
+      - default
+      - medical_conversation
+      - medical_dictation
+    speech-to-text_Error:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+          format: integer
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+    speechmatics_models:
+      type: string
+      enum:
+      - speechmatics/standard
+    TranscriptFrame:
+      type: object
+      description: Server-to-client frame containing a transcription result.
+      properties:
+        type:
+          type: string
+          const: transcript
+          description: Frame type identifier.
+        transcript:
+          type: string
+          description: The transcribed text from the audio.
+        is_final:
+          type: boolean
+          description: Whether this is a final transcription result. When `false`, this is an interim result that may be refined.
+        confidence:
+          type:
+          - number
+          - 'null'
+          description: Confidence score of the transcription, ranging from 0 to 1. `cohere/ar-stt` frames return `null` here rather than omitting the field.
+      required:
+      - type
+      - transcript
+    humain_models:
+      type: string
+      enum:
+      - humain/realtime
+    reson8_models:
+      type: string
+      enum:
+      - reson8/turns
+    soniox_models:
+      type: string
+      enum:
+      - soniox/stt-rt-v4
+    SttServerEvent:
+      description: Union of all server-to-client WebSocket events for STT streaming.
+      oneOf:
+      - $ref: '#/components/schemas/TranscriptFrame'
+      - $ref: '#/components/schemas/SttErrorFrame'
+      discriminator:
+        propertyName: type
+        mapping:
+          transcript: '#/components/schemas/TranscriptFrame'
+          error: '#/components/schemas/SttErrorFrame'
+    deepgram_models:
+      type: string
+      enum:
+      - deepgram/nova-2
+      - deepgram/nova-3
+    cohere_ar_stt_models:
+      type: string
+      enum:
+      - cohere/ar-stt
+    speech-to-text_Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/speech-to-text_Error'
+    SttClientEvent_2:
+      description: Binary audio data in mp3 or wav format.
+      format: binary
+      type: string
+    TranscriptFrame_2:
+      description: Server-to-client frame containing a transcription result.
+      properties:
+        confidence:
+          description: Confidence score of the transcription, ranging from 0 to 1.
+          type: number
+        is_final:
+          description: Whether this is a final transcription result. When `false`, this is an interim result that may be refined.
+          type: boolean
+        transcript:
+          description: The transcribed text from the audio.
+          type: string
+        type:
+          const: transcript
+          description: Frame type identifier.
+          type: string
+      required:
+      - type
+      - transcript
+      type: object
+    speechmatics_models_2:
+      type: string
+      description: 'Available Speechmatics models. `speechmatics/linden-1` is a preview, vendor-hosted model that accepts only 16 kHz raw audio: set `input_format` to `linear16` or `linear32` and `sample_rate` to `16000`. `mp3`, `wav`, and other sample rates are not supported for this model.'
+      enum:
+      - speechmatics/standard
+      - speechmatics/linden-1
+  parameters:
+    keyterm:
+      name: keyterm
+      in: query
+      required: false
+      description: A key term to boost in the transcription. The engine will be more likely to recognize this term. Can be specified multiple times for multiple terms.
+      schema:
+        type: string
+      example: Telnyx
+    language:
+      name: language
+      in: query
+      required: false
+      description: The language spoken in the audio stream. For `cohere/ar-stt`, this must be `ar` or `en` — unlike other engines, Cohere does not auto-detect the language, and rejects unsupported values including `auto`; omitting it defaults to `ar`.
+      schema:
+        type: string
+      example: en-US
+    interim_results:
+      name: interim_results
+      in: query
+      required: false
+      description: Whether to receive interim transcription results.
+      schema:
+        type: boolean
+      example: true
+    redact:
+      name: redact
+      in: query
+      required: false
+      description: Enable redaction of sensitive information (e.g., PCI data, SSN) from transcription results. Supported values depend on the transcription engine.
+      schema:
+        type: string
+      example: pci
+    input_format:
+      name: input_format
+      in: query
+      required: true
+      description: The format of input audio stream.
+      schema:
+        type: string
+        enum:
+        - mp3
+        - wav
+        - linear16
+        - linear32
+      example: mp3
+    model:
+      name: model
+      in: query
+      description: The specific model to use within the selected transcription engine.
+      schema:
+        oneOf:
+        - $ref: '#/components/schemas/azure_models'
+        - $ref: '#/components/schemas/deepgram_models'
+        - $ref: '#/components/schemas/google_models'
+        - $ref: '#/components/schemas/telnyx_models'
+        - $ref: '#/components/schemas/xai_models'
+        - $ref: '#/components/schemas/speechmatics_models'
+        - $ref: '#/components/schemas/soniox_models'
+        - $ref: '#/components/schemas/parakeet_models'
+        - $ref: '#/components/schemas/humain_models'
+        - $ref: '#/components/schemas/reson8_models'
+        - $ref: '#/components/schemas/cohere_ar_stt_models'
+    transcription_engine:
+      name: transcription_engine
+      in: query
+      required: true
+      description: The transcription engine to use for processing the audio stream.
+      schema:
+        type: string
+        enum:
+        - Azure
+        - Deepgram
+        - Google
+        - Telnyx
+        - xAI
+        - Speechmatics
+        - Soniox
+        - Parakeet
+        - Humain
+        - Reson8
+        - Cohere
+      example: Telnyx
+    keywords:
+      name: keywords
+      in: query
+      required: false
+      description: Comma-separated list of keywords to boost in the transcription. The engine will prioritize recognition of these words.
+      schema:
+        type: string
+      example: Telnyx,SIP,WebRTC
+    sample_rate:
+      name: sample_rate
+      in: query
+      required: false
+      description: Audio sample rate in Hz. Required when `input_format` is a raw encoding (`linear16`, `linear32`) — those formats carry no header metadata. Ignored for container formats (`mp3`, `wav`), which self-describe their rate.
+      schema:
+        type: integer
+      example: 16000
+    endpointing:
+      name: endpointing
+      in: query
+      required: false
+      description: Silence duration (in milliseconds) that triggers end-of-speech detection. When set, the engine uses this value to determine when a speaker has stopped talking. Supported by `xAI`, `Deepgram`, `Google`, `Speechmatics`, and `Soniox`. `Soniox` accepts values between 500 and 3000. Other engines may not support this parameter.
+      schema:
+        type: integer
+      example: 500
+    language_2:
+      description: The language spoken in the audio stream.
+      example: en-US
+      in: query
+      name: language
+      required: false
+      schema:
+        type: string
+    input_format_2:
+      description: The format of input audio stream.
+      example: mp3
+      in: query
+      name: input_format
+      required: true
+      schema:
+        enum:
+        - mp3
+        - wav
+        type: string
+    model_2:
+      description: The specific model to use within the selected transcription engine.
+      in: query
+      name: model
+      schema:
+        oneOf:
+        - $ref: '#/components/schemas/azure_models'
+        - $ref: '#/components/schemas/deepgram_models'
+        - $ref: '#/components/schemas/google_models'
+        - $ref: '#/components/schemas/telnyx_models'
+        - $ref: '#/components/schemas/xai_models'
+        - $ref: '#/components/schemas/speechmatics_models'
+    transcription_engine_2:
+      description: The transcription engine to use for processing the audio stream.
+      example: Telnyx
+      in: query
+      name: transcription_engine
+      required: true
+      schema:
+        enum:
+        - Azure
+        - Deepgram
+        - Google
+        - Telnyx
+        - xAI
+        - Speechmatics
+        type: string
+    endpointing_2:
+      description: Silence duration (in milliseconds) that triggers end-of-speech detection. When set, the engine uses this value to determine when a speaker has stopped talking. Supported by `xAI`, `Deepgram`, `Google`, and `Speechmatics`. Other engines may not support this parameter.
+      example: 500
+      in: query
+      name: endpointing
+      required: false
+      schema:
+        type: integer
+    language_3:
+      name: language
+      in: query
+      required: false
+      description: The language spoken in the audio stream. For `cohere/ar-stt`, this must be `ar` or `en` — unlike other engines, Cohere does not auto-detect the language, and rejects unsupported values including `auto`; omitting it defaults to `ar`. For `speechmatics/linden-1`, omitting it defaults to `en`; `auto`, `auto_beta`, `multi`, or a language outside its supported list is rejected when the connection is established. `speechmatics/linden-1` also accepts `en-US`, `en-GB`, `en-AU`, `cmn-Hans`, and `cmn-Hant`, which select the spelling or script variant (`en` alone uses the default spelling).
+      schema:
+        type: string
+      example: en-US
+    sample_rate_2:
+      name: sample_rate
+      in: query
+      required: false
+      description: Audio sample rate in Hz. Required when `input_format` is a raw encoding (`linear16`, `linear32`) — those formats carry no header metadata. Ignored for container formats (`mp3`, `wav`), which self-describe their rate. `speechmatics/linden-1` accepts only `16000`.
+      schema:
+        type: integer
+      example: 16000
+    endpointing_3:
+      name: endpointing
+      in: query
+      required: false
+      description: Silence duration (in milliseconds) that triggers end-of-speech detection. When set, the engine uses this value to determine when a speaker has stopped talking. Supported by `xAI`, `Deepgram`, `Google`, `Speechmatics` (`speechmatics/standard` only; `speechmatics/linden-1` uses fixed service-side voice activity detection and ignores it), and `Soniox`. `Soniox` accepts values between 500 and 3000. Other engines may not support this parameter.
+      schema:
+        type: integer
+      example: 500
+  responses:
+    speech-to-text_UnprocessableEntityResponse:
+      description: Unprocessable entity. The request was well-formed but could not be processed due to semantic errors. This includes validation errors, invalid parameter values and business logic violations.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/speech-to-text_Errors'
+          examples:
+            missing_required_parameter:
+              summary: Missing required parameter
+              value:
+                errors:
+                - code: '10004'
+                  title: Missing required parameter
+                  detail: The 'transcription_engine' parameter is required and cannot be blank.
+                  source:
+                    pointer: /transcription_engine
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    pay-connectors_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key, not the processor bearer token.
+    telnyxApiKey:
+      type: http
+      scheme: bearer
+      description: Management-only Telnyx account credential.
+x-refined-from:
+- telnyx-openapi.json
+- telnyx-openapi.yml
+- telnyx-openapi_2.json
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

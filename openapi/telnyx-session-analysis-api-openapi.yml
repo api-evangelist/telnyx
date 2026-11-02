@@ -1,0 +1,739 @@
+openapi: 3.2.0
+info:
+  title: Telnyx Session Analysis API
+  version: 2.0.0
+  contact:
+    email: support@telnyx.com
+  x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged Session Analysis across 3 of this provider''s published API definitions: telnyx-openapi.json, telnyx-openapi.yml, telnyx-openapi_2.json. Each path carries the servers of the definition it was published in.'
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Session Analysis
+  description: Analyze voice AI sessions, costs, and event hierarchies across Telnyx products.
+paths:
+  /session_analysis/metadata:
+    get:
+      tags:
+      - Session Analysis
+      summary: Get metadata overview
+      description: Returns all available record types and supported query parameters for session analysis.
+      operationId: GetSessionAnalysisMetadata
+      responses:
+        '200':
+          description: Metadata overview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetadataOverviewResponse'
+              example:
+                record_types:
+                - record_type: string
+                  aliases:
+                  - string
+                  product: string
+                  event: string
+                  description: string
+                  child_relationships:
+                  - relationship_type: string
+                    via:
+                      local_field: string
+                      parent_field: string
+                    cost_rollup: false
+                    traversal_enabled: false
+                    description: string
+                    child_product: string
+                    child_event: string
+                    child_record_type: string
+                  parent_relationships:
+                  - relationship_type: string
+                    via:
+                      local_field: string
+                      parent_field: string
+                    cost_rollup: false
+                    traversal_enabled: false
+                    description: string
+                    parent_product: string
+                    parent_event: string
+                    parent_record_type: string
+                meta:
+                  total_record_types: 0
+                  last_updated: '2024-01-23T18:10:02.574Z'
+                query_parameters: {}
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionAnalysisErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionAnalysisErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /session_analysis/metadata/{record_type}:
+    get:
+      tags:
+      - Session Analysis
+      summary: Get record type metadata
+      description: Returns detailed metadata for a specific record type, including relationships and examples.
+      operationId: GetSessionAnalysisRecordTypeMetadata
+      parameters:
+      - name: record_type
+        in: path
+        required: true
+        description: The record type identifier (e.g. "call-control").
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Record type metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordTypeMetadataResponse'
+              example:
+                record_type: call-control
+                aliases:
+                - call_control
+                product: Voice
+                event: call.hangup
+                child_relationships: []
+                parent_relationships: []
+                examples:
+                  event_id: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+                meta:
+                  total_children: 0
+                  total_siblings: 0
+                  total_parents: 0
+                  max_recommended_depth: 1
+        '404':
+          description: Record type not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionAnalysisErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionAnalysisErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /session_analysis/{record_type}/{event_id}:
+    get:
+      tags:
+      - Session Analysis
+      summary: Get session analysis
+      description: Retrieves a full session analysis tree for a given event, including costs, child events, and product linkages.
+      operationId: GetSessionAnalysis
+      parameters:
+      - name: record_type
+        in: path
+        required: true
+        description: The record type identifier.
+        schema:
+          type: string
+      - name: event_id
+        in: path
+        required: true
+        description: The event identifier (UUID).
+        schema:
+          type: string
+          format: uuid
+      - name: include_children
+        in: query
+        required: false
+        description: Whether to include child events in the response.
+        schema:
+          type: boolean
+          default: true
+      - name: max_depth
+        in: query
+        required: false
+        description: Maximum traversal depth for the event tree.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 5
+          default: 2
+      - name: expand
+        in: query
+        required: false
+        description: Controls what data to expand on each event node.
+        schema:
+          type: string
+          enum:
+          - record
+          - none
+          default: record
+      - name: date_time
+        in: query
+        required: false
+        description: ISO 8601 timestamp or date to narrow index selection for faster lookups. Accepts full datetime (e.g., 2026-03-17T10:00:00Z) or date-only format (e.g., 2026-03-17).
+        schema:
+          type: string
+          format: date-time
+      responses:
+        '200':
+          description: Session analysis result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionAnalysisResponse'
+              example:
+                session_id: call-123
+                cost:
+                  total: '0.056800'
+                  currency: USD
+                root:
+                  id: call-123
+                  product: callcontrol-cdrs
+                  event_name: callcontrol-cdrs
+                  relationship: null
+                  cost:
+                    event_cost: '0.001800'
+                    cumulative_cost: '0.056800'
+                    currency: USD
+                  links:
+                    self: /v2/session_analysis/callcontrol-cdrs/call-123
+                    records: /v2/detail_records?record_type=callcontrol-cdrs&id=call-123
+                  record: {}
+                  children: []
+                meta:
+                  event_count: 3
+                  products:
+                  - ai-voice-assistant
+                  - callcontrol-cdrs
+                  - inference
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionAnalysisErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionAnalysisErrorResponse'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionAnalysisErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionAnalysisErrorResponse'
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+components:
+  schemas:
+    CostSummary:
+      type: object
+      required:
+      - total
+      - currency
+      properties:
+        total:
+          type: string
+          description: Total session cost as a decimal string.
+        currency:
+          type: string
+          description: ISO 4217 currency code.
+    MetadataInfo:
+      type: object
+      required:
+      - total_record_types
+      - last_updated
+      properties:
+        total_record_types:
+          type: integer
+        last_updated:
+          type: string
+          format: date-time
+    QueryParameterInfo:
+      type: object
+      required:
+      - type
+      - default
+      - description
+      properties:
+        type:
+          type: string
+        default:
+          type: string
+        min:
+          type:
+          - integer
+          - 'null'
+        max:
+          type:
+          - integer
+          - 'null'
+        enum_values:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+        description:
+          type: string
+    CostInfo:
+      type: object
+      required:
+      - event_cost
+      - cumulative_cost
+      - currency
+      properties:
+        event_cost:
+          type: string
+          description: Cost of this individual event.
+        cumulative_cost:
+          type: string
+          description: Cumulative cost including all descendants.
+        currency:
+          type: string
+          description: ISO 4217 currency code.
+    EventNode:
+      type: object
+      required:
+      - id
+      - product
+      - event_name
+      - cost
+      - links
+      - record
+      - children
+      properties:
+        id:
+          type: string
+          description: Event identifier.
+        product:
+          type: string
+          description: Product that generated this event.
+        event_name:
+          type: string
+          description: Name of the event type.
+        relationship:
+          oneOf:
+          - $ref: '#/components/schemas/RelationshipInfo'
+          - type: 'null'
+          description: Relationship to the parent node, null for root.
+        cost:
+          $ref: '#/components/schemas/CostInfo'
+        links:
+          $ref: '#/components/schemas/Links'
+        record:
+          type: object
+          description: The underlying detail record data. Contents vary by record type.
+          additionalProperties: true
+        children:
+          type: array
+          items:
+            type: object
+            title: EventNode
+            description: 'Recursive reference to EventNode. Nesting is elided here so every $ref chain stays finite for function-calling tooling; see #/components/schemas/EventNode for the full structure.'
+            additionalProperties: true
+          description: Child events in the session tree.
+    ChildRelationshipInfo:
+      type: object
+      required:
+      - relationship_type
+      - via
+      - cost_rollup
+      - traversal_enabled
+      - description
+      - child_product
+      - child_event
+      - child_record_type
+      properties:
+        relationship_type:
+          type: string
+        via:
+          $ref: '#/components/schemas/MetadataFieldMapping'
+        cost_rollup:
+          type: boolean
+        traversal_enabled:
+          type: boolean
+        description:
+          type: string
+        child_product:
+          type: string
+        child_event:
+          type: string
+        child_record_type:
+          type: string
+    ParentRelationshipInfo:
+      type: object
+      required:
+      - relationship_type
+      - via
+      - cost_rollup
+      - traversal_enabled
+      - description
+      - parent_product
+      - parent_event
+      - parent_record_type
+      properties:
+        relationship_type:
+          type: string
+        via:
+          $ref: '#/components/schemas/MetadataFieldMapping'
+        cost_rollup:
+          type: boolean
+        traversal_enabled:
+          type: boolean
+        description:
+          type: string
+        parent_product:
+          type: string
+        parent_event:
+          type: string
+        parent_record_type:
+          type: string
+    MetadataFieldMapping:
+      type: object
+      required:
+      - local_field
+      - parent_field
+      properties:
+        local_field:
+          type: string
+        parent_field:
+          type: string
+    RecordTypeMetadataResponse:
+      type: object
+      required:
+      - record_type
+      - aliases
+      - product
+      - event
+      - child_relationships
+      - parent_relationships
+      - examples
+      - meta
+      properties:
+        record_type:
+          type: string
+        aliases:
+          type: array
+          items:
+            type: string
+        product:
+          type: string
+        event:
+          type: string
+        child_relationships:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChildRelationshipInfo'
+        parent_relationships:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParentRelationshipInfo'
+        examples:
+          type: object
+          additionalProperties: true
+          description: Example queries and responses for this record type.
+        meta:
+          $ref: '#/components/schemas/RelationshipMetadata'
+    SessionAnalysisErrorResponse:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionAnalysisError'
+    SessionAnalysisError:
+      type: object
+      required:
+      - code
+      - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        detail:
+          type: string
+    Links:
+      type: object
+      required:
+      - self
+      - records
+      properties:
+        self:
+          type: string
+          description: Link to this session analysis node.
+        records:
+          type: string
+          description: Link to the underlying detail records.
+    ResponseMeta:
+      type: object
+      required:
+      - event_count
+      - products
+      properties:
+        event_count:
+          type: integer
+          description: Total number of events in the session tree.
+        products:
+          type: array
+          items:
+            type: string
+          description: List of distinct products involved in the session.
+    FieldMapping:
+      type: object
+      required:
+      - local_field
+      - parent_field
+      properties:
+        local_field:
+          type: string
+          description: Field name on the child record.
+        parent_field:
+          type: string
+          description: Field name on the parent record.
+    SessionAnalysisResponse:
+      type: object
+      required:
+      - session_id
+      - cost
+      - root
+      - meta
+      properties:
+        session_id:
+          type: string
+          description: Identifier for the analyzed session.
+        cost:
+          $ref: '#/components/schemas/CostSummary'
+        root:
+          $ref: '#/components/schemas/EventNode'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    MetadataOverviewResponse:
+      type: object
+      required:
+      - record_types
+      - query_parameters
+      - meta
+      properties:
+        record_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecordTypeInfo'
+        query_parameters:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/QueryParameterInfo'
+          description: Map of supported query parameter names to their definitions.
+        meta:
+          $ref: '#/components/schemas/MetadataInfo'
+    RecordTypeInfo:
+      type: object
+      required:
+      - record_type
+      - aliases
+      - product
+      - event
+      - description
+      - child_relationships
+      - parent_relationships
+      properties:
+        record_type:
+          type: string
+        aliases:
+          type: array
+          items:
+            type: string
+        product:
+          type: string
+        event:
+          type: string
+        description:
+          type: string
+        child_relationships:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChildRelationshipInfo'
+        parent_relationships:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParentRelationshipInfo'
+    RelationshipInfo:
+      type: object
+      required:
+      - type
+      - via
+      - parent_id
+      properties:
+        type:
+          type: string
+          description: Relationship type identifier.
+        via:
+          $ref: '#/components/schemas/FieldMapping'
+        parent_id:
+          type: string
+          description: Identifier of the parent event.
+    RelationshipMetadata:
+      type: object
+      required:
+      - total_children
+      - total_siblings
+      - total_parents
+      - max_recommended_depth
+      properties:
+        total_children:
+          type: integer
+        total_siblings:
+          type: integer
+        total_parents:
+          type: integer
+        max_recommended_depth:
+          type: integer
+    EventNode_2:
+      properties:
+        children:
+          description: Child events in the session tree.
+          items:
+            $ref: '#/components/schemas/EventNode_2'
+          type: array
+        cost:
+          $ref: '#/components/schemas/CostInfo'
+        event_name:
+          description: Name of the event type.
+          type: string
+        id:
+          description: Event identifier.
+          type: string
+        links:
+          $ref: '#/components/schemas/Links'
+        product:
+          description: Product that generated this event.
+          type: string
+        record:
+          additionalProperties: true
+          description: The underlying detail record data. Contents vary by record type.
+          type: object
+        relationship:
+          description: Relationship to the parent node, null for root.
+          oneOf:
+          - $ref: '#/components/schemas/RelationshipInfo'
+          - type: 'null'
+      required:
+      - id
+      - product
+      - event_name
+      - cost
+      - links
+      - record
+      - children
+      type: object
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    pay-connectors_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key, not the processor bearer token.
+    telnyxApiKey:
+      type: http
+      scheme: bearer
+      description: Management-only Telnyx account credential.
+x-refined-from:
+- telnyx-openapi.json
+- telnyx-openapi.yml
+- telnyx-openapi_2.json
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

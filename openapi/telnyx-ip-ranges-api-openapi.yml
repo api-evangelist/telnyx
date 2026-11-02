@@ -1,0 +1,551 @@
+openapi: 3.2.0
+info:
+  title: Telnyx IP Ranges API
+  version: 2.0.0
+  contact:
+    email: support@telnyx.com
+  x-endpoint-cost: light
+  x-refined-note:
+  - x-latency-category differs across the merged source definitions and was not carried
+  description: 'Operations tagged IP Ranges across 3 of this provider''s published API definitions: telnyx-openapi.json, telnyx-openapi.yml, telnyx-openapi_2.json. Each path carries the servers of the definition it was published in.'
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: IP Ranges
+  description: IP Range Operations
+paths:
+  /access_ip_ranges:
+    get:
+      summary: List all Access IP Ranges
+      operationId: ListAccessIpRanges
+      tags:
+      - IP Ranges
+      parameters:
+      - name: filter
+        in: query
+        style: deepObject
+        explode: true
+        description: 'Consolidated filter parameter (deepObject style). Originally: filter[cidr_block], filter[cidr_block][startswith], filter[cidr_block][endswith], filter[cidr_block][contains], filter[created_at]. Supports complex bracket operations for dynamic filtering.'
+        schema:
+          type: object
+          properties:
+            cidr_block:
+              oneOf:
+              - type: string
+                description: Filter by exact CIDR block match
+              - type: object
+                title: CidrBlockPatternFilter
+                properties:
+                  startswith:
+                    type: string
+                    description: Filter CIDR blocks starting with the specified string
+                  endswith:
+                    type: string
+                    description: Filter CIDR blocks ending with the specified string
+                  contains:
+                    type: string
+                    description: Filter CIDR blocks containing the specified string
+                additionalProperties: false
+                description: CIDR block pattern matching operations
+            created_at:
+              oneOf:
+              - type: string
+                format: date-time
+                description: Filter by exact creation date-time
+              - type: object
+                title: DateRangeFilter
+                properties:
+                  gt:
+                    type: string
+                    format: date-time
+                    description: Filter for creation date-time greater than
+                  lt:
+                    type: string
+                    format: date-time
+                    description: Filter for creation date-time less than
+                  gte:
+                    type: string
+                    format: date-time
+                    description: Filter for creation date-time greater than or equal to
+                  lte:
+                    type: string
+                    format: date-time
+                    description: Filter for creation date-time less than or equal to
+                additionalProperties: false
+                description: Date range filtering operations
+          additionalProperties: true
+        examples:
+          filter[cidr_block]=192.168.1.0/24:
+            value:
+              cidr_block: 192.168.1.0/24
+            summary: Filter by exact CIDR block match
+          filter[cidr_block][startswith]=192.168:
+            value:
+              cidr_block:
+                startswith: '192.168'
+            summary: Filter CIDR blocks starting with '192.168'
+          filter[cidr_block][endswith]=/24:
+            value:
+              cidr_block:
+                endswith: /24
+            summary: Filter CIDR blocks ending with '/24'
+          filter[cidr_block][contains]=10.0:
+            value:
+              cidr_block:
+                contains: '10.0'
+            summary: Filter CIDR blocks containing '10.0'
+          filter[created_at][gt]=2023-01-01T00:00:00Z:
+            value:
+              created_at:
+                gt: '2023-01-01T00:00:00Z'
+            summary: Filter IP ranges created after the specified date-time
+          filter[created_at][lt]=2023-12-31T23:59:59Z:
+            value:
+              created_at:
+                lt: '2023-12-31T23:59:59Z'
+            summary: Filter IP ranges created before the specified date-time
+          Complex filtering example:
+            value:
+              cidr_block:
+                startswith: '10.0'
+                endswith: /16
+              created_at:
+                gt: '2023-01-01T00:00:00Z'
+                lt: '2023-12-31T23:59:59Z'
+            summary: 'Combine multiple filters: CIDR blocks starting with ''10.0'' and ending with ''/16'', created within 2023'
+      - name: page
+        in: query
+        style: deepObject
+        explode: true
+        description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
+        schema:
+          type: object
+          properties:
+            number:
+              type: integer
+              default: 1
+            size:
+              maximum: 250
+              type: integer
+              default: 20
+        examples:
+          page[number]=1&page[size]=20:
+            value:
+              number: 1
+              size: 20
+            summary: Default pagination with first page and 20 records per page
+          page[number]=2&page[size]=20:
+            value:
+              number: 2
+              size: 20
+            summary: Second page with 20 records per page
+          page[number]=1&page[size]=50:
+            value:
+              number: 1
+              size: 50
+            summary: First page with 50 records per page
+          page[number]=5&page[size]=100:
+            value:
+              number: 5
+              size: 100
+            summary: Fifth page with 100 records per page
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessIPRangeListResponseSchema'
+              example:
+                data:
+                - id: Id
+                  cidr_block: Cidr Block
+                  status: pending
+                  description: Description
+                  user_id: User Id
+                  created_at: '2024-01-23T18:10:02.574Z'
+                  updated_at: '2024-01-23T18:10:02.574Z'
+                meta:
+                  page_number: 0
+                  page_size: 0
+                  total_pages: 0
+                  total_results: 0
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10027'
+                  title: Unprocessable Entity
+                  detail: The server understood the syntax of the request but was unable to process the instructions.
+      description: Retrieve a paginated list of access IP ranges configured on your account.
+    post:
+      summary: Create new Access IP Range
+      operationId: CreateAccessIPRange
+      tags:
+      - IP Ranges
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccessIPRangePOST'
+            example:
+              cidr_block: Cidr Block
+              description: Description
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessIPRangeResponseSchema'
+              example:
+                id: Id
+                cidr_block: Cidr Block
+                status: pending
+                description: Description
+                user_id: User Id
+                created_at: '2024-01-23T18:10:02.574Z'
+                updated_at: '2024-01-23T18:10:02.574Z'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10027'
+                  title: Unprocessable Entity
+                  detail: The server understood the syntax of the request but was unable to process the instructions.
+      description: Create a new access IP range on your account.
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+  /access_ip_ranges/{access_ip_range_id}:
+    delete:
+      summary: Delete access IP ranges
+      operationId: DeleteAccessIpRange
+      tags:
+      - IP Ranges
+      parameters:
+      - required: true
+        schema:
+          type: string
+        name: access_ip_range_id
+        in: path
+        description: Unique identifier of the access ip range.
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessIPRangeResponseSchema'
+              example:
+                id: Id
+                cidr_block: Cidr Block
+                status: pending
+                description: Description
+                user_id: User Id
+                created_at: '2024-01-23T18:10:02.574Z'
+                updated_at: '2024-01-23T18:10:02.574Z'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10005'
+                  title: Resource not found
+                  detail: The requested resource or URL could not be found.
+      description: Delete an access IP range from your account.
+    servers:
+    - url: https://api.telnyx.com/v2
+      description: Version 2.0.0 of the Telnyx API
+components:
+  schemas:
+    AccessIPRangePOST:
+      title: AccessIPRangePOST
+      required:
+      - cidr_block
+      type: object
+      properties:
+        cidr_block:
+          title: Cidr Block
+          type: string
+        description:
+          title: Description
+          type: string
+    AccessIPRangeListResponseSchema:
+      title: AccessIPRangeListResponseSchema
+      required:
+      - data
+      - meta
+      type: object
+      properties:
+        data:
+          title: Data
+          type: array
+          items:
+            $ref: '#/components/schemas/AccessIPRangeResponseSchema'
+        meta:
+          $ref: '#/components/schemas/cloudflare-ip-list-sync_PaginationMeta'
+    cloudflare-ip-list-sync_PaginationMeta:
+      title: PaginationMeta
+      required:
+      - page_number
+      - page_size
+      - total_pages
+      - total_results
+      type: object
+      properties:
+        page_number:
+          type: integer
+        page_size:
+          type: integer
+        total_pages:
+          type: integer
+        total_results:
+          type: integer
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    AccessIPRangeResponseSchema:
+      title: AccessIPRangeResponseSchema
+      required:
+      - id
+      - cidr_block
+      - status
+      - user_id
+      type: object
+      properties:
+        id:
+          title: Id
+          type: string
+        cidr_block:
+          title: Cidr Block
+          type: string
+        status:
+          $ref: '#/components/schemas/CloudflareSyncStatus'
+        description:
+          title: Description
+          type: string
+        user_id:
+          title: User Id
+          type: string
+        created_at:
+          title: Created At
+          type: string
+          format: date-time
+        updated_at:
+          title: Updated At
+          type: string
+          format: date-time
+    CloudflareSyncStatus:
+      title: CloudflareSyncStatus
+      enum:
+      - pending
+      - added
+      type: string
+      description: An enumeration.
+    cloudflare-ip-list-sync_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/cloudflare-ip-list-sync_Error'
+          type: array
+      type: object
+    cloudflare-ip-list-sync_Error:
+      properties:
+        code:
+          type: string
+        detail:
+          type: string
+        meta:
+          additionalProperties: true
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+          type: object
+        title:
+          type: string
+      required:
+      - code
+      - title
+      type: object
+    Errors_2:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+      type: object
+    Error:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+          x-format: int64
+        title:
+          type: string
+        detail:
+          type: string
+          description: A human-readable explanation of the error.
+        description:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          additionalProperties: true
+      example:
+        title: Invalid street address
+        source:
+          pointer: /street_address
+        code: '20207'
+        description: The street address provided is invalid.
+      type: object
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    pay-connectors_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key, not the processor bearer token.
+    telnyxApiKey:
+      type: http
+      scheme: bearer
+      description: Management-only Telnyx account credential.
+x-refined-from:
+- telnyx-openapi.json
+- telnyx-openapi.yml
+- telnyx-openapi_2.json
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt
