@@ -380,19 +380,59 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
+  parameters:
+    wireless_PageNumber_c5290d5308:
+      name: page[number]
+      in: query
+      description: The page number to load.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    SIMCardGroupId:
+      name: id
+      description: Identifies the SIM group.
+      in: path
+      required: true
+      schema:
+        format: uuid
+        type: string
+        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+    IncludeICCIDs:
+      name: include_iccids
+      in: query
+      description: It includes a list of associated ICCIDs.
+      schema:
+        type: boolean
+        default: false
+        example: true
+    wireless_PageSize_c5290d5308:
+      name: page[size]
+      in: query
+      description: The size of the page.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 250
+        default: 20
+    wireless_PageNumber:
+      description: The page number to load.
+      in: query
+      name: page[number]
+      schema:
+        default: 1
+        minimum: 1
+        type: integer
+    wireless_PageSize:
+      description: The size of the page.
+      in: query
+      name: page[size]
+      schema:
+        default: 20
+        maximum: 250
+        minimum: 1
+        type: integer
   schemas:
-    ConsumedData:
-      type: object
-      title: ConsumedData
-      description: Represents the amount of data consumed.
-      properties:
-        unit:
-          type: string
-          example: MB
-          default: MB
-        amount:
-          type: string
-          example: '2048.1'
     PaginationMeta:
       type: object
       properties:
@@ -408,32 +448,6 @@ components:
         page_size:
           type: integer
           example: 25
-    billing-group_Error:
-      type: object
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: integer
-          format: int32
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-          properties: {}
-          additionalProperties: true
     Errors:
       properties:
         errors:
@@ -441,6 +455,81 @@ components:
           items:
             $ref: '#/components/schemas/billing-group_Error'
       type: object
+    ConsumedData:
+      type: object
+      title: ConsumedData
+      description: Represents the amount of data consumed.
+      properties:
+        unit:
+          type: string
+          example: MB
+          default: MB
+        amount:
+          type: string
+          example: '2048.1'
+    SearchedSIMCardGroup:
+      title: SIMCardGroup
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identifies the resource.
+          readOnly: true
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+        record_type:
+          type: string
+          description: Identifies the type of the resource.
+          readOnly: true
+          example: sim_card_group
+        default:
+          description: Indicates whether the SIM card group is the users default group.<br/>The default group is created for the user and can not be removed.
+          type: boolean
+          example: true
+          readOnly: true
+        name:
+          description: A user friendly name for the SIM card group.
+          type: string
+          example: My Test Group
+        data_limit:
+          type: object
+          description: Upper limit on the amount of data the SIM cards, within the group, can use.
+          properties:
+            amount:
+              type: string
+              example: '2048.1'
+            unit:
+              type: string
+              example: MB
+        consumed_data:
+          $ref: '#/components/schemas/ConsumedData'
+        sim_card_count:
+          description: The number of SIM cards associated with the group.
+          type: integer
+          example: 10
+          default: 0
+        private_wireless_gateway_id:
+          description: The identification of the related Private Wireless Gateway resource.
+          format: uuid
+          type: string
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+          default: null
+        wireless_blocklist_id:
+          description: The identification of the related Wireless Blocklist resource.
+          format: uuid
+          type: string
+          example: 5aa584f6-14b1-41b2-8e01-1c04d1ee77c1
+          default: null
+        created_at:
+          type: string
+          description: ISO 8601 formatted date-time indicating when the resource was created.
+          readOnly: true
+          example: '2018-02-02T22:25:27.521Z'
+        updated_at:
+          type: string
+          description: ISO 8601 formatted date-time indicating when the resource was updated.
+          readOnly: true
+          example: '2018-02-02T22:25:27.521Z'
     SIMCardGroupAction:
       type: object
       title: SIMCardGroupAction
@@ -521,6 +610,50 @@ components:
               example: MB
       required:
       - name
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
+    SIMCardGroupPatch:
+      title: SIMCardGroupPatch
+      type: object
+      properties:
+        name:
+          description: A user friendly name for the SIM card group.
+          type: string
+          example: My Test Group
+        data_limit:
+          type: object
+          description: Upper limit on the amount of data the SIM cards, within the group, can use.
+          properties:
+            amount:
+              type: string
+              example: '2048.1'
+            unit:
+              type: string
+              example: MB
     SIMCardGroup:
       title: SIMCardGroup
       type: object
@@ -579,117 +712,12 @@ components:
           description: ISO 8601 formatted date-time indicating when the resource was updated.
           readOnly: true
           example: '2018-02-02T22:25:27.521Z'
-    SearchedSIMCardGroup:
-      title: SIMCardGroup
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Identifies the resource.
-          readOnly: true
-          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-        record_type:
-          type: string
-          description: Identifies the type of the resource.
-          readOnly: true
-          example: sim_card_group
-        default:
-          description: Indicates whether the SIM card group is the users default group.<br/>The default group is created for the user and can not be removed.
-          type: boolean
-          example: true
-          readOnly: true
-        name:
-          description: A user friendly name for the SIM card group.
-          type: string
-          example: My Test Group
-        data_limit:
-          type: object
-          description: Upper limit on the amount of data the SIM cards, within the group, can use.
-          properties:
-            amount:
-              type: string
-              example: '2048.1'
-            unit:
-              type: string
-              example: MB
-        consumed_data:
-          $ref: '#/components/schemas/ConsumedData'
-        sim_card_count:
-          description: The number of SIM cards associated with the group.
-          type: integer
-          example: 10
-          default: 0
-        private_wireless_gateway_id:
-          description: The identification of the related Private Wireless Gateway resource.
-          format: uuid
-          type: string
-          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-          default: null
-        wireless_blocklist_id:
-          description: The identification of the related Wireless Blocklist resource.
-          format: uuid
-          type: string
-          example: 5aa584f6-14b1-41b2-8e01-1c04d1ee77c1
-          default: null
-        created_at:
-          type: string
-          description: ISO 8601 formatted date-time indicating when the resource was created.
-          readOnly: true
-          example: '2018-02-02T22:25:27.521Z'
-        updated_at:
-          type: string
-          description: ISO 8601 formatted date-time indicating when the resource was updated.
-          readOnly: true
-          example: '2018-02-02T22:25:27.521Z'
-    SIMCardGroupPatch:
-      title: SIMCardGroupPatch
-      type: object
-      properties:
-        name:
-          description: A user friendly name for the SIM card group.
-          type: string
-          example: My Test Group
-        data_limit:
-          type: object
-          description: Upper limit on the amount of data the SIM cards, within the group, can use.
-          properties:
-            amount:
-              type: string
-              example: '2048.1'
-            unit:
-              type: string
-              example: MB
     wireless_Errors:
       properties:
         errors:
           items:
             $ref: '#/components/schemas/wireless_Error'
           type: array
-      type: object
-    wireless_Error:
-      properties:
-        code:
-          type: string
-        detail:
-          type: string
-        meta:
-          additionalProperties: true
-          type: object
-        source:
-          properties:
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-          type: object
-        title:
-          type: string
-      required:
-      - code
-      - title
       type: object
     SIMCardGroupAction_2:
       description: This object represents a SIM card group action request. It allows tracking the current status of an operation that impacts the SIM card group and SIM card in it.
@@ -746,6 +774,30 @@ components:
           type: string
       title: SIMCardGroupAction
       type: object
+    wireless_Error:
+      properties:
+        code:
+          type: string
+        detail:
+          type: string
+        meta:
+          additionalProperties: true
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+          type: object
+        title:
+          type: string
+      required:
+      - code
+      - title
+      type: object
     Errors_2:
       properties:
         errors:
@@ -788,58 +840,6 @@ components:
         code: '20207'
         description: The street address provided is invalid.
       type: object
-  parameters:
-    wireless_PageNumber_c5290d5308:
-      name: page[number]
-      in: query
-      description: The page number to load.
-      schema:
-        type: integer
-        minimum: 1
-        default: 1
-    IncludeICCIDs:
-      name: include_iccids
-      in: query
-      description: It includes a list of associated ICCIDs.
-      schema:
-        type: boolean
-        default: false
-        example: true
-    wireless_PageSize_c5290d5308:
-      name: page[size]
-      in: query
-      description: The size of the page.
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 250
-        default: 20
-    SIMCardGroupId:
-      name: id
-      description: Identifies the SIM group.
-      in: path
-      required: true
-      schema:
-        format: uuid
-        type: string
-        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-    wireless_PageSize:
-      description: The size of the page.
-      in: query
-      name: page[size]
-      schema:
-        default: 20
-        maximum: 250
-        minimum: 1
-        type: integer
-    wireless_PageNumber:
-      description: The page number to load.
-      in: query
-      name: page[number]
-      schema:
-        default: 1
-        minimum: 1
-        type: integer
   responses:
     wireless_GenericErrorResponse_c5290d5308:
       description: Unexpected error
@@ -870,28 +870,6 @@ components:
                 $ref: '#/components/schemas/SIMCardGroup'
             type: object
       description: Successful Response
-    GetAllSimCardGroupsResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/SearchedSIMCardGroup'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful Response
-    CreateSimCardGroupResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/SIMCardGroup'
-            type: object
-      description: Successful Response
     DeleteSimCardGroupResponse:
       content:
         application/json:
@@ -910,6 +888,19 @@ components:
                 $ref: '#/components/schemas/SIMCardGroup'
             type: object
       description: Successful Response
+    GetAllSimCardGroupsResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/SearchedSIMCardGroup'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful Response
     SIMCardGroupActionResponse:
       content:
         application/json:
@@ -917,6 +908,15 @@ components:
             properties:
               data:
                 $ref: '#/components/schemas/SIMCardGroupAction_2'
+            type: object
+      description: Successful Response
+    CreateSimCardGroupResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/SIMCardGroup'
             type: object
       description: Successful Response
   securitySchemes:

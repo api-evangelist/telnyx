@@ -76,13 +76,6 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    CommentWrapped:
-      type: object
-      required:
-      - data
-      properties:
-        data:
-          $ref: '#/components/schemas/DirComment'
     CommentList:
       type: object
       required:
@@ -95,88 +88,29 @@ components:
             $ref: '#/components/schemas/DirComment'
         meta:
           $ref: '#/components/schemas/branded-calling_PaginationMeta'
-    branded-calling_PaginationMeta:
+    DirCommentCreateRequest:
       type: object
       required:
-      - total_pages
-      - total_results
-      - page_number
-      - page_size
+      - content
+      description: Customer-facing comment body. The server forces `comment_type=customer_inquiry`, `visibility=customer`, and `author_role=customer`; clients cannot override these. `author_name` is dropped to prevent admin-impersonation.
       properties:
-        total_pages:
-          type: integer
-          example: 3
-          description: Total number of pages available given the current `page_size`.
-        total_results:
-          type: integer
-          example: 42
-          description: Total number of items across all pages (excludes soft-deleted rows).
-        page_number:
-          type: integer
-          example: 1
-          description: 1-based index of this page. Echoes the `page[number]` query parameter (default `1`).
-        page_size:
-          type: integer
-          example: 20
-          description: Number of items returned in this page's `data` array. Capped at 250.
-      description: JSON:API pagination metadata returned with every paginated list response. Page numbering is 1-based. `page_size` reports the number of items actually returned in `data` for this page; the requested size is taken from the `page[size]` query parameter.
-    DirComment:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          example: 30bbd13c-1f3a-47c0-8fa6-718835917b2f
-          readOnly: true
-        entity_type:
-          type: string
-          enum:
-          - dir
-          description: Resource the comment is attached to. Always `dir` on this endpoint.
-          example: dir
-          readOnly: true
         content:
           type: string
-          example: Please re-upload a clearer scan of the certificate.
-        visibility:
+          minLength: 1
+          maxLength: 5000
+          description: Comment body. 1–5000 characters.
+          example: Re-uploaded the logo as a 256×256 BMP. Please re-review.
+        parent_comment_id:
           type: string
-          enum:
-          - customer
-          description: Always `customer` on this endpoint - internal-only comments are filtered out.
-          example: customer
-          readOnly: true
-        author_role:
-          type: string
-          enum:
-          - customer
-          - admin
-          description: Who wrote the comment. `admin` covers the Telnyx vetting team.
-          example: customer
-          readOnly: true
-        author_name:
-          type: string
-          nullable: true
-          description: Display name of the author. May be `null`.
-          example: null
-          readOnly: true
-        comment_type:
-          $ref: '#/components/schemas/CommentType'
-        created_at:
-          type: string
-          format: date-time
-          example: '2026-04-27T00:42:44.305835Z'
-          readOnly: true
-    branded-calling_Errors:
+          format: uuid
+          description: Optional parent comment id to thread this reply under.
+    CommentWrapped:
       type: object
       required:
-      - errors
+      - data
       properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/branded-calling_Error'
-          description: List of one or more error entries. Order is not significant.
-      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
+        data:
+          $ref: '#/components/schemas/DirComment'
     branded-calling_Error:
       type: object
       required:
@@ -234,6 +168,52 @@ components:
               type: string
               example: page[size]
       description: A single entry in the canonical Telnyx error envelope. `code` is the stable Telnyx error catalog id; the human-readable explanation lives at `meta.url`. `detail` is a context-specific message; `source.pointer` (when present) names the offending field of the request.
+    DirComment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 30bbd13c-1f3a-47c0-8fa6-718835917b2f
+          readOnly: true
+        entity_type:
+          type: string
+          enum:
+          - dir
+          description: Resource the comment is attached to. Always `dir` on this endpoint.
+          example: dir
+          readOnly: true
+        content:
+          type: string
+          example: Please re-upload a clearer scan of the certificate.
+        visibility:
+          type: string
+          enum:
+          - customer
+          description: Always `customer` on this endpoint - internal-only comments are filtered out.
+          example: customer
+          readOnly: true
+        author_role:
+          type: string
+          enum:
+          - customer
+          - admin
+          description: Who wrote the comment. `admin` covers the Telnyx vetting team.
+          example: customer
+          readOnly: true
+        author_name:
+          type: string
+          nullable: true
+          description: Display name of the author. May be `null`.
+          example: null
+          readOnly: true
+        comment_type:
+          $ref: '#/components/schemas/CommentType'
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-04-27T00:42:44.305835Z'
+          readOnly: true
     CommentType:
       type: string
       enum:
@@ -245,53 +225,42 @@ components:
       - customer_inquiry
       - admin_response
       description: Comment categorisation. Customers post `customer_inquiry`. The Telnyx team posts `vetting_comment`, `rejection_reason`, `notification`, `status_update`, or `admin_response`. `internal_note` is filtered out of customer-visible responses.
-    DirCommentCreateRequest:
+    branded-calling_Errors:
       type: object
       required:
-      - content
-      description: Customer-facing comment body. The server forces `comment_type=customer_inquiry`, `visibility=customer`, and `author_role=customer`; clients cannot override these. `author_name` is dropped to prevent admin-impersonation.
+      - errors
       properties:
-        content:
-          type: string
-          minLength: 1
-          maxLength: 5000
-          description: Comment body. 1–5000 characters.
-          example: Re-uploaded the logo as a 256×256 BMP. Please re-review.
-        parent_comment_id:
-          type: string
-          format: uuid
-          description: Optional parent comment id to thread this reply under.
-  parameters:
-    BcPageNumber:
-      name: page[number]
-      in: query
-      description: 1-based page number. Out-of-range values return an empty page with correct meta.
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        default: 1
-        example: 1
-    BcPageSize:
-      name: page[size]
-      in: query
-      description: Items per page. Maximum 250; values above are clamped to 250.
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 250
-        default: 20
-        example: 20
-    DirId:
-      name: dir_id
-      in: path
-      description: The DIR id. Lowercase UUID.
-      required: true
-      schema:
-        type: string
-        format: uuid
-        example: 16635d38-75a6-4481-82e8-69af60e05011
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/branded-calling_Error'
+          description: List of one or more error entries. Order is not significant.
+      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
+    branded-calling_PaginationMeta:
+      type: object
+      required:
+      - total_pages
+      - total_results
+      - page_number
+      - page_size
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+          description: Total number of pages available given the current `page_size`.
+        total_results:
+          type: integer
+          example: 42
+          description: Total number of items across all pages (excludes soft-deleted rows).
+        page_number:
+          type: integer
+          example: 1
+          description: 1-based index of this page. Echoes the `page[number]` query parameter (default `1`).
+        page_size:
+          type: integer
+          example: 20
+          description: Number of items returned in this page's `data` array. Capped at 250.
+      description: JSON:API pagination metadata returned with every paginated list response. Page numbering is 1-based. `page_size` reports the number of items actually returned in `data` for this page; the requested size is taken from the `page[size]` query parameter.
   responses:
     branded-calling_GenericErrorResponse:
       description: An error occurred. The response carries the standard Telnyx error envelope.
@@ -339,6 +308,37 @@ components:
                   detail: DIR has 1 active infringement claim(s). Resolve the claim before making this change.
                   meta:
                     url: https://developers.telnyx.com/docs/overview/errors/10021
+  parameters:
+    DirId:
+      name: dir_id
+      in: path
+      description: The DIR id. Lowercase UUID.
+      required: true
+      schema:
+        type: string
+        format: uuid
+        example: 16635d38-75a6-4481-82e8-69af60e05011
+    BcPageNumber:
+      name: page[number]
+      in: query
+      description: 1-based page number. Out-of-range values return an empty page with correct meta.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+        example: 1
+    BcPageSize:
+      name: page[size]
+      in: query
+      description: Items per page. Maximum 250; values above are clamped to 250.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 250
+        default: 20
+        example: 20
   securitySchemes:
     BearerAuth:
       type: http

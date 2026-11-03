@@ -1,0 +1,607 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Avatars API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Avatars
+  description: Create and manage real-time AI avatars
+paths:
+  /ai/avatars:
+    get:
+      tags:
+      - Avatars
+      summary: List avatars
+      description: Returns a paginated list of the Telnyx stock avatars and custom avatars available to the authenticated organization. Custom avatars owned by other organizations are never returned. The `image_url` value is suitable for displaying a thumbnail and may be refreshed by listing or retrieving the avatar again. `suggested_voice_id` recommends a compatible Telnyx voice for stock avatars and is an empty string for custom avatars; it does not change an AI Assistant's voice automatically.
+      operationId: list_avatars_public_avatars_get
+      parameters:
+      - name: page[size]
+        in: query
+        description: Number of avatars to return per page.
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: page[number]
+        in: query
+        description: Page number to retrieve, starting at 1.
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: filter[name]
+        in: query
+        description: Return avatars whose names contain this value, using case-insensitive matching.
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 255
+      - name: filter[id]
+        in: query
+        description: Return the avatar with this exact ID.
+        required: false
+        schema:
+          $ref: '#/components/schemas/AvatarId'
+      - name: filter[avatar_type]
+        in: query
+        description: Return only stock or custom avatars.
+        required: false
+        schema:
+          $ref: '#/components/schemas/AvatarType'
+      responses:
+        '200':
+          description: A page of available avatars.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvatarListResponse'
+              example:
+                data:
+                - id: elena
+                  name: Elena
+                  provider: telnyx
+                  avatar_type: stock
+                  hosted: true
+                  image_url: https://example.com/avatars/elena.png
+                  suggested_voice_id: Telnyx.Ultra.db6b0ed5-d5d3-463d-ae85-518a07d3c2b4
+                - id: avatar_0123456789abcdef0123456789abcdef
+                  name: Customer portrait
+                  provider: telnyx
+                  avatar_type: custom
+                  hosted: true
+                  image_url: https://example.com/avatar.png
+                  image_url_expires_at: '2026-10-13T15:00:00Z'
+                  suggested_voice_id: ''
+                  content_type: image/png
+                  size_bytes: 248512
+                  width_px: 1920
+                  height_px: 1080
+                  created_at: '2026-10-13T14:00:00Z'
+                  updated_at: '2026-10-13T14:00:00Z'
+                meta:
+                  total_pages: 1
+                  total_results: 2
+                  page_number: 1
+                  page_size: 20
+        '400':
+          $ref: '#/components/responses/AvatarRequestValidationErrorResponse'
+        '503':
+          $ref: '#/components/responses/AvatarServiceUnavailableResponse'
+    post:
+      tags:
+      - Avatars
+      summary: Create a custom avatar
+      description: Uploads an image, validates its file type, size, safe decoding, and resolution, stores it in Telnyx-managed private storage, and creates an avatar owned by the authenticated organization. Creating an avatar does not update an AI Assistant; use the returned ID separately wherever the avatar is consumed. The avatar image is stored independently from the rendering model and background, which are selected where the avatar is consumed. Supported image types are JPEG, PNG, and WebP. Images may be up to 10 MiB, must be between 256 and 8192 pixels on each side, and may contain at most 40 megapixels. A per-organization custom-avatar quota applies; the create request returns an error when the quota is reached. For best results, use a 16:9 landscape image, preferably 1920 by 1080 pixels and at least 1280 by 720 pixels. Show one centered, front-facing person from the shoulders up, keep the full head and hair visible with space around it, and use a sharp, evenly lit image with unobstructed eyes and mouth. Use a transparent PNG or WebP when the avatar will be combined with a selectable background. These composition recommendations are not enforced in the first release; the first release does not validate the number of faces, pose, or image content.
+      operationId: create_avatar_public_avatars_post
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateAvatarRequest'
+            example:
+              image_file: string($binary)
+              name: Customer portrait
+      responses:
+        '201':
+          description: The custom avatar was validated, stored, and created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvatarResponse'
+              example:
+                data:
+                  id: avatar_0123456789abcdef0123456789abcdef
+                  name: Customer portrait
+                  provider: telnyx
+                  avatar_type: custom
+                  hosted: true
+                  image_url: https://example.com/avatar.png
+                  image_url_expires_at: '2026-10-13T15:00:00Z'
+                  suggested_voice_id: ''
+                  content_type: image/png
+                  size_bytes: 248512
+                  width_px: 1920
+                  height_px: 1080
+                  created_at: '2026-10-13T14:00:00Z'
+                  updated_at: '2026-10-13T14:00:00Z'
+        '400':
+          $ref: '#/components/responses/AvatarRequestValidationErrorResponse'
+        '422':
+          $ref: '#/components/responses/AvatarValidationErrorResponse'
+        '503':
+          $ref: '#/components/responses/AvatarServiceUnavailableResponse'
+  /ai/avatars/{avatar_id}:
+    get:
+      tags:
+      - Avatars
+      summary: Get an avatar
+      description: Returns a Telnyx stock avatar or a custom avatar owned by the authenticated organization. A custom avatar belonging to another organization is returned as not found.
+      operationId: get_avatar_public_avatars__avatar_id__get
+      parameters:
+      - $ref: '#/components/parameters/AvatarId'
+      responses:
+        '200':
+          description: The avatar.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvatarResponse'
+              example:
+                data:
+                  id: avatar_0123456789abcdef0123456789abcdef
+                  name: Customer portrait
+                  provider: telnyx
+                  avatar_type: custom
+                  hosted: true
+                  image_url: https://example.com/avatar.png
+                  image_url_expires_at: '2026-10-13T15:00:00Z'
+                  suggested_voice_id: ''
+                  content_type: image/png
+                  size_bytes: 248512
+                  width_px: 1920
+                  height_px: 1080
+                  created_at: '2026-10-13T14:00:00Z'
+                  updated_at: '2026-10-13T14:00:00Z'
+        '400':
+          $ref: '#/components/responses/AvatarRequestValidationErrorResponse'
+        '404':
+          $ref: '#/components/responses/AvatarNotFoundResponse'
+        '503':
+          $ref: '#/components/responses/AvatarServiceUnavailableResponse'
+    patch:
+      tags:
+      - Avatars
+      summary: Update a custom avatar
+      description: Updates the customer-facing name of a custom avatar owned by the authenticated organization. Stock avatars cannot be modified. To replace the image, create a new custom avatar so existing references keep their original content.
+      operationId: update_avatar_public_avatars__avatar_id__patch
+      parameters:
+      - $ref: '#/components/parameters/AvatarId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAvatarRequest'
+            example:
+              name: Updated portrait
+      responses:
+        '200':
+          description: The custom avatar was updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvatarResponse'
+        '400':
+          $ref: '#/components/responses/AvatarMutationBadRequestResponse'
+        '404':
+          $ref: '#/components/responses/AvatarNotFoundResponse'
+        '422':
+          $ref: '#/components/responses/AvatarValidationErrorResponse'
+        '503':
+          $ref: '#/components/responses/AvatarServiceUnavailableResponse'
+components:
+  responses:
+    AvatarMutationBadRequestResponse:
+      description: The avatar identifier is malformed, or the operation targets a Telnyx stock avatar, which is read-only.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AvatarErrorResponse'
+          example:
+            errors:
+            - code: '10015'
+              title: Bad Request
+              detail: Telnyx stock avatars cannot be modified.
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10015
+    AvatarValidationErrorResponse:
+      description: The request, uploaded image, or organization quota failed validation. Uploaded images must not exceed 10 MiB.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AvatarErrorResponse'
+          example:
+            errors:
+            - code: '10027'
+              title: Unprocessable Entity
+              detail: The image must be between 256 and 8192 pixels on each side.
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10027
+    AvatarServiceUnavailableResponse:
+      description: Avatar storage is temporarily unavailable. Retry the operation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AvatarErrorResponse'
+          example:
+            errors:
+            - code: '10037'
+              title: Service unavailable
+              detail: Avatar storage is temporarily unavailable. Try again.
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10037
+    AvatarRequestValidationErrorResponse:
+      description: The request body, path parameter, or query parameter failed validation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AvatarErrorResponse'
+          example:
+            errors:
+            - code: '10015'
+              title: Bad Request
+              detail: The request contains invalid avatar parameters.
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10015
+    AvatarNotFoundResponse:
+      description: The avatar does not exist or is not available to the authenticated organization.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AvatarErrorResponse'
+          example:
+            errors:
+            - code: '10005'
+              title: Resource not found
+              detail: Avatar avatar_0123456789abcdef0123456789abcdef does not exist.
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10005
+  parameters:
+    AvatarId:
+      name: avatar_id
+      in: path
+      required: true
+      description: Stable identifier of a Telnyx stock avatar or an organization-owned custom avatar.
+      schema:
+        $ref: '#/components/schemas/AvatarId'
+  schemas:
+    AvatarId:
+      type: string
+      minLength: 1
+      maxLength: 128
+      pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+      description: Stable identifier returned by the Avatars API. Discover available stock IDs with GET /v2/ai/avatars and filter[avatar_type]=stock rather than maintaining a fixed list. Custom avatar IDs use the `avatar_` prefix and must belong to the authenticated organization. The service validates that the selected avatar is available.
+      example: avatar_0123456789abcdef0123456789abcdef
+    CreateAvatarRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - image_file
+      - name
+      properties:
+        image_file:
+          type: string
+          format: binary
+          description: JPEG, PNG, or WebP image file. The maximum file size is 10 MiB.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Customer-facing name of the custom avatar.
+          example: Customer portrait
+    AvatarError:
+      type: object
+      additionalProperties: true
+      required:
+      - code
+      - title
+      - detail
+      - meta
+      properties:
+        code:
+          type: string
+          description: Telnyx error code.
+          example: '10015'
+        title:
+          type: string
+          description: Short description of the error.
+          example: Bad Request
+        detail:
+          type: string
+          description: Human-readable details about the error.
+          example: The request failed because it was not well-formed.
+        source:
+          $ref: '#/components/schemas/AvatarErrorSource'
+        meta:
+          $ref: '#/components/schemas/AvatarErrorMeta'
+    AvatarListMeta:
+      type: object
+      required:
+      - total_pages
+      - total_results
+      - page_number
+      - page_size
+      properties:
+        total_pages:
+          type: integer
+          minimum: 0
+          description: Total number of pages for the current filters.
+          example: 1
+        total_results:
+          type: integer
+          minimum: 0
+          description: Total number of matching avatars.
+          example: 1
+        page_number:
+          type: integer
+          minimum: 1
+          description: Current page number.
+          example: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Maximum number of avatars returned on each page.
+          example: 20
+    AvatarResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/Avatar'
+    Avatar:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - name
+      - provider
+      - avatar_type
+      - hosted
+      - image_url
+      properties:
+        id:
+          $ref: '#/components/schemas/AvatarId'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Customer-facing avatar name.
+          example: Customer portrait
+        provider:
+          type: string
+          const: telnyx
+          description: Avatar provider. The first release supports Telnyx avatars.
+          example: telnyx
+        avatar_type:
+          $ref: '#/components/schemas/AvatarType'
+        hosted:
+          type: boolean
+          const: true
+          description: Indicates that avatar rendering runs on Telnyx-operated infrastructure.
+          example: true
+        image_url:
+          type: string
+          format: uri
+          pattern: ^https://
+          description: HTTPS image URL suitable for an avatar selection thumbnail. If the URL expires, list or retrieve the avatar again to refresh it.
+          example: https://example.com/avatar.png
+        image_url_expires_at:
+          type: string
+          format: date-time
+          description: Expiration time of `image_url`. Omitted when the URL does not expire.
+          example: '2026-10-13T15:00:00Z'
+        suggested_voice_id:
+          type: string
+          minLength: 0
+          maxLength: 255
+          readOnly: true
+          description: Optional recommended Telnyx text-to-speech voice for this avatar. An omitted field or empty string means no recommendation is available. Custom avatars have no suggested voice. It is informational and selecting the avatar does not automatically change the AI Assistant's configured voice.
+          example: Telnyx.Ultra.db6b0ed5-d5d3-463d-ae85-518a07d3c2b4
+        content_type:
+          $ref: '#/components/schemas/AvatarContentType'
+        size_bytes:
+          type: integer
+          minimum: 1
+          maximum: 10485760
+          description: Size of a custom avatar image in bytes.
+          example: 248512
+        width_px:
+          type: integer
+          minimum: 256
+          maximum: 8192
+          description: Decoded width of a custom avatar image.
+          example: 1920
+        height_px:
+          type: integer
+          minimum: 256
+          maximum: 8192
+          description: Decoded height of a custom avatar image.
+          example: 1080
+        created_at:
+          type: string
+          format: date-time
+          description: Time when the custom avatar was created.
+          example: '2026-10-13T14:00:00Z'
+        updated_at:
+          type: string
+          format: date-time
+          description: Time when the custom avatar was last updated.
+          example: '2026-10-13T14:00:00Z'
+    UpdateAvatarRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: New customer-facing name of the custom avatar.
+          example: Updated portrait
+    AvatarErrorMeta:
+      type: object
+      additionalProperties: true
+      required:
+      - url
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Link to the Telnyx error-code documentation.
+          example: https://developers.telnyx.com/docs/overview/errors/10027
+    AvatarErrorResponse:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/AvatarError'
+    AvatarErrorSource:
+      type: object
+      additionalProperties: true
+      properties:
+        pointer:
+          type: string
+          description: Location of the invalid request value.
+          example: /image_file
+    AvatarContentType:
+      type: string
+      enum:
+      - image/jpeg
+      - image/png
+      - image/webp
+      description: MIME type of a custom avatar image.
+    AvatarType:
+      type: string
+      enum:
+      - stock
+      - custom
+      description: Whether the avatar is provided by Telnyx or was uploaded by the authenticated organization.
+    AvatarListResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Avatar'
+        meta:
+          $ref: '#/components/schemas/AvatarListMeta'
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pay-connectors_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key, not the processor bearer token.
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    telnyxApiKey:
+      type: http
+      scheme: bearer
+      description: Management-only Telnyx account credential.
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

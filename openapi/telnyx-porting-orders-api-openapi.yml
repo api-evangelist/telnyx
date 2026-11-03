@@ -2367,76 +2367,198 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    PortingOrderEndUserAdmin:
+    UpdatePortingOrder:
+      type: object
+      title: UpdatePortingOrder
+      properties:
+        misc:
+          anyOf:
+          - $ref: '#/components/schemas/PortingOrderMisc'
+          - type: 'null'
+        end_user:
+          $ref: '#/components/schemas/PortingOrderEndUser'
+        documents:
+          $ref: '#/components/schemas/PortingOrderDocuments'
+        activation_settings:
+          type: object
+          properties:
+            foc_datetime_requested:
+              type: string
+              format: date-time
+              description: ISO 8601 formatted Date/Time requested for the FOC date
+              example: '2021-03-19T10:07:15.527Z'
+        phone_number_configuration:
+          $ref: '#/components/schemas/PortingOrderPhoneNumberConfiguration'
+        requirement_group_id:
+          type: string
+          format: uuid
+          description: If present, we will read the current values from the specified Requirement Group into the Documents and Requirements for this Porting Order. Note that any future changes in the Requirement Group would have no impact on this Porting Order. We will return an error if a specified Requirement Group conflicts with documents or requirements in the same request.
+          example: DE748D99-06FA-4D90-9F9A-F4B62696BADA
+        requirements:
+          type: array
+          description: 'List of requirements for porting numbers. '
+          items:
+            $ref: '#/components/schemas/UpdatePortingOrderRequirement'
+        user_feedback:
+          $ref: '#/components/schemas/PortingOrderUserFeedback'
+        webhook_url:
+          type: string
+          format: uri
+        customer_reference:
+          type: string
+        customer_group_reference:
+          type: string
+        messaging:
+          type: object
+          properties:
+            enable_messaging:
+              type: boolean
+              description: Indicates whether Telnyx will port messaging capabilities from the losing carrier. If false, any messaging capabilities will stay with their current provider.
+              example: true
+    PortingOrderPhoneNumberConfiguration:
       type: object
       properties:
-        entity_name:
+        billing_group_id:
           type:
           - string
           - 'null'
-          description: Person Name or Company name requesting the port
-          example: Porter McPortersen
-        auth_person_name:
+          description: identifies the billing group to set on the numbers when ported
+          example: f1486bae-f067-460c-ad43-73a92848f902
+        connection_id:
           type:
           - string
           - 'null'
-          description: Name of person authorizing the porting order
-          example: Porter McPortersen II
-        billing_phone_number:
+          description: identifies the connection to set on the numbers when ported
+          example: f1486bae-f067-460c-ad43-73a92848f902
+        messaging_profile_id:
           type:
           - string
           - 'null'
-          description: Billing phone number associated with these phone numbers
-          example: '13035551234'
-        account_number:
+          description: identifies the messaging profile to set on the numbers when ported
+          example: f1486bae-f067-460c-ad43-73a92848f901
+        emergency_address_id:
           type:
           - string
           - 'null'
-          description: The authorized person's account number with the current service provider
-          example: 123abc
-        tax_identifier:
-          type:
-          - string
-          - 'null'
-          description: European tax identification number. Applicable only in the European Union
-          example: 1234abcd
-        pin_passcode:
-          type:
-          - string
-          - 'null'
-          description: PIN/passcode possibly required by the old service provider for extra verification
-          example: '1234'
-        business_identifier:
-          type:
-          - string
-          - 'null'
-          description: European business identification number. Applicable only in the European Union
-          example: abc123
-    CreatePortingOrder:
-      type: object
-      title: CreatePortingOrder
-      required:
-      - phone_numbers
-      properties:
-        phone_numbers:
+          description: identifies the emergency address to set on the numbers when ported
+          example: f1486bae-f067-460c-ad43-73a92848f902
+        tags:
           type: array
           items:
             type: string
-          description: The list of +E.164 formatted phone numbers
+            description: Tag to set on the numbers when ported
           example:
-          - '+13035550000'
-          - '+13035550001'
-          - '+13035550002'
-        customer_reference:
-          type:
-          - string
-          - 'null'
-          description: A customer-specified reference number for customer bookkeeping purposes
-          example: Acct 123abc
-        customer_group_reference:
+          - abc
+          - '123'
+    UpdatePortingOrderRequirement:
+      type: object
+      description: Specifies a value for a requirement on the Porting Order.
+      required:
+      - field_value
+      - requirement_type_id
+      properties:
+        field_value:
           type: string
-          description: A customer-specified group reference for customer bookkeeping purposes
-          example: Group-456
+          description: identifies the document or provides the text value that satisfies this requirement
+          example: 9787fb5f-cbe5-4de4-b765-3303774ee9fe
+        requirement_type_id:
+          type: string
+          description: Identifies the requirement type that the `field_value` fulfills
+          example: 59b0762a-b274-4f76-ac32-4d5cf0272e66
+    PortingEventNewCommentEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Uniquely identifies the event.
+          format: uuid
+          example: eef3340b-8903-4466-b445-89b697315a3a
+        event_type:
+          type: string
+          description: Identifies the event type
+          enum:
+          - porting_order.new_comment
+          example: porting_order.new_comment
+        porting_order_id:
+          type: string
+          format: uuid
+          description: Identifies the porting order associated with the event.
+          example: 9471c873-e3eb-4ca1-957d-f9a451334d52
+        available_notification_methods:
+          type: array
+          items:
+            type: string
+            enum:
+            - email
+            - webhook
+            - webhook_v1
+          description: Indicates the notification methods used.
+        payload_status:
+          type: string
+          description: The status of the payload generation.
+          enum:
+          - created
+          - completed
+          example: created
+        payload:
+          type: object
+          description: The webhook payload for the porting_order.new_comment event
+          properties:
+            porting_order_id:
+              type: string
+              format: uuid
+              example: 96dfa9e4-c753-4fd3-97cd-42d66f26cf0c
+              description: Identifies the porting order that the comment was added to.
+            support_key:
+              type: string
+              description: Identifies the support key associated with the porting order.
+              example: sr_b1a2c3
+            comment:
+              type: object
+              description: The comment that was added to the porting order.
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                  example: 96dfa9e4-c753-4fd3-97cd-42d66f26cf0c
+                  description: Identifies the comment.
+                body:
+                  type: string
+                  description: The body of the comment.
+                  example: This is a comment.
+                user_id:
+                  type: string
+                  format: uuid
+                  example: 96dfa9e4-c753-4fd3-97cd-42d66f26cf0c
+                  description: Identifies the user that create the comment.
+                user_type:
+                  type: string
+                  example: user
+                  description: Identifies the type of the user that created the comment.
+                  enum:
+                  - user
+                  - admin
+                  - system
+                inserted_at:
+                  type: string
+                  format: date-time
+                  description: ISO 8601 formatted date indicating when the comment was created.
+                  example: '2021-03-19T10:07:15.527Z'
+        record_type:
+          type: string
+          example: porting_event
+          description: Identifies the type of the resource.
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was created.
+          example: '2021-03-19T10:07:15.527000Z'
+        updated_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was updated.
+          example: '2021-03-19T10:07:15.527000Z'
     PortingOrder:
       type: object
       properties:
@@ -2568,158 +2690,147 @@ components:
             enum:
             - associated_phone_numbers
             - phone_number_verification_codes
-    PortingEventNewCommentEvent:
+    PortingOrdersActivationJob:
       type: object
       properties:
         id:
-          type: string
-          description: Uniquely identifies the event.
-          format: uuid
-          example: eef3340b-8903-4466-b445-89b697315a3a
-        event_type:
-          type: string
-          description: Identifies the event type
-          enum:
-          - porting_order.new_comment
-          example: porting_order.new_comment
-        porting_order_id:
+          description: Uniquely identifies this activation job
           type: string
           format: uuid
-          description: Identifies the porting order associated with the event.
-          example: 9471c873-e3eb-4ca1-957d-f9a451334d52
-        available_notification_methods:
-          type: array
-          items:
-            type: string
-            enum:
-            - email
-            - webhook
-            - webhook_v1
-          description: Indicates the notification methods used.
-        payload_status:
+          example: f1486bae-f067-460c-ad43-73a92848f902
+          readOnly: true
+        status:
           type: string
-          description: The status of the payload generation.
+          description: Specifies the status of this activation job
           enum:
           - created
+          - in-process
           - completed
-          example: created
-        payload:
-          type: object
-          description: The webhook payload for the porting_order.new_comment event
-          properties:
-            porting_order_id:
-              type: string
-              format: uuid
-              example: 96dfa9e4-c753-4fd3-97cd-42d66f26cf0c
-              description: Identifies the porting order that the comment was added to.
-            support_key:
-              type: string
-              description: Identifies the support key associated with the porting order.
-              example: sr_b1a2c3
-            comment:
-              type: object
-              description: The comment that was added to the porting order.
-              properties:
-                id:
-                  type: string
-                  format: uuid
-                  example: 96dfa9e4-c753-4fd3-97cd-42d66f26cf0c
-                  description: Identifies the comment.
-                body:
-                  type: string
-                  description: The body of the comment.
-                  example: This is a comment.
-                user_id:
-                  type: string
-                  format: uuid
-                  example: 96dfa9e4-c753-4fd3-97cd-42d66f26cf0c
-                  description: Identifies the user that create the comment.
-                user_type:
-                  type: string
-                  example: user
-                  description: Identifies the type of the user that created the comment.
-                  enum:
-                  - user
-                  - admin
-                  - system
-                inserted_at:
-                  type: string
-                  format: date-time
-                  description: ISO 8601 formatted date indicating when the comment was created.
-                  example: '2021-03-19T10:07:15.527Z'
-        record_type:
+          - failed
+        activation_type:
           type: string
-          example: porting_event
-          description: Identifies the type of the resource.
-          readOnly: true
-        created_at:
+          description: Specifies the type of this activation job
+          enum:
+          - scheduled
+          - on-demand
+        activate_at:
           type: string
           format: date-time
-          description: ISO 8601 formatted date indicating when the resource was created.
-          example: '2021-03-19T10:07:15.527000Z'
-        updated_at:
-          type: string
-          format: date-time
-          description: ISO 8601 formatted date indicating when the resource was updated.
-          example: '2021-03-19T10:07:15.527000Z'
-    PortingOrdersAllowedFocWindow:
-      type: object
-      title: PortingOrdersAllowedFocWindow
-      properties:
-        started_at:
-          type: string
-          format: date-time
-          description: ISO 8601 formatted date indicating the start of the range of foc window.
+          description: ISO 8601 formatted date indicating when the activation job should be executed. This time should be between some activation window.
           example: '2021-03-19T10:07:15.527Z'
-          readOnly: true
-        ended_at:
-          type: string
-          format: date-time
-          description: ISO 8601 formatted date indicating the end of the range of foc window
-          example: '2021-03-19T10:07:15.527Z'
-          readOnly: true
-        record_type:
-          type: string
-          example: porting_order
-          description: Identifies the type of the resource.
-          readOnly: true
-    PortingUKCarrier:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          example: 96dfa9e4-c753-4fd3-97cd-42d66f26cf0c
-          description: Identifies the UK carrier.
-        cupid:
-          type: string
-          description: The CUPID of the carrier. This is a 3 digit number code that identifies the carrier in the UK.
-          example: '895'
-        name:
-          type: string
-          description: The name of the carrier.
-          example: Telnyx UK Limited
-        alternative_cupids:
+        activation_windows:
           type: array
-          description: Alternative CUPIDs of the carrier.
+          description: List of allowed activation windows for this activation job
           items:
-            type: string
-            description: An alternative CUPID of the carrier.
-            example: '895'
+            type: object
+            properties:
+              start_at:
+                type: string
+                format: date-time
+                description: ISO 8601 formatted date indicating when the activation window starts
+                example: '2021-03-19T10:07:15.527Z'
+              end_at:
+                type: string
+                format: date-time
+                description: ISO 8601 formatted date indicating when the activation window ends
+                example: '2021-03-19T10:07:15.527Z'
         record_type:
           type: string
-          example: porting_uk_carrier
+          example: porting_activation_job
           description: Identifies the type of the resource.
+          readOnly: true
         created_at:
           type: string
           format: date-time
           description: ISO 8601 formatted date indicating when the resource was created.
-          example: '2021-03-19T10:07:15.527000Z'
+          example: '2021-03-19T10:07:15.527Z'
+          readOnly: true
         updated_at:
           type: string
           format: date-time
-          description: ISO 8601 formatted date indicating when the resource was updated.
-          example: '2021-03-19T10:07:15.527000Z'
+          description: ISO 8601 formatted date indicating when the resource was created.
+          example: '2021-03-19T10:07:15.527Z'
+          readOnly: true
+    PortingOrderActivationSettings:
+      type: object
+      properties:
+        foc_datetime_requested:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: ISO 8601 formatted Date/Time requested for the FOC date
+          example: '2021-03-19T10:07:15.527Z'
+        foc_datetime_actual:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: ISO 8601 formatted Date/Time of the FOC date
+          example: '2021-03-19T10:07:15.527Z'
+        fast_port_eligible:
+          type: boolean
+          readOnly: true
+          description: Indicates whether this porting order is eligible for FastPort
+          example: true
+        activation_status:
+          anyOf:
+          - $ref: '#/components/schemas/PortingOrderActivationStatus'
+          - type: 'null'
+    AUIdVerificationParams:
+      type: object
+      description: Required information for initiating the action requirement for AU ID verification.
+      required:
+      - first_name
+      - last_name
+      properties:
+        first_name:
+          type: string
+          description: The first name of the person that will perform the verification flow.
+          example: John
+        last_name:
+          type: string
+          description: The last name of the person that will perform the verification flow.
+          example: Doe
+    PortingOrderEndUserLocation:
+      type: object
+      properties:
+        street_address:
+          type:
+          - string
+          - 'null'
+          description: First line of billing address
+          example: 600 Congress Avenue
+        extended_address:
+          type:
+          - string
+          - 'null'
+          description: Second line of billing address
+          example: 14th Floor
+        locality:
+          type:
+          - string
+          - 'null'
+          description: City or municipality of billing address
+          example: Austin
+        administrative_area:
+          type:
+          - string
+          - 'null'
+          description: State, province, or similar of billing address
+          example: TX
+        postal_code:
+          type:
+          - string
+          - 'null'
+          description: Postal Code of billing address
+          example: '78701'
+        country_code:
+          type:
+          - string
+          - 'null'
+          description: ISO3166-1 alpha-2 country code of billing address
+          example: US
     PortingReport:
       type: object
       properties:
@@ -2764,103 +2875,81 @@ components:
           format: date-time
           description: ISO 8601 formatted date indicating when the resource was updated.
           example: '2021-03-19T10:07:15.527000Z'
-    ExportPortingOrdersCSVReport:
-      description: The parameters for generating a porting orders CSV report.
-      type: object
-      required:
-      - filters
-      properties:
-        filters:
-          type: object
-          description: The filters to apply to the export porting order CSV report.
-          properties:
-            status__in:
-              type: array
-              description: The status of the porting orders to include in the report.
-              items:
-                type: string
-                enum:
-                - draft
-                - in-process
-                - submitted
-                - exception
-                - foc-date-confirmed
-                - cancel-pending
-                - ported
-                - cancelled
-            customer_reference__in:
-              type: array
-              description: The customer reference of the porting orders to include in the report.
-              items:
-                type: string
-                example: my-customer-reference
-            created_at__lt:
-              type: string
-              description: The date and time the porting order was created before.
-              format: date-time
-            created_at__gt:
-              type: string
-              description: The date and time the porting order was created after.
-              format: date-time
-    PortingPhoneNumberBlock:
+    PortingOrdersComment:
       type: object
       properties:
         id:
-          description: Uniquely identifies this porting phone number block.
+          type: string
+          format: uuid
+          example: f1486bae-f067-460c-ad43-73a92848f902
+        body:
+          type: string
+          description: Body of comment
+          example: Great experience so far
+        porting_order_id:
+          type: string
+          format: uuid
+          example: f1486bae-f067-460c-ad43-73a92848f902
+        user_type:
+          type: string
+          description: Indicates whether this comment was created by a Telnyx Admin, user, or system
+          enum:
+          - admin
+          - user
+          - system
+          example: user
+        record_type:
+          type: string
+          description: Identifies the type of the resource.
+          example: porting_comment
+        created_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was created.
+          example: '2021-03-19T10:07:15.527Z'
+    PortingPhoneNumberExtension:
+      type: object
+      properties:
+        id:
+          description: Uniquely identifies this porting phone number extension.
           type: string
           format: uuid
           example: f24151b6-3389-41d3-8747-7dd8c681e5e2
           readOnly: true
-        country_code:
-          description: Specifies the country code for this porting phone number block. It is a two-letter ISO 3166-1 alpha-2 country code.
+        porting_phone_number_id:
+          description: Identifies the porting phone number associated with this porting phone number extension.
           type: string
-          example: DE
-        phone_number_type:
-          description: Specifies the phone number type for this porting phone number block.
-          type: string
-          example: local
-          enum:
-          - landline
-          - local
-          - mobile
-          - multipurpose
-          - national
-          - other
-          - shared_cost
-          - toll_free
-        phone_number_range:
-          description: Specifies the phone number range for this porting phone number block.
+          format: uuid
+          example: f24151b6-3389-41d3-8747-7dd8c681e5e2
+        extension_range:
+          description: Specifies the extension range for this porting phone number extension.
           type: object
           properties:
             start_at:
-              description: Specifies the start of the phone number range for this porting phone number block.
-              type: string
-              pattern: ^\+\d{7,15}$
-              example: '+4930244999901'
+              description: Specifies the start of the extension range for this porting phone number extension.
+              type: integer
+              example: 1
             end_at:
-              description: Specifies the end of the phone number range for this porting phone number block.
-              type: string
-              pattern: ^\+\d{7,15}$
-              example: '+4930244999910'
+              description: Specifies the end of the extension range for this porting phone number extension.
+              type: integer
+              example: 10
         activation_ranges:
-          description: Specifies the activation ranges for this porting phone number block. The activation range must be within the phone number range and should not overlap with other activation ranges.
+          description: Specifies the activation ranges for this porting phone number extension. The activation range must be within the extension range and should not overlap with other activation ranges.
           type: array
           items:
             type: object
             properties:
               start_at:
-                description: Specifies the start of the activation range. Must be greater or equal the start of the phone number range.
-                type: string
-                pattern: ^\+\d{7,15}$
-                example: '+4930244999901'
+                description: Specifies the start of the activation range. Must be greater or equal the start of the extension range.
+                type: integer
+                example: 1
               end_at:
-                description: Specifies the end of the activation range. It must be no more than the end of the phone number range.
-                type: string
-                pattern: ^\+\d{7,15}$
-                example: '+4930244999910'
+                description: Specifies the end of the activation range. It must be no more than the end of the extension range.
+                type: integer
+                example: 10
         record_type:
           type: string
-          example: porting_phone_number_block
+          example: porting_phone_number_extension
           description: Identifies the type of the resource.
           readOnly: true
         created_at:
@@ -2875,50 +2964,7 @@ components:
           description: ISO 8601 formatted date indicating when the resource was last updated.
           example: '2021-03-19T10:07:15.527Z'
           readOnly: true
-    PortabilityStatus:
-      type: string
-      description: Specifies whether Telnyx is able to confirm portability this number in the United States & Canada. International phone numbers are provisional by default.
-      enum:
-      - pending
-      - confirmed
-      - provisional
-      example: confirmed
-    PortingOrderEndUser:
-      type: object
-      properties:
-        admin:
-          $ref: '#/components/schemas/PortingOrderEndUserAdmin'
-        location:
-          $ref: '#/components/schemas/PortingOrderEndUserLocation'
-    PortingOrderMessaging:
-      type: object
-      description: Information about messaging porting process.
-      properties:
-        messaging_capable:
-          type: boolean
-          description: Indicates whether the porting order can also port messaging capabilities.
-          example: true
-        enable_messaging:
-          type: boolean
-          description: Indicates whether Telnyx will port messaging capabilities from the losing carrier. If false, any messaging capabilities will stay with their current provider.
-          example: true
-        messaging_port_status:
-          type: string
-          description: The current status of the messaging porting.
-          enum:
-          - not_applicable
-          - pending
-          - activating
-          - exception
-          - canceled
-          - partial_port_complete
-          - ported
-          example: pending
-        messaging_port_completed:
-          type: boolean
-          description: Indicates whether the messaging porting has been completed.
-          example: false
-    PortingEventStatusChangedEvent:
+    PortingEventDeletedPayload:
       type: object
       properties:
         id:
@@ -2930,8 +2976,8 @@ components:
           type: string
           description: Identifies the event type
           enum:
-          - porting_order.status_changed
-          example: porting_order.status_changed
+          - porting_order.deleted
+          example: porting_order.deleted
         porting_order_id:
           type: string
           format: uuid
@@ -2955,182 +3001,89 @@ components:
           example: created
         payload:
           type: object
-          description: The webhook payload for the porting_order.status_changed event
           properties:
             id:
               type: string
               format: uuid
               example: 96dfa9e4-c753-4fd3-97cd-42d66f26cf0c
-              description: Identifies the porting order that was moved.
+              description: Identifies the porting order that was deleted.
             customer_reference:
               type: string
               description: Identifies the customer reference associated with the porting order.
               example: my-ref-001
-            status:
-              $ref: '#/components/schemas/PortingOrderStatus'
-            support_key:
+            deleted_at:
               type: string
-              description: Identifies the support key associated with the porting order.
-              example: sr_b1a2c3
+              format: date-time
+              description: ISO 8601 formatted date indicating when the porting order was deleted.
+              example: '2021-03-19T10:07:15.527Z'
+            record_type:
+              type: string
+              example: porting_event
+              description: Identifies the type of the resource.
+              readOnly: true
+            created_at:
+              type: string
+              format: date-time
+              description: ISO 8601 formatted date indicating when the resource was created.
+              example: '2021-03-19T10:07:15.527000Z'
             updated_at:
               type: string
               format: date-time
-              description: ISO 8601 formatted date indicating when the porting order was moved.
-              example: '2021-03-19T10:07:15.527Z'
-            webhook_url:
-              type: string
-              description: The URL to send the webhook to.
-              example: https://example.com/webhook
-        record_type:
-          type: string
-          example: porting_event
-          description: Identifies the type of the resource.
-          readOnly: true
-        created_at:
-          type: string
-          format: date-time
-          description: ISO 8601 formatted date indicating when the resource was created.
-          example: '2021-03-19T10:07:15.527000Z'
-        updated_at:
-          type: string
-          format: date-time
-          description: ISO 8601 formatted date indicating when the resource was updated.
-          example: '2021-03-19T10:07:15.527000Z'
-    GetSubRequestByPortingOrder:
+              description: ISO 8601 formatted date indicating when the resource was updated.
+              example: '2021-03-19T10:07:15.527000Z'
+    PortingOrderMisc:
       type: object
       properties:
-        sub_request_id:
-          type: string
-          description: Identifies the Sub Request associated with the Porting Order
-          example: 9787fb5f-cbe5-4de4-b765-3303774ee9fe
-        port_request_id:
-          type: string
-          description: Identifies the Port Request associated with the Porting Order
-          example: 59b0762a-b274-4f76-ac32-4d5cf0272e66
-    UpdatePortingOrder:
-      type: object
-      title: UpdatePortingOrder
-      properties:
-        misc:
-          anyOf:
-          - $ref: '#/components/schemas/PortingOrderMisc'
-          - type: 'null'
-        end_user:
-          $ref: '#/components/schemas/PortingOrderEndUser'
-        documents:
-          $ref: '#/components/schemas/PortingOrderDocuments'
-        activation_settings:
-          type: object
-          properties:
-            foc_datetime_requested:
-              type: string
-              format: date-time
-              description: ISO 8601 formatted Date/Time requested for the FOC date
-              example: '2021-03-19T10:07:15.527Z'
-        phone_number_configuration:
-          $ref: '#/components/schemas/PortingOrderPhoneNumberConfiguration'
-        requirement_group_id:
-          type: string
-          format: uuid
-          description: If present, we will read the current values from the specified Requirement Group into the Documents and Requirements for this Porting Order. Note that any future changes in the Requirement Group would have no impact on this Porting Order. We will return an error if a specified Requirement Group conflicts with documents or requirements in the same request.
-          example: DE748D99-06FA-4D90-9F9A-F4B62696BADA
-        requirements:
-          type: array
-          description: 'List of requirements for porting numbers. '
-          items:
-            $ref: '#/components/schemas/UpdatePortingOrderRequirement'
-        user_feedback:
-          $ref: '#/components/schemas/PortingOrderUserFeedback'
-        webhook_url:
-          type: string
-          format: uri
-        customer_reference:
-          type: string
-        customer_group_reference:
-          type: string
-        messaging:
-          type: object
-          properties:
-            enable_messaging:
-              type: boolean
-              description: Indicates whether Telnyx will port messaging capabilities from the losing carrier. If false, any messaging capabilities will stay with their current provider.
-              example: true
-    PortingAdditionalDocument:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Uniquely identifies this additional document
-          format: uuid
-          example: eef3340b-8903-4466-b445-89b697315a3a
-        document_type:
-          type: string
-          description: Identifies the type of additional document
+        type:
+          $ref: '#/components/schemas/PortingOrderType'
+        remaining_numbers_action:
+          type:
+          - string
+          - 'null'
+          description: Remaining numbers can be either kept with their current service provider or disconnected. 'new_billing_telephone_number' is required when 'remaining_numbers_action' is 'keep'.
           enum:
-          - loa
-          - invoice
-          - csr
-          - other
-          example: loa
-        document_id:
-          type: string
-          format: uuid
-          description: Identifies the associated document
-          example: f1486bae-f067-460c-ad43-73a92848f902
-        filename:
-          type: string
-          description: The filename of the related document.
-          example: file.txt
-        content_type:
-          type: string
-          description: The content type of the related document.
-          example: text/plain
-        porting_order_id:
-          type: string
-          format: uuid
-          description: Identifies the associated porting order
-          example: f1486bae-f067-460c-ad43-73a92848f902
-        record_type:
-          type: string
-          example: porting_additional_document
-          description: Identifies the type of the resource.
-          readOnly: true
-        created_at:
-          type: string
-          format: date-time
-          description: ISO 8601 formatted date indicating when the resource was created.
-          example: '2021-03-19T10:07:15.527000Z'
-        updated_at:
-          type: string
-          format: date-time
-          description: ISO 8601 formatted date indicating when the resource was updated.
-          example: '2021-03-19T10:07:15.527000Z'
-    PortingOrderActivationSettings:
+          - keep
+          - disconnect
+          - null
+          example: disconnect
+        new_billing_phone_number:
+          type:
+          - string
+          - 'null'
+          description: New billing phone number for the remaining numbers. Used in case the current billing phone number is being ported to Telnyx. This will be set on your account with your current service provider and should be one of the numbers remaining on that account.
+    PortingOrdersExceptionType:
       type: object
       properties:
-        foc_datetime_requested:
-          type:
-          - string
-          - 'null'
-          format: date-time
-          description: ISO 8601 formatted Date/Time requested for the FOC date
-          example: '2021-03-19T10:07:15.527Z'
-        foc_datetime_actual:
-          type:
-          - string
-          - 'null'
-          format: date-time
-          description: ISO 8601 formatted Date/Time of the FOC date
-          example: '2021-03-19T10:07:15.527Z'
-        fast_port_eligible:
-          type: boolean
-          readOnly: true
-          description: Indicates whether this porting order is eligible for FastPort
-          example: true
-        activation_status:
-          anyOf:
-          - $ref: '#/components/schemas/PortingOrderActivationStatus'
-          - type: 'null'
+        code:
+          type: string
+          description: Identifier of an exception type
+          enum:
+          - ACCOUNT_NUMBER_MISMATCH
+          - AUTH_PERSON_MISMATCH
+          - BTN_ATN_MISMATCH
+          - ENTITY_NAME_MISMATCH
+          - FOC_EXPIRED
+          - FOC_REJECTED
+          - LOCATION_MISMATCH
+          - LSR_PENDING
+          - MAIN_BTN_PORTING
+          - OSP_IRRESPONSIVE
+          - OTHER
+          - PASSCODE_PIN_INVALID
+          - PHONE_NUMBER_HAS_SPECIAL_FEATURE
+          - PHONE_NUMBER_MISMATCH
+          - PHONE_NUMBER_NOT_PORTABLE
+          - PORT_TYPE_INCORRECT
+          - PORTING_ORDER_SPLIT_REQUIRED
+          - POSTAL_CODE_MISMATCH
+          - RATE_CENTER_NOT_PORTABLE
+          - SV_CONFLICT
+          - SV_UNKNOWN_FAILURE
+          example: ENTITY_NAME_MISMATCH
+        description:
+          type: string
+          description: Description of an exception type
+          example: Entity name does not match that on the CSR
     PortingEventSplitEvent:
       type: object
       properties:
@@ -3214,288 +3167,6 @@ components:
           format: date-time
           description: ISO 8601 formatted date indicating when the resource was updated.
           example: '2021-03-19T10:07:15.527000Z'
-    PaginationMeta:
-      type: object
-      properties:
-        total_pages:
-          type: integer
-          example: 3
-        total_results:
-          type: integer
-          example: 55
-        page_number:
-          type: integer
-          example: 2
-        page_size:
-          type: integer
-          example: 25
-    PortingPhoneNumberExtension:
-      type: object
-      properties:
-        id:
-          description: Uniquely identifies this porting phone number extension.
-          type: string
-          format: uuid
-          example: f24151b6-3389-41d3-8747-7dd8c681e5e2
-          readOnly: true
-        porting_phone_number_id:
-          description: Identifies the porting phone number associated with this porting phone number extension.
-          type: string
-          format: uuid
-          example: f24151b6-3389-41d3-8747-7dd8c681e5e2
-        extension_range:
-          description: Specifies the extension range for this porting phone number extension.
-          type: object
-          properties:
-            start_at:
-              description: Specifies the start of the extension range for this porting phone number extension.
-              type: integer
-              example: 1
-            end_at:
-              description: Specifies the end of the extension range for this porting phone number extension.
-              type: integer
-              example: 10
-        activation_ranges:
-          description: Specifies the activation ranges for this porting phone number extension. The activation range must be within the extension range and should not overlap with other activation ranges.
-          type: array
-          items:
-            type: object
-            properties:
-              start_at:
-                description: Specifies the start of the activation range. Must be greater or equal the start of the extension range.
-                type: integer
-                example: 1
-              end_at:
-                description: Specifies the end of the activation range. It must be no more than the end of the extension range.
-                type: integer
-                example: 10
-        record_type:
-          type: string
-          example: porting_phone_number_extension
-          description: Identifies the type of the resource.
-          readOnly: true
-        created_at:
-          type: string
-          format: date-time
-          description: ISO 8601 formatted date indicating when the resource was created.
-          example: '2021-03-19T10:07:15.527Z'
-          readOnly: true
-        updated_at:
-          type: string
-          format: date-time
-          description: ISO 8601 formatted date indicating when the resource was last updated.
-          example: '2021-03-19T10:07:15.527Z'
-          readOnly: true
-    PortingOrdersComment:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          example: f1486bae-f067-460c-ad43-73a92848f902
-        body:
-          type: string
-          description: Body of comment
-          example: Great experience so far
-        porting_order_id:
-          type: string
-          format: uuid
-          example: f1486bae-f067-460c-ad43-73a92848f902
-        user_type:
-          type: string
-          description: Indicates whether this comment was created by a Telnyx Admin, user, or system
-          enum:
-          - admin
-          - user
-          - system
-          example: user
-        record_type:
-          type: string
-          description: Identifies the type of the resource.
-          example: porting_comment
-        created_at:
-          type: string
-          format: date-time
-          description: ISO 8601 formatted date indicating when the resource was created.
-          example: '2021-03-19T10:07:15.527Z'
-    PortingOrderType:
-      type: string
-      description: A port can be either 'full' or 'partial'. When type is 'full' the other attributes should be omitted.
-      enum:
-      - full
-      - partial
-      example: full
-    PortingOrderRequirement:
-      type: object
-      properties:
-        field_type:
-          type: string
-          description: Type of value expected on field_value field
-          enum:
-          - document
-          example: document
-        field_value:
-          type: string
-          description: identifies the document that satisfies this requirement
-          example: 9787fb5f-cbe5-4de4-b765-3303774ee9fe
-        requirement_type_id:
-          type: string
-          description: Identifies the requirement type that meets this requirement
-          example: 59b0762a-b274-4f76-ac32-4d5cf0272e66
-        record_type:
-          type: string
-          description: Identifies the type of the resource.
-          example: porting_requirement
-    AUIdVerificationParams:
-      type: object
-      description: Required information for initiating the action requirement for AU ID verification.
-      required:
-      - first_name
-      - last_name
-      properties:
-        first_name:
-          type: string
-          description: The first name of the person that will perform the verification flow.
-          example: John
-        last_name:
-          type: string
-          description: The last name of the person that will perform the verification flow.
-          example: Doe
-    PortingOrderSharingToken:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Uniquely identifies this sharing token
-          format: uuid
-          example: 0a4b78a0-d416-4761-94f7-46c72ec56547
-        porting_order_id:
-          type: string
-          format: uuid
-          description: Identifies the porting order resource being shared
-          example: f1486bae-f067-460c-ad43-73a92848f902
-        expires_in_seconds:
-          type: integer
-          minimum: 1
-          description: The number of seconds until the sharing token expires
-          example: 3600
-        permissions:
-          type: array
-          description: The permissions granted to the sharing token
-          items:
-            type: string
-            enum:
-            - porting_order.document.read
-            - porting_order.document.update
-          example:
-          - porting_order.document.read
-          - porting_order.document.update
-        token:
-          type: string
-          description: A signed JWT token that can be used to access the shared resource
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2ODk4OTQ2NzcsImlzdCI6MTY4OTg5MTA3NywicGVybWlzc2lvbnMiOlsicG9ydGluZ19vcmRlci5kb2N1bWVudC5yZWFkIl0sInBvcnRpbmdfb3JkZXJfaWQiOiJmZDRiODZjOC00OTdkLTRjNmQtOTYwOS1hNzg5ZTRlMTRjZmUifQ.CT0HRF6OLj7VPZ8p5Y_0S8rOL8SEUznwJJkR-YReKwc
-        expires_at:
-          type: string
-          format: date-time
-          description: ISO 8601 formatted date indicating when the sharing token expires.
-          example: '2021-03-19T10:07:15.527000Z'
-        record_type:
-          type: string
-          example: porting_order_sharing_token
-          description: Identifies the type of the resource.
-          readOnly: true
-        created_at:
-          type: string
-          format: date-time
-          description: ISO 8601 formatted date indicating when the resource was created.
-          example: '2021-03-19T10:07:15.527000Z'
-    PortingOrderMisc:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/PortingOrderType'
-        remaining_numbers_action:
-          type:
-          - string
-          - 'null'
-          description: Remaining numbers can be either kept with their current service provider or disconnected. 'new_billing_telephone_number' is required when 'remaining_numbers_action' is 'keep'.
-          enum:
-          - keep
-          - disconnect
-          - null
-          example: disconnect
-        new_billing_phone_number:
-          type:
-          - string
-          - 'null'
-          description: New billing phone number for the remaining numbers. Used in case the current billing phone number is being ported to Telnyx. This will be set on your account with your current service provider and should be one of the numbers remaining on that account.
-    PortingAssociatedPhoneNumber:
-      type: object
-      properties:
-        id:
-          description: Uniquely identifies this associated phone number.
-          type: string
-          format: uuid
-          example: f24151b6-3389-41d3-8747-7dd8c681e5e2
-          readOnly: true
-        porting_order_id:
-          description: Identifies the porting order associated with this phone number.
-          type: string
-          format: uuid
-          example: a24151b6-3389-41d3-8747-7dd8c681e5e2
-        country_code:
-          description: Specifies the country code for this associated phone number. It is a two-letter ISO 3166-1 alpha-2 country code.
-          type: string
-          example: GB
-        phone_number_type:
-          description: Specifies the phone number type for this associated phone number.
-          type: string
-          example: local
-          enum:
-          - landline
-          - local
-          - mobile
-          - national
-          - shared_cost
-          - toll_free
-        phone_number_range:
-          description: Specifies the phone number range for this associated phone number.
-          type: object
-          properties:
-            start_at:
-              description: Specifies the start of the phone number range for this associated phone number.
-              type: string
-              pattern: ^\+\d{7,15}$
-              example: '+441234567890'
-            end_at:
-              description: Specifies the end of the phone number range for this associated phone number.
-              type: string
-              pattern: ^\+\d{7,15}$
-              example: '+441234567899'
-        action:
-          description: Specifies the action to take with this phone number during partial porting.
-          type: string
-          enum:
-          - keep
-          - disconnect
-          example: keep
-        record_type:
-          type: string
-          example: porting_associated_phone_number
-          description: Identifies the type of the resource.
-          readOnly: true
-        created_at:
-          type: string
-          format: date-time
-          description: ISO 8601 formatted date indicating when the resource was created.
-          example: '2021-03-19T10:07:15.527Z'
-          readOnly: true
-        updated_at:
-          type: string
-          format: date-time
-          description: ISO 8601 formatted date indicating when the resource was last updated.
-          example: '2021-03-19T10:07:15.527Z'
-          readOnly: true
     PortingEventMessagingChangedPayload:
       type: object
       properties:
@@ -3591,6 +3262,122 @@ components:
           format: date-time
           description: ISO 8601 formatted date indicating when the resource was updated.
           example: '2021-03-19T10:07:15.527000Z'
+    CreatePortingOrder:
+      type: object
+      title: CreatePortingOrder
+      required:
+      - phone_numbers
+      properties:
+        phone_numbers:
+          type: array
+          items:
+            type: string
+          description: The list of +E.164 formatted phone numbers
+          example:
+          - '+13035550000'
+          - '+13035550001'
+          - '+13035550002'
+        customer_reference:
+          type:
+          - string
+          - 'null'
+          description: A customer-specified reference number for customer bookkeeping purposes
+          example: Acct 123abc
+        customer_group_reference:
+          type: string
+          description: A customer-specified group reference for customer bookkeeping purposes
+          example: Group-456
+    CreatePortingOrderComment:
+      type: object
+      properties:
+        body:
+          type: string
+          example: Please, let me know when the port completes
+    PortingOrderActivationStatus:
+      type: string
+      description: Activation status
+      enum:
+      - New
+      - Pending
+      - Conflict
+      - Cancel Pending
+      - Failed
+      - Concurred
+      - Activate RDY
+      - Disconnect Pending
+      - Concurrence Sent
+      - Old
+      - Sending
+      - Active
+      - Cancelled
+      example: Active
+    PortingAssociatedPhoneNumber:
+      type: object
+      properties:
+        id:
+          description: Uniquely identifies this associated phone number.
+          type: string
+          format: uuid
+          example: f24151b6-3389-41d3-8747-7dd8c681e5e2
+          readOnly: true
+        porting_order_id:
+          description: Identifies the porting order associated with this phone number.
+          type: string
+          format: uuid
+          example: a24151b6-3389-41d3-8747-7dd8c681e5e2
+        country_code:
+          description: Specifies the country code for this associated phone number. It is a two-letter ISO 3166-1 alpha-2 country code.
+          type: string
+          example: GB
+        phone_number_type:
+          description: Specifies the phone number type for this associated phone number.
+          type: string
+          example: local
+          enum:
+          - landline
+          - local
+          - mobile
+          - national
+          - shared_cost
+          - toll_free
+        phone_number_range:
+          description: Specifies the phone number range for this associated phone number.
+          type: object
+          properties:
+            start_at:
+              description: Specifies the start of the phone number range for this associated phone number.
+              type: string
+              pattern: ^\+\d{7,15}$
+              example: '+441234567890'
+            end_at:
+              description: Specifies the end of the phone number range for this associated phone number.
+              type: string
+              pattern: ^\+\d{7,15}$
+              example: '+441234567899'
+        action:
+          description: Specifies the action to take with this phone number during partial porting.
+          type: string
+          enum:
+          - keep
+          - disconnect
+          example: keep
+        record_type:
+          type: string
+          example: porting_associated_phone_number
+          description: Identifies the type of the resource.
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was created.
+          example: '2021-03-19T10:07:15.527Z'
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was last updated.
+          example: '2021-03-19T10:07:15.527Z'
+          readOnly: true
     PortingVerificationCode:
       type: object
       properties:
@@ -3679,6 +3466,284 @@ components:
           type: string
           description: Identifies the type of the resource.
           example: porting_requirement
+    PortingPhoneNumberConfiguration:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Uniquely identifies this phone number configuration
+          format: uuid
+          example: eef3340b-8903-4466-b445-89b697315a3a
+        user_bundle_id:
+          type: string
+          format: uuid
+          description: Identifies the associated user bundle
+          example: daa4308e-742f-4867-97f2-3073db13319a
+        porting_phone_number_id:
+          type: string
+          format: uuid
+          description: Identifies the associated porting phone number
+          example: f1486bae-f067-460c-ad43-73a92848f902
+        record_type:
+          type: string
+          example: porting_phone_number_configuration
+          description: Identifies the type of the resource.
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was created.
+          example: '2021-03-19T10:07:15.527000Z'
+        updated_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was updated.
+          example: '2021-03-19T10:07:15.527000Z'
+    PortingAdditionalDocument:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Uniquely identifies this additional document
+          format: uuid
+          example: eef3340b-8903-4466-b445-89b697315a3a
+        document_type:
+          type: string
+          description: Identifies the type of additional document
+          enum:
+          - loa
+          - invoice
+          - csr
+          - other
+          example: loa
+        document_id:
+          type: string
+          format: uuid
+          description: Identifies the associated document
+          example: f1486bae-f067-460c-ad43-73a92848f902
+        filename:
+          type: string
+          description: The filename of the related document.
+          example: file.txt
+        content_type:
+          type: string
+          description: The content type of the related document.
+          example: text/plain
+        porting_order_id:
+          type: string
+          format: uuid
+          description: Identifies the associated porting order
+          example: f1486bae-f067-460c-ad43-73a92848f902
+        record_type:
+          type: string
+          example: porting_additional_document
+          description: Identifies the type of the resource.
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was created.
+          example: '2021-03-19T10:07:15.527000Z'
+        updated_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was updated.
+          example: '2021-03-19T10:07:15.527000Z'
+    PortingEvent:
+      type: object
+      oneOf:
+      - $ref: '#/components/schemas/PortingEventDeletedPayload'
+      - $ref: '#/components/schemas/PortingEventMessagingChangedPayload'
+      - $ref: '#/components/schemas/PortingEventStatusChangedEvent'
+      - $ref: '#/components/schemas/PortingEventNewCommentEvent'
+      - $ref: '#/components/schemas/PortingEventSplitEvent'
+      - $ref: '#/components/schemas/PortingEventWithoutWebhook'
+      discriminator:
+        propertyName: event_type
+        mapping:
+          porting_order.deleted: '#/components/schemas/PortingEventDeletedPayload'
+          porting_order.messaging_changed: '#/components/schemas/PortingEventMessagingChangedPayload'
+          porting_order.status_changed: '#/components/schemas/PortingEventStatusChangedEvent'
+          porting_order.new_comment: '#/components/schemas/PortingEventNewCommentEvent'
+          porting_order.split: '#/components/schemas/PortingEventSplitEvent'
+          porting_order.loa_updated: '#/components/schemas/PortingEventWithoutWebhook'
+          porting_order.sharing_token_expired: '#/components/schemas/PortingEventWithoutWebhook'
+    PaginationMeta:
+      type: object
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 55
+        page_number:
+          type: integer
+          example: 2
+        page_size:
+          type: integer
+          example: 25
+    ExportPortingOrdersCSVReport:
+      description: The parameters for generating a porting orders CSV report.
+      type: object
+      required:
+      - filters
+      properties:
+        filters:
+          type: object
+          description: The filters to apply to the export porting order CSV report.
+          properties:
+            status__in:
+              type: array
+              description: The status of the porting orders to include in the report.
+              items:
+                type: string
+                enum:
+                - draft
+                - in-process
+                - submitted
+                - exception
+                - foc-date-confirmed
+                - cancel-pending
+                - ported
+                - cancelled
+            customer_reference__in:
+              type: array
+              description: The customer reference of the porting orders to include in the report.
+              items:
+                type: string
+                example: my-customer-reference
+            created_at__lt:
+              type: string
+              description: The date and time the porting order was created before.
+              format: date-time
+            created_at__gt:
+              type: string
+              description: The date and time the porting order was created after.
+              format: date-time
+    PortingOrderMessaging:
+      type: object
+      description: Information about messaging porting process.
+      properties:
+        messaging_capable:
+          type: boolean
+          description: Indicates whether the porting order can also port messaging capabilities.
+          example: true
+        enable_messaging:
+          type: boolean
+          description: Indicates whether Telnyx will port messaging capabilities from the losing carrier. If false, any messaging capabilities will stay with their current provider.
+          example: true
+        messaging_port_status:
+          type: string
+          description: The current status of the messaging porting.
+          enum:
+          - not_applicable
+          - pending
+          - activating
+          - exception
+          - canceled
+          - partial_port_complete
+          - ported
+          example: pending
+        messaging_port_completed:
+          type: boolean
+          description: Indicates whether the messaging porting has been completed.
+          example: false
+    PortingPhoneNumberBlock:
+      type: object
+      properties:
+        id:
+          description: Uniquely identifies this porting phone number block.
+          type: string
+          format: uuid
+          example: f24151b6-3389-41d3-8747-7dd8c681e5e2
+          readOnly: true
+        country_code:
+          description: Specifies the country code for this porting phone number block. It is a two-letter ISO 3166-1 alpha-2 country code.
+          type: string
+          example: DE
+        phone_number_type:
+          description: Specifies the phone number type for this porting phone number block.
+          type: string
+          example: local
+          enum:
+          - landline
+          - local
+          - mobile
+          - multipurpose
+          - national
+          - other
+          - shared_cost
+          - toll_free
+        phone_number_range:
+          description: Specifies the phone number range for this porting phone number block.
+          type: object
+          properties:
+            start_at:
+              description: Specifies the start of the phone number range for this porting phone number block.
+              type: string
+              pattern: ^\+\d{7,15}$
+              example: '+4930244999901'
+            end_at:
+              description: Specifies the end of the phone number range for this porting phone number block.
+              type: string
+              pattern: ^\+\d{7,15}$
+              example: '+4930244999910'
+        activation_ranges:
+          description: Specifies the activation ranges for this porting phone number block. The activation range must be within the phone number range and should not overlap with other activation ranges.
+          type: array
+          items:
+            type: object
+            properties:
+              start_at:
+                description: Specifies the start of the activation range. Must be greater or equal the start of the phone number range.
+                type: string
+                pattern: ^\+\d{7,15}$
+                example: '+4930244999901'
+              end_at:
+                description: Specifies the end of the activation range. It must be no more than the end of the phone number range.
+                type: string
+                pattern: ^\+\d{7,15}$
+                example: '+4930244999910'
+        record_type:
+          type: string
+          example: porting_phone_number_block
+          description: Identifies the type of the resource.
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was created.
+          example: '2021-03-19T10:07:15.527Z'
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was last updated.
+          example: '2021-03-19T10:07:15.527Z'
+          readOnly: true
+    PortingOrderStatus:
+      type: object
+      description: Porting order status
+      properties:
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/PortingOrdersExceptionType'
+          description: A list of 0 or more details about this porting order's status
+        value:
+          type: string
+          description: The current status of the porting order
+          example: ported
+          enum:
+          - draft
+          - in-process
+          - submitted
+          - exception
+          - foc-date-confirmed
+          - ported
+          - cancelled
+          - cancel-pending
     PortingEventWithoutWebhook:
       type: object
       properties:
@@ -3732,6 +3797,394 @@ components:
           format: date-time
           description: ISO 8601 formatted date indicating when the resource was updated.
           example: '2021-03-19T10:07:15.527000Z'
+    PortingOrderDocuments:
+      type: object
+      description: Can be specified directly or via the `requirement_group_id` parameter.
+      properties:
+        loa:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: Returned ID of the submitted LOA via the Documents endpoint
+          example: 64ffb720-04c7-455b-92d6-20fcca92e935
+        invoice:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: Returned ID of the submitted Invoice via the Documents endpoint
+          example: ce74b771-d23d-4960-81ec-8741b3862146
+    PortingUKCarrier:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 96dfa9e4-c753-4fd3-97cd-42d66f26cf0c
+          description: Identifies the UK carrier.
+        cupid:
+          type: string
+          description: The CUPID of the carrier. This is a 3 digit number code that identifies the carrier in the UK.
+          example: '895'
+        name:
+          type: string
+          description: The name of the carrier.
+          example: Telnyx UK Limited
+        alternative_cupids:
+          type: array
+          description: Alternative CUPIDs of the carrier.
+          items:
+            type: string
+            description: An alternative CUPID of the carrier.
+            example: '895'
+        record_type:
+          type: string
+          example: porting_uk_carrier
+          description: Identifies the type of the resource.
+        created_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was created.
+          example: '2021-03-19T10:07:15.527000Z'
+        updated_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was updated.
+          example: '2021-03-19T10:07:15.527000Z'
+    PortingOrderRequirement:
+      type: object
+      properties:
+        field_type:
+          type: string
+          description: Type of value expected on field_value field
+          enum:
+          - document
+          example: document
+        field_value:
+          type: string
+          description: identifies the document that satisfies this requirement
+          example: 9787fb5f-cbe5-4de4-b765-3303774ee9fe
+        requirement_type_id:
+          type: string
+          description: Identifies the requirement type that meets this requirement
+          example: 59b0762a-b274-4f76-ac32-4d5cf0272e66
+        record_type:
+          type: string
+          description: Identifies the type of the resource.
+          example: porting_requirement
+    PortabilityStatus:
+      type: string
+      description: Specifies whether Telnyx is able to confirm portability this number in the United States & Canada. International phone numbers are provisional by default.
+      enum:
+      - pending
+      - confirmed
+      - provisional
+      example: confirmed
+    PortingOrderSharingToken:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Uniquely identifies this sharing token
+          format: uuid
+          example: 0a4b78a0-d416-4761-94f7-46c72ec56547
+        porting_order_id:
+          type: string
+          format: uuid
+          description: Identifies the porting order resource being shared
+          example: f1486bae-f067-460c-ad43-73a92848f902
+        expires_in_seconds:
+          type: integer
+          minimum: 1
+          description: The number of seconds until the sharing token expires
+          example: 3600
+        permissions:
+          type: array
+          description: The permissions granted to the sharing token
+          items:
+            type: string
+            enum:
+            - porting_order.document.read
+            - porting_order.document.update
+          example:
+          - porting_order.document.read
+          - porting_order.document.update
+        token:
+          type: string
+          description: A signed JWT token that can be used to access the shared resource
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2ODk4OTQ2NzcsImlzdCI6MTY4OTg5MTA3NywicGVybWlzc2lvbnMiOlsicG9ydGluZ19vcmRlci5kb2N1bWVudC5yZWFkIl0sInBvcnRpbmdfb3JkZXJfaWQiOiJmZDRiODZjOC00OTdkLTRjNmQtOTYwOS1hNzg5ZTRlMTRjZmUifQ.CT0HRF6OLj7VPZ8p5Y_0S8rOL8SEUznwJJkR-YReKwc
+        expires_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the sharing token expires.
+          example: '2021-03-19T10:07:15.527000Z'
+        record_type:
+          type: string
+          example: porting_order_sharing_token
+          description: Identifies the type of the resource.
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was created.
+          example: '2021-03-19T10:07:15.527000Z'
+    PortingOrderUserFeedback:
+      type: object
+      properties:
+        user_rating:
+          type:
+          - integer
+          - 'null'
+          description: Once an order is ported, cancellation is requested or the request is cancelled, the user may rate their experience
+          example: 5
+        user_comment:
+          type:
+          - string
+          - 'null'
+          description: A comment related to the customer rating.
+          example: I loved my experience porting numbers with Telnyx
+    PortingPhoneNumber:
+      type: object
+      properties:
+        porting_order_status:
+          type: string
+          description: The current status of the porting order
+          enum:
+          - draft
+          - in-process
+          - submitted
+          - exception
+          - foc-date-confirmed
+          - cancel-pending
+          - ported
+          - cancelled
+          example: in-process
+        phone_number_type:
+          type: string
+          description: The type of the phone number
+          enum:
+          - landline
+          - local
+          - mobile
+          - multipurpose
+          - national
+          - other
+          - shared_cost
+          - toll_free
+          example: local
+        phone_number:
+          type: string
+          description: E164 formatted phone number
+          example: '13035550987'
+        porting_order_id:
+          type: string
+          format: uuid
+          description: Identifies the associated port request
+          example: f1486bae-f067-460c-ad43-73a92848f902
+        support_key:
+          type: string
+          description: A key to reference this porting order when contacting Telnyx customer support
+          example: sr_a12345
+        activation_status:
+          $ref: '#/components/schemas/PortingOrderActivationStatus'
+        portability_status:
+          $ref: '#/components/schemas/PortabilityStatus'
+        requirements_status:
+          type: string
+          description: The current status of the requirements in a INTL porting order
+          enum:
+          - requirement-info-pending
+          - requirement-info-under-review
+          - requirement-info-exception
+          - approved
+          example: approved
+        record_type:
+          type: string
+          example: porting_phone_number
+          description: Identifies the type of the resource.
+          readOnly: true
+    GetSubRequestByPortingOrder:
+      type: object
+      properties:
+        sub_request_id:
+          type: string
+          description: Identifies the Sub Request associated with the Porting Order
+          example: 9787fb5f-cbe5-4de4-b765-3303774ee9fe
+        port_request_id:
+          type: string
+          description: Identifies the Port Request associated with the Porting Order
+          example: 59b0762a-b274-4f76-ac32-4d5cf0272e66
+    PortingEventStatusChangedEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Uniquely identifies the event.
+          format: uuid
+          example: eef3340b-8903-4466-b445-89b697315a3a
+        event_type:
+          type: string
+          description: Identifies the event type
+          enum:
+          - porting_order.status_changed
+          example: porting_order.status_changed
+        porting_order_id:
+          type: string
+          format: uuid
+          description: Identifies the porting order associated with the event.
+          example: 9471c873-e3eb-4ca1-957d-f9a451334d52
+        available_notification_methods:
+          type: array
+          items:
+            type: string
+            enum:
+            - email
+            - webhook
+            - webhook_v1
+          description: Indicates the notification methods used.
+        payload_status:
+          type: string
+          description: The status of the payload generation.
+          enum:
+          - created
+          - completed
+          example: created
+        payload:
+          type: object
+          description: The webhook payload for the porting_order.status_changed event
+          properties:
+            id:
+              type: string
+              format: uuid
+              example: 96dfa9e4-c753-4fd3-97cd-42d66f26cf0c
+              description: Identifies the porting order that was moved.
+            customer_reference:
+              type: string
+              description: Identifies the customer reference associated with the porting order.
+              example: my-ref-001
+            status:
+              $ref: '#/components/schemas/PortingOrderStatus'
+            support_key:
+              type: string
+              description: Identifies the support key associated with the porting order.
+              example: sr_b1a2c3
+            updated_at:
+              type: string
+              format: date-time
+              description: ISO 8601 formatted date indicating when the porting order was moved.
+              example: '2021-03-19T10:07:15.527Z'
+            webhook_url:
+              type: string
+              description: The URL to send the webhook to.
+              example: https://example.com/webhook
+        record_type:
+          type: string
+          example: porting_event
+          description: Identifies the type of the resource.
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was created.
+          example: '2021-03-19T10:07:15.527000Z'
+        updated_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating when the resource was updated.
+          example: '2021-03-19T10:07:15.527000Z'
+    PortingOrderEndUser:
+      type: object
+      properties:
+        admin:
+          $ref: '#/components/schemas/PortingOrderEndUserAdmin'
+        location:
+          $ref: '#/components/schemas/PortingOrderEndUserLocation'
+    PortingOrderType:
+      type: string
+      description: A port can be either 'full' or 'partial'. When type is 'full' the other attributes should be omitted.
+      enum:
+      - full
+      - partial
+      example: full
+    PortingActionRequirement:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Identifies the action requirement
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+        record_type:
+          type: string
+          description: Identifies the type of the resource
+          example: porting_action_requirement
+          enum:
+          - porting_action_requirement
+        porting_order_id:
+          type: string
+          description: The ID of the porting order this action requirement belongs to
+          example: 12ade33a-21c0-473b-b055-b3c836e1c292
+        requirement_type_id:
+          type: string
+          description: The ID of the requirement type
+          example: 53970723-fbff-4f46-a975-f62be6c1a585
+        action_type:
+          type: string
+          description: The type of action required
+          example: document_upload
+        action_url:
+          type:
+          - string
+          - 'null'
+          description: Optional URL for the action
+          example: https://example.com/action
+        status:
+          type: string
+          description: Current status of the action requirement
+          example: created
+          enum:
+          - created
+          - pending
+          - completed
+          - cancelled
+          - failed
+        cancel_reason:
+          type:
+          - string
+          - 'null'
+          description: Reason for cancellation if status is 'cancelled'
+          example: null
+        created_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date-time indicating when the resource was created
+          example: '2018-02-02T22:25:27.521Z'
+        updated_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date-time indicating when the resource was updated
+          example: '2018-02-02T22:25:27.521Z'
+    PortingOrdersAllowedFocWindow:
+      type: object
+      title: PortingOrdersAllowedFocWindow
+      properties:
+        started_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating the start of the range of foc window.
+          example: '2021-03-19T10:07:15.527Z'
+          readOnly: true
+        ended_at:
+          type: string
+          format: date-time
+          description: ISO 8601 formatted date indicating the end of the range of foc window
+          example: '2021-03-19T10:07:15.527Z'
+          readOnly: true
+        record_type:
+          type: string
+          example: porting_order
+          description: Identifies the type of the resource.
+          readOnly: true
     PortingLOAConfiguration:
       type: object
       properties:
@@ -3826,514 +4279,101 @@ components:
           format: date-time
           description: ISO 8601 formatted date indicating when the resource was updated.
           example: '2021-03-19T10:07:15.527000Z'
-    UpdatePortingOrderRequirement:
-      type: object
-      description: Specifies a value for a requirement on the Porting Order.
-      required:
-      - field_value
-      - requirement_type_id
-      properties:
-        field_value:
-          type: string
-          description: identifies the document or provides the text value that satisfies this requirement
-          example: 9787fb5f-cbe5-4de4-b765-3303774ee9fe
-        requirement_type_id:
-          type: string
-          description: Identifies the requirement type that the `field_value` fulfills
-          example: 59b0762a-b274-4f76-ac32-4d5cf0272e66
-    CreatePortingOrderComment:
+    PortingOrderEndUserAdmin:
       type: object
       properties:
-        body:
-          type: string
-          example: Please, let me know when the port completes
-    PortingPhoneNumberConfiguration:
-      type: object
+        entity_name:
+          type:
+          - string
+          - 'null'
+          description: Person Name or Company name requesting the port
+          example: Porter McPortersen
+        auth_person_name:
+          type:
+          - string
+          - 'null'
+          description: Name of person authorizing the porting order
+          example: Porter McPortersen II
+        billing_phone_number:
+          type:
+          - string
+          - 'null'
+          description: Billing phone number associated with these phone numbers
+          example: '13035551234'
+        account_number:
+          type:
+          - string
+          - 'null'
+          description: The authorized person's account number with the current service provider
+          example: 123abc
+        tax_identifier:
+          type:
+          - string
+          - 'null'
+          description: European tax identification number. Applicable only in the European Union
+          example: 1234abcd
+        pin_passcode:
+          type:
+          - string
+          - 'null'
+          description: PIN/passcode possibly required by the old service provider for extra verification
+          example: '1234'
+        business_identifier:
+          type:
+          - string
+          - 'null'
+          description: European business identification number. Applicable only in the European Union
+          example: abc123
+    PortingPhoneNumberBlock_2:
       properties:
-        id:
-          type: string
-          description: Uniquely identifies this phone number configuration
-          format: uuid
-          example: eef3340b-8903-4466-b445-89b697315a3a
-        user_bundle_id:
-          type: string
-          format: uuid
-          description: Identifies the associated user bundle
-          example: daa4308e-742f-4867-97f2-3073db13319a
-        porting_phone_number_id:
-          type: string
-          format: uuid
-          description: Identifies the associated porting phone number
-          example: f1486bae-f067-460c-ad43-73a92848f902
-        record_type:
-          type: string
-          example: porting_phone_number_configuration
-          description: Identifies the type of the resource.
-          readOnly: true
-        created_at:
-          type: string
-          format: date-time
-          description: ISO 8601 formatted date indicating when the resource was created.
-          example: '2021-03-19T10:07:15.527000Z'
-        updated_at:
-          type: string
-          format: date-time
-          description: ISO 8601 formatted date indicating when the resource was updated.
-          example: '2021-03-19T10:07:15.527000Z'
-    PortingOrderDocuments:
-      type: object
-      description: Can be specified directly or via the `requirement_group_id` parameter.
-      properties:
-        loa:
-          type:
-          - string
-          - 'null'
-          format: uuid
-          description: Returned ID of the submitted LOA via the Documents endpoint
-          example: 64ffb720-04c7-455b-92d6-20fcca92e935
-        invoice:
-          type:
-          - string
-          - 'null'
-          format: uuid
-          description: Returned ID of the submitted Invoice via the Documents endpoint
-          example: ce74b771-d23d-4960-81ec-8741b3862146
-    PortingOrderEndUserLocation:
-      type: object
-      properties:
-        street_address:
-          type:
-          - string
-          - 'null'
-          description: First line of billing address
-          example: 600 Congress Avenue
-        extended_address:
-          type:
-          - string
-          - 'null'
-          description: Second line of billing address
-          example: 14th Floor
-        locality:
-          type:
-          - string
-          - 'null'
-          description: City or municipality of billing address
-          example: Austin
-        administrative_area:
-          type:
-          - string
-          - 'null'
-          description: State, province, or similar of billing address
-          example: TX
-        postal_code:
-          type:
-          - string
-          - 'null'
-          description: Postal Code of billing address
-          example: '78701'
-        country_code:
-          type:
-          - string
-          - 'null'
-          description: ISO3166-1 alpha-2 country code of billing address
-          example: US
-    PortingOrderStatus:
-      type: object
-      description: Porting order status
-      properties:
-        details:
-          type: array
+        activation_ranges:
+          description: Specifies the activation ranges for this porting phone number block. The activation range must be within the phone number range and should not overlap with other activation ranges.
           items:
-            $ref: '#/components/schemas/PortingOrdersExceptionType'
-          description: A list of 0 or more details about this porting order's status
-        value:
-          type: string
-          description: The current status of the porting order
-          example: ported
-          enum:
-          - draft
-          - in-process
-          - submitted
-          - exception
-          - foc-date-confirmed
-          - ported
-          - cancelled
-          - cancel-pending
-    PortingOrdersExceptionType:
-      type: object
-      properties:
-        code:
-          type: string
-          description: Identifier of an exception type
-          enum:
-          - ACCOUNT_NUMBER_MISMATCH
-          - AUTH_PERSON_MISMATCH
-          - BTN_ATN_MISMATCH
-          - ENTITY_NAME_MISMATCH
-          - FOC_EXPIRED
-          - FOC_REJECTED
-          - LOCATION_MISMATCH
-          - LSR_PENDING
-          - MAIN_BTN_PORTING
-          - OSP_IRRESPONSIVE
-          - OTHER
-          - PASSCODE_PIN_INVALID
-          - PHONE_NUMBER_HAS_SPECIAL_FEATURE
-          - PHONE_NUMBER_MISMATCH
-          - PHONE_NUMBER_NOT_PORTABLE
-          - PORT_TYPE_INCORRECT
-          - PORTING_ORDER_SPLIT_REQUIRED
-          - POSTAL_CODE_MISMATCH
-          - RATE_CENTER_NOT_PORTABLE
-          - SV_CONFLICT
-          - SV_UNKNOWN_FAILURE
-          example: ENTITY_NAME_MISMATCH
-        description:
-          type: string
-          description: Description of an exception type
-          example: Entity name does not match that on the CSR
-    PortingOrderPhoneNumberConfiguration:
-      type: object
-      properties:
-        billing_group_id:
-          type:
-          - string
-          - 'null'
-          description: identifies the billing group to set on the numbers when ported
-          example: f1486bae-f067-460c-ad43-73a92848f902
-        connection_id:
-          type:
-          - string
-          - 'null'
-          description: identifies the connection to set on the numbers when ported
-          example: f1486bae-f067-460c-ad43-73a92848f902
-        messaging_profile_id:
-          type:
-          - string
-          - 'null'
-          description: identifies the messaging profile to set on the numbers when ported
-          example: f1486bae-f067-460c-ad43-73a92848f901
-        emergency_address_id:
-          type:
-          - string
-          - 'null'
-          description: identifies the emergency address to set on the numbers when ported
-          example: f1486bae-f067-460c-ad43-73a92848f902
-        tags:
-          type: array
-          items:
-            type: string
-            description: Tag to set on the numbers when ported
-          example:
-          - abc
-          - '123'
-    PortingOrdersActivationJob:
-      type: object
-      properties:
-        id:
-          description: Uniquely identifies this activation job
-          type: string
-          format: uuid
-          example: f1486bae-f067-460c-ad43-73a92848f902
-          readOnly: true
-        status:
-          type: string
-          description: Specifies the status of this activation job
-          enum:
-          - created
-          - in-process
-          - completed
-          - failed
-        activation_type:
-          type: string
-          description: Specifies the type of this activation job
-          enum:
-          - scheduled
-          - on-demand
-        activate_at:
-          type: string
-          format: date-time
-          description: ISO 8601 formatted date indicating when the activation job should be executed. This time should be between some activation window.
-          example: '2021-03-19T10:07:15.527Z'
-        activation_windows:
-          type: array
-          description: List of allowed activation windows for this activation job
-          items:
-            type: object
             properties:
-              start_at:
-                type: string
-                format: date-time
-                description: ISO 8601 formatted date indicating when the activation window starts
-                example: '2021-03-19T10:07:15.527Z'
               end_at:
+                description: Specifies the end of the activation range. It must be no more than the end of the phone number range.
+                example: '+4930244999910'
+                pattern: ^\+\d{7,15}$
                 type: string
-                format: date-time
-                description: ISO 8601 formatted date indicating when the activation window ends
-                example: '2021-03-19T10:07:15.527Z'
-        record_type:
-          type: string
-          example: porting_activation_job
-          description: Identifies the type of the resource.
-          readOnly: true
-        created_at:
-          type: string
-          format: date-time
-          description: ISO 8601 formatted date indicating when the resource was created.
-          example: '2021-03-19T10:07:15.527Z'
-          readOnly: true
-        updated_at:
-          type: string
-          format: date-time
-          description: ISO 8601 formatted date indicating when the resource was created.
-          example: '2021-03-19T10:07:15.527Z'
-          readOnly: true
-    PortingActionRequirement:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Identifies the action requirement
-          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-        record_type:
-          type: string
-          description: Identifies the type of the resource
-          example: porting_action_requirement
-          enum:
-          - porting_action_requirement
-        porting_order_id:
-          type: string
-          description: The ID of the porting order this action requirement belongs to
-          example: 12ade33a-21c0-473b-b055-b3c836e1c292
-        requirement_type_id:
-          type: string
-          description: The ID of the requirement type
-          example: 53970723-fbff-4f46-a975-f62be6c1a585
-        action_type:
-          type: string
-          description: The type of action required
-          example: document_upload
-        action_url:
-          type:
-          - string
-          - 'null'
-          description: Optional URL for the action
-          example: https://example.com/action
-        status:
-          type: string
-          description: Current status of the action requirement
-          example: created
-          enum:
-          - created
-          - pending
-          - completed
-          - cancelled
-          - failed
-        cancel_reason:
-          type:
-          - string
-          - 'null'
-          description: Reason for cancellation if status is 'cancelled'
-          example: null
-        created_at:
-          type: string
-          format: date-time
-          description: ISO 8601 formatted date-time indicating when the resource was created
-          example: '2018-02-02T22:25:27.521Z'
-        updated_at:
-          type: string
-          format: date-time
-          description: ISO 8601 formatted date-time indicating when the resource was updated
-          example: '2018-02-02T22:25:27.521Z'
-    PortingEventDeletedPayload:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Uniquely identifies the event.
-          format: uuid
-          example: eef3340b-8903-4466-b445-89b697315a3a
-        event_type:
-          type: string
-          description: Identifies the event type
-          enum:
-          - porting_order.deleted
-          example: porting_order.deleted
-        porting_order_id:
-          type: string
-          format: uuid
-          description: Identifies the porting order associated with the event.
-          example: 9471c873-e3eb-4ca1-957d-f9a451334d52
-        available_notification_methods:
+              start_at:
+                description: Specifies the start of the activation range. Must be greater or equal the start of the phone number range.
+                example: '+4930244999901'
+                pattern: ^\+\d{7,15}$
+                type: string
+            type: object
           type: array
-          items:
-            type: string
-            enum:
-            - email
-            - webhook
-            - webhook_v1
-          description: Indicates the notification methods used.
-        payload_status:
+        country_code:
+          description: Specifies the country code for this porting phone number block. It is a two-letter ISO 3166-1 alpha-2 country code.
+          example: DE
           type: string
-          description: The status of the payload generation.
-          enum:
-          - created
-          - completed
-          example: created
-        payload:
-          type: object
+        created_at:
+          description: ISO 8601 formatted date indicating when the resource was created.
+          example: '2021-03-19T10:07:15.527Z'
+          format: date-time
+          readOnly: true
+          type: string
+        id:
+          description: Uniquely identifies this porting phone number block.
+          example: f24151b6-3389-41d3-8747-7dd8c681e5e2
+          format: uuid
+          readOnly: true
+          type: string
+        phone_number_range:
+          description: Specifies the phone number range for this porting phone number block.
           properties:
-            id:
+            end_at:
+              description: Specifies the end of the phone number range for this porting phone number block.
+              example: '+4930244999910'
+              pattern: ^\+\d{7,15}$
               type: string
-              format: uuid
-              example: 96dfa9e4-c753-4fd3-97cd-42d66f26cf0c
-              description: Identifies the porting order that was deleted.
-            customer_reference:
+            start_at:
+              description: Specifies the start of the phone number range for this porting phone number block.
+              example: '+4930244999901'
+              pattern: ^\+\d{7,15}$
               type: string
-              description: Identifies the customer reference associated with the porting order.
-              example: my-ref-001
-            deleted_at:
-              type: string
-              format: date-time
-              description: ISO 8601 formatted date indicating when the porting order was deleted.
-              example: '2021-03-19T10:07:15.527Z'
-            record_type:
-              type: string
-              example: porting_event
-              description: Identifies the type of the resource.
-              readOnly: true
-            created_at:
-              type: string
-              format: date-time
-              description: ISO 8601 formatted date indicating when the resource was created.
-              example: '2021-03-19T10:07:15.527000Z'
-            updated_at:
-              type: string
-              format: date-time
-              description: ISO 8601 formatted date indicating when the resource was updated.
-              example: '2021-03-19T10:07:15.527000Z'
-    PortingPhoneNumber:
-      type: object
-      properties:
-        porting_order_status:
-          type: string
-          description: The current status of the porting order
-          enum:
-          - draft
-          - in-process
-          - submitted
-          - exception
-          - foc-date-confirmed
-          - cancel-pending
-          - ported
-          - cancelled
-          example: in-process
+          type: object
         phone_number_type:
-          type: string
-          description: The type of the phone number
-          enum:
-          - landline
-          - local
-          - mobile
-          - multipurpose
-          - national
-          - other
-          - shared_cost
-          - toll_free
-          example: local
-        phone_number:
-          type: string
-          description: E164 formatted phone number
-          example: '13035550987'
-        porting_order_id:
-          type: string
-          format: uuid
-          description: Identifies the associated port request
-          example: f1486bae-f067-460c-ad43-73a92848f902
-        support_key:
-          type: string
-          description: A key to reference this porting order when contacting Telnyx customer support
-          example: sr_a12345
-        activation_status:
-          $ref: '#/components/schemas/PortingOrderActivationStatus'
-        portability_status:
-          $ref: '#/components/schemas/PortabilityStatus'
-        requirements_status:
-          type: string
-          description: The current status of the requirements in a INTL porting order
-          enum:
-          - requirement-info-pending
-          - requirement-info-under-review
-          - requirement-info-exception
-          - approved
-          example: approved
-        record_type:
-          type: string
-          example: porting_phone_number
-          description: Identifies the type of the resource.
-          readOnly: true
-    PortingEvent:
-      type: object
-      oneOf:
-      - $ref: '#/components/schemas/PortingEventDeletedPayload'
-      - $ref: '#/components/schemas/PortingEventMessagingChangedPayload'
-      - $ref: '#/components/schemas/PortingEventStatusChangedEvent'
-      - $ref: '#/components/schemas/PortingEventNewCommentEvent'
-      - $ref: '#/components/schemas/PortingEventSplitEvent'
-      - $ref: '#/components/schemas/PortingEventWithoutWebhook'
-      discriminator:
-        propertyName: event_type
-        mapping:
-          porting_order.deleted: '#/components/schemas/PortingEventDeletedPayload'
-          porting_order.messaging_changed: '#/components/schemas/PortingEventMessagingChangedPayload'
-          porting_order.status_changed: '#/components/schemas/PortingEventStatusChangedEvent'
-          porting_order.new_comment: '#/components/schemas/PortingEventNewCommentEvent'
-          porting_order.split: '#/components/schemas/PortingEventSplitEvent'
-          porting_order.loa_updated: '#/components/schemas/PortingEventWithoutWebhook'
-          porting_order.sharing_token_expired: '#/components/schemas/PortingEventWithoutWebhook'
-    PortingOrderUserFeedback:
-      type: object
-      properties:
-        user_rating:
-          type:
-          - integer
-          - 'null'
-          description: Once an order is ported, cancellation is requested or the request is cancelled, the user may rate their experience
-          example: 5
-        user_comment:
-          type:
-          - string
-          - 'null'
-          description: A comment related to the customer rating.
-          example: I loved my experience porting numbers with Telnyx
-    PortingOrderActivationStatus:
-      type: string
-      description: Activation status
-      enum:
-      - New
-      - Pending
-      - Conflict
-      - Cancel Pending
-      - Failed
-      - Concurred
-      - Activate RDY
-      - Disconnect Pending
-      - Concurrence Sent
-      - Old
-      - Sending
-      - Active
-      - Cancelled
-      example: Active
-    PortingPhoneNumber_2:
-      properties:
-        activation_status:
-          $ref: '#/components/schemas/PortingOrderActivationStatus'
-        phone_number:
-          description: E164 formatted phone number
-          example: '13035550987'
-          type: string
-        phone_number_type:
-          description: The type of the phone number
+          description: Specifies the phone number type for this porting phone number block.
           enum:
           - landline
           - local
@@ -4343,43 +4383,16 @@ components:
           - toll_free
           example: local
           type: string
-        portability_status:
-          $ref: '#/components/schemas/PortabilityStatus'
-        porting_order_id:
-          description: Identifies the associated port request
-          example: f1486bae-f067-460c-ad43-73a92848f902
-          format: uuid
-          type: string
-        porting_order_status:
-          description: The current status of the porting order
-          enum:
-          - draft
-          - in-process
-          - submitted
-          - exception
-          - foc-date-confirmed
-          - cancel-pending
-          - ported
-          - cancelled
-          example: in-process
-          type: string
         record_type:
           description: Identifies the type of the resource.
-          example: porting_phone_number
+          example: porting_phone_number_block
           readOnly: true
           type: string
-        requirements_status:
-          description: The current status of the requirements in a INTL porting order
-          enum:
-          - requirement-info-pending
-          - requirement-info-under-review
-          - requirement-info-exception
-          - approved
-          example: approved
-          type: string
-        support_key:
-          description: A key to reference this porting order when contacting Telnyx customer support
-          example: sr_a12345
+        updated_at:
+          description: ISO 8601 formatted date indicating when the resource was last updated.
+          example: '2021-03-19T10:07:15.527Z'
+          format: date-time
+          readOnly: true
           type: string
       type: object
     PortingOrder_2:
@@ -4511,56 +4524,16 @@ components:
           - string
           - 'null'
       type: object
-    PortingPhoneNumberBlock_2:
+    PortingPhoneNumber_2:
       properties:
-        activation_ranges:
-          description: Specifies the activation ranges for this porting phone number block. The activation range must be within the phone number range and should not overlap with other activation ranges.
-          items:
-            properties:
-              end_at:
-                description: Specifies the end of the activation range. It must be no more than the end of the phone number range.
-                example: '+4930244999910'
-                pattern: ^\+\d{7,15}$
-                type: string
-              start_at:
-                description: Specifies the start of the activation range. Must be greater or equal the start of the phone number range.
-                example: '+4930244999901'
-                pattern: ^\+\d{7,15}$
-                type: string
-            type: object
-          type: array
-        country_code:
-          description: Specifies the country code for this porting phone number block. It is a two-letter ISO 3166-1 alpha-2 country code.
-          example: DE
+        activation_status:
+          $ref: '#/components/schemas/PortingOrderActivationStatus'
+        phone_number:
+          description: E164 formatted phone number
+          example: '13035550987'
           type: string
-        created_at:
-          description: ISO 8601 formatted date indicating when the resource was created.
-          example: '2021-03-19T10:07:15.527Z'
-          format: date-time
-          readOnly: true
-          type: string
-        id:
-          description: Uniquely identifies this porting phone number block.
-          example: f24151b6-3389-41d3-8747-7dd8c681e5e2
-          format: uuid
-          readOnly: true
-          type: string
-        phone_number_range:
-          description: Specifies the phone number range for this porting phone number block.
-          properties:
-            end_at:
-              description: Specifies the end of the phone number range for this porting phone number block.
-              example: '+4930244999910'
-              pattern: ^\+\d{7,15}$
-              type: string
-            start_at:
-              description: Specifies the start of the phone number range for this porting phone number block.
-              example: '+4930244999901'
-              pattern: ^\+\d{7,15}$
-              type: string
-          type: object
         phone_number_type:
-          description: Specifies the phone number type for this porting phone number block.
+          description: The type of the phone number
           enum:
           - landline
           - local
@@ -4570,16 +4543,43 @@ components:
           - toll_free
           example: local
           type: string
+        portability_status:
+          $ref: '#/components/schemas/PortabilityStatus'
+        porting_order_id:
+          description: Identifies the associated port request
+          example: f1486bae-f067-460c-ad43-73a92848f902
+          format: uuid
+          type: string
+        porting_order_status:
+          description: The current status of the porting order
+          enum:
+          - draft
+          - in-process
+          - submitted
+          - exception
+          - foc-date-confirmed
+          - cancel-pending
+          - ported
+          - cancelled
+          example: in-process
+          type: string
         record_type:
           description: Identifies the type of the resource.
-          example: porting_phone_number_block
+          example: porting_phone_number
           readOnly: true
           type: string
-        updated_at:
-          description: ISO 8601 formatted date indicating when the resource was last updated.
-          example: '2021-03-19T10:07:15.527Z'
-          format: date-time
-          readOnly: true
+        requirements_status:
+          description: The current status of the requirements in a INTL porting order
+          enum:
+          - requirement-info-pending
+          - requirement-info-under-review
+          - requirement-info-exception
+          - approved
+          example: approved
+          type: string
+        support_key:
+          description: A key to reference this porting order when contacting Telnyx customer support
+          example: sr_a12345
           type: string
       type: object
     PortingOrder_3:
@@ -4850,6 +4850,203 @@ components:
           description: Identifies the type of the resource.
           readOnly: true
   requestBodies:
+    CreatePortingAssociatedPhoneNumber:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - phone_number_range
+            - action
+            properties:
+              phone_number_range:
+                type: object
+                properties:
+                  start_at:
+                    type: string
+                    description: Specifies the start of the phone number range for this associated phone number.
+                    pattern: ^\+\d{7,15}$
+                    example: '+441234567890'
+                  end_at:
+                    type: string
+                    description: Specifies the end of the phone number range for this associated phone number.
+                    pattern: ^\+\d{7,15}$
+                    example: '+441234567899'
+              action:
+                type: string
+                description: Specifies the action to take with this phone number during partial porting.
+                enum:
+                - keep
+                - disconnect
+                example: keep
+    SendPortingVerificationCodes:
+      description: A list of phone numbers to send the verification codes to and the method to send them by
+      required: false
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              phone_numbers:
+                type: array
+                maxItems: 100
+                items:
+                  type: string
+              verification_method:
+                type: string
+                enum:
+                - sms
+                - call
+            example:
+              phone_numbers:
+              - '+61424000001'
+              - '+61424000002'
+              verification_method: sms
+    UpdatePortingOrdersActivationJob:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              activate_at:
+                type: string
+                format: date-time
+                example: '2019-01-01T00:00:00Z'
+                description: The desired activation time. The activation time should be between any of the activation windows.
+    CreatePortingPhoneNumberConfigurations:
+      description: A list of phone number configuration parameters
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              phone_number_configurations:
+                type: array
+                maxItems: 20
+                items:
+                  type: object
+                  required:
+                  - porting_phone_number_id
+                  - user_bundle_id
+                  properties:
+                    porting_phone_number_id:
+                      type: string
+                      format: uuid
+                      description: Identifies the porting phone number to be configured.
+                      example: 927f4687-318c-44bc-9f2f-22a5898143a4
+                    user_bundle_id:
+                      type: string
+                      format: uuid
+                      description: Identifies the user bundle to be associated with the porting phone number.
+                      example: ff901545-3e27-462a-ba9d-2b34654cab82
+    CreatePortingPhoneNumberExtension:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - porting_phone_number_id
+            - extension_range
+            - activation_ranges
+            properties:
+              porting_phone_number_id:
+                type: string
+                description: Identifies the porting phone number associated with this porting phone number extension.
+                format: uuid
+                example: f24151b6-3389-41d3-8747-7dd8c681e5e2
+              extension_range:
+                type: object
+                required:
+                - start_at
+                - end_at
+                properties:
+                  start_at:
+                    type: integer
+                    description: Specifies the start of the extension range for this porting phone number extension.
+                    example: 1
+                  end_at:
+                    type: integer
+                    description: Specifies the end of the extension range for this porting phone number extension.
+                    example: 10
+              activation_ranges:
+                description: Specifies the activation ranges for this porting phone number extension. The activation range must be within the extension range and should not overlap with other activation ranges.
+                type: array
+                items:
+                  type: object
+                  required:
+                  - start_at
+                  - end_at
+                  properties:
+                    start_at:
+                      description: Specifies the start of the activation range. Must be greater or equal the start of the extension range.
+                      type: integer
+                      example: 1
+                    end_at:
+                      description: Specifies the end of the activation range. It must be no more than the end of the extension range.
+                      type: integer
+                      example: 10
+    InitiatePortingActionRequirement:
+      description: Parameters for initiating the action requirement
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - params
+            properties:
+              params:
+                oneOf:
+                - $ref: '#/components/schemas/AUIdVerificationParams'
+    CreatePortingPhoneNumberBlock:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - phone_number_range
+            - activation_ranges
+            properties:
+              phone_number_range:
+                type: object
+                required:
+                - start_at
+                - end_at
+                properties:
+                  start_at:
+                    type: string
+                    description: Specifies the start of the phone number range for this porting phone number block.
+                    pattern: ^\+\d{7,15}$
+                    example: '+4930244999901'
+                  end_at:
+                    type: string
+                    description: Specifies the end of the phone number range for this porting phone number block.
+                    pattern: ^\+\d{7,15}$
+                    example: '+4930244999910'
+              activation_ranges:
+                description: Specifies the activation ranges for this porting phone number block. The activation range must be within the block range and should not overlap with other activation ranges.
+                type: array
+                items:
+                  type: object
+                  required:
+                  - start_at
+                  - end_at
+                  properties:
+                    start_at:
+                      type: string
+                      description: Specifies the start of the activation range. Must be greater or equal the start of the extension range.
+                      pattern: ^\+\d{7,15}$
+                      example: '+4930244999901'
+                    end_at:
+                      type: string
+                      description: Specifies the end of the activation range. It must be no more than the end of the extension range.
+                      pattern: ^\+\d{7,15}$
+                      example: '+4930244999910'
     CreatePortingLOAConfiguration:
       required: true
       content:
@@ -4935,51 +5132,27 @@ components:
                     description: The phone number of the contact
                     example: '+12003270001'
                     pattern: ^\+\d{11,15}$
-    CreatePortingPhoneNumberBlock:
+    SharePortingOrder:
       required: true
       content:
         application/json:
           schema:
             type: object
-            required:
-            - phone_number_range
-            - activation_ranges
             properties:
-              phone_number_range:
-                type: object
-                required:
-                - start_at
-                - end_at
-                properties:
-                  start_at:
-                    type: string
-                    description: Specifies the start of the phone number range for this porting phone number block.
-                    pattern: ^\+\d{7,15}$
-                    example: '+4930244999901'
-                  end_at:
-                    type: string
-                    description: Specifies the end of the phone number range for this porting phone number block.
-                    pattern: ^\+\d{7,15}$
-                    example: '+4930244999910'
-              activation_ranges:
-                description: Specifies the activation ranges for this porting phone number block. The activation range must be within the block range and should not overlap with other activation ranges.
-                type: array
-                items:
-                  type: object
-                  required:
-                  - start_at
-                  - end_at
-                  properties:
-                    start_at:
-                      type: string
-                      description: Specifies the start of the activation range. Must be greater or equal the start of the extension range.
-                      pattern: ^\+\d{7,15}$
-                      example: '+4930244999901'
-                    end_at:
-                      type: string
-                      description: Specifies the end of the activation range. It must be no more than the end of the extension range.
-                      pattern: ^\+\d{7,15}$
-                      example: '+4930244999910'
+              expires_in_seconds:
+                description: The number of seconds the token will be valid for
+                type: integer
+                minimum: 1
+                maximum: 172800
+              permissions:
+                description: The permissions the token will have
+                type: string
+                enum:
+                - porting_order.document.read
+                - porting_order.document.update
+            example:
+              expires_in_seconds: 3600
+              permissions: porting_order.document.read
     CreatePortingAdditionalDocuments:
       description: A list of additional document parameters
       required: true
@@ -5012,18 +5185,26 @@ components:
                 document_type: loa
               - document_id: d91474e6-4ebc-4ec1-b379-c596eeb405d6
                 document_type: invoice
-    UpdatePortingOrdersActivationJob:
+    CreatePortingReport:
       required: true
       content:
         application/json:
           schema:
             type: object
+            description: The parameters for generating a new porting related report.
+            required:
+            - report_type
+            - params
             properties:
-              activate_at:
+              report_type:
                 type: string
-                format: date-time
-                example: '2019-01-01T00:00:00Z'
-                description: The desired activation time. The activation time should be between any of the activation windows.
+                description: Identifies the type of report
+                enum:
+                - export_porting_orders_csv
+                example: export_porting_orders_csv
+              params:
+                oneOf:
+                - $ref: '#/components/schemas/ExportPortingOrdersCSVReport'
     VerifyPortingVerificationCodes:
       description: A list of phone numbers and their verification codes
       required: true
@@ -5048,196 +5229,7 @@ components:
                 code: '12345'
               - phone_number: '+61424000002'
                 code: '54321'
-    CreatePortingAssociatedPhoneNumber:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            required:
-            - phone_number_range
-            - action
-            properties:
-              phone_number_range:
-                type: object
-                properties:
-                  start_at:
-                    type: string
-                    description: Specifies the start of the phone number range for this associated phone number.
-                    pattern: ^\+\d{7,15}$
-                    example: '+441234567890'
-                  end_at:
-                    type: string
-                    description: Specifies the end of the phone number range for this associated phone number.
-                    pattern: ^\+\d{7,15}$
-                    example: '+441234567899'
-              action:
-                type: string
-                description: Specifies the action to take with this phone number during partial porting.
-                enum:
-                - keep
-                - disconnect
-                example: keep
-    InitiatePortingActionRequirement:
-      description: Parameters for initiating the action requirement
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            required:
-            - params
-            properties:
-              params:
-                oneOf:
-                - $ref: '#/components/schemas/AUIdVerificationParams'
-    CreatePortingReport:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            description: The parameters for generating a new porting related report.
-            required:
-            - report_type
-            - params
-            properties:
-              report_type:
-                type: string
-                description: Identifies the type of report
-                enum:
-                - export_porting_orders_csv
-                example: export_porting_orders_csv
-              params:
-                oneOf:
-                - $ref: '#/components/schemas/ExportPortingOrdersCSVReport'
-    SendPortingVerificationCodes:
-      description: A list of phone numbers to send the verification codes to and the method to send them by
-      required: false
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              phone_numbers:
-                type: array
-                maxItems: 100
-                items:
-                  type: string
-              verification_method:
-                type: string
-                enum:
-                - sms
-                - call
-            example:
-              phone_numbers:
-              - '+61424000001'
-              - '+61424000002'
-              verification_method: sms
-    SharePortingOrder:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              expires_in_seconds:
-                description: The number of seconds the token will be valid for
-                type: integer
-                minimum: 1
-                maximum: 172800
-              permissions:
-                description: The permissions the token will have
-                type: string
-                enum:
-                - porting_order.document.read
-                - porting_order.document.update
-            example:
-              expires_in_seconds: 3600
-              permissions: porting_order.document.read
-    CreatePortingPhoneNumberExtension:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            required:
-            - porting_phone_number_id
-            - extension_range
-            - activation_ranges
-            properties:
-              porting_phone_number_id:
-                type: string
-                description: Identifies the porting phone number associated with this porting phone number extension.
-                format: uuid
-                example: f24151b6-3389-41d3-8747-7dd8c681e5e2
-              extension_range:
-                type: object
-                required:
-                - start_at
-                - end_at
-                properties:
-                  start_at:
-                    type: integer
-                    description: Specifies the start of the extension range for this porting phone number extension.
-                    example: 1
-                  end_at:
-                    type: integer
-                    description: Specifies the end of the extension range for this porting phone number extension.
-                    example: 10
-              activation_ranges:
-                description: Specifies the activation ranges for this porting phone number extension. The activation range must be within the extension range and should not overlap with other activation ranges.
-                type: array
-                items:
-                  type: object
-                  required:
-                  - start_at
-                  - end_at
-                  properties:
-                    start_at:
-                      description: Specifies the start of the activation range. Must be greater or equal the start of the extension range.
-                      type: integer
-                      example: 1
-                    end_at:
-                      description: Specifies the end of the activation range. It must be no more than the end of the extension range.
-                      type: integer
-                      example: 10
-    CreatePortingPhoneNumberConfigurations:
-      description: A list of phone number configuration parameters
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              phone_number_configurations:
-                type: array
-                maxItems: 20
-                items:
-                  type: object
-                  required:
-                  - porting_phone_number_id
-                  - user_bundle_id
-                  properties:
-                    porting_phone_number_id:
-                      type: string
-                      format: uuid
-                      description: Identifies the porting phone number to be configured.
-                      example: 927f4687-318c-44bc-9f2f-22a5898143a4
-                    user_bundle_id:
-                      type: string
-                      format: uuid
-                      description: Identifies the user bundle to be associated with the porting phone number.
-                      example: ff901545-3e27-462a-ba9d-2b34654cab82
   parameters:
-    PathPortingOrderID:
-      name: id
-      description: Porting Order id
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
     porting-order_FilterConsolidated:
       name: filter
       in: query
@@ -5308,6 +5300,22 @@ components:
           portability_status:
             $ref: '#/components/schemas/PortabilityStatus'
             description: Filter results by portability status
+    PathPortingOrderID:
+      name: id
+      description: Porting Order id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    QueryIncludePhoneNumbers:
+      name: include_phone_numbers
+      in: query
+      required: false
+      description: Include the first 50 phone number objects in the results
+      schema:
+        type: boolean
+        default: true
     PathPortingOrdersActivationJobID:
       name: activationJobId
       description: Activation Job Identifier
@@ -5336,46 +5344,27 @@ components:
             minimum: 1
             default: 1
             description: The page number to load
-    QueryIncludePhoneNumbers:
-      name: include_phone_numbers
-      in: query
-      required: false
-      description: Include the first 50 phone number objects in the results
-      schema:
-        type: boolean
-        default: true
   responses:
-    ListPortingOrdersComments:
+    ShowPortingEventResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/PortingEvent'
+            type: object
+      description: Successful response
+    ListPortingOrder:
       content:
         application/json:
           schema:
             properties:
               data:
                 items:
-                  $ref: '#/components/schemas/PortingOrdersComment'
+                  $ref: '#/components/schemas/PortingOrder_2'
                 type: array
               meta:
                 $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful response
-    ListPortingOrdersExceptionTypes:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/PortingOrdersExceptionType'
-                type: array
-            type: object
-      description: Successful response
-    CreatePortingReport:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/PortingReport'
             type: object
       description: Successful response
     ShowPortingPhoneNumberBlock:
@@ -5387,36 +5376,20 @@ components:
                 $ref: '#/components/schemas/PortingPhoneNumberBlock_2'
             type: object
       description: Successful response
-    ListPortingVerificationCodes:
+    ShowPortingOrder:
       content:
         application/json:
           schema:
-            example:
-              data:
-              - created_at: '2020-10-22T15:00:00.000Z'
-                id: 52090326-6533-4421-bcf4-bd0117cf3954
-                phone_number: '+61424000001'
-                porting_order_id: f28e6ecc-29a8-430b-bd0b-d93055f70604
-                updated_at: '2020-10-22T15:00:00.000Z'
-                verified: true
-              - created_at: '2020-10-22T15:00:00.000Z'
-                id: cf076b8e-645b-4040-8209-543c5909775f
-                phone_number: '+61424000002'
-                porting_order_id: f28e6ecc-29a8-430b-bd0b-d93055f70604
-                updated_at: '2020-10-22T15:00:00.000Z'
-                verified: false
-              meta:
-                page_number: 1
-                page_size: 2
-                total_pages: 1
-                total_results: 2
             properties:
               data:
-                items:
-                  $ref: '#/components/schemas/PortingVerificationCode'
-                type: array
+                $ref: '#/components/schemas/PortingOrder_2'
               meta:
-                $ref: '#/components/schemas/PaginationMeta'
+                properties:
+                  phone_numbers_url:
+                    description: Link to list all phone numbers
+                    example: /v2/porting_phone_numbers?filter[porting_order_id]=eef10fb8-f3df-4c67-97c5-e18179723222
+                    type: string
+                type: object
             type: object
       description: Successful response
     ListPortingEventsResponse:
@@ -5432,7 +5405,34 @@ components:
                 $ref: '#/components/schemas/PaginationMeta'
             type: object
       description: Successful response
-    CreatePortingLOAConfiguration:
+    ShowPortingAssociatedPhoneNumber:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/PortingAssociatedPhoneNumber'
+            type: object
+      description: Successful response
+    ShowPortingOrdersActivationJob:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/PortingOrdersActivationJob'
+            type: object
+      description: Successful response
+    SubRequestByPortingOrder:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/GetSubRequestByPortingOrder'
+            type: object
+      description: Successful response
+    ShowPortingLOAConfiguration:
       content:
         application/json:
           schema:
@@ -5454,26 +5454,17 @@ components:
                 $ref: '#/components/schemas/PaginationMeta'
             type: object
       description: Successful response
-    ListPortingPhoneNumberExtensions:
+    ListPortingAssociatedPhoneNumbers:
       content:
         application/json:
           schema:
             properties:
               data:
                 items:
-                  $ref: '#/components/schemas/PortingPhoneNumberExtension'
+                  $ref: '#/components/schemas/PortingAssociatedPhoneNumber'
                 type: array
               meta:
                 $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful response
-    ShowPortingAssociatedPhoneNumber:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/PortingAssociatedPhoneNumber'
             type: object
       description: Successful response
     ListAllowedFocWindows:
@@ -5489,6 +5480,17 @@ components:
                 $ref: '#/components/schemas/PaginationMeta'
             type: object
       description: Successful response
+    ListPortingUKCarriersResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PortingUKCarrier'
+                type: array
+            type: object
+      description: Successful response
     ShowPortingOrdersComment:
       content:
         application/json:
@@ -5498,121 +5500,25 @@ components:
                 $ref: '#/components/schemas/PortingOrdersComment'
             type: object
       description: Successful response
-    ListPortingActionRequirements:
+    SharePortingOrder:
       content:
         application/json:
+          example:
+            data:
+              created_at: '2023-07-20T22:11:17.292573Z'
+              expires_at: '2023-07-20T23:11:17Z'
+              expires_in_seconds: 3600
+              id: 03a35311-ad92-46b3-95d7-8ad6dccf2d7c
+              permissions:
+              - porting_order.document.read
+              - porting_order.document.update
+              porting_order_id: fd4b86c8-497d-4c6d-9609-a789e4e14cfe
+              record_type: porting_order_sharing_token
+              token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2ODk4OTQ2NzcsImlzdCI6MTY4OTg5MTA3NywicGVybWlzc2lvbnMiOlsicG9ydGluZ19vcmRlci5kb2N1bWVudC5yZWFkIl0sInBvcnRpbmdfb3JkZXJfaWQiOiJmZDRiODZjOC00OTdkLTRjNmQtOTYwOS1hNzg5ZTRlMTRjZmUifQ.CT0HRF6OLj7VPZ8p5Y_0S8rOL8SEUznwJJkR-YReKwc
           schema:
             properties:
               data:
-                items:
-                  $ref: '#/components/schemas/PortingActionRequirement'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful response
-    ListPortingAssociatedPhoneNumbers:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/PortingAssociatedPhoneNumber'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful response
-    ListPortingOrdersActivationJobs:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/PortingOrdersActivationJob'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful response
-    ListPortingAdditionalDocuments:
-      content:
-        application/json:
-          schema:
-            example:
-              data:
-              - created_at: '2023-06-01T10:00:00.00000Z'
-                document_id: 40bc547a-7f96-4cd5-926a-da4842671e88
-                document_type: loa
-                id: 2acd1061-33cb-49b8-8014-beb6dc3fedbf
-                porting_order_id: 9d7b3b8e-4e67-4837-9c44-d110cd2c82a1
-                record_type: porting_additional_document
-                updated_at: '2023-06-01T10:00:00.00000Z'
-              meta:
-                page_number: 1
-                page_size: 25
-                total_pages: 1
-                total_results: 1
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/PortingAdditionalDocument'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful response
-    ShowPortingReport:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/PortingReport'
-            type: object
-      description: Successful response
-    ShowPortingLOAConfiguration:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/PortingLOAConfiguration'
-            type: object
-      description: Successful response
-    CreatePortingAdditionalDocuments:
-      content:
-        application/json:
-          schema:
-            example:
-              data:
-              - created_at: '2023-06-01T10:00:00.00000Z'
-                document_id: 40bc547a-7f96-4cd5-926a-da4842671e88
-                document_type: loa
-                id: 2acd1061-33cb-49b8-8014-beb6dc3fedbf
-                porting_order_id: 9d7b3b8e-4e67-4837-9c44-d110cd2c82a1
-                record_type: porting_additional_document
-                updated_at: '2023-06-01T10:00:00.00000Z'
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/PortingAdditionalDocument'
-                type: array
-            type: object
-      description: Successful response
-    ListPortingPhoneNumberBlocks:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/PortingPhoneNumberBlock_2'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
+                $ref: '#/components/schemas/PortingOrderSharingToken'
             type: object
       description: Successful response
     CancelPortingOrderResponse:
@@ -5690,362 +5596,13 @@ components:
                 type: object
             type: object
       description: Successful response
-    ListDraftPortingOrdersWithoutPagination:
-      content:
-        application/json:
-          schema:
-            example:
-              data:
-              - activation_settings:
-                  activation_status: null
-                  fast_port_eligible: true
-                  foc_datetime_actual: null
-                  foc_datetime_requested: null
-                created_at: '2022-03-17T18:01:01Z'
-                customer_group_reference: null
-                customer_reference: null
-                description: FP Telnyx
-                documents:
-                  invoice: null
-                  loa: null
-                end_user:
-                  admin:
-                    account_number: null
-                    auth_person_name: null
-                    billing_phone_number: null
-                    business_identifier: null
-                    entity_name: null
-                    pin_passcode: null
-                    tax_identifier: null
-                  location:
-                    administrative_area: null
-                    country_code: null
-                    extended_address: null
-                    locality: null
-                    postal_code: null
-                    street_address: null
-                id: b0ea6d6f-de31-4079-a536-992e0c98b037
-                messaging:
-                  enable_messaging: false
-                  messaging_capable: true
-                  messaging_port_completed: false
-                  messaging_port_status: not_applicable
-                misc: null
-                old_service_provider_ocn: Unreal Communications
-                parent_support_key: null
-                phone_number_configuration:
-                  billing_group_id: null
-                  connection_id: null
-                  emergency_address_id: null
-                  messaging_profile_id: null
-                  tags: []
-                phone_number_type: local
-                phone_numbers:
-                - activation_status: Activate RDY
-                  phone_number: '{e.164 TN}'
-                  phone_number_type: local
-                  portability_status: confirmed
-                  porting_order_id: b0ea6d6f-de31-4079-a536-992e0c98b037
-                  porting_order_status: draft
-                  record_type: porting_phone_number
-                  requirements_status: requirement-info-pending
-                  support_key: sr_10b316
-                porting_phone_numbers_count: 1
-                record_type: porting_order
-                requirements: []
-                requirements_met: false
-                status:
-                  details: []
-                  value: draft
-                support_key: null
-                updated_at: '2022-03-17T18:01:01Z'
-                user_feedback:
-                  user_comment: null
-                  user_rating: null
-                user_id: 40d68ba2-0847-4df2-be9c-b0e0cb673e75
-                webhook_url: null
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/PortingOrder_2'
-                type: array
-            type: object
-      description: Successful response
-    CreatePortingPhoneNumberConfigurations:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/PortingPhoneNumberConfiguration'
-                type: array
-            type: object
-      description: Successful response
-    UpdatePortingLOAConfiguration:
+    CreatePortingLOAConfiguration:
       content:
         application/json:
           schema:
             properties:
               data:
                 $ref: '#/components/schemas/PortingLOAConfiguration'
-            type: object
-      description: Successful response
-    ListPortingPhoneNumbers:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/PortingPhoneNumber_2'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-        text/csv:
-          schema:
-            example: 'phone_number,phone_number_type,porting_order_id,support_key,porting_order_status
-
-              +12003155566,local,5f940c35-ef28-4408-bb95-af73b047d589,sr_a12345,draft
-
-              '
-            type: string
-      description: Successful response
-    UpdatePortingOrderResponse:
-      content:
-        application/json:
-          schema:
-            example:
-              data:
-                activation_settings:
-                  activation_status: null
-                  fast_port_eligible: true
-                  foc_datetime_actual: null
-                  foc_datetime_requested: '2022-04-08T15:00:00Z'
-                created_at: '2022-03-24T14:22:28Z'
-                customer_group_reference: Group-789
-                customer_reference: Test1234
-                description: FP Telnyx
-                documents:
-                  invoice: null
-                  loa: null
-                end_user:
-                  admin:
-                    account_number: 123abc
-                    auth_person_name: Porter McPortersen II
-                    billing_phone_number: '+13035551234'
-                    business_identifier: abc123
-                    entity_name: Porter McPortersen
-                    pin_passcode: '1234'
-                    tax_identifier: 1234abcd
-                  location:
-                    administrative_area: TX
-                    country_code: US
-                    extended_address: 14th Floor
-                    locality: Austin
-                    postal_code: '78701'
-                    street_address: 600 Congress Avenue
-                id: eef10fb8-f3df-4c67-97c5-e18179723222
-                messaging:
-                  enable_messaging: true
-                  messaging_capable: true
-                  messaging_port_completed: false
-                  messaging_port_status: pending
-                misc:
-                  new_billing_phone_number: null
-                  remaining_numbers_action: null
-                  type: full
-                old_service_provider_ocn: Unreal Communications
-                parent_support_key: null
-                phone_number_configuration:
-                  billing_group_id: null
-                  connection_id: '1752379429071357070'
-                  emergency_address_id: null
-                  messaging_profile_id: null
-                  tags: []
-                phone_number_type: local
-                porting_phone_numbers_count: 1
-                record_type: porting_order
-                requirements: []
-                requirements_met: false
-                status:
-                  details: []
-                  value: draft
-                support_key: null
-                updated_at: '2022-03-24T14:26:53Z'
-                user_feedback:
-                  user_comment: null
-                  user_rating: null
-                user_id: 40d68ba2-0847-4df2-be9c-b0e0cb673e75
-                webhook_url: https://example.com/porting_webhooks
-              meta:
-                phone_numbers_url: /v2/porting_phone_numbers?filter[porting_order_id]=eef10fb8-f3df-4c67-97c5-e18179723222
-            properties:
-              data:
-                $ref: '#/components/schemas/PortingOrder_2'
-              meta:
-                properties:
-                  phone_numbers_url:
-                    description: Link to list all phone numbers
-                    type: string
-                type: object
-            type: object
-      description: Successful response
-    ShowPortingOrder:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/PortingOrder_2'
-              meta:
-                properties:
-                  phone_numbers_url:
-                    description: Link to list all phone numbers
-                    example: /v2/porting_phone_numbers?filter[porting_order_id]=eef10fb8-f3df-4c67-97c5-e18179723222
-                    type: string
-                type: object
-            type: object
-      description: Successful response
-    ShowPortingOrdersActivationJob:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/PortingOrdersActivationJob'
-            type: object
-      description: Successful response
-    ListPortingReports:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/PortingReport'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful response
-    SubRequestByPortingOrder:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/GetSubRequestByPortingOrder'
-            type: object
-      description: Successful response
-    ShowPortingActionRequirement:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/PortingActionRequirement'
-            type: object
-      description: Successful response
-    ListPortingOrder:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/PortingOrder_2'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful response
-    VerifyPortingVerificationCodes:
-      content:
-        application/json:
-          schema:
-            example:
-              data:
-              - created_at: '2020-10-22T15:00:00.000Z'
-                id: 52090326-6533-4421-bcf4-bd0117cf3954
-                phone_number: '+61424000001'
-                porting_order_id: f28e6ecc-29a8-430b-bd0b-d93055f70604
-                updated_at: '2020-10-22T15:00:00.000Z'
-                verified: true
-              - created_at: '2020-10-22T15:00:00.000Z'
-                id: cf076b8e-645b-4040-8209-543c5909775f
-                phone_number: '+61424000002'
-                porting_order_id: f28e6ecc-29a8-430b-bd0b-d93055f70604
-                updated_at: '2020-10-22T15:00:00.000Z'
-                verified: false
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/PortingVerificationCode'
-                type: array
-            type: object
-      description: Successful response
-    ListPortingPhoneNumberConfigurations:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/PortingPhoneNumberConfiguration'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful response
-    DownloadLOATemplate:
-      content:
-        application/pdf:
-          schema:
-            example: '%PDF-1.4...'
-            format: binary
-            type: string
-      description: Successful response
-    ShowPortingEventResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/PortingEvent'
-            type: object
-      description: Successful response
-    ListPortingUKCarriersResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/PortingUKCarrier'
-                type: array
-            type: object
-      description: Successful response
-    SharePortingOrder:
-      content:
-        application/json:
-          example:
-            data:
-              created_at: '2023-07-20T22:11:17.292573Z'
-              expires_at: '2023-07-20T23:11:17Z'
-              expires_in_seconds: 3600
-              id: 03a35311-ad92-46b3-95d7-8ad6dccf2d7c
-              permissions:
-              - porting_order.document.read
-              - porting_order.document.update
-              porting_order_id: fd4b86c8-497d-4c6d-9609-a789e4e14cfe
-              record_type: porting_order_sharing_token
-              token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2ODk4OTQ2NzcsImlzdCI6MTY4OTg5MTA3NywicGVybWlzc2lvbnMiOlsicG9ydGluZ19vcmRlci5kb2N1bWVudC5yZWFkIl0sInBvcnRpbmdfb3JkZXJfaWQiOiJmZDRiODZjOC00OTdkLTRjNmQtOTYwOS1hNzg5ZTRlMTRjZmUifQ.CT0HRF6OLj7VPZ8p5Y_0S8rOL8SEUznwJJkR-YReKwc
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/PortingOrderSharingToken'
             type: object
       description: Successful response
     ShowPortingPhoneNumberExtension:
@@ -6057,14 +5614,14 @@ components:
                 $ref: '#/components/schemas/PortingPhoneNumberExtension'
             type: object
       description: Successful response
-    ListPortingOrderRequirements:
+    ListPortingPhoneNumberExtensions:
       content:
         application/json:
           schema:
             properties:
               data:
                 items:
-                  $ref: '#/components/schemas/PortingOrderRequirementDetail'
+                  $ref: '#/components/schemas/PortingPhoneNumberExtension'
                 type: array
               meta:
                 $ref: '#/components/schemas/PaginationMeta'
@@ -6148,6 +5705,449 @@ components:
                     description: Link to list all phone numbers
                     type: string
                 type: object
+            type: object
+      description: Successful response
+    CreatePortingPhoneNumberConfigurations:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PortingPhoneNumberConfiguration'
+                type: array
+            type: object
+      description: Successful response
+    ListPortingOrdersActivationJobs:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PortingOrdersActivationJob'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful response
+    CreatePortingReport:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/PortingReport'
+            type: object
+      description: Successful response
+    UpdatePortingOrderResponse:
+      content:
+        application/json:
+          schema:
+            example:
+              data:
+                activation_settings:
+                  activation_status: null
+                  fast_port_eligible: true
+                  foc_datetime_actual: null
+                  foc_datetime_requested: '2022-04-08T15:00:00Z'
+                created_at: '2022-03-24T14:22:28Z'
+                customer_group_reference: Group-789
+                customer_reference: Test1234
+                description: FP Telnyx
+                documents:
+                  invoice: null
+                  loa: null
+                end_user:
+                  admin:
+                    account_number: 123abc
+                    auth_person_name: Porter McPortersen II
+                    billing_phone_number: '+13035551234'
+                    business_identifier: abc123
+                    entity_name: Porter McPortersen
+                    pin_passcode: '1234'
+                    tax_identifier: 1234abcd
+                  location:
+                    administrative_area: TX
+                    country_code: US
+                    extended_address: 14th Floor
+                    locality: Austin
+                    postal_code: '78701'
+                    street_address: 600 Congress Avenue
+                id: eef10fb8-f3df-4c67-97c5-e18179723222
+                messaging:
+                  enable_messaging: true
+                  messaging_capable: true
+                  messaging_port_completed: false
+                  messaging_port_status: pending
+                misc:
+                  new_billing_phone_number: null
+                  remaining_numbers_action: null
+                  type: full
+                old_service_provider_ocn: Unreal Communications
+                parent_support_key: null
+                phone_number_configuration:
+                  billing_group_id: null
+                  connection_id: '1752379429071357070'
+                  emergency_address_id: null
+                  messaging_profile_id: null
+                  tags: []
+                phone_number_type: local
+                porting_phone_numbers_count: 1
+                record_type: porting_order
+                requirements: []
+                requirements_met: false
+                status:
+                  details: []
+                  value: draft
+                support_key: null
+                updated_at: '2022-03-24T14:26:53Z'
+                user_feedback:
+                  user_comment: null
+                  user_rating: null
+                user_id: 40d68ba2-0847-4df2-be9c-b0e0cb673e75
+                webhook_url: https://example.com/porting_webhooks
+              meta:
+                phone_numbers_url: /v2/porting_phone_numbers?filter[porting_order_id]=eef10fb8-f3df-4c67-97c5-e18179723222
+            properties:
+              data:
+                $ref: '#/components/schemas/PortingOrder_2'
+              meta:
+                properties:
+                  phone_numbers_url:
+                    description: Link to list all phone numbers
+                    type: string
+                type: object
+            type: object
+      description: Successful response
+    ListPortingVerificationCodes:
+      content:
+        application/json:
+          schema:
+            example:
+              data:
+              - created_at: '2020-10-22T15:00:00.000Z'
+                id: 52090326-6533-4421-bcf4-bd0117cf3954
+                phone_number: '+61424000001'
+                porting_order_id: f28e6ecc-29a8-430b-bd0b-d93055f70604
+                updated_at: '2020-10-22T15:00:00.000Z'
+                verified: true
+              - created_at: '2020-10-22T15:00:00.000Z'
+                id: cf076b8e-645b-4040-8209-543c5909775f
+                phone_number: '+61424000002'
+                porting_order_id: f28e6ecc-29a8-430b-bd0b-d93055f70604
+                updated_at: '2020-10-22T15:00:00.000Z'
+                verified: false
+              meta:
+                page_number: 1
+                page_size: 2
+                total_pages: 1
+                total_results: 2
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PortingVerificationCode'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful response
+    ListPortingAdditionalDocuments:
+      content:
+        application/json:
+          schema:
+            example:
+              data:
+              - created_at: '2023-06-01T10:00:00.00000Z'
+                document_id: 40bc547a-7f96-4cd5-926a-da4842671e88
+                document_type: loa
+                id: 2acd1061-33cb-49b8-8014-beb6dc3fedbf
+                porting_order_id: 9d7b3b8e-4e67-4837-9c44-d110cd2c82a1
+                record_type: porting_additional_document
+                updated_at: '2023-06-01T10:00:00.00000Z'
+              meta:
+                page_number: 1
+                page_size: 25
+                total_pages: 1
+                total_results: 1
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PortingAdditionalDocument'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful response
+    ListPortingPhoneNumberBlocks:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PortingPhoneNumberBlock_2'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful response
+    ShowPortingReport:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/PortingReport'
+            type: object
+      description: Successful response
+    ListPortingOrderRequirements:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PortingOrderRequirementDetail'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful response
+    ListPortingActionRequirements:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PortingActionRequirement'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful response
+    ListPortingOrdersExceptionTypes:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PortingOrdersExceptionType'
+                type: array
+            type: object
+      description: Successful response
+    UpdatePortingLOAConfiguration:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/PortingLOAConfiguration'
+            type: object
+      description: Successful response
+    ShowPortingActionRequirement:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/PortingActionRequirement'
+            type: object
+      description: Successful response
+    ListPortingOrdersComments:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PortingOrdersComment'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful response
+    ListPortingReports:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PortingReport'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful response
+    ListDraftPortingOrdersWithoutPagination:
+      content:
+        application/json:
+          schema:
+            example:
+              data:
+              - activation_settings:
+                  activation_status: null
+                  fast_port_eligible: true
+                  foc_datetime_actual: null
+                  foc_datetime_requested: null
+                created_at: '2022-03-17T18:01:01Z'
+                customer_group_reference: null
+                customer_reference: null
+                description: FP Telnyx
+                documents:
+                  invoice: null
+                  loa: null
+                end_user:
+                  admin:
+                    account_number: null
+                    auth_person_name: null
+                    billing_phone_number: null
+                    business_identifier: null
+                    entity_name: null
+                    pin_passcode: null
+                    tax_identifier: null
+                  location:
+                    administrative_area: null
+                    country_code: null
+                    extended_address: null
+                    locality: null
+                    postal_code: null
+                    street_address: null
+                id: b0ea6d6f-de31-4079-a536-992e0c98b037
+                messaging:
+                  enable_messaging: false
+                  messaging_capable: true
+                  messaging_port_completed: false
+                  messaging_port_status: not_applicable
+                misc: null
+                old_service_provider_ocn: Unreal Communications
+                parent_support_key: null
+                phone_number_configuration:
+                  billing_group_id: null
+                  connection_id: null
+                  emergency_address_id: null
+                  messaging_profile_id: null
+                  tags: []
+                phone_number_type: local
+                phone_numbers:
+                - activation_status: Activate RDY
+                  phone_number: '{e.164 TN}'
+                  phone_number_type: local
+                  portability_status: confirmed
+                  porting_order_id: b0ea6d6f-de31-4079-a536-992e0c98b037
+                  porting_order_status: draft
+                  record_type: porting_phone_number
+                  requirements_status: requirement-info-pending
+                  support_key: sr_10b316
+                porting_phone_numbers_count: 1
+                record_type: porting_order
+                requirements: []
+                requirements_met: false
+                status:
+                  details: []
+                  value: draft
+                support_key: null
+                updated_at: '2022-03-17T18:01:01Z'
+                user_feedback:
+                  user_comment: null
+                  user_rating: null
+                user_id: 40d68ba2-0847-4df2-be9c-b0e0cb673e75
+                webhook_url: null
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PortingOrder_2'
+                type: array
+            type: object
+      description: Successful response
+    VerifyPortingVerificationCodes:
+      content:
+        application/json:
+          schema:
+            example:
+              data:
+              - created_at: '2020-10-22T15:00:00.000Z'
+                id: 52090326-6533-4421-bcf4-bd0117cf3954
+                phone_number: '+61424000001'
+                porting_order_id: f28e6ecc-29a8-430b-bd0b-d93055f70604
+                updated_at: '2020-10-22T15:00:00.000Z'
+                verified: true
+              - created_at: '2020-10-22T15:00:00.000Z'
+                id: cf076b8e-645b-4040-8209-543c5909775f
+                phone_number: '+61424000002'
+                porting_order_id: f28e6ecc-29a8-430b-bd0b-d93055f70604
+                updated_at: '2020-10-22T15:00:00.000Z'
+                verified: false
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PortingVerificationCode'
+                type: array
+            type: object
+      description: Successful response
+    ListPortingPhoneNumbers:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PortingPhoneNumber_2'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+        text/csv:
+          schema:
+            example: 'phone_number,phone_number_type,porting_order_id,support_key,porting_order_status
+
+              +12003155566,local,5f940c35-ef28-4408-bb95-af73b047d589,sr_a12345,draft
+
+              '
+            type: string
+      description: Successful response
+    DownloadLOATemplate:
+      content:
+        application/pdf:
+          schema:
+            example: '%PDF-1.4...'
+            format: binary
+            type: string
+      description: Successful response
+    CreatePortingAdditionalDocuments:
+      content:
+        application/json:
+          schema:
+            example:
+              data:
+              - created_at: '2023-06-01T10:00:00.00000Z'
+                document_id: 40bc547a-7f96-4cd5-926a-da4842671e88
+                document_type: loa
+                id: 2acd1061-33cb-49b8-8014-beb6dc3fedbf
+                porting_order_id: 9d7b3b8e-4e67-4837-9c44-d110cd2c82a1
+                record_type: porting_additional_document
+                updated_at: '2023-06-01T10:00:00.00000Z'
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PortingAdditionalDocument'
+                type: array
+            type: object
+      description: Successful response
+    ListPortingPhoneNumberConfigurations:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PortingPhoneNumberConfiguration'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
             type: object
       description: Successful response
   securitySchemes:

@@ -401,11 +401,26 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    CloudfsFilesystemDetailResponseWrapper:
+    UpdateCloudfsFilesystemRequest:
       type: object
       properties:
-        data:
-          $ref: '#/components/schemas/CloudfsFilesystemDetail'
+        name:
+          type: string
+          description: New filesystem name, unique within your organization. Names are trimmed and lowercased; after normalization they may contain lowercase letters, numbers, `.`, `_`, and `-` only.
+          pattern: ^[a-z0-9._-]+$
+          minLength: 1
+          maxLength: 63
+          example: agent-fs
+    CloudfsListCursors:
+      type: object
+      description: Opaque cursors for the adjacent pages. Empty when there are no adjacent pages.
+      properties:
+        after:
+          type: string
+          description: Cursor for the next page; pass it as `page[after]`. Omitted on the last page.
+        before:
+          type: string
+          description: Cursor for the previous page; pass it as `page[before]`. Omitted on the first page.
     CloudfsFilesystemListResponseWrapper:
       type: object
       properties:
@@ -415,43 +430,27 @@ components:
             $ref: '#/components/schemas/CloudfsFilesystemListItem'
         meta:
           $ref: '#/components/schemas/CloudfsListMeta'
-    billing-group_Error:
-      type: object
-      required:
-      - code
-      - title
+    Errors:
       properties:
-        code:
-          type: integer
-          format: int32
-        title:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    CloudfsFilesystemResponseWrapper:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/CloudfsFilesystem'
+    ErrorSource:
+      type: object
+      properties:
+        parameter:
           type: string
-        detail:
+          example: id
+        pointer:
           type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-          properties: {}
-          additionalProperties: true
-    CloudfsFilesystemStatus:
-      type: string
-      description: 'Lifecycle status of the filesystem. `ready` means it is fully provisioned and usable. `needs_format` means the storage bucket and metadata database were provisioned but the filesystem has not yet been formatted — run `juicefs format` with the filesystem''s `meta_url` before mounting. `failed` means the last lifecycle action failed — see the filesystem''s `error` message. `deleted` appears only in the delete response: deleted filesystems are excluded from list results and return a `404` on retrieval.'
-      enum:
-      - provisioning
-      - ready
-      - needs_format
-      - deleting
-      - failed
-      - deleted
-      example: ready
+          example: /id
     edge-compute_Error:
       type: object
       properties:
@@ -468,29 +467,6 @@ components:
         title:
           type: string
           example: Function not found
-    ErrorMeta:
-      type: object
-      properties:
-        url:
-          type: string
-          example: https://docs.telnyx.com/api/errors/10005
-    UpdateCloudfsFilesystemRequest:
-      type: object
-      properties:
-        name:
-          type: string
-          description: New filesystem name, unique within your organization. Names are trimmed and lowercased; after normalization they may contain lowercase letters, numbers, `.`, `_`, and `-` only.
-          pattern: ^[a-z0-9._-]+$
-          minLength: 1
-          maxLength: 63
-          example: agent-fs
-    Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/billing-group_Error'
-      type: object
     CreateCloudfsFilesystemRequest:
       type: object
       properties:
@@ -512,103 +488,24 @@ components:
       required:
       - name
       - region
-    CloudfsFilesystem:
-      type: object
-      description: A CloudFS filesystem, including its metadata credential. This shape is returned only by create and rotate-meta-token.
-      properties:
-        record_type:
-          type: string
-          example: cloudfs
-        id:
-          type: string
-          format: uuid
-          example: 550e8400-e29b-41d4-a716-446655440000
-        name:
-          type: string
-          example: agent-fs
-        status:
-          $ref: '#/components/schemas/CloudfsFilesystemStatus'
-        meta_url:
-          type: string
-          description: 'PostgreSQL connection URL for the filesystem''s metadata database. In create and rotate-meta-token responses it embeds the metadata token as the password: `postgres://<database>:<meta_token>@us-east-1.telnyxcloudfs.com:5432/<database>?sslmode=require` (the example below is shown without the credential; the actual response includes it). Pass it to `juicefs mount`: the storage configuration is baked in at provisioning, so the metadata URL is all a client needs to mount the filesystem.'
-          example: postgres://fs_0123456789abcdef@us-east-1.telnyxcloudfs.com:5432/fs_0123456789abcdef?sslmode=require
-        meta_token:
-          type: string
-          description: Metadata access token, in cleartext. Returned only by create and rotate-meta-token and not retrievable afterwards — store it securely.
-          example: cloudfs_tok_0123456789abcdef0123456789abcdef
-        s3_endpoint:
-          type: string
-          description: URL of the Telnyx Cloud Storage endpoint backing this filesystem.
-          example: https://us-east-1.telnyxcloudstorage.com
-        s3_bucket:
-          type: string
-          description: Name of the bucket that stores this filesystem's data. Created during provisioning.
-          example: cloudfs-fs-0123456789abcdef
-        region:
-          type: string
-          example: us-east-1
-        created_at:
-          type: string
-          format: date-time
-          example: '2026-07-14T21:42:01Z'
-        updated_at:
-          type: string
-          format: date-time
-          example: '2026-07-14T21:42:01Z'
-    ErrorSource:
+    CloudfsFilesystemStatus:
+      type: string
+      description: 'Lifecycle status of the filesystem. `ready` means it is fully provisioned and usable. `needs_format` means the storage bucket and metadata database were provisioned but the filesystem has not yet been formatted — run `juicefs format` with the filesystem''s `meta_url` before mounting. `failed` means the last lifecycle action failed — see the filesystem''s `error` message. `deleted` appears only in the delete response: deleted filesystems are excluded from list results and return a `404` on retrieval.'
+      enum:
+      - provisioning
+      - ready
+      - needs_format
+      - deleting
+      - failed
+      - deleted
+      example: ready
+    GenericErrorResponse:
       type: object
       properties:
-        parameter:
-          type: string
-          example: id
-        pointer:
-          type: string
-          example: /id
-    CloudfsFilesystemListItem:
-      type: object
-      description: A CloudFS filesystem as returned in list results. Connection details (`meta_url`, `meta_token`) are omitted — retrieve the filesystem by ID for its redacted `meta_url`.
-      properties:
-        record_type:
-          type: string
-          example: cloudfs
-        id:
-          type: string
-          format: uuid
-          example: 550e8400-e29b-41d4-a716-446655440000
-        name:
-          type: string
-          example: agent-fs
-        status:
-          $ref: '#/components/schemas/CloudfsFilesystemStatus'
-        s3_endpoint:
-          type: string
-          description: URL of the Telnyx Cloud Storage endpoint backing this filesystem.
-          example: https://us-east-1.telnyxcloudstorage.com
-        s3_bucket:
-          type: string
-          description: Name of the bucket that stores this filesystem's data. Created during provisioning.
-          example: cloudfs-fs-0123456789abcdef
-        region:
-          type: string
-          example: us-east-1
-        created_at:
-          type: string
-          format: date-time
-          example: '2026-07-14T21:42:01Z'
-        updated_at:
-          type: string
-          format: date-time
-          example: '2026-07-14T21:42:01Z'
-    CloudfsListCursors:
-      type: object
-      description: Opaque cursors for the adjacent pages. Empty when there are no adjacent pages.
-      properties:
-        after:
-          type: string
-          description: Cursor for the next page; pass it as `page[after]`. Omitted on the last page.
-        before:
-          type: string
-          description: Cursor for the previous page; pass it as `page[before]`. Omitted on the first page.
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/edge-compute_Error'
     CloudfsFilesystemDetail:
       type: object
       description: A CloudFS filesystem as returned by get, update, and delete. `meta_url` omits the credential and there is no `meta_token` field — the token is only returned by create and rotate-meta-token.
@@ -652,6 +549,78 @@ components:
           type: string
           format: date-time
           example: '2026-07-14T21:42:01Z'
+    CloudfsFilesystemListItem:
+      type: object
+      description: A CloudFS filesystem as returned in list results. Connection details (`meta_url`, `meta_token`) are omitted — retrieve the filesystem by ID for its redacted `meta_url`.
+      properties:
+        record_type:
+          type: string
+          example: cloudfs
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        name:
+          type: string
+          example: agent-fs
+        status:
+          $ref: '#/components/schemas/CloudfsFilesystemStatus'
+        s3_endpoint:
+          type: string
+          description: URL of the Telnyx Cloud Storage endpoint backing this filesystem.
+          example: https://us-east-1.telnyxcloudstorage.com
+        s3_bucket:
+          type: string
+          description: Name of the bucket that stores this filesystem's data. Created during provisioning.
+          example: cloudfs-fs-0123456789abcdef
+        region:
+          type: string
+          example: us-east-1
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-07-14T21:42:01Z'
+        updated_at:
+          type: string
+          format: date-time
+          example: '2026-07-14T21:42:01Z'
+    CloudfsFilesystemDetailResponseWrapper:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/CloudfsFilesystemDetail'
+    ErrorMeta:
+      type: object
+      properties:
+        url:
+          type: string
+          example: https://docs.telnyx.com/api/errors/10005
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
     CloudfsListMeta:
       type: object
       properties:
@@ -663,18 +632,49 @@ components:
         previous:
           type: string
           description: Relative URL (path and query) of the previous page. Omitted on the first page.
-    CloudfsFilesystemResponseWrapper:
+    CloudfsFilesystem:
       type: object
+      description: A CloudFS filesystem, including its metadata credential. This shape is returned only by create and rotate-meta-token.
       properties:
-        data:
-          $ref: '#/components/schemas/CloudfsFilesystem'
-    GenericErrorResponse:
-      type: object
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/edge-compute_Error'
+        record_type:
+          type: string
+          example: cloudfs
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        name:
+          type: string
+          example: agent-fs
+        status:
+          $ref: '#/components/schemas/CloudfsFilesystemStatus'
+        meta_url:
+          type: string
+          description: 'PostgreSQL connection URL for the filesystem''s metadata database. In create and rotate-meta-token responses it embeds the metadata token as the password: `postgres://<database>:<meta_token>@us-east-1.telnyxcloudfs.com:5432/<database>?sslmode=require` (the example below is shown without the credential; the actual response includes it). Pass it to `juicefs mount`: the storage configuration is baked in at provisioning, so the metadata URL is all a client needs to mount the filesystem.'
+          example: postgres://fs_0123456789abcdef@us-east-1.telnyxcloudfs.com:5432/fs_0123456789abcdef?sslmode=require
+        meta_token:
+          type: string
+          description: Metadata access token, in cleartext. Returned only by create and rotate-meta-token and not retrievable afterwards — store it securely.
+          example: cloudfs_tok_0123456789abcdef0123456789abcdef
+        s3_endpoint:
+          type: string
+          description: URL of the Telnyx Cloud Storage endpoint backing this filesystem.
+          example: https://us-east-1.telnyxcloudstorage.com
+        s3_bucket:
+          type: string
+          description: Name of the bucket that stores this filesystem's data. Created during provisioning.
+          example: cloudfs-fs-0123456789abcdef
+        region:
+          type: string
+          example: us-east-1
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-07-14T21:42:01Z'
+        updated_at:
+          type: string
+          format: date-time
+          example: '2026-07-14T21:42:01Z'
     Errors_2:
       properties:
         errors:

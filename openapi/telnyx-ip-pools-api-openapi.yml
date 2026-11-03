@@ -1,0 +1,912 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx IP Pools API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: IP Pools
+  description: Group dedicated IPs into pools for sending.
+paths:
+  /email/ip_pools:
+    get:
+      operationId: listIpPools
+      summary: List IP pools
+      description: List the account's dedicated-IP pools. Member IPs are not included (`ips` is empty); retrieve a pool to see its members.
+      tags:
+      - IP Pools
+      responses:
+        '200':
+          description: IP pool list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IpPoolListResponse'
+              example:
+                data:
+                - id: 9b1c4d70-abcd-4e5f-8a9b-0c1d2e3f4a5b
+                  record_type: ip_pool
+                  name: primary-pool
+                  is_default: true
+                  domain_id: null
+                  ips: []
+                  created_at: '2026-09-30T02:03:09.474123Z'
+                  updated_at: '2026-09-30T02:03:09.474123Z'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                errors:
+                - code: '10007'
+                  title: Unauthorized
+                  detail: The API key provided is invalid or unauthorized
+    post:
+      operationId: createIpPool
+      summary: Create an IP pool
+      description: Create an account-scoped pool of dedicated IPs. Set `is_default` or `domain_id` for the pool to carry mail; a pool with neither carries none.
+      tags:
+      - IP Pools
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IpPoolCreateRequest'
+            example:
+              name: primary-pool
+              is_default: true
+      responses:
+        '201':
+          description: Created IP pool
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IpPoolShowResponse'
+              example:
+                data:
+                  id: 9b1c4d70-abcd-4e5f-8a9b-0c1d2e3f4a5b
+                  record_type: ip_pool
+                  name: primary-pool
+                  is_default: true
+                  domain_id: null
+                  ips: []
+                  created_at: '2026-09-30T02:03:09.474123Z'
+                  updated_at: '2026-09-30T02:03:09.474123Z'
+        '400':
+          description: Malformed request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: The referenced email domain was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                errors:
+                - code: '10001'
+                  title: Not Found
+                  detail: The requested email domain was not found
+        '422':
+          description: 'Validation failed: invalid or duplicate `name`, a second default pool, or a `domain_id` owned by another account.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                errors:
+                - code: '10015'
+                  title: Validation Failed
+                  detail: already has a default pool
+                  source:
+                    pointer: /data/attributes/account_id
+  /email/ip_pools/{id}:
+    delete:
+      operationId: deleteIpPool
+      summary: Delete an IP pool
+      description: Delete the pool. Member IPs are kept but leave the pool, so they carry no mail until added to another pool. Deleting a pool changes routing for subsequently resolved messages. It does not reroute messages already assigned to the deleted pool. Deleting a pool that still has IPs requires `force=true` and `drain=true`.
+      tags:
+      - IP Pools
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: The IP pool identifier (UUID).
+        schema:
+          type: string
+          format: uuid
+      - name: force
+        in: query
+        required: false
+        description: Set together with `drain=true` to delete a pool that still has IPs. Either flag alone has no effect.
+        schema:
+          type: boolean
+          default: false
+      - name: drain
+        in: query
+        required: false
+        description: Set together with `force=true` to delete a pool that still has IPs. Acknowledges deletion while the pool still has members; this flag does not reroute already queued messages.
+        schema:
+          type: boolean
+          default: false
+      responses:
+        '204':
+          description: Pool deleted. No response body.
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                errors:
+                - code: '10001'
+                  title: Not Found
+                  detail: The requested ip pool was not found
+        '409':
+          description: The pool still has IPs and `force`/`drain` were not both set.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                errors:
+                - code: '40901'
+                  title: Conflict
+                  detail: 'pool still has 2 member IP(s) — remove them first or pass force: true with drain: true'
+        '422':
+          description: Validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+    get:
+      operationId: getIpPool
+      summary: Retrieve an IP pool
+      tags:
+      - IP Pools
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: The IP pool identifier (UUID).
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: IP pool details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IpPoolShowResponse'
+              example:
+                data:
+                  id: 9b1c4d70-abcd-4e5f-8a9b-0c1d2e3f4a5b
+                  record_type: ip_pool
+                  name: primary-pool
+                  is_default: true
+                  domain_id: null
+                  ips:
+                  - id: 6a7f9a30-1234-4b5c-8d9e-0f1a2b3c4d5e
+                    record_type: dedicated_ip
+                    ip_address: 64.16.239.170
+                    ip_version: ipv4
+                    pool_id: 9b1c4d70-abcd-4e5f-8a9b-0c1d2e3f4a5b
+                    region: ewr-nj1
+                    status: active
+                    warmup:
+                      started_at: '2026-09-15T00:00:00.000000Z'
+                      progress: 100
+                      daily_cap: null
+                      paused: false
+                      paused_at: null
+                      today:
+                        day: '2026-10-24'
+                        cap: 100000000
+                        granted: 0
+                        remaining: 100000000
+                    billing:
+                      status: active
+                      charged: true
+                    provisioning_status: dns_confirmed
+                    provisioning:
+                      dns_status: dns_confirmed
+                      ptr_request_state: confirmed
+                      ptr_request_pr_url: null
+                      checklist:
+                        ptr_requested: true
+                        ptr_authored: false
+                        ptr_merged: true
+                        forward_confirmed: true
+                    ptr_hostname: mta-64-16-239-170.msgtelnyx.com
+                    dns_confirmed_at: '2026-10-14T20:12:41.552310Z'
+                    quarantine_until: null
+                    released_at: null
+                    suspension_reason: null
+                    created_at: '2026-09-30T02:03:09.474123Z'
+                    updated_at: '2026-10-20T04:00:03.402117Z'
+                    weight: 100
+                  created_at: '2026-09-30T02:03:09.474123Z'
+                  updated_at: '2026-09-30T02:03:09.474123Z'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                errors:
+                - code: '10001'
+                  title: Not Found
+                  detail: The requested ip pool was not found
+      description: Retrieve a single IP pool by its identifier, including its dedicated-IP members with billing state.
+    patch:
+      operationId: updateIpPool
+      summary: Update an IP pool
+      description: Rename the pool, set or clear the default flag, or change its domain scope. Routing follows the new settings for subsequent mail.
+      tags:
+      - IP Pools
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: The IP pool identifier (UUID).
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IpPoolUpdateRequest'
+            example:
+              name: renamed-pool
+      responses:
+        '200':
+          description: Updated IP pool
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IpPoolShowResponse'
+              example:
+                data:
+                  id: 9b1c4d70-abcd-4e5f-8a9b-0c1d2e3f4a5b
+                  record_type: ip_pool
+                  name: renamed-pool
+                  is_default: true
+                  domain_id: null
+                  ips: []
+                  created_at: '2026-09-30T02:03:09.474123Z'
+                  updated_at: '2026-10-14T21:30:00.000000Z'
+        '400':
+          description: Malformed request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: The pool or the referenced email domain was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                errors:
+                - code: '10001'
+                  title: Not Found
+                  detail: The requested ip pool was not found
+        '422':
+          description: 'Validation failed: invalid or duplicate `name`, a second default pool, or a `domain_id` owned by another account.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                errors:
+                - code: '10015'
+                  title: Validation Failed
+                  detail: must contain only lowercase letters, numbers, dots, underscores and hyphens
+                  source:
+                    pointer: /data/attributes/name
+  /email/ip_pools/{id}/ips:
+    post:
+      operationId: addIpToPool
+      summary: Add a dedicated IP to a pool
+      description: Add a dedicated IP to the pool with an optional routing weight. An IP can belong to one pool; to move an IP that is already in a pool, use `PATCH /email/dedicated_ips/{id}` with `pool_id`.
+      tags:
+      - IP Pools
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: The IP pool identifier (UUID).
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IpPoolAddIpRequest'
+            example:
+              dedicated_ip_id: 6a7f9a30-1234-4b5c-8d9e-0f1a2b3c4d5e
+              weight: 100
+      responses:
+        '201':
+          description: Pool membership created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PoolMembershipResponse'
+              example:
+                data:
+                  pool_id: 9b1c4d70-abcd-4e5f-8a9b-0c1d2e3f4a5b
+                  dedicated_ip_id: 6a7f9a30-1234-4b5c-8d9e-0f1a2b3c4d5e
+                  weight: 100
+                  created_at: '2026-10-14T20:40:00.000000Z'
+        '400':
+          description: Malformed request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: The pool or the dedicated IP was not found in this account.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                errors:
+                - code: '10001'
+                  title: Not Found
+                  detail: The requested ip pool was not found
+        '422':
+          description: 'Validation failed: missing `dedicated_ip_id`, invalid `weight`, released IP, or IP already in a pool.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                errors:
+                - code: '10015'
+                  title: Validation Failed
+                  detail: weight must be a positive integer (got 0)
+                  source:
+                    pointer: /data/attributes/weight
+  /email/ip_pools/{id}/ips/{ip_id}:
+    delete:
+      operationId: removeIpFromPool
+      summary: Remove a dedicated IP from a pool
+      description: Remove the dedicated IP from the pool. The IP is kept but carries no mail until added to a pool again. Removing the last IP requires `force=true` and `drain=true`.
+      tags:
+      - IP Pools
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: The IP pool identifier (UUID).
+        schema:
+          type: string
+          format: uuid
+      - name: ip_id
+        in: path
+        required: true
+        description: The dedicated IP identifier (UUID).
+        schema:
+          type: string
+          format: uuid
+      - name: force
+        in: query
+        required: false
+        description: Set together with `drain=true` to remove the last IP in the pool. Either flag alone has no effect.
+        schema:
+          type: boolean
+          default: false
+      - name: drain
+        in: query
+        required: false
+        description: Set together with `force=true` to remove the last IP in the pool. Acknowledges that mail routed to the emptied pool is held until the pool has a sendable IP again.
+        schema:
+          type: boolean
+          default: false
+      responses:
+        '204':
+          description: IP removed from the pool. No response body.
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: The pool or the dedicated IP was not found, or the IP is not in this pool.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                errors:
+                - code: '10001'
+                  title: Not Found
+                  detail: The requested pool membership was not found
+        '409':
+          description: The IP is the pool's last member and `force`/`drain` were not both set.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                errors:
+                - code: '40901'
+                  title: Conflict
+                  detail: 'cannot remove the last IP from a pool without force: true and drain: true (in-flight messages need a routable source)'
+        '422':
+          description: Validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+components:
+  schemas:
+    DedicatedIpProvisioning:
+      type: object
+      description: Read-only status of the Telnyx-managed PTR record. No customer action is required to complete it.
+      properties:
+        dns_status:
+          type: string
+          enum:
+          - not_applicable
+          - pending_ptr
+          - pending_dns
+          - dns_confirmed
+          - dns_lost
+          description: '`dns_confirmed`: the PTR is forward-confirmed and `dns_confirmed_at` is set. `pending_ptr`: the PTR record is not yet in place. `pending_dns`: the PTR record is waiting for forward confirmation. `dns_lost`: a previously confirmed PTR no longer confirms, or the PTR request was abandoned before it ever confirmed (`ptr_request_state` is `abandoned`); the IP carries no mail until DNS is confirmed. `not_applicable`: the IP is released or has no PTR record on file.'
+        ptr_request_state:
+          type: string
+          nullable: true
+          enum:
+          - pending
+          - pr_open
+          - merged
+          - confirmed
+          - failed
+          - abandoned
+          - null
+          description: 'State of the Telnyx PTR change: `pending`, `pr_open`, `merged`, `confirmed`, `failed`, or `abandoned`. Informational.'
+        ptr_request_pr_url:
+          type: string
+          nullable: true
+          description: Reference to the Telnyx PTR change request, when one exists. Informational.
+        checklist:
+          type: object
+          properties:
+            ptr_requested:
+              type: boolean
+            ptr_authored:
+              type: boolean
+            ptr_merged:
+              type: boolean
+            forward_confirmed:
+              type: boolean
+          description: Informational progress flags for the Telnyx-managed PTR. They do not gate `start_warmup`; use `dns_status` to check whether the IP can carry mail.
+    DedicatedIpWarmup:
+      type: object
+      description: Warmup ramp state for a dedicated IP.
+      properties:
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When `start_warmup` was called. Null before warm-up starts and after release.
+        progress:
+          type: integer
+          description: 'Ramp progress (0-100): the share of the 28 send-day schedule completed. Only UTC days on which the IP sent mail count. Set to 100 when the ramp completes, automatically or through `complete_warmup`. On an `active` IP this value is informational and can keep an earlier value after a suspension is lifted.'
+          minimum: 0
+          maximum: 100
+        daily_cap:
+          type: integer
+          nullable: true
+          minimum: 1
+          description: Daily cap of the current ramp stage. Null until the scheduler arms the first stage, and cleared when the ramp completes, automatically or through `complete_warmup`. On an `active` IP this value is informational and can keep an earlier stage cap after a suspension is lifted; it does not limit sending.
+        paused:
+          type: boolean
+          description: True while the ramp is paused.
+        paused_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the ramp was paused. Null when not paused.
+        today:
+          type: object
+          nullable: true
+          description: Today's warmup allowance report card (current UTC day). Null outside the warmup window (before start_warmup, after release/suspension). `active` IPs report the ramp-complete allowance, except as described for `cap`.
+          properties:
+            day:
+              type: string
+              format: date
+              description: The UTC day this snapshot describes (warmup caps reset at UTC midnight).
+            cap:
+              type: integer
+              nullable: true
+              description: 'The day''s allowance cap. Null when the ramp has not opened yet (day 0: the scheduler has not armed a stage cap) — distinct from a spent day, which reports the cap with remaining 0. `active` IPs report `100000000`, the ramp-complete cap; `complete_warmup` applies it to the current day immediately. A day''s allowance created before the IP became `active` can keep its stored `cap` and `remaining` until the next first-attempt send refreshes them.'
+            granted:
+              type: integer
+              description: First-attempt sends released from warmup hold so far today. Delivery retries never lease allowance and are not counted.
+            remaining:
+              type: integer
+              nullable: true
+              description: Headroom left today. A queued send held by the daily cap is explained by remaining == 0; null mirrors cap (ramp not open yet). On an `active` IP whose `cap` is below `100000000`, remaining == 0 is a stored allowance and does not block the next eligible first-attempt send.
+    IpPoolAddIpRequest:
+      type: object
+      required:
+      - dedicated_ip_id
+      properties:
+        dedicated_ip_id:
+          type: string
+          format: uuid
+          description: The dedicated IP to add. It must belong to the account, must not be released, and must not already be in a pool.
+        weight:
+          type: integer
+          description: Relative routing weight for this IP in the pool. Positive integer; defaults to 100.
+          minimum: 1
+    DedicatedIpBilling:
+      type: object
+      description: Monthly recurring charge (MRC) state for the IP's current allocation.
+      properties:
+        status:
+          type: string
+          enum:
+          - not_started
+          - pending
+          - in_progress
+          - active
+          - stopping
+          - stopped
+          - stop_failed
+          - failed
+          description: '`not_started`: no charge recorded for the current allocation. `pending`: the charge is queued. `in_progress`: the charge is being created. `active`: the MRC is active. `stopping`: release requested; the MRC stop is being processed. `stopped`: the MRC has stopped. `stop_failed`: the MRC stop failed and the charge remains. `failed`: the charge could not be created.'
+        charged:
+          type: boolean
+          description: True when `status` is `active`, `stopping`, or `stop_failed`. An IP carries mail only after its charge has been created.
+    PoolMembershipResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            pool_id:
+              type: string
+              format: uuid
+            dedicated_ip_id:
+              type: string
+              format: uuid
+            weight:
+              type: integer
+              minimum: 1
+            created_at:
+              type: string
+              format: date-time
+      required:
+      - data
+    IpPoolShowResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/IpPool'
+      required:
+      - data
+    IpPoolListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/IpPool'
+      required:
+      - data
+    IpPoolUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: 'Pool name: 1-64 characters of lowercase letters, digits, `.`, `_`, and `-`, starting and ending with a letter or digit. Must be unique within the account and must not start with `dip_`.'
+        is_default:
+          type: boolean
+          description: Set or clear the account default flag. An account can have one default pool.
+        domain_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Scope the pool to one of the account's email domains, or `null` to remove the scope.
+    IpPool:
+      type: object
+      description: An account-scoped pool of dedicated IPs. Mail uses a pool only when the pool is scoped to the sending domain (`domain_id`) or is the account default (`is_default`).
+      properties:
+        id:
+          type: string
+          format: uuid
+        record_type:
+          type: string
+          enum:
+          - ip_pool
+        name:
+          type: string
+          description: Pool name, unique within the account.
+        is_default:
+          type: boolean
+          description: Whether this is the account's default pool. The default pool carries mail for sending domains that have no domain-scoped pool. At most one per account.
+        domain_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Email domain this pool is scoped to. The pool carries that domain's mail. Null when the pool is not domain-scoped.
+        ips:
+          type: array
+          items:
+            $ref: '#/components/schemas/IpPoolMemberIp'
+          description: Member IPs with their routing weights. Populated by Retrieve an IP pool; list, create, and update responses return an empty array.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ErrorEnvelope:
+      type: object
+      description: Telnyx v2 error envelope.
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              title:
+                type: string
+              detail:
+                type: string
+              source:
+                type: object
+                properties:
+                  pointer:
+                    type: string
+                  parameter:
+                    type: string
+      required:
+      - errors
+    IpPoolCreateRequest:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          description: 'Pool name: 1-64 characters of lowercase letters, digits, `.`, `_`, and `-`, starting and ending with a letter or digit. Must be unique within the account and must not start with `dip_`.'
+        is_default:
+          type: boolean
+          description: Make this the account's default pool, which carries mail for sending domains without a domain-scoped pool. An account can have one default pool. Defaults to `false`.
+        domain_id:
+          type: string
+          format: uuid
+          description: Scope the pool to one of the account's email domains; the pool then carries that domain's mail. Scope at most one pool to each domain.
+    IpPoolMemberIp:
+      description: A dedicated IP as a member of a pool, with its routing weight in this pool. Weight is a positive integer (default 100).
+      allOf:
+      - $ref: '#/components/schemas/DedicatedIp'
+      type: object
+      properties:
+        weight:
+          type: integer
+          minimum: 1
+          description: Relative routing weight of this IP within the pool.
+    DedicatedIp:
+      type: object
+      description: A dedicated sending IP address owned by the account.
+      properties:
+        id:
+          type: string
+          format: uuid
+        record_type:
+          type: string
+          enum:
+          - dedicated_ip
+        ip_address:
+          type: string
+          description: The allocated IPv4/IPv6 address.
+        ip_version:
+          type: string
+          enum:
+          - ipv4
+          - ipv6
+        pool_id:
+          type: string
+          format: uuid
+          nullable: true
+        region:
+          type: string
+          description: Region label of the allocated IP (for example, `ewr-nj1`).
+        status:
+          type: string
+          enum:
+          - provisioning
+          - warming_up
+          - active
+          - suspended
+          - released
+          description: 'Lifecycle status. `provisioning`: purchased and billed, carries no mail until `start_warmup`. `warming_up`: warm-up ramp in progress. `active`: ramp complete. `suspended`: suspended by Telnyx; carries no mail and is still billed. `released`: returned to Telnyx; carries no mail.'
+        warmup:
+          $ref: '#/components/schemas/DedicatedIpWarmup'
+        billing:
+          $ref: '#/components/schemas/DedicatedIpBilling'
+        provisioning_status:
+          type: string
+          enum:
+          - not_applicable
+          - pending_ptr
+          - pending_dns
+          - dns_confirmed
+          - dns_lost
+          description: Same value as `provisioning.dns_status`.
+        provisioning:
+          $ref: '#/components/schemas/DedicatedIpProvisioning'
+        ptr_hostname:
+          type: string
+          nullable: true
+          description: Telnyx-managed reverse DNS (PTR) hostname of the IP, in the form `mta-<a-b-c-d>.msgtelnyx.com`. Also used as the EHLO hostname when sending from the IP. Managed by Telnyx and cannot be changed through the API.
+        dns_confirmed_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the PTR hostname was forward-confirmed (PTR → hostname → A record → this IP). The IP carries mail only while this is set.
+        quarantine_until:
+          type: string
+          format: date-time
+          nullable: true
+          description: Set on release to 30 days after `released_at`. The address is not returned to stock before this time.
+        released_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the IP was released. Null until release.
+        suspension_reason:
+          type: string
+          nullable: true
+          description: Reason Telnyx recorded when suspending the IP. Null unless `status` is `suspended`.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pay-connectors_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key, not the processor bearer token.
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    telnyxApiKey:
+      type: http
+      scheme: bearer
+      description: Management-only Telnyx account credential.
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

@@ -267,30 +267,48 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    email_ErrorResponse:
+    ErrorObject:
       type: object
       properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/ErrorObject'
-        suppressed:
-          type: array
-          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
-          items:
-            $ref: '#/components/schemas/SuppressedRecipient'
-      required:
-      - errors
-    InboundEmailAddress:
-      type: object
-      properties:
-        email:
+        code:
           type: string
-          format: email
-        name:
+          description: Telnyx error code. Send admission errors include account daily quota 10011 and sender-domain ramp code domain_graduation_limit_exceeded. Edge idempotency errors use 10027 or 10036. Fallback 404/500 responses from the framework may use string status codes ('404', '500') instead.
+          enum:
+          - '10001'
+          - '10006'
+          - '10007'
+          - '10011'
+          - '10015'
+          - '10016'
+          - '10019'
+          - domain_graduation_limit_exceeded
+          - recipient_suppressed
+          - reputation_suspended
+          - '404'
+          - '500'
+          - '10027'
+          - '10036'
+        title:
           type: string
+        detail:
+          description: Human-readable error detail. Changeset responses may return a structured object.
+          oneOf:
+          - type: string
+          - type: object
+            additionalProperties: true
+        source:
+          type: object
+          additionalProperties: true
+          nullable: true
+        meta:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: Additional metadata. Present on 401 errors with a documentation URL.
       required:
-      - email
+      - code
+      - title
+      - detail
     ThreadMessage:
       type: object
       properties:
@@ -435,71 +453,20 @@ components:
       - sent_at
       - created_at
       - updated_at
-    InboundThreadDetail:
-      allOf:
-      - $ref: '#/components/schemas/InboundThread'
-      - type: object
-        properties:
-          messages:
-            type: array
-            items:
-              $ref: '#/components/schemas/ThreadMessage'
-        required:
-        - messages
-    ErrorObject:
+    email_ErrorResponse:
       type: object
       properties:
-        code:
-          type: string
-          description: Telnyx error code. Send admission errors include account daily quota 10011 and sender-domain ramp code domain_graduation_limit_exceeded. Edge idempotency errors use 10027 or 10036. Fallback 404/500 responses from the framework may use string status codes ('404', '500') instead.
-          enum:
-          - '10001'
-          - '10006'
-          - '10007'
-          - '10011'
-          - '10015'
-          - '10016'
-          - '10019'
-          - domain_graduation_limit_exceeded
-          - recipient_suppressed
-          - reputation_suspended
-          - '404'
-          - '500'
-          - '10027'
-          - '10036'
-        title:
-          type: string
-        detail:
-          description: Human-readable error detail. Changeset responses may return a structured object.
-          oneOf:
-          - type: string
-          - type: object
-            additionalProperties: true
-        source:
-          type: object
-          additionalProperties: true
-          nullable: true
-        meta:
-          type: object
-          additionalProperties: true
-          nullable: true
-          description: Additional metadata. Present on 401 errors with a documentation URL.
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorObject'
+        suppressed:
+          type: array
+          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
       required:
-      - code
-      - title
-      - detail
-    email_PaginationMeta:
-      type: object
-      properties:
-        page_size:
-          type: integer
-          minimum: 1
-          maximum: 100
-        page_cursor:
-          type: string
-          description: Cursor for the next page, when more results are available.
-      required:
-      - page_size
+      - errors
     InboundThreadListResponse:
       type: object
       properties:
@@ -512,27 +479,28 @@ components:
       required:
       - data
       - meta
-    SuppressedRecipient:
+    InboundEmailAddress:
       type: object
       properties:
-        to:
+        email:
           type: string
           format: email
-          description: Suppressed recipient email address.
-        reason:
+        name:
           type: string
-          description: Suppression reason returned by the recipient suppression service.
-        scope:
-          type: string
-          description: Scope at which the suppression applies.
-        override_allowed:
-          type: boolean
-          description: Whether an authorized send may override this suppression.
       required:
-      - to
-      - reason
-      - scope
-      - override_allowed
+      - email
+    email_PaginationMeta:
+      type: object
+      properties:
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        page_cursor:
+          type: string
+          description: Cursor for the next page, when more results are available.
+      required:
+      - page_size
     InboundThread:
       type: object
       properties:
@@ -593,7 +561,52 @@ components:
       - created_at
       - updated_at
       - labels
+    SuppressedRecipient:
+      type: object
+      properties:
+        to:
+          type: string
+          format: email
+          description: Suppressed recipient email address.
+        reason:
+          type: string
+          description: Suppression reason returned by the recipient suppression service.
+        scope:
+          type: string
+          description: Scope at which the suppression applies.
+        override_allowed:
+          type: boolean
+          description: Whether an authorized send may override this suppression.
+      required:
+      - to
+      - reason
+      - scope
+      - override_allowed
+    InboundThreadDetail:
+      allOf:
+      - $ref: '#/components/schemas/InboundThread'
+      - type: object
+        properties:
+          messages:
+            type: array
+            items:
+              $ref: '#/components/schemas/ThreadMessage'
+        required:
+        - messages
   responses:
+    email_UnauthorizedResponse:
+      description: Not authorized (10006).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10006'
+              title: Not authorized
+              detail: Invalid API key
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10006
     email_NotFoundResponse:
       description: Resource not found (10001).
       content:
@@ -618,19 +631,6 @@ components:
               detail: subject can't be blank
               source:
                 pointer: /data/attributes/subject
-    email_UnauthorizedResponse:
-      description: Not authorized (10006).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/email_ErrorResponse'
-          example:
-            errors:
-            - code: '10006'
-              title: Not authorized
-              detail: Invalid API key
-              meta:
-                url: https://developers.telnyx.com/docs/overview/errors/10006
   securitySchemes:
     BearerAuth:
       type: http

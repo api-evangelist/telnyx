@@ -217,19 +217,51 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    VoiceSdkCallReportListResponse:
-      type: object
-      description: Paginated raw Voice SDK call report stats payloads as stored by voice-sdk-debug.
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/VoiceSdkCallReport'
-        meta:
-          $ref: '#/components/schemas/voice-sdk-debug_PaginationMeta'
-      required:
-      - data
-      - meta
+    VoiceSdkCallReportStats:
+      description: Raw stats payload emitted by the Voice SDK and stored without normalization. The exact shape can vary by SDK platform and version. Live responses commonly return an array of interval snapshots, but object-shaped stats payloads are also allowed for compatibility.
+      oneOf:
+      - type: array
+        description: Raw interval stats snapshots emitted by the Voice SDK.
+        items:
+          type: object
+          additionalProperties: true
+          description: Raw stats snapshot. It may include WebRTC RTCStatsReport-style entries and audio, connection, ICE, or transport metrics.
+      - type: object
+        description: Raw stats object emitted by the Voice SDK.
+        properties:
+          audio:
+            type: object
+            additionalProperties: true
+            description: Raw audio stats such as inbound/outbound packet, byte, jitter, packet-loss, bitrate, and audio-level metrics.
+          connection:
+            type: object
+            additionalProperties: true
+            description: Raw connection stats such as round-trip time, packets, and bytes sent or received.
+          ice:
+            type: object
+            additionalProperties: true
+            description: Raw ICE candidate-pair information, including selected pair, local/remote candidates, state, and nomination data when provided by the SDK.
+          transport:
+            type: object
+            additionalProperties: true
+            description: Raw transport stats such as ICE state, DTLS state, SRTP cipher, TLS version, and selected-candidate-pair changes.
+        additionalProperties: true
+    VoiceSdkCallReportLogs:
+      description: Raw logs payload emitted by the Voice SDK and stored without normalization. Live responses commonly return an array of log entries, but object-shaped log payloads are also allowed for compatibility.
+      oneOf:
+      - type: array
+        description: Raw log entries emitted by the Voice SDK.
+        items:
+          $ref: '#/components/schemas/VoiceSdkCallReportLogEntry'
+      - type: object
+        description: Raw logs object emitted by the Voice SDK when logs are grouped under an entries field.
+        properties:
+          entries:
+            type: array
+            description: Raw log entries when the SDK groups logs under an entries field.
+            items:
+              $ref: '#/components/schemas/VoiceSdkCallReportLogEntry'
+        additionalProperties: true
     VoiceSdkCallReport:
       type: object
       description: A raw call report stats JSON payload. The schema is intentionally permissive because Voice SDK clients can add fields over time.
@@ -295,67 +327,11 @@ components:
           format: date-time
           description: Creation timestamp when present.
       additionalProperties: true
-    voice-sdk-debug_PaginationMeta:
-      type: object
-      title: Pagination Meta
-      properties:
-        total_pages:
-          type: integer
-          example: 1
-        total_results:
-          type: integer
-          example: 1
-        page_number:
-          type: integer
-          example: 1
-        page_size:
-          type: integer
-          example: 20
     VoiceSdkCallReportsResponse:
       type: array
       description: Raw Voice SDK call report stats payloads as stored by voice-sdk-debug.
       items:
         $ref: '#/components/schemas/VoiceSdkCallReport'
-    VoiceSdkCallReportV2ErrorResponse:
-      type: object
-      description: Standard Telnyx API v2 error response envelope.
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/VoiceSdkCallReportV2Error'
-      required:
-      - errors
-      additionalProperties: true
-    VoiceSdkCallReportStats:
-      description: Raw stats payload emitted by the Voice SDK and stored without normalization. The exact shape can vary by SDK platform and version. Live responses commonly return an array of interval snapshots, but object-shaped stats payloads are also allowed for compatibility.
-      oneOf:
-      - type: array
-        description: Raw interval stats snapshots emitted by the Voice SDK.
-        items:
-          type: object
-          additionalProperties: true
-          description: Raw stats snapshot. It may include WebRTC RTCStatsReport-style entries and audio, connection, ICE, or transport metrics.
-      - type: object
-        description: Raw stats object emitted by the Voice SDK.
-        properties:
-          audio:
-            type: object
-            additionalProperties: true
-            description: Raw audio stats such as inbound/outbound packet, byte, jitter, packet-loss, bitrate, and audio-level metrics.
-          connection:
-            type: object
-            additionalProperties: true
-            description: Raw connection stats such as round-trip time, packets, and bytes sent or received.
-          ice:
-            type: object
-            additionalProperties: true
-            description: Raw ICE candidate-pair information, including selected pair, local/remote candidates, state, and nomination data when provided by the SDK.
-          transport:
-            type: object
-            additionalProperties: true
-            description: Raw transport stats such as ICE state, DTLS state, SRTP cipher, TLS version, and selected-candidate-pair changes.
-        additionalProperties: true
     VoiceSdkCallReportLogEntry:
       type: object
       description: A raw Voice SDK log entry. Additional SDK-specific fields may be present.
@@ -380,22 +356,30 @@ components:
           additionalProperties: true
           description: Raw structured context attached to the log entry.
       additionalProperties: true
-    VoiceSdkCallReportLogs:
-      description: Raw logs payload emitted by the Voice SDK and stored without normalization. Live responses commonly return an array of log entries, but object-shaped log payloads are also allowed for compatibility.
-      oneOf:
-      - type: array
-        description: Raw log entries emitted by the Voice SDK.
-        items:
-          $ref: '#/components/schemas/VoiceSdkCallReportLogEntry'
-      - type: object
-        description: Raw logs object emitted by the Voice SDK when logs are grouped under an entries field.
-        properties:
-          entries:
-            type: array
-            description: Raw log entries when the SDK groups logs under an entries field.
-            items:
-              $ref: '#/components/schemas/VoiceSdkCallReportLogEntry'
-        additionalProperties: true
+    VoiceSdkCallReportV2ErrorResponse:
+      type: object
+      description: Standard Telnyx API v2 error response envelope.
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/VoiceSdkCallReportV2Error'
+      required:
+      - errors
+      additionalProperties: true
+    VoiceSdkCallReportListResponse:
+      type: object
+      description: Paginated raw Voice SDK call report stats payloads as stored by voice-sdk-debug.
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/VoiceSdkCallReport'
+        meta:
+          $ref: '#/components/schemas/voice-sdk-debug_PaginationMeta'
+      required:
+      - data
+      - meta
     VoiceSdkCallReportV2Error:
       type: object
       description: Standard Telnyx API v2 error object.
@@ -439,7 +423,45 @@ components:
       - title
       - detail
       additionalProperties: true
+    voice-sdk-debug_PaginationMeta:
+      type: object
+      title: Pagination Meta
+      properties:
+        total_pages:
+          type: integer
+          example: 1
+        total_results:
+          type: integer
+          example: 1
+        page_number:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 20
   parameters:
+    CallId:
+      name: call_id
+      in: path
+      required: true
+      description: Call identifier used to retrieve reports owned by the authenticated user.
+      schema:
+        type: string
+        format: uuid
+    VoiceSdkCallReportSort:
+      name: sort
+      in: query
+      description: Set the order of the results by creation date. `asc` and `created_at` sort oldest reports first; `desc` and `-created_at` sort newest reports first. If not given, results are sorted by creation date in descending order.
+      required: false
+      schema:
+        type: string
+        enum:
+        - asc
+        - desc
+        - created_at
+        - -created_at
+        default: desc
+        example: -created_at
     voice-sdk-debug_PageConsolidated:
       name: page
       in: query
@@ -462,28 +484,6 @@ components:
             example: 20
             maximum: 100
             description: Number of reports per page. Maximum 100.
-    VoiceSdkCallReportSort:
-      name: sort
-      in: query
-      description: Set the order of the results by creation date. `asc` and `created_at` sort oldest reports first; `desc` and `-created_at` sort newest reports first. If not given, results are sorted by creation date in descending order.
-      required: false
-      schema:
-        type: string
-        enum:
-        - asc
-        - desc
-        - created_at
-        - -created_at
-        default: desc
-        example: -created_at
-    CallId:
-      name: call_id
-      in: path
-      required: true
-      description: Call identifier used to retrieve reports owned by the authenticated user.
-      schema:
-        type: string
-        format: uuid
   securitySchemes:
     BearerAuth:
       type: http

@@ -302,8 +302,172 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    messaging_toll_free_verification_VerificationRequestEgress:
-      title: VerificationRequestEgress
+    toll-free-verification_EntityType:
+      title: EntityType
+      type: string
+      enum:
+      - SOLE_PROPRIETOR
+      - PRIVATE_PROFIT
+      - PUBLIC_PROFIT
+      - NON_PROFIT
+      - GOVERNMENT
+      description: Business entity classification
+    Paginated_VerificationStatusHistoryEntry_:
+      title: Paginated[VerificationStatusHistoryEntry]
+      type: object
+      required:
+      - records
+      - total_records
+      properties:
+        records:
+          title: Records
+          type: array
+          items:
+            $ref: '#/components/schemas/VerificationStatusHistoryEntry'
+          description: The records yielded by this request
+          default: []
+        total_records:
+          title: Total Records
+          type: integer
+          description: The total amount of records for these query parameters
+          default: 0
+      description: A paginated response
+    Volume:
+      title: Volume
+      enum:
+      - '10'
+      - '100'
+      - 1,000
+      - 10,000
+      - 100,000
+      - 250,000
+      - 500,000
+      - 750,000
+      - 1,000,000
+      - 5,000,000
+      - 10,000,000+
+      type: string
+      description: Message Volume Enums
+    UseCaseCategories:
+      title: UseCaseCategories
+      enum:
+      - 2FA
+      - App Notifications
+      - Appointments
+      - Auctions
+      - Auto Repair Services
+      - Bank Transfers
+      - Billing
+      - Booking Confirmations
+      - Business Updates
+      - COVID-19 Alerts
+      - Career Training
+      - Chatbot
+      - Conversational / Alerts
+      - Courier Services & Deliveries
+      - Emergency Alerts
+      - Events & Planning
+      - Financial Services
+      - Fraud Alerts
+      - Fundraising
+      - General Marketing
+      - General School Updates
+      - HR / Staffing
+      - Healthcare Alerts
+      - Housing Community Updates
+      - Insurance Services
+      - Job Dispatch
+      - Legal Services
+      - Mixed
+      - Motivational Reminders
+      - Notary Notifications
+      - Order Notifications
+      - Political
+      - Public Works
+      - Real Estate Services
+      - Religious Services
+      - Repair and Diagnostics Alerts
+      - Rewards Program
+      - Surveys
+      - System Alerts
+      - Voting Reminders
+      - Waitlist Alerts
+      - Webinar Reminders
+      - Workshop Alerts
+      type: string
+      description: Tollfree usecase categories
+    Url:
+      title: Url
+      required:
+      - url
+      type: object
+      properties:
+        url:
+          title: Url
+          maxLength: 2083
+          minLength: 1
+          type: string
+          format: uri
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    VerificationStatusHistoryEntry:
+      title: VerificationStatusHistoryEntry
+      required:
+      - verificationStatus
+      - updatedAt
+      type: object
+      properties:
+        verificationStatus:
+          allOf:
+          - $ref: '#/components/schemas/TFVerificationStatus'
+          description: The verification status at this point in time
+        reason:
+          title: Reason
+          type:
+          - string
+          - 'null'
+          maxLength: 500
+          description: An explanation of why this request has its current status.
+          example: Unfortunately, we have to cancel this request as we do not support non tollfree US numbers.
+        updatedAt:
+          title: Updatedat
+          type: string
+          format: date-time
+          description: The timestamp at which this status change occurred
+      description: A single entry in the verification request status history
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
+    messaging_toll_free_verification_VerificationRequestStatus:
+      title: VerificationRequestStatus
       required:
       - businessName
       - corporateWebsite
@@ -324,7 +488,7 @@ components:
       - optInWorkflowImageURLs
       - additionalInformation
       - id
-      - verificationRequestId
+      - verificationStatus
       type: object
       properties:
         businessName:
@@ -370,7 +534,7 @@ components:
         businessContactPhone:
           title: Businesscontactphone
           type: string
-          example: '+18005550100'
+          example: '+18889809750'
         messageVolume:
           allOf:
           - $ref: '#/components/schemas/Volume'
@@ -476,39 +640,33 @@ components:
           title: Id
           type: string
           format: uuid
-        verificationRequestId:
-          title: Verificationrequestid
-          type: string
+          example: eaba9f52-164e-58e0-b002-4f668e18b7ed
         verificationStatus:
           allOf:
           - $ref: '#/components/schemas/TFVerificationStatus'
-          default: In Progress
-      description: A verification request as it comes out of the database
-    Volume:
-      title: Volume
-      enum:
-      - '10'
-      - '100'
-      - 1,000
-      - 10,000
-      - 100,000
-      - 250,000
-      - 500,000
-      - 750,000
-      - 1,000,000
-      - 5,000,000
-      - 10,000,000+
-      type: string
-      description: Message Volume Enums
-    billing-group_Error:
-      type: object
+          example: Waiting For Customer
+        reason:
+          title: Reason
+          type: string
+          example: Unfortunately, we have to cancel this request as we do not support non tollfree US numbers.
+        createdAt:
+          title: Createdat
+          type: string
+          format: date-time
+          example: '2024-01-23T18:10:02.574Z'
+        updatedAt:
+          title: Updatedat
+          type: string
+          format: date-time
+          example: '2024-01-23T18:10:02.574Z'
+      description: A verification request and its status, suitable for returning to users
+    toll-free-verification_Error:
       required:
       - code
       - title
       properties:
         code:
-          type: integer
-          format: int32
+          type: string
         title:
           type: string
         detail:
@@ -524,142 +682,8 @@ components:
               type: string
         meta:
           type: object
-          properties: {}
           additionalProperties: true
-    Paginated_VerificationRequestStatus_:
-      title: Paginated[VerificationRequestStatus]
       type: object
-      required:
-      - records
-      - total_records
-      properties:
-        records:
-          title: Records
-          type: array
-          items:
-            $ref: '#/components/schemas/VerificationRequestStatus'
-          description: The records yielded by this request
-          default: []
-        total_records:
-          title: Total Records
-          type: integer
-          description: The total amount of records for these query parameters
-          default: 0
-      description: A paginated response
-    Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/billing-group_Error'
-      type: object
-    TFPhoneNumber:
-      title: PhoneNumber
-      required:
-      - phoneNumber
-      type: object
-      properties:
-        phoneNumber:
-          title: Phonenumber
-          type: string
-      description: A phone number
-    UseCaseCategories:
-      title: UseCaseCategories
-      enum:
-      - 2FA
-      - App Notifications
-      - Appointments
-      - Auctions
-      - Auto Repair Services
-      - Bank Transfers
-      - Billing
-      - Booking Confirmations
-      - Business Updates
-      - COVID-19 Alerts
-      - Career Training
-      - Chatbot
-      - Conversational / Alerts
-      - Courier Services & Deliveries
-      - Emergency Alerts
-      - Events & Planning
-      - Financial Services
-      - Fraud Alerts
-      - Fundraising
-      - General Marketing
-      - General School Updates
-      - HR / Staffing
-      - Healthcare Alerts
-      - Housing Community Updates
-      - Insurance Services
-      - Job Dispatch
-      - Legal Services
-      - Mixed
-      - Motivational Reminders
-      - Notary Notifications
-      - Order Notifications
-      - Political
-      - Public Works
-      - Real Estate Services
-      - Religious Services
-      - Repair and Diagnostics Alerts
-      - Rewards Program
-      - Surveys
-      - System Alerts
-      - Voting Reminders
-      - Waitlist Alerts
-      - Webinar Reminders
-      - Workshop Alerts
-      type: string
-      description: Tollfree usecase categories
-    toll-free-verification_Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/toll-free-verification_Error'
-      type: object
-    Url:
-      title: Url
-      required:
-      - url
-      type: object
-      properties:
-        url:
-          title: Url
-          maxLength: 2083
-          minLength: 1
-          type: string
-          format: uri
-    Paginated_VerificationStatusHistoryEntry_:
-      title: Paginated[VerificationStatusHistoryEntry]
-      type: object
-      required:
-      - records
-      - total_records
-      properties:
-        records:
-          title: Records
-          type: array
-          items:
-            $ref: '#/components/schemas/VerificationStatusHistoryEntry'
-          description: The records yielded by this request
-          default: []
-        total_records:
-          title: Total Records
-          type: integer
-          description: The total amount of records for these query parameters
-          default: 0
-      description: A paginated response
-    toll-free-verification_EntityType:
-      title: EntityType
-      type: string
-      enum:
-      - SOLE_PROPRIETOR
-      - PRIVATE_PROFIT
-      - PUBLIC_PROFIT
-      - NON_PROFIT
-      - GOVERNMENT
-      description: Business entity classification
     messaging_toll_free_verification_TFVerificationRequest:
       title: VerificationRequest
       required:
@@ -907,6 +931,54 @@ components:
           description: Campaign Verify Authorization Token required for Political use case submissions starting February 17, 2026. This token is validated by Zipwhip and must be provided for all Political use case verifications after the deadline.
           example: cv_token_abc123xyz
       description: The body of a tollfree verification request
+    toll-free-verification_Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/toll-free-verification_Error'
+      type: object
+    TFVerificationStatus:
+      title: VerificationStatus
+      enum:
+      - Verified
+      - Rejected
+      - Waiting For Vendor
+      - Waiting For Customer
+      - Waiting For Telnyx
+      - In Progress
+      type: string
+      description: Tollfree verification status
+    messaging_toll_free_verification_EntityType:
+      title: EntityType
+      type: string
+      enum:
+      - SOLE_PROPRIETOR
+      - PRIVATE_PROFIT
+      - PUBLIC_PROFIT
+      - NON_PROFIT
+      - GOVERNMENT
+      description: Business entity classification
+    Paginated_VerificationRequestStatus_:
+      title: Paginated[VerificationRequestStatus]
+      type: object
+      required:
+      - records
+      - total_records
+      properties:
+        records:
+          title: Records
+          type: array
+          items:
+            $ref: '#/components/schemas/VerificationRequestStatus'
+          description: The records yielded by this request
+          default: []
+        total_records:
+          title: Total Records
+          type: integer
+          description: The total amount of records for these query parameters
+          default: 0
+      description: A paginated response
     VerificationRequestStatus:
       title: VerificationRequestStatus
       required:
@@ -1101,78 +1173,8 @@ components:
           format: date-time
           example: '2024-01-23T18:10:02.574Z'
       description: A verification request and its status, suitable for returning to users
-    TFVerificationStatus:
-      title: VerificationStatus
-      enum:
-      - Verified
-      - Rejected
-      - Waiting For Vendor
-      - Waiting For Customer
-      - Waiting For Telnyx
-      - In Progress
-      type: string
-      description: Tollfree verification status
-    messaging_toll_free_verification_EntityType:
-      title: EntityType
-      type: string
-      enum:
-      - SOLE_PROPRIETOR
-      - PRIVATE_PROFIT
-      - PUBLIC_PROFIT
-      - NON_PROFIT
-      - GOVERNMENT
-      description: Business entity classification
-    toll-free-verification_Error:
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: string
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-          additionalProperties: true
-      type: object
-    VerificationStatusHistoryEntry:
-      title: VerificationStatusHistoryEntry
-      required:
-      - verificationStatus
-      - updatedAt
-      type: object
-      properties:
-        verificationStatus:
-          allOf:
-          - $ref: '#/components/schemas/TFVerificationStatus'
-          description: The verification status at this point in time
-        reason:
-          title: Reason
-          type:
-          - string
-          - 'null'
-          maxLength: 500
-          description: An explanation of why this request has its current status.
-          example: Unfortunately, we have to cancel this request as we do not support non tollfree US numbers.
-        updatedAt:
-          title: Updatedat
-          type: string
-          format: date-time
-          description: The timestamp at which this status change occurred
-      description: A single entry in the verification request status history
-    messaging_toll_free_verification_VerificationRequestStatus:
-      title: VerificationRequestStatus
+    messaging_toll_free_verification_VerificationRequestEgress:
+      title: VerificationRequestEgress
       required:
       - businessName
       - corporateWebsite
@@ -1193,7 +1195,7 @@ components:
       - optInWorkflowImageURLs
       - additionalInformation
       - id
-      - verificationStatus
+      - verificationRequestId
       type: object
       properties:
         businessName:
@@ -1239,7 +1241,7 @@ components:
         businessContactPhone:
           title: Businesscontactphone
           type: string
-          example: '+18889809750'
+          example: '+18005550100'
         messageVolume:
           allOf:
           - $ref: '#/components/schemas/Volume'
@@ -1345,26 +1347,24 @@ components:
           title: Id
           type: string
           format: uuid
-          example: eaba9f52-164e-58e0-b002-4f668e18b7ed
+        verificationRequestId:
+          title: Verificationrequestid
+          type: string
         verificationStatus:
           allOf:
           - $ref: '#/components/schemas/TFVerificationStatus'
-          example: Waiting For Customer
-        reason:
-          title: Reason
+          default: In Progress
+      description: A verification request as it comes out of the database
+    TFPhoneNumber:
+      title: PhoneNumber
+      required:
+      - phoneNumber
+      type: object
+      properties:
+        phoneNumber:
+          title: Phonenumber
           type: string
-          example: Unfortunately, we have to cancel this request as we do not support non tollfree US numbers.
-        createdAt:
-          title: Createdat
-          type: string
-          format: date-time
-          example: '2024-01-23T18:10:02.574Z'
-        updatedAt:
-          title: Updatedat
-          type: string
-          format: date-time
-          example: '2024-01-23T18:10:02.574Z'
-      description: A verification request and its status, suitable for returning to users
+      description: A phone number
     TFVerificationRequest:
       description: The body of a tollfree verification request
       properties:

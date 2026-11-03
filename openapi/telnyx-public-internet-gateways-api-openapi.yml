@@ -135,6 +135,20 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
+    Interface:
+      type: object
+      properties:
+        network_id:
+          description: The id of the network associated with the interface.
+          type: string
+          format: uuid
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+        name:
+          type: string
+          description: A user specified name for the interface.
+          example: test interface
+        status:
+          $ref: '#/components/schemas/InterfaceStatus'
     PaginationMeta:
       type: object
       properties:
@@ -150,32 +164,6 @@ components:
         page_size:
           type: integer
           example: 25
-    billing-group_Error:
-      type: object
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: integer
-          format: int32
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-          properties: {}
-          additionalProperties: true
     Errors:
       properties:
         errors:
@@ -186,16 +174,6 @@ components:
     PublicInternetGatewayRead:
       allOf:
       - $ref: '#/components/schemas/PublicInternetGateway'
-    InterfaceStatus:
-      type: string
-      enum:
-      - created
-      - provisioning
-      - provisioned
-      - deleting
-      description: The current status of the interface deployment.
-      readOnly: true
-      example: provisioned
     PublicInternetGatewayCreate:
       allOf:
       - $ref: '#/components/schemas/PublicInternetGateway'
@@ -225,20 +203,6 @@ components:
           description: ISO 8601 formatted date-time indicating when the resource was updated.
           readOnly: true
           example: '2018-02-02T22:25:27.521Z'
-    Interface:
-      type: object
-      properties:
-        network_id:
-          description: The id of the network associated with the interface.
-          type: string
-          format: uuid
-          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-        name:
-          type: string
-          description: A user specified name for the interface.
-          example: test interface
-        status:
-          $ref: '#/components/schemas/InterfaceStatus'
     PublicInternetGateway:
       allOf:
       - $ref: '#/components/schemas/Record'
@@ -260,13 +224,42 @@ components:
             type: string
             example: 127.0.0.1
             readOnly: true
-    netapps_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/netapps_Error'
-          type: array
+    InterfaceStatus:
+      type: string
+      enum:
+      - created
+      - provisioning
+      - provisioned
+      - deleting
+      description: The current status of the interface deployment.
+      readOnly: true
+      example: provisioned
+    billing-group_Error:
       type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
     netapps_Error:
       properties:
         code:
@@ -290,6 +283,13 @@ components:
       required:
       - code
       - title
+      type: object
+    netapps_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/netapps_Error'
+          type: array
       type: object
     Errors_2:
       properties:
@@ -333,79 +333,7 @@ components:
         code: '20207'
         description: The street address provided is invalid.
       type: object
-  responses:
-    UnprocessableEntity:
-      description: Unprocessable entity. Check the 'detail' field in response for details.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Errors'
-          example:
-            errors:
-            - code: '10027'
-              title: Unprocessable Entity
-              detail: The server understood the syntax of the request but was unable to process the instructions.
-    GenericErrorResponse:
-      description: Unexpected error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Errors'
-    PublicInternetGatewayListResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/PublicInternetGatewayRead'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful response
-    PublicInternetGatewayResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/PublicInternetGatewayRead'
-            type: object
-      description: Successful response
-    netapps_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/netapps_Errors'
-      description: Unexpected error
-    netapps_UnprocessableEntity:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/netapps_Errors'
-      description: Unprocessable entity. Check the 'detail' field in response for details.
-    netapps_UnprocessableEntity_17904fcfbc:
-      description: Unprocessable entity. Check the 'detail' field in response for details.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Errors_2'
-          example:
-            errors:
-            - code: '10027'
-              title: Unprocessable Entity
-              detail: The server understood the syntax of the request but was unable to process the instructions.
   parameters:
-    ResourceId:
-      name: id
-      description: Identifies the resource.
-      in: path
-      required: true
-      schema:
-        format: uuid
-        type: string
-        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
     PageConsolidated:
       name: page
       in: query
@@ -426,6 +354,78 @@ components:
             maximum: 250
             default: 20
             description: The size of the page
+    ResourceId:
+      name: id
+      description: Identifies the resource.
+      in: path
+      required: true
+      schema:
+        format: uuid
+        type: string
+        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+  responses:
+    UnprocessableEntity:
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          example:
+            errors:
+            - code: '10027'
+              title: Unprocessable Entity
+              detail: The server understood the syntax of the request but was unable to process the instructions.
+    GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    PublicInternetGatewayResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/PublicInternetGatewayRead'
+            type: object
+      description: Successful response
+    netapps_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/netapps_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+    netapps_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/netapps_Errors'
+      description: Unexpected error
+    PublicInternetGatewayListResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PublicInternetGatewayRead'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful response
+    netapps_UnprocessableEntity_17904fcfbc:
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors_2'
+          example:
+            errors:
+            - code: '10027'
+              title: Unprocessable Entity
+              detail: The server understood the syntax of the request but was unable to process the instructions.
   securitySchemes:
     BearerAuth:
       type: http

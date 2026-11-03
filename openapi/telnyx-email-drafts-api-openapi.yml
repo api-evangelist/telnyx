@@ -587,37 +587,7 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
-  parameters:
-    DraftInboxId:
-      name: inbox_id
-      in: path
-      required: true
-      description: Email inbox UUID.
-      schema:
-        type: string
-        format: uuid
-    DraftId:
-      name: draft_id
-      in: path
-      required: true
-      description: Email draft UUID.
-      schema:
-        type: string
-        format: uuid
   responses:
-    ValidationErrorResponse:
-      description: Validation Failed (10015) or changeset validation error.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/email_ErrorResponse'
-          example:
-            errors:
-            - code: '10015'
-              title: Validation Failed
-              detail: subject can't be blank
-              source:
-                pointer: /data/attributes/subject
     email_UnauthorizedResponse:
       description: Not authorized (10006).
       content:
@@ -642,6 +612,19 @@ components:
             - code: '10016'
               title: Service Unavailable
               detail: Drafts are temporarily unavailable. Please try again later.
+    ValidationErrorResponse:
+      description: Validation Failed (10015) or changeset validation error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10015'
+              title: Validation Failed
+              detail: subject can't be blank
+              source:
+                pointer: /data/attributes/subject
     email_NotFoundResponse:
       description: Resource not found (10001).
       content:
@@ -702,147 +685,47 @@ components:
           $ref: '#/components/schemas/EmailDraft'
       required:
       - data
-    DomainGraduationLimitExceededError:
+    AttachmentResponse:
       type: object
-      description: Error envelope returned when a newly sending custom domain on shared egress would exceed its current daily graduation ceiling. The send is rejected before message creation.
-      required:
-      - errors
+      description: EDR-aligned attachment metadata. The base64 `content` is never returned.
       properties:
-        errors:
-          type: array
-          minItems: 1
-          maxItems: 1
-          items:
-            type: object
-            required:
-            - code
-            - title
-            - detail
-            properties:
-              code:
-                type: string
-                enum:
-                - domain_graduation_limit_exceeded
-              title:
-                type: string
-                example: Too Many Requests
-              detail:
-                type: string
-                example: Daily send limit of 250 recipients for this sender domain exceeded. The limit resets at midnight UTC.
-              meta:
-                type: object
-                description: Bounded retry guidance. Each field is omitted when unknown.
-                additionalProperties: false
-                properties:
-                  retry_after_seconds:
-                    type: integer
-                    minimum: 1
-                    description: Seconds until the next UTC-midnight reset.
-                  remaining_today:
-                    type: integer
-                    minimum: 0
-                    description: Recipient headroom remaining for the sender-domain identity before this rejected request.
-    ErrorObject:
-      type: object
-      properties:
-        code:
+        url:
           type: string
-          description: Telnyx error code. Send admission errors include account daily quota 10011 and sender-domain ramp code domain_graduation_limit_exceeded. Edge idempotency errors use 10027 or 10036. Fallback 404/500 responses from the framework may use string status codes ('404', '500') instead.
-          enum:
-          - '10001'
-          - '10006'
-          - '10007'
-          - '10011'
-          - '10015'
-          - '10016'
-          - '10019'
-          - domain_graduation_limit_exceeded
-          - recipient_suppressed
-          - reputation_suspended
-          - '404'
-          - '500'
-          - '10027'
-          - '10036'
-        title:
-          type: string
-        detail:
-          description: Human-readable error detail. Changeset responses may return a structured object.
-          oneOf:
-          - type: string
-          - type: object
-            additionalProperties: true
-        source:
-          type: object
-          additionalProperties: true
+          format: uri
           nullable: true
-        meta:
-          type: object
-          additionalProperties: true
+          description: Telnyx-hosted public URL for the attachment content.
+        sha256:
+          type: string
           nullable: true
-          description: Additional metadata. Present on 401 errors with a documentation URL.
-      required:
-      - code
-      - title
-      - detail
-    EmailMessageResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/EmailMessage'
-        suppressed:
-          type: array
-          description: Recipients removed by suppression checks when at least one recipient remains and the message is accepted.
-          items:
-            $ref: '#/components/schemas/SuppressedRecipient'
-      required:
-      - data
-    EmailAddress:
-      type: object
-      properties:
-        email:
+          description: SHA-256 hex digest of the attachment content.
+        size_bytes:
+          type: integer
+          nullable: true
+          description: Attachment size in bytes.
+        filename:
           type: string
-        name:
+        content_type:
           type: string
+        disposition:
+          type: string
+          default: attachment
+          description: MIME disposition (e.g. `attachment` or `inline`). Runtime passes through the stored value without enforcing an enum.
+        content_id:
+          type: string
+          nullable: true
+          description: MIME Content-ID for inline references.
       required:
-      - email
-    EmailMessageStatus:
-      type: string
-      description: Current status of an email message. Lifecycle statuses (queued, scheduled, etc.) are set on creation. Delivery statuses (delivered, bounced, etc.) are updated by delivery event consumers.
-      enum:
-      - queued
-      - scheduled
-      - cancelled
-      - sandbox
-      - sending
-      - sent
-      - failed
-      - deferred
-      - delivered
-      - bounced
-      - complained
-      - rejected
-      - opened
-      - clicked
-      - unsubscribed
+      - url
+      - sha256
+      - size_bytes
+      - filename
+      - content_type
+      - disposition
+      - content_id
     EmailAddressInput:
       oneOf:
       - type: string
       - $ref: '#/components/schemas/EmailAddress'
-    EmbeddedMessageEvent:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/EmailEventType'
-        occurred_at:
-          type: string
-          format: date-time
-        payload:
-          type: object
-          additionalProperties: true
-      required:
-      - type
-      - occurred_at
-      description: An event embedded in a message response. The dedicated per-message events endpoint additionally returns event_type and canonical_event_type.
     ReputationSuspendedError:
       type: object
       description: Non-standard error envelope returned when the sending domain's reputation band is 'poor'. Uses string code `reputation_suspended` instead of a numeric code.
@@ -977,57 +860,33 @@ components:
       - id
       - inbox_id
       - status
-    email_ErrorResponse:
+    DailySendLimitError:
       type: object
+      description: Error envelope returned when the account's daily recipient quota is exhausted before message creation.
+      required:
+      - errors
       properties:
         errors:
           type: array
+          minItems: 1
+          maxItems: 1
           items:
-            $ref: '#/components/schemas/ErrorObject'
-        suppressed:
-          type: array
-          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
-          items:
-            $ref: '#/components/schemas/SuppressedRecipient'
-      required:
-      - errors
-    AttachmentResponse:
-      type: object
-      description: EDR-aligned attachment metadata. The base64 `content` is never returned.
-      properties:
-        url:
-          type: string
-          format: uri
-          nullable: true
-          description: Telnyx-hosted public URL for the attachment content.
-        sha256:
-          type: string
-          nullable: true
-          description: SHA-256 hex digest of the attachment content.
-        size_bytes:
-          type: integer
-          nullable: true
-          description: Attachment size in bytes.
-        filename:
-          type: string
-        content_type:
-          type: string
-        disposition:
-          type: string
-          default: attachment
-          description: MIME disposition (e.g. `attachment` or `inline`). Runtime passes through the stored value without enforcing an enum.
-        content_id:
-          type: string
-          nullable: true
-          description: MIME Content-ID for inline references.
-      required:
-      - url
-      - sha256
-      - size_bytes
-      - filename
-      - content_type
-      - disposition
-      - content_id
+            type: object
+            required:
+            - code
+            - title
+            - detail
+            properties:
+              code:
+                type: string
+                enum:
+                - '10011'
+              title:
+                type: string
+                example: Too Many Requests
+              detail:
+                type: string
+                example: Daily send limit of 1000 recipients exceeded. The limit resets at midnight UTC.
     email_PaginationMeta:
       type: object
       properties:
@@ -1040,27 +899,48 @@ components:
           description: Cursor for the next page, when more results are available.
       required:
       - page_size
-    SuppressedRecipient:
+    ErrorObject:
       type: object
       properties:
-        to:
+        code:
           type: string
-          format: email
-          description: Suppressed recipient email address.
-        reason:
+          description: Telnyx error code. Send admission errors include account daily quota 10011 and sender-domain ramp code domain_graduation_limit_exceeded. Edge idempotency errors use 10027 or 10036. Fallback 404/500 responses from the framework may use string status codes ('404', '500') instead.
+          enum:
+          - '10001'
+          - '10006'
+          - '10007'
+          - '10011'
+          - '10015'
+          - '10016'
+          - '10019'
+          - domain_graduation_limit_exceeded
+          - recipient_suppressed
+          - reputation_suspended
+          - '404'
+          - '500'
+          - '10027'
+          - '10036'
+        title:
           type: string
-          description: Suppression reason returned by the recipient suppression service.
-        scope:
-          type: string
-          description: Scope at which the suppression applies.
-        override_allowed:
-          type: boolean
-          description: Whether an authorized send may override this suppression.
+        detail:
+          description: Human-readable error detail. Changeset responses may return a structured object.
+          oneOf:
+          - type: string
+          - type: object
+            additionalProperties: true
+        source:
+          type: object
+          additionalProperties: true
+          nullable: true
+        meta:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: Additional metadata. Present on 401 errors with a documentation URL.
       required:
-      - to
-      - reason
-      - scope
-      - override_allowed
+      - code
+      - title
+      - detail
     EmailEventType:
       type: string
       description: Bare stored event names returned by message history. In addition to the normal send and delivery lifecycle, polling can expose suppression, scan, and quarantine lifecycle rows. Sharp canonical names gw_reject, injection_timeout, and expired distinguish gateway rejection, ambiguous injection timeout, and MTA expiration. The failed and bounced names remain valid for system/admin failures and hard bounces respectively. Existing stored rows retain their original names.
@@ -1091,45 +971,6 @@ components:
       - gw_reject
       - injection_timeout
       - expired
-    EmailDraftListResponse:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/EmailDraft'
-        meta:
-          $ref: '#/components/schemas/email_PaginationMeta'
-      required:
-      - data
-      - meta
-    DailySendLimitError:
-      type: object
-      description: Error envelope returned when the account's daily recipient quota is exhausted before message creation.
-      required:
-      - errors
-      properties:
-        errors:
-          type: array
-          minItems: 1
-          maxItems: 1
-          items:
-            type: object
-            required:
-            - code
-            - title
-            - detail
-            properties:
-              code:
-                type: string
-                enum:
-                - '10011'
-              title:
-                type: string
-                example: Too Many Requests
-              detail:
-                type: string
-                example: Daily send limit of 1000 recipients exceeded. The limit resets at midnight UTC.
     EmailDraftRequest:
       type: object
       description: 'All fields are optional — a draft may be saved incomplete. `account_id`,
@@ -1189,6 +1030,75 @@ components:
             type: string
         metadata:
           type: object
+    email_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorObject'
+        suppressed:
+          type: array
+          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
+      required:
+      - errors
+    EmbeddedMessageEvent:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/EmailEventType'
+        occurred_at:
+          type: string
+          format: date-time
+        payload:
+          type: object
+          additionalProperties: true
+      required:
+      - type
+      - occurred_at
+      description: An event embedded in a message response. The dedicated per-message events endpoint additionally returns event_type and canonical_event_type.
+    DomainGraduationLimitExceededError:
+      type: object
+      description: Error envelope returned when a newly sending custom domain on shared egress would exceed its current daily graduation ceiling. The send is rejected before message creation.
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: object
+            required:
+            - code
+            - title
+            - detail
+            properties:
+              code:
+                type: string
+                enum:
+                - domain_graduation_limit_exceeded
+              title:
+                type: string
+                example: Too Many Requests
+              detail:
+                type: string
+                example: Daily send limit of 250 recipients for this sender domain exceeded. The limit resets at midnight UTC.
+              meta:
+                type: object
+                description: Bounded retry guidance. Each field is omitted when unknown.
+                additionalProperties: false
+                properties:
+                  retry_after_seconds:
+                    type: integer
+                    minimum: 1
+                    description: Seconds until the next UTC-midnight reset.
+                  remaining_today:
+                    type: integer
+                    minimum: 0
+                    description: Recipient headroom remaining for the sender-domain identity before this rejected request.
     EmailMessage:
       type: object
       properties:
@@ -1296,6 +1206,96 @@ components:
       - attachments
       - events
       - created_at
+    SuppressedRecipient:
+      type: object
+      properties:
+        to:
+          type: string
+          format: email
+          description: Suppressed recipient email address.
+        reason:
+          type: string
+          description: Suppression reason returned by the recipient suppression service.
+        scope:
+          type: string
+          description: Scope at which the suppression applies.
+        override_allowed:
+          type: boolean
+          description: Whether an authorized send may override this suppression.
+      required:
+      - to
+      - reason
+      - scope
+      - override_allowed
+    EmailDraftListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailDraft'
+        meta:
+          $ref: '#/components/schemas/email_PaginationMeta'
+      required:
+      - data
+      - meta
+    EmailMessageResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailMessage'
+        suppressed:
+          type: array
+          description: Recipients removed by suppression checks when at least one recipient remains and the message is accepted.
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
+      required:
+      - data
+    EmailAddress:
+      type: object
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+      required:
+      - email
+    EmailMessageStatus:
+      type: string
+      description: Current status of an email message. Lifecycle statuses (queued, scheduled, etc.) are set on creation. Delivery statuses (delivered, bounced, etc.) are updated by delivery event consumers.
+      enum:
+      - queued
+      - scheduled
+      - cancelled
+      - sandbox
+      - sending
+      - sent
+      - failed
+      - deferred
+      - delivered
+      - bounced
+      - complained
+      - rejected
+      - opened
+      - clicked
+      - unsubscribed
+  parameters:
+    DraftInboxId:
+      name: inbox_id
+      in: path
+      required: true
+      description: Email inbox UUID.
+      schema:
+        type: string
+        format: uuid
+    DraftId:
+      name: draft_id
+      in: path
+      required: true
+      description: Email draft UUID.
+      schema:
+        type: string
+        format: uuid
   securitySchemes:
     BearerAuth:
       type: http

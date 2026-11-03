@@ -300,27 +300,6 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    voice-designs_PaginationMeta:
-      type: object
-      description: Pagination metadata returned with list responses.
-      properties:
-        page_number:
-          type: integer
-          description: Current page number (1-based).
-        page_size:
-          type: integer
-          description: Number of results per page.
-        total_results:
-          type: integer
-          description: Total number of results across all pages.
-        total_pages:
-          type: integer
-          description: Total number of pages.
-      example:
-        page_number: 1
-        page_size: 20
-        total_results: 42
-        total_pages: 3
     VoiceDesignSummaryData:
       type: object
       description: A summarized voice design object (without version-specific fields).
@@ -361,6 +340,39 @@ components:
           items:
             type: string
           description: List of TTS model identifiers supported by this design's provider.
+    VoiceDesignUpdateRequest:
+      type: object
+      description: Request body for renaming a voice design.
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: New name for the voice design.
+      example:
+        name: updated-narrator
+    voice-designs_ErrorObject:
+      type: object
+      description: A single error object.
+      properties:
+        code:
+          type: string
+          description: Telnyx-specific error code.
+        title:
+          type: string
+          description: Short, human-readable summary of the error.
+        detail:
+          type: string
+          description: Detailed, human-readable explanation of the error.
+        source:
+          type: object
+          description: Reference to the source of the error.
+          properties:
+            pointer:
+              type: string
+              description: A JSON Pointer (RFC 6901) to the field that caused the error.
     VoiceDesignResponse:
       type: object
       description: Response envelope for a single voice design with full version detail.
@@ -383,6 +395,40 @@ components:
           provider_supported_models:
           - Qwen3TTS
           provider_voice_id: 550e8400-e29b-41d4-a716-446655440000
+    voice-designs_PaginationMeta:
+      type: object
+      description: Pagination metadata returned with list responses.
+      properties:
+        page_number:
+          type: integer
+          description: Current page number (1-based).
+        page_size:
+          type: integer
+          description: Number of results per page.
+        total_results:
+          type: integer
+          description: Total number of results across all pages.
+        total_pages:
+          type: integer
+          description: Total number of pages.
+      example:
+        page_number: 1
+        page_size: 20
+        total_results: 42
+        total_pages: 3
+    VoiceDesignUpdatedResponse:
+      type: object
+      description: Response envelope for a voice design after a rename operation (no version-specific fields).
+      properties:
+        data:
+          $ref: '#/components/schemas/VoiceDesignSummaryData'
+      example:
+        data:
+          record_type: voice_design
+          id: 550e8400-e29b-41d4-a716-446655440000
+          name: updated-narrator
+          created_at: '2024-01-01T00:00:00Z'
+          updated_at: '2024-01-02T00:00:00Z'
     VoiceDesignData:
       type: object
       description: A voice design object with full version detail.
@@ -457,52 +503,6 @@ components:
         - code: '10005'
           title: Resource not found
           detail: Voice design not found
-    VoiceDesignUpdatedResponse:
-      type: object
-      description: Response envelope for a voice design after a rename operation (no version-specific fields).
-      properties:
-        data:
-          $ref: '#/components/schemas/VoiceDesignSummaryData'
-      example:
-        data:
-          record_type: voice_design
-          id: 550e8400-e29b-41d4-a716-446655440000
-          name: updated-narrator
-          created_at: '2024-01-01T00:00:00Z'
-          updated_at: '2024-01-02T00:00:00Z'
-    VoiceDesignUpdateRequest:
-      type: object
-      description: Request body for renaming a voice design.
-      required:
-      - name
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 255
-          description: New name for the voice design.
-      example:
-        name: updated-narrator
-    voice-designs_ErrorObject:
-      type: object
-      description: A single error object.
-      properties:
-        code:
-          type: string
-          description: Telnyx-specific error code.
-        title:
-          type: string
-          description: Short, human-readable summary of the error.
-        detail:
-          type: string
-          description: Detailed, human-readable explanation of the error.
-        source:
-          type: object
-          description: Reference to the source of the error.
-          properties:
-            pointer:
-              type: string
-              description: A JSON Pointer (RFC 6901) to the field that caused the error.
     VoiceDesignRequest:
       type: object
       description: Request body for creating a new voice design or adding a version to an existing one. Omit `voice_design_id` to create a new design; include it to add a new version.
@@ -584,13 +584,16 @@ components:
         meta:
           $ref: '#/components/schemas/voice-designs_PaginationMeta'
   parameters:
-    FilterName:
-      name: filter[name]
+    voice-designs_PageSize:
+      name: page[size]
       in: query
       required: false
-      description: Case-insensitive substring filter on the name field.
+      description: Number of results per page.
       schema:
-        type: string
+        type: integer
+        minimum: 1
+        maximum: 250
+        default: 20
     voice-designs_Sort:
       name: sort
       in: query
@@ -604,16 +607,13 @@ components:
         - created_at
         - -created_at
         default: -created_at
-    voice-designs_PageSize:
-      name: page[size]
+    FilterName:
+      name: filter[name]
       in: query
       required: false
-      description: Number of results per page.
+      description: Case-insensitive substring filter on the name field.
       schema:
-        type: integer
-        minimum: 1
-        maximum: 250
-        default: 20
+        type: string
     voice-designs_PageNumber:
       name: page[number]
       in: query

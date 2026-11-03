@@ -330,26 +330,87 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    SqlDatabaseQueryRequest:
+    SqlDatabaseQueryResult:
       type: object
       properties:
-        sql:
-          type: string
-          description: The SQL to run. Use positional `?` placeholders and supply the values in `params` rather than interpolating them into this string.
-          example: SELECT * FROM users WHERE name = ?
-        params:
+        results:
           type: array
-          description: Positional bind parameters, in placeholder order. Each value is a string, a number, a boolean, or null; booleans are cast to `1`/`0`. The count must match the number of `?` placeholders exactly — a mismatch is rejected with 422 rather than binding null for the ones you left out. (Not enforced for multi-statement scripts or named parameters, where the placeholder count is not the number bound.)
+          description: The result rows, each a map of column name to value. Empty for statements that return no rows.
           items:
-            type:
-            - string
-            - number
-            - boolean
-            - 'null'
-          example:
-          - alice
-      required:
-      - sql
+            type: object
+            additionalProperties: true
+        success:
+          type: boolean
+          example: true
+        count:
+          type: integer
+          description: Number of rows returned.
+          example: 1
+        duration:
+          type: number
+          description: Wall-clock duration of the request, in milliseconds.
+          example: 2.5
+        meta:
+          $ref: '#/components/schemas/SqlDatabaseQueryResultMeta'
+    SqlDatabaseResponseWrapper:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SqlDatabase'
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    ErrorSource:
+      type: object
+      properties:
+        parameter:
+          type: string
+          example: id
+        pointer:
+          type: string
+          example: /id
+    edge-compute_Error:
+      type: object
+      properties:
+        code:
+          type: string
+          example: '10005'
+        detail:
+          type: string
+          example: The requested function does not exist or you don't have access to it
+        meta:
+          $ref: '#/components/schemas/ErrorMeta'
+        source:
+          $ref: '#/components/schemas/ErrorSource'
+        title:
+          type: string
+          example: Function not found
+    edge-compute_PaginationMeta:
+      type: object
+      properties:
+        page_number:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 20
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 52
+    GenericErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/edge-compute_Error'
     SqlDatabaseQueryResultMeta:
       type: object
       properties:
@@ -371,6 +432,33 @@ components:
           type: integer
           description: Number of rows added, changed, or removed by the statement.
           example: 0
+    SqlDatabaseListResponseWrapper:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SqlDatabase'
+        meta:
+          $ref: '#/components/schemas/edge-compute_PaginationMeta'
+    CreateSqlDatabaseRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Database name. Lowercase letters, numbers, and hyphens only; must start and end with a letter or number.
+          pattern: ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$
+          minLength: 1
+          maxLength: 255
+          example: my-database
+      required:
+      - name
+    ErrorMeta:
+      type: object
+      properties:
+        url:
+          type: string
+          example: https://docs.telnyx.com/api/errors/10005
     billing-group_Error:
       type: object
       required:
@@ -397,28 +485,31 @@ components:
           type: object
           properties: {}
           additionalProperties: true
-    edge-compute_Error:
+    SqlDatabaseQueryRequest:
       type: object
       properties:
-        code:
+        sql:
           type: string
-          example: '10005'
-        detail:
-          type: string
-          example: The requested function does not exist or you don't have access to it
-        meta:
-          $ref: '#/components/schemas/ErrorMeta'
-        source:
-          $ref: '#/components/schemas/ErrorSource'
-        title:
-          type: string
-          example: Function not found
-    ErrorMeta:
+          description: The SQL to run. Use positional `?` placeholders and supply the values in `params` rather than interpolating them into this string.
+          example: SELECT * FROM users WHERE name = ?
+        params:
+          type: array
+          description: Positional bind parameters, in placeholder order. Each value is a string, a number, a boolean, or null; booleans are cast to `1`/`0`. The count must match the number of `?` placeholders exactly — a mismatch is rejected with 422 rather than binding null for the ones you left out. (Not enforced for multi-statement scripts or named parameters, where the placeholder count is not the number bound.)
+          items:
+            type:
+            - string
+            - number
+            - boolean
+            - 'null'
+          example:
+          - alice
+      required:
+      - sql
+    SqlDatabaseQueryResponseWrapper:
       type: object
       properties:
-        url:
-          type: string
-          example: https://docs.telnyx.com/api/errors/10005
+        data:
+          $ref: '#/components/schemas/SqlDatabaseQueryResult'
     SqlDatabase:
       type: object
       properties:
@@ -450,97 +541,6 @@ components:
           type: string
           format: date-time
           example: '2026-06-18T14:48:17Z'
-    CreateSqlDatabaseRequest:
-      type: object
-      properties:
-        name:
-          type: string
-          description: Database name. Lowercase letters, numbers, and hyphens only; must start and end with a letter or number.
-          pattern: ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$
-          minLength: 1
-          maxLength: 255
-          example: my-database
-      required:
-      - name
-    SqlDatabaseQueryResponseWrapper:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/SqlDatabaseQueryResult'
-    edge-compute_PaginationMeta:
-      type: object
-      properties:
-        page_number:
-          type: integer
-          example: 1
-        page_size:
-          type: integer
-          example: 20
-        total_pages:
-          type: integer
-          example: 3
-        total_results:
-          type: integer
-          example: 52
-    Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/billing-group_Error'
-      type: object
-    ErrorSource:
-      type: object
-      properties:
-        parameter:
-          type: string
-          example: id
-        pointer:
-          type: string
-          example: /id
-    SqlDatabaseResponseWrapper:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/SqlDatabase'
-    SqlDatabaseQueryResult:
-      type: object
-      properties:
-        results:
-          type: array
-          description: The result rows, each a map of column name to value. Empty for statements that return no rows.
-          items:
-            type: object
-            additionalProperties: true
-        success:
-          type: boolean
-          example: true
-        count:
-          type: integer
-          description: Number of rows returned.
-          example: 1
-        duration:
-          type: number
-          description: Wall-clock duration of the request, in milliseconds.
-          example: 2.5
-        meta:
-          $ref: '#/components/schemas/SqlDatabaseQueryResultMeta'
-    SqlDatabaseListResponseWrapper:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/SqlDatabase'
-        meta:
-          $ref: '#/components/schemas/edge-compute_PaginationMeta'
-    GenericErrorResponse:
-      type: object
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/edge-compute_Error'
     Errors_2:
       properties:
         errors:

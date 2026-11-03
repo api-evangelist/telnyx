@@ -122,74 +122,6 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   responses:
-    MeetingReadAuthUnavailable:
-      description: Authentication is temporarily unavailable.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: auth_unavailable
-              message: authentication service unavailable
-    meeting-sessions_Conflict:
-      description: Conflict
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: invalid_state
-              message: only scheduled sessions can be updated
-    TooManyRequests:
-      description: Authentication is temporarily overloaded. Retry after the number of seconds in `Retry-After`.
-      headers:
-        Retry-After:
-          required: true
-          description: Seconds to wait before retrying.
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 5
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: auth_overloaded
-              message: authentication temporarily overloaded
-    meeting-sessions_InternalServerError:
-      description: Internal Server Error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: internal_error
-              message: internal server error
-    MeetingArtifactUnavailable:
-      description: Artifact generation or authentication is not configured or temporarily unavailable.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: not_configured
-              message: artifact generation is not configured
-    PayloadTooLarge:
-      description: Payload Too Large
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: invalid_request
-              message: request body too large
     meeting-sessions_Unauthorized:
       description: 'Unauthorized. On api.telnyx.com, authentication is enforced by the API gateway before the request reaches the Meeting service, so a missing or invalid API key returns the standard Telnyx error envelope (`{"errors": [{"code": "10009", ...}]}`) rather than the single-`error` shape below.'
       content:
@@ -200,6 +132,46 @@ components:
             error:
               code: unauthorized
               message: invalid or missing credentials
+    meeting-sessions_Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: invalid_state
+              message: only scheduled sessions can be updated
+    PayloadTooLarge:
+      description: Payload Too Large
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: invalid_request
+              message: request body too large
+    MeetingArtifactUnavailable:
+      description: Artifact generation or authentication is not configured or temporarily unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: not_configured
+              message: artifact generation is not configured
+    meeting-sessions_InternalServerError:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: internal_error
+              message: internal server error
     meeting-sessions_BadRequest:
       description: Bad Request
       content:
@@ -220,6 +192,34 @@ components:
             error:
               code: forbidden
               message: credential is not permitted
+    MeetingReadAuthUnavailable:
+      description: Authentication is temporarily unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: auth_unavailable
+              message: authentication service unavailable
+    TooManyRequests:
+      description: Authentication is temporarily overloaded. Retry after the number of seconds in `Retry-After`.
+      headers:
+        Retry-After:
+          required: true
+          description: Seconds to wait before retrying.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: auth_overloaded
+              message: authentication temporarily overloaded
     meeting-sessions_NotFound:
       description: Not Found
       content:
@@ -231,6 +231,60 @@ components:
               code: not_found
               message: meeting session not found
   schemas:
+    CreateMeetingSessionArtifactRequest:
+      title: CreateMeetingSessionArtifactRequest
+      description: 'One of two shapes: a named type on its own, or `custom` with the prompt it answers.'
+      oneOf:
+      - title: Named artifact
+        type: object
+        additionalProperties: false
+        required:
+        - type
+        properties:
+          type:
+            type: string
+            enum:
+            - summary
+            - action_items
+            - decisions
+            - topics
+            - open_questions
+            description: What to generate from the transcript. `custom` is answered from a `prompt` you supply; the five named types need none.
+      - title: Custom artifact
+        type: object
+        additionalProperties: false
+        required:
+        - type
+        - prompt
+        properties:
+          type:
+            type: string
+            const: custom
+            description: Answered from the `prompt` below rather than a fixed question.
+          prompt:
+            type: string
+            minLength: 1
+            maxLength: 4000
+            description: An open-ended request answered from the transcript. Required when `type` is `custom`, and rejected with 400 on any named type. Trimmed before storage and echoed back in artifact responses and the `artifact.completed` webhook.
+    MeetingSessionArtifactResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/MeetingSessionArtifact'
+    ModelProvenance:
+      type: object
+      additionalProperties: false
+      required:
+      - model
+      - provider
+      properties:
+        model:
+          type: string
+        provider:
+          type: string
     MeetingSessionArtifact:
       type: object
       required:
@@ -312,78 +366,6 @@ components:
         updated_at: '2025-01-15T10:31:00Z'
         prompt: null
       additionalProperties: false
-    MeetingSessionArtifactResponse:
-      type: object
-      additionalProperties: false
-      required:
-      - data
-      properties:
-        data:
-          $ref: '#/components/schemas/MeetingSessionArtifact'
-    ArtifactContent:
-      type: object
-      additionalProperties: false
-      required:
-      - text
-      properties:
-        text:
-          type: string
-    CreateMeetingSessionArtifactRequest:
-      title: CreateMeetingSessionArtifactRequest
-      description: 'One of two shapes: a named type on its own, or `custom` with the prompt it answers.'
-      oneOf:
-      - title: Named artifact
-        type: object
-        additionalProperties: false
-        required:
-        - type
-        properties:
-          type:
-            type: string
-            enum:
-            - summary
-            - action_items
-            - decisions
-            - topics
-            - open_questions
-            description: What to generate from the transcript. `custom` is answered from a `prompt` you supply; the five named types need none.
-      - title: Custom artifact
-        type: object
-        additionalProperties: false
-        required:
-        - type
-        - prompt
-        properties:
-          type:
-            type: string
-            const: custom
-            description: Answered from the `prompt` below rather than a fixed question.
-          prompt:
-            type: string
-            minLength: 1
-            maxLength: 4000
-            description: An open-ended request answered from the transcript. Required when `type` is `custom`, and rejected with 400 on any named type. Trimmed before storage and echoed back in artifact responses and the `artifact.completed` webhook.
-    MeetingSessionArtifactListResponse:
-      type: object
-      additionalProperties: false
-      required:
-      - data
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/MeetingSessionArtifact'
-    ModelProvenance:
-      type: object
-      additionalProperties: false
-      required:
-      - model
-      - provider
-      properties:
-        model:
-          type: string
-        provider:
-          type: string
     meeting-sessions_ErrorResponse:
       type: object
       additionalProperties: false
@@ -414,6 +396,24 @@ components:
       - error:
           code: internal_error
           message: internal server error
+    MeetingSessionArtifactListResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeetingSessionArtifact'
+    ArtifactContent:
+      type: object
+      additionalProperties: false
+      required:
+      - text
+      properties:
+        text:
+          type: string
   parameters:
     MeetingSessionId:
       name: id

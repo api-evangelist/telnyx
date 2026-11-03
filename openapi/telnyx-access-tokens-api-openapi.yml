@@ -84,62 +84,6 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    email_ErrorResponse:
-      type: object
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/ErrorObject'
-        suppressed:
-          type: array
-          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
-          items:
-            $ref: '#/components/schemas/SuppressedRecipient'
-      required:
-      - errors
-    TokenMaterial:
-      type: object
-      title: Token Material
-      description: 'What a server needs to mint login tokens for the credential itself, with no request per token (`TelephonyCredential#to_jwt` in telnyx-ruby 3.1.0 or later). As sensitive as `sip_password`: keep it on the server.'
-      properties:
-        kid:
-          type: string
-          description: Identifies the Telnyx signing key the `signing_secret` was derived with. Goes in the token header.
-          example: v1
-        tel_token:
-          type: string
-          description: Opaque value Telnyx uses to resolve the credential. Carried in the token's `tel_token` claim as is.
-          example: rj_ZkkZUOZMxZOfOmLpEUB3siU7u6RjZFeM9s-gb_xCR56WFKFAJiMyF2T6CBRmlh_Sy0i_lfyT9AI8sEif8MTIIszyzSl_aDnG48aO50yaHGuRSYbUbSYm9WIiQ0g==
-        signing_secret:
-          type: string
-          description: The HMAC-SHA256 key the token is signed with, base64url without padding.
-          example: cCL985ACi7wpbe_2xh1VDF3NabPJ90u1wCKmJCPNpxw
-    telephony-credentials_ErrorObject:
-      type: object
-      properties:
-        code:
-          description: Telnyx error code. Edge idempotency errors use 10027 or 10036. Fallback 404/500 responses from the framework may use string status codes ('404', '500') instead.
-          enum:
-          - '10015'
-          - '10016'
-          - '10027'
-          - '10036'
-          - '404'
-          - '500'
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              type: string
-        title:
-          type: string
-      required:
-      - code
-      - title
     ErrorObject:
       type: object
       properties:
@@ -182,6 +126,20 @@ components:
       - code
       - title
       - detail
+    email_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorObject'
+        suppressed:
+          type: array
+          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
+      required:
+      - errors
     telephony-credentials_ErrorResponse:
       type: object
       properties:
@@ -191,6 +149,23 @@ components:
             $ref: '#/components/schemas/telephony-credentials_ErrorObject'
       required:
       - errors
+    TokenMaterial:
+      type: object
+      title: Token Material
+      description: 'What a server needs to mint login tokens for the credential itself, with no request per token (`TelephonyCredential#to_jwt` in telnyx-ruby 3.1.0 or later). As sensitive as `sip_password`: keep it on the server.'
+      properties:
+        kid:
+          type: string
+          description: Identifies the Telnyx signing key the `signing_secret` was derived with. Goes in the token header.
+          example: v1
+        tel_token:
+          type: string
+          description: Opaque value Telnyx uses to resolve the credential. Carried in the token's `tel_token` claim as is.
+          example: rj_ZkkZUOZMxZOfOmLpEUB3siU7u6RjZFeM9s-gb_xCR56WFKFAJiMyF2T6CBRmlh_Sy0i_lfyT9AI8sEif8MTIIszyzSl_aDnG48aO50yaHGuRSYbUbSYm9WIiQ0g==
+        signing_secret:
+          type: string
+          description: The HMAC-SHA256 key the token is signed with, base64url without padding.
+          example: cCL985ACi7wpbe_2xh1VDF3NabPJ90u1wCKmJCPNpxw
     SuppressedRecipient:
       type: object
       properties:
@@ -212,14 +187,43 @@ components:
       - reason
       - scope
       - override_allowed
-  headers:
-    IdempotentReplayed:
-      description: Present with value `true` when Edge replayed a stored successful response for the supplied Idempotency-Key. Omitted for first-time requests and error responses.
+    telephony-credentials_ErrorObject:
+      type: object
+      properties:
+        code:
+          description: Telnyx error code. Edge idempotency errors use 10027 or 10036. Fallback 404/500 responses from the framework may use string status codes ('404', '500') instead.
+          enum:
+          - '10015'
+          - '10016'
+          - '10027'
+          - '10036'
+          - '404'
+          - '500'
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              type: string
+        title:
+          type: string
+      required:
+      - code
+      - title
+  parameters:
+    telephony-credentials_IdempotencyKey:
+      description: 'Unique key for safely retrying the same logical request. Generate a UUID v4 for each operation and reuse it only when retrying that operation with the same request body. Valid characters: A-Z, a-z, 0-9, -, and _. Length: 1-255 characters. Do not include sensitive data in the key.'
+      in: header
+      name: Idempotency-Key
+      required: false
+      example: 8e03978e-40d5-43e8-bc93-6894a57f9326
       schema:
-        type: boolean
-        enum:
-        - true
-        example: true
+        type: string
+        minLength: 1
+        maxLength: 255
+        pattern: ^[A-Za-z0-9_-]{1,255}$
   responses:
     IdempotencyConflictResponse:
       description: A request with the same Idempotency-Key is still being processed (10036). Retry later with the same key and request.
@@ -234,18 +238,14 @@ components:
               source:
                 pointer: /header/Idempotency-Key
               title: Resource is being processed
-  parameters:
-    telephony-credentials_IdempotencyKey:
-      description: 'Unique key for safely retrying the same logical request. Generate a UUID v4 for each operation and reuse it only when retrying that operation with the same request body. Valid characters: A-Z, a-z, 0-9, -, and _. Length: 1-255 characters. Do not include sensitive data in the key.'
-      in: header
-      name: Idempotency-Key
-      required: false
-      example: 8e03978e-40d5-43e8-bc93-6894a57f9326
+  headers:
+    IdempotentReplayed:
+      description: Present with value `true` when Edge replayed a stored successful response for the supplied Idempotency-Key. Omitted for first-time requests and error responses.
       schema:
-        type: string
-        minLength: 1
-        maxLength: 255
-        pattern: ^[A-Za-z0-9_-]{1,255}$
+        type: boolean
+        enum:
+        - true
+        example: true
   securitySchemes:
     BearerAuth:
       type: http

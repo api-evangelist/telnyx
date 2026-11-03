@@ -213,46 +213,41 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    ChatCompletionResponseFormatParam:
-      description: Output format for the model response. `text` returns plain text, `json_object` enables JSON mode (valid JSON output without a schema), and `json_schema` constrains the output to a schema you supply. For guaranteed schema-conformant structured output on Telnyx-hosted models, use `json_schema`.
-      oneOf:
-      - $ref: '#/components/schemas/ResponseFormatText'
-      - $ref: '#/components/schemas/ResponseFormatJsonObject'
-      - $ref: '#/components/schemas/ResponseFormatJsonSchemaParam'
-      title: ChatCompletionResponseFormatParam
-    ResponseFormatJsonSchema:
-      description: The JSON schema configuration, required when `type` is `json_schema`. Matches the [OpenAI structured outputs](https://platform.openai.com/docs/guides/structured-outputs) `json_schema` response format.
-      properties:
-        name:
-          type: string
-          description: The name of the response format. Used for clarity only.
-        description:
-          type: string
-          description: A description of what the response format is for, typically used to guide the model.
-        schema:
-          type: object
-          additionalProperties: true
-          description: The JSON schema the model output must conform to. A valid [JSON Schema](https://json-schema.org) object, e.g. a Pydantic `model_json_schema()` export.
-        strict:
-          type: boolean
-          description: Enables strict schema adherence when supported by the model. If the generated output does not match the provided schema, the request fails instead of returning non-conformant output.
-      type: object
+    ValidationError:
+      title: ValidationError
       required:
-      - name
-      title: ResponseFormatJsonSchema
-    ChatCompletionToolParam:
-      properties:
-        type:
-          type: string
-          enum:
-          - function
-        function:
-          $ref: '#/components/schemas/FunctionDefinition'
-      type: object
-      required:
-      - function
+      - loc
+      - msg
       - type
-      title: Function
+      type: object
+      properties:
+        loc:
+          title: Location
+          type: array
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+    BucketIds:
+      properties:
+        bucket_ids:
+          items:
+            type: string
+          type: array
+          description: List of [embedded storage buckets](https://developers.telnyx.com/api-reference/embeddings/embed-documents) to use for retrieval-augmented generation.
+        max_num_results:
+          description: The maximum number of results to retrieve as context for the language model.
+          type: integer
+      type: object
+      required:
+      - bucket_ids
+      title: BucketIds
     ChatCompletionRequest:
       properties:
         messages:
@@ -389,91 +384,51 @@ components:
       required:
       - messages
       title: ChatCompletionRequest
-    ResponseFormatJsonSchemaParam:
-      description: 'Structured output: the model output is constrained to the JSON schema supplied in `json_schema`.'
+    ChatCompletionToolParam:
       properties:
         type:
-          const: json_schema
-          type: string
-        json_schema:
-          $ref: '#/components/schemas/ResponseFormatJsonSchema'
-      required:
-      - type
-      - json_schema
-      title: ResponseFormatJsonSchemaParam
-      type: object
-    ResponseFormatText:
-      description: Plain text output.
-      properties:
-        type:
-          const: text
-          type: string
-      required:
-      - type
-      title: ResponseFormatText
-      type: object
-    ChatCompletionSystemMessageParam:
-      type: object
-      properties:
-        content:
-          oneOf:
-          - title: Content String
-            type: string
-          - title: Text and Image Array
-            type: array
-            items:
-              type: object
-              properties:
-                type:
-                  type: string
-                  enum:
-                  - text
-                  - image_url
-                text:
-                  type: string
-                image_url:
-                  type: string
-              required:
-              - type
-              additionalProperties: false
-        role:
           type: string
           enum:
-          - system
-          - user
-          - assistant
-          - tool
+          - function
+        function:
+          $ref: '#/components/schemas/FunctionDefinition'
+      type: object
       required:
-      - content
-      - role
-      title: ChatCompletionSystemMessageParam
-    BucketIds:
+      - function
+      - type
+      title: Function
+    ModelsResponse:
       properties:
-        bucket_ids:
+        object:
+          type: string
+          title: Object
+          default: list
+        data:
           items:
-            type: string
+            $ref: '#/components/schemas/ModelMetadata'
           type: array
-          description: List of [embedded storage buckets](https://developers.telnyx.com/api-reference/embeddings/embed-documents) to use for retrieval-augmented generation.
-        max_num_results:
-          description: The maximum number of results to retrieve as context for the language model.
-          type: integer
+          title: Data
       type: object
       required:
-      - bucket_ids
-      title: BucketIds
-    Retrieval:
+      - data
+      title: ModelsResponse
+    ResponseFormatJsonObject:
+      description: 'JSON mode: the model output is valid JSON, without a schema.'
       properties:
         type:
+          const: json_object
           type: string
-          enum:
-          - retrieval
-        retrieval:
-          $ref: '#/components/schemas/BucketIds'
-      type: object
       required:
       - type
-      - retrieval
-      title: Retrieval
+      title: ResponseFormatJsonObject
+      type: object
+    ChatCompletionResponseFormatParam:
+      description: Output format for the model response. `text` returns plain text, `json_object` enables JSON mode (valid JSON output without a schema), and `json_schema` constrains the output to a schema you supply. For guaranteed schema-conformant structured output on Telnyx-hosted models, use `json_schema`.
+      oneOf:
+      - $ref: '#/components/schemas/ResponseFormatText'
+      - $ref: '#/components/schemas/ResponseFormatJsonObject'
+      - $ref: '#/components/schemas/ResponseFormatJsonSchemaParam'
+      title: ChatCompletionResponseFormatParam
     ModelMetadata:
       type: object
       title: ModelMetadata
@@ -620,6 +575,32 @@ components:
             - priority
             - flex
           description: Service tiers supported by this Telnyx-hosted model. Use one of these values as `service_tier` in Chat Completions or Responses requests. This field is omitted for externally hosted models.
+    FunctionDefinition:
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        parameters:
+          type: object
+          additionalProperties: true
+      type: object
+      required:
+      - name
+      title: FunctionDefinition
+    Retrieval:
+      properties:
+        type:
+          type: string
+          enum:
+          - retrieval
+        retrieval:
+          $ref: '#/components/schemas/BucketIds'
+      type: object
+      required:
+      - type
+      - retrieval
+      title: Retrieval
     HTTPValidationError:
       properties:
         detail:
@@ -636,75 +617,83 @@ components:
           - name
           msg: Field required
           type: missing
-    ModelsResponse:
-      properties:
-        object:
-          type: string
-          title: Object
-          default: list
-        data:
-          items:
-            $ref: '#/components/schemas/ModelMetadata'
-          type: array
-          title: Data
+    ChatCompletionSystemMessageParam:
       type: object
+      properties:
+        content:
+          oneOf:
+          - title: Content String
+            type: string
+          - title: Text and Image Array
+            type: array
+            items:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum:
+                  - text
+                  - image_url
+                text:
+                  type: string
+                image_url:
+                  type: string
+              required:
+              - type
+              additionalProperties: false
+        role:
+          type: string
+          enum:
+          - system
+          - user
+          - assistant
+          - tool
       required:
-      - data
-      title: ModelsResponse
-    FunctionDefinition:
+      - content
+      - role
+      title: ChatCompletionSystemMessageParam
+    ResponseFormatJsonSchemaParam:
+      description: 'Structured output: the model output is constrained to the JSON schema supplied in `json_schema`.'
+      properties:
+        type:
+          const: json_schema
+          type: string
+        json_schema:
+          $ref: '#/components/schemas/ResponseFormatJsonSchema'
+      required:
+      - type
+      - json_schema
+      title: ResponseFormatJsonSchemaParam
+      type: object
+    ResponseFormatJsonSchema:
+      description: The JSON schema configuration, required when `type` is `json_schema`. Matches the [OpenAI structured outputs](https://platform.openai.com/docs/guides/structured-outputs) `json_schema` response format.
       properties:
         name:
           type: string
+          description: The name of the response format. Used for clarity only.
         description:
           type: string
-        parameters:
+          description: A description of what the response format is for, typically used to guide the model.
+        schema:
           type: object
           additionalProperties: true
+          description: The JSON schema the model output must conform to. A valid [JSON Schema](https://json-schema.org) object, e.g. a Pydantic `model_json_schema()` export.
+        strict:
+          type: boolean
+          description: Enables strict schema adherence when supported by the model. If the generated output does not match the provided schema, the request fails instead of returning non-conformant output.
       type: object
       required:
       - name
-      title: FunctionDefinition
-    ResponseFormatJsonObject:
-      description: 'JSON mode: the model output is valid JSON, without a schema.'
+      title: ResponseFormatJsonSchema
+    ResponseFormatText:
+      description: Plain text output.
       properties:
         type:
-          const: json_object
+          const: text
           type: string
       required:
       - type
-      title: ResponseFormatJsonObject
-      type: object
-    ValidationError:
-      title: ValidationError
-      required:
-      - loc
-      - msg
-      - type
-      type: object
-      properties:
-        loc:
-          title: Location
-          type: array
-          items:
-            anyOf:
-            - type: string
-            - type: integer
-        msg:
-          title: Message
-          type: string
-        type:
-          title: Error Type
-          type: string
-    ChatCompletionResponseFormatParam_2:
-      properties:
-        type:
-          enum:
-          - text
-          - json_object
-          type: string
-      required:
-      - type
-      title: ChatCompletionResponseFormatParam
+      title: ResponseFormatText
       type: object
     ChatCompletionRequest_2:
       properties:
@@ -821,6 +810,17 @@ components:
       required:
       - messages
       title: ChatCompletionRequest
+      type: object
+    ChatCompletionResponseFormatParam_2:
+      properties:
+        type:
+          enum:
+          - text
+          - json_object
+          type: string
+      required:
+      - type
+      title: ChatCompletionResponseFormatParam
       type: object
     ModelMetadata_2:
       properties:

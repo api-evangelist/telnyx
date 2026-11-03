@@ -1,0 +1,583 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Tunnels API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Tunnels
+  description: Tunnels connect a Network to hosts behind a tunnel process within the user's network.
+paths:
+  /tunnels:
+    get:
+      summary: List all Tunnels
+      operationId: ListTunnels
+      tags:
+      - Tunnels
+      description: Lists the tunnels on the account with their status and connected tunnel processes. Responses never include `tunnel_token`.
+      parameters:
+      - name: filter
+        in: query
+        style: deepObject
+        explode: true
+        description: 'Consolidated filter parameter (deepObject style). Originally: filter[name], filter[status]'
+        schema:
+          type: object
+          properties:
+            name:
+              type: string
+              description: The name of the tunnel.
+              example: chicago-dc
+            status:
+              type: string
+              enum:
+              - inactive
+              - healthy
+              - degraded
+              description: The status of the tunnel.
+              example: healthy
+      - name: sort
+        in: query
+        description: Sorts the results by a field, ascending, or descending with a leading `-`. The default is `-created_at`.
+        schema:
+          type: string
+          enum:
+          - name
+          - -name
+          - status
+          - -status
+          - created_at
+          - -created_at
+          - updated_at
+          - -updated_at
+          example: -created_at
+      - $ref: '#/components/parameters/PageCursorConsolidated'
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Tunnel'
+                  meta:
+                    $ref: '#/components/schemas/netapps_CursorPaginationMeta'
+              example:
+                data:
+                - id: 62d438d2-8a51-4c5e-9d0c-1f6b2a7e4c39
+                  record_type: tunnel
+                  name: chicago-dc
+                  status: healthy
+                  connection_count: 2
+                  connections:
+                  - hostname: dc1-tunnel-a
+                    version: 0.6.0
+                    region_code: chicago-il
+                    connected_at: '2026-10-21T15:04:05.123456Z'
+                  - hostname: dc1-tunnel-b
+                    version: 0.6.0
+                    region_code: chicago-il
+                    connected_at: '2026-10-21T15:04:05.123456Z'
+                  created_at: '2026-10-21T15:04:05.123456Z'
+                meta:
+                  cursors: {}
+        '422':
+          description: 'Unprocessable entity: a query parameter is not valid, such as an unsupported `sort` field.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10022'
+                  title: Unprocessable Entity
+                  detail: unsupported sort field
+                  source:
+                    pointer: sort
+        default:
+          $ref: '#/components/responses/GenericErrorResponse'
+    post:
+      summary: Create a Tunnel
+      operationId: CreateTunnel
+      tags:
+      - Tunnels
+      description: Creates a tunnel and returns its `tunnel_token`. The token is the only credential the tunnel process needs, and this response and `POST /tunnels/{id}/actions/rotate_token` are the only ones that return it. A new tunnel is `inactive` until a tunnel process connects with the token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TunnelCreate'
+            example:
+              name: chicago-dc
+      responses:
+        '201':
+          description: Created. The response carries the tunnel token, once.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TunnelWithToken'
+              example:
+                data:
+                  id: 62d438d2-8a51-4c5e-9d0c-1f6b2a7e4c39
+                  record_type: tunnel
+                  name: chicago-dc
+                  tunnel_token: tnl_example-token-shown-once
+                  status: inactive
+                  connection_count: 0
+                  connections: []
+                  created_at: '2026-10-21T15:04:05.123456Z'
+        '422':
+          description: 'Unprocessable entity: the body failed validation. `source.pointer` names the field.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10022'
+                  title: Unprocessable Entity
+                  detail: name is required
+                  source:
+                    pointer: /name
+        default:
+          $ref: '#/components/responses/GenericErrorResponse'
+  /tunnels/{id}:
+    delete:
+      summary: Delete a Tunnel
+      operationId: DeleteTunnel
+      tags:
+      - Tunnels
+      description: Deletes a tunnel. A tunnel that a route names as its next hop cannot be deleted; delete those routes first. Connected tunnel processes are disconnected and cannot reconnect with the tunnel's token.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: The id of the tunnel.
+        schema:
+          type: string
+          format: uuid
+          example: 62d438d2-8a51-4c5e-9d0c-1f6b2a7e4c39
+      responses:
+        '204':
+          description: Deleted.
+        '404':
+          description: 'Not found: no tunnel with this id exists on the account.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10020'
+                  title: Resource not found
+                  detail: 'get tunnel: not found'
+        '409':
+          description: 'Conflict: one or more routes name the tunnel as their next hop. `detail` and `meta.route_ids` list them.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10021'
+                  title: Resource conflict
+                  detail: 'tunnel 62d438d2-8a51-4c5e-9d0c-1f6b2a7e4c39 is the next hop of 1 route; delete it first: e8a2c5d0-3f7b-4a19-b6d2-9c1e0f8a7b53'
+                  meta:
+                    route_ids:
+                    - e8a2c5d0-3f7b-4a19-b6d2-9c1e0f8a7b53
+        default:
+          $ref: '#/components/responses/GenericErrorResponse'
+    get:
+      summary: Retrieve a Tunnel
+      operationId: GetTunnel
+      tags:
+      - Tunnels
+      description: Retrieves a tunnel with its status and the tunnel processes connected to it. The response never includes `tunnel_token`.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: The id of the tunnel.
+        schema:
+          type: string
+          format: uuid
+          example: 62d438d2-8a51-4c5e-9d0c-1f6b2a7e4c39
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Tunnel'
+              example:
+                data:
+                  id: 62d438d2-8a51-4c5e-9d0c-1f6b2a7e4c39
+                  record_type: tunnel
+                  name: chicago-dc
+                  status: healthy
+                  connection_count: 2
+                  connections:
+                  - hostname: dc1-tunnel-a
+                    version: 0.6.0
+                    region_code: chicago-il
+                    connected_at: '2026-10-21T15:04:05.123456Z'
+                  - hostname: dc1-tunnel-b
+                    version: 0.6.0
+                    region_code: chicago-il
+                    connected_at: '2026-10-21T15:04:05.123456Z'
+                  created_at: '2026-10-21T15:04:05.123456Z'
+        '404':
+          description: 'Not found: no tunnel with this id exists on the account.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10020'
+                  title: Resource not found
+                  detail: 'get tunnel: not found'
+        default:
+          $ref: '#/components/responses/GenericErrorResponse'
+  /tunnels/{id}/actions/rotate_token:
+    post:
+      summary: Rotate a Tunnel Token
+      operationId: RotateTunnelToken
+      tags:
+      - Tunnels
+      description: Issues a new `tunnel_token` and invalidates the previous one. Tunnel processes already connected stay connected until they reconnect, and are then refused until they use the new token.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: The id of the tunnel.
+        schema:
+          type: string
+          format: uuid
+          example: 62d438d2-8a51-4c5e-9d0c-1f6b2a7e4c39
+      responses:
+        '200':
+          description: Successful response. The response carries the new tunnel token, once.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TunnelWithToken'
+              example:
+                data:
+                  id: 62d438d2-8a51-4c5e-9d0c-1f6b2a7e4c39
+                  record_type: tunnel
+                  name: chicago-dc
+                  status: healthy
+                  connection_count: 2
+                  connections:
+                  - hostname: dc1-tunnel-a
+                    version: 0.6.0
+                    region_code: chicago-il
+                    connected_at: '2026-10-21T15:04:05.123456Z'
+                  - hostname: dc1-tunnel-b
+                    version: 0.6.0
+                    region_code: chicago-il
+                    connected_at: '2026-10-21T15:04:05.123456Z'
+                  created_at: '2026-10-21T15:04:05.123456Z'
+                  tunnel_token: tnl_example-new-token-shown-once
+        '404':
+          description: 'Not found: no tunnel with this id exists on the account.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10020'
+                  title: Resource not found
+                  detail: 'get tunnel: not found'
+        default:
+          $ref: '#/components/responses/GenericErrorResponse'
+components:
+  schemas:
+    Tunnel:
+      type: object
+      title: Tunnel
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Identifies the resource.
+          example: 62d438d2-8a51-4c5e-9d0c-1f6b2a7e4c39
+        record_type:
+          type: string
+          readOnly: true
+          description: Identifies the type of the resource.
+          example: tunnel
+        name:
+          type: string
+          minLength: 1
+          description: A user specified name for the tunnel.
+          example: chicago-dc
+        status:
+          type: string
+          enum:
+          - inactive
+          - healthy
+          - degraded
+          readOnly: true
+          description: '`inactive` when no tunnel process is connected, and `healthy` when one or more are. `degraded` (Preview, not reported yet) when a process is connected but fails to reach its destinations.'
+          example: healthy
+        connection_count:
+          type: integer
+          minimum: 0
+          readOnly: true
+          description: The number of tunnel processes connected with the tunnel's token.
+          example: 2
+        connections:
+          type: array
+          readOnly: true
+          description: The tunnel processes connected with the tunnel's token.
+          items:
+            $ref: '#/components/schemas/TunnelConnection'
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: ISO 8601 formatted date-time indicating when the resource was created.
+          example: '2026-10-21T15:04:05.123456Z'
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+      type: object
+    TunnelCreate:
+      type: object
+      title: TunnelCreate
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: A user specified name for the tunnel.
+          example: chicago-dc
+    Error:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+          x-format: int64
+        title:
+          type: string
+        detail:
+          type: string
+          description: A human-readable explanation of the error.
+        description:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          additionalProperties: true
+      example:
+        title: Invalid street address
+        source:
+          pointer: /street_address
+        code: '20207'
+        description: The street address provided is invalid.
+      type: object
+    TunnelConnection:
+      type: object
+      title: TunnelConnection
+      description: A tunnel process connected to the tunnel.
+      properties:
+        hostname:
+          type: string
+          description: 'The name the host reports for itself. Preview: empty until the CLI reports it.'
+          example: dc1-tunnel-a
+        version:
+          type: string
+          description: 'The `telnyx-edge` CLI version of the process. Preview: empty until the CLI reports it.'
+          example: 0.6.0
+        region_code:
+          type: string
+          description: 'The Telnyx region the process is connected to. Preview: empty until the CLI reports it.'
+          example: chicago-il
+        connected_at:
+          type: string
+          format: date-time
+          description: When the process connected.
+          example: '2026-10-21T15:04:05.123456Z'
+    TunnelWithToken:
+      title: TunnelWithToken
+      allOf:
+      - $ref: '#/components/schemas/Tunnel'
+      - type: object
+        properties:
+          tunnel_token:
+            type: string
+            readOnly: true
+            description: The credential that a tunnel process presents with `telnyx-edge tunnel run --token`. Returned only by create and rotate_token. Telnyx stores only a hash of it.
+            example: tnl_example-token-shown-once
+    netapps_CursorPaginationMeta:
+      type: object
+      title: CursorPaginationMeta
+      properties:
+        cursors:
+          type: object
+          description: Opaque cursors. Absent keys mean there is no such page.
+          properties:
+            after:
+              type: string
+              description: Pass as `page[after]` to fetch the next page. Absent on the last page.
+            before:
+              type: string
+              description: The cursor of the previous page. Present when the request used `page[after]`.
+        next:
+          type: string
+          description: The path of the next page, with the same query parameters. Absent on the last page.
+          example: /v2/network_routes?filter%5Bnetwork_id%5D=91446ee3-5b1c-4f0e-8d2a-6c7e9b0a1f24&page%5Bafter%5D=MjAyNi0xMC0yMVQxNjowNjowMC4wNDMwNDRa&page%5Blimit%5D=1
+        previous:
+          type: string
+          description: The path of the previous page. Present when the request used `page[after]`.
+  responses:
+    GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+  parameters:
+    PageCursorConsolidated:
+      name: page
+      in: query
+      style: deepObject
+      explode: true
+      description: 'Consolidated page parameter (deepObject style). Originally: page[after], page[limit]'
+      schema:
+        type: object
+        properties:
+          after:
+            type: string
+            description: The cursor from `meta.cursors.after` of the previous page.
+          limit:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+            description: The number of results per page.
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pay-connectors_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key, not the processor bearer token.
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    telnyxApiKey:
+      type: http
+      scheme: bearer
+      description: Management-only Telnyx account credential.
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

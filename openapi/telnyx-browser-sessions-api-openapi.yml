@@ -1,0 +1,484 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Browser Sessions API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Browser Sessions
+  description: Create, list, get, and close browser sessions.
+paths:
+  /browser_sessions:
+    get:
+      summary: List browser sessions
+      description: Lists sessions for the authenticated org. Optional status filter.
+      operationId: ListBrowserSessions
+      tags:
+      - Browser Sessions
+      parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - provisioning
+          - ready
+          - closing
+          - closed
+          - failed
+          - expired
+      responses:
+        '200':
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Session'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Create browser session
+      description: Creates an isolated browser session with network access restricted to the domains you allow.
+      operationId: CreateBrowserSession
+      tags:
+      - Browser Sessions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+            example:
+              policy:
+                allowed_domains:
+                - example.com
+      responses:
+        '201':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Session'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Idempotency key reused with a different normalized create request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: idempotency_conflict
+                  message: idempotency key reused with a different request
+                  retryable: false
+        '429':
+          description: Concurrent-session quota exceeded for the organization. Close unneeded active sessions or wait for capacity before retrying.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: quota_exceeded
+                  message: organization concurrent-session limit reached
+                  retryable: true
+        '500':
+          description: The session could not be created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: internal_error
+                  message: failed to provision browser session
+                  retryable: true
+  /browser_sessions/{id}:
+    delete:
+      summary: Close browser session
+      description: Closes a ready session and releases its resources. An already closed, failed, or expired session is returned unchanged; a provisioning session returns 409 session_not_ready.
+      operationId: CloseBrowserSession
+      tags:
+      - Browser Sessions
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Session after close, or its unchanged terminal state.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Session'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Session is still provisioning. Poll its state before retrying the close.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: session_not_ready
+                  message: session is still provisioning
+                  retryable: true
+        '503':
+          description: The request could not be completed reliably. Retrieve action and session state before retrying; a mutation may already have taken effect. Do not blindly repeat it with a new idempotency key or session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: execution_lost
+                  message: Request could not be completed reliably
+                  retryable: true
+    get:
+      summary: Get browser session
+      description: Returns the current status of a browser session.
+      operationId: GetBrowserSession
+      tags:
+      - Browser Sessions
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Session details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Session'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  schemas:
+    CreateSessionRequest:
+      type: object
+      required:
+      - policy
+      properties:
+        policy:
+          type: object
+          required:
+          - allowed_domains
+          properties:
+            allowed_domains:
+              type: array
+              items:
+                type: string
+                minLength: 1
+              minItems: 1
+              maxItems: 50
+              description: Domain patterns the browser can navigate to. Exact match (example.com) or wildcard (*.example.com). IP literals not allowed.
+          additionalProperties: false
+        limits:
+          type: object
+          properties:
+            lifetime_s:
+              type: integer
+              minimum: 60
+              maximum: 1800
+              default: 900
+              description: Max session duration in seconds (60-1800).
+            idle_timeout_s:
+              type: integer
+              minimum: 30
+              default: 300
+              description: Idle timeout in seconds. Must not exceed lifetime_s.
+          additionalProperties: false
+        metadata:
+          type: object
+          description: Arbitrary key-value metadata.
+          additionalProperties: true
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Scoped to the organization. The same key and identical normalized policy, limits, and metadata replay the existing session (HTTP 201); a different request returns 409 idempotency_conflict. Replays do not restart terminal sessions.
+      additionalProperties: false
+    GatewayError:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            required:
+            - code
+            - title
+            properties:
+              code:
+                type: string
+              title:
+                type: string
+              detail:
+                type: string
+              source:
+                type: object
+                properties:
+                  pointer:
+                    type: string
+              meta:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+          example: bsess_3b108e10-906a-486e-9132-196726ba7979
+        status:
+          type: string
+          enum:
+          - provisioning
+          - ready
+          - closing
+          - closed
+          - failed
+          - expired
+        failure_reason:
+          type:
+          - string
+          - 'null'
+        policy:
+          type: object
+          properties:
+            allowed_domains:
+              type: array
+              items:
+                type: string
+          required:
+          - allowed_domains
+        limits:
+          type: object
+          properties:
+            lifetime_s:
+              type: integer
+            idle_timeout_s:
+              type: integer
+          required:
+          - lifetime_s
+          - idle_timeout_s
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+        ready_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        last_activity_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        expires_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        closed_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+      required:
+      - id
+      - status
+      - failure_reason
+      - policy
+      - limits
+      - metadata
+      - created_at
+      - ready_at
+      - last_activity_at
+      - expires_at
+      - closed_at
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            retryable:
+              type: boolean
+          required:
+          - code
+          - message
+          - retryable
+      required:
+      - error
+  responses:
+    BadRequest:
+      description: Invalid request — validation error or invalid parameters.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: validation_error
+              message: 'invalid request: policy.allowed_domains must have at least 1 item(s)'
+              retryable: false
+    Unauthorized:
+      description: Unauthorized — missing or invalid API key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GatewayError'
+          example:
+            errors:
+            - code: '10009'
+              title: Authentication failed
+              detail: Could not find any usable credentials in the request.
+              source:
+                pointer: /
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10009
+    NotFound:
+      description: Session or artifact not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: not_found
+              message: session not found
+              retryable: false
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pay-connectors_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key, not the processor bearer token.
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    telnyxApiKey:
+      type: http
+      scheme: bearer
+      description: Management-only Telnyx account credential.
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

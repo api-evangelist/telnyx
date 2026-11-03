@@ -84,37 +84,10 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    SttErrorFrame:
-      type: object
-      description: Server-to-client frame indicating an error during transcription. The connection may be closed shortly after.
-      properties:
-        type:
-          type: string
-          const: error
-          description: Frame type identifier.
-        error:
-          type: string
-          description: Error message describing what went wrong.
-      required:
-      - type
-      - error
-    azure_models:
-      type: string
-      enum:
-      - fast
-    xai_models:
-      type: string
-      enum:
-      - xai/grok-stt
     SttClientEvent:
       type: string
       format: binary
       description: Binary audio data in mp3, wav, linear16, or linear32 format, per `input_format`.
-    telnyx_models:
-      type: string
-      enum:
-      - openai/whisper-tiny
-      - openai/whisper-large-v3-turbo
     parakeet_models:
       type: string
       enum:
@@ -131,6 +104,62 @@ components:
       - default
       - medical_conversation
       - medical_dictation
+    azure_models:
+      type: string
+      enum:
+      - fast
+    deepgram_models:
+      type: string
+      enum:
+      - deepgram/nova-2
+      - deepgram/nova-3
+    humain_models:
+      type: string
+      enum:
+      - humain/realtime
+    xai_models:
+      type: string
+      enum:
+      - xai/grok-stt
+    telnyx_models:
+      type: string
+      enum:
+      - openai/whisper-tiny
+      - openai/whisper-large-v3-turbo
+    SttErrorFrame:
+      type: object
+      description: Server-to-client frame indicating an error during transcription. The connection may be closed shortly after.
+      properties:
+        type:
+          type: string
+          const: error
+          description: Frame type identifier.
+        error:
+          type: string
+          description: Error message describing what went wrong.
+      required:
+      - type
+      - error
+    reson8_models:
+      type: string
+      enum:
+      - reson8/turns
+    speech-to-text_Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/speech-to-text_Error'
+    SttServerEvent:
+      description: Union of all server-to-client WebSocket events for STT streaming.
+      oneOf:
+      - $ref: '#/components/schemas/TranscriptFrame'
+      - $ref: '#/components/schemas/SttErrorFrame'
+      discriminator:
+        propertyName: type
+        mapping:
+          transcript: '#/components/schemas/TranscriptFrame'
+          error: '#/components/schemas/SttErrorFrame'
     speech-to-text_Error:
       required:
       - code
@@ -155,10 +184,10 @@ components:
               type: string
         meta:
           type: object
-    speechmatics_models:
+    soniox_models:
       type: string
       enum:
-      - speechmatics/standard
+      - soniox/stt-rt-v4
     TranscriptFrame:
       type: object
       description: Server-to-client frame containing a transcription result.
@@ -181,43 +210,14 @@ components:
       required:
       - type
       - transcript
-    humain_models:
-      type: string
-      enum:
-      - humain/realtime
-    reson8_models:
-      type: string
-      enum:
-      - reson8/turns
-    soniox_models:
-      type: string
-      enum:
-      - soniox/stt-rt-v4
-    SttServerEvent:
-      description: Union of all server-to-client WebSocket events for STT streaming.
-      oneOf:
-      - $ref: '#/components/schemas/TranscriptFrame'
-      - $ref: '#/components/schemas/SttErrorFrame'
-      discriminator:
-        propertyName: type
-        mapping:
-          transcript: '#/components/schemas/TranscriptFrame'
-          error: '#/components/schemas/SttErrorFrame'
-    deepgram_models:
-      type: string
-      enum:
-      - deepgram/nova-2
-      - deepgram/nova-3
     cohere_ar_stt_models:
       type: string
       enum:
       - cohere/ar-stt
-    speech-to-text_Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/speech-to-text_Error'
+    speechmatics_models:
+      type: string
+      enum:
+      - speechmatics/standard
     SttClientEvent_2:
       description: Binary audio data in mp3 or wav format.
       format: binary
@@ -257,60 +257,6 @@ components:
       schema:
         type: string
       example: Telnyx
-    language:
-      name: language
-      in: query
-      required: false
-      description: The language spoken in the audio stream. For `cohere/ar-stt`, this must be `ar` or `en` — unlike other engines, Cohere does not auto-detect the language, and rejects unsupported values including `auto`; omitting it defaults to `ar`.
-      schema:
-        type: string
-      example: en-US
-    interim_results:
-      name: interim_results
-      in: query
-      required: false
-      description: Whether to receive interim transcription results.
-      schema:
-        type: boolean
-      example: true
-    redact:
-      name: redact
-      in: query
-      required: false
-      description: Enable redaction of sensitive information (e.g., PCI data, SSN) from transcription results. Supported values depend on the transcription engine.
-      schema:
-        type: string
-      example: pci
-    input_format:
-      name: input_format
-      in: query
-      required: true
-      description: The format of input audio stream.
-      schema:
-        type: string
-        enum:
-        - mp3
-        - wav
-        - linear16
-        - linear32
-      example: mp3
-    model:
-      name: model
-      in: query
-      description: The specific model to use within the selected transcription engine.
-      schema:
-        oneOf:
-        - $ref: '#/components/schemas/azure_models'
-        - $ref: '#/components/schemas/deepgram_models'
-        - $ref: '#/components/schemas/google_models'
-        - $ref: '#/components/schemas/telnyx_models'
-        - $ref: '#/components/schemas/xai_models'
-        - $ref: '#/components/schemas/speechmatics_models'
-        - $ref: '#/components/schemas/soniox_models'
-        - $ref: '#/components/schemas/parakeet_models'
-        - $ref: '#/components/schemas/humain_models'
-        - $ref: '#/components/schemas/reson8_models'
-        - $ref: '#/components/schemas/cohere_ar_stt_models'
     transcription_engine:
       name: transcription_engine
       in: query
@@ -331,53 +277,10 @@ components:
         - Reson8
         - Cohere
       example: Telnyx
-    keywords:
-      name: keywords
-      in: query
-      required: false
-      description: Comma-separated list of keywords to boost in the transcription. The engine will prioritize recognition of these words.
-      schema:
-        type: string
-      example: Telnyx,SIP,WebRTC
-    sample_rate:
-      name: sample_rate
-      in: query
-      required: false
-      description: Audio sample rate in Hz. Required when `input_format` is a raw encoding (`linear16`, `linear32`) — those formats carry no header metadata. Ignored for container formats (`mp3`, `wav`), which self-describe their rate.
-      schema:
-        type: integer
-      example: 16000
-    endpointing:
-      name: endpointing
-      in: query
-      required: false
-      description: Silence duration (in milliseconds) that triggers end-of-speech detection. When set, the engine uses this value to determine when a speaker has stopped talking. Supported by `xAI`, `Deepgram`, `Google`, `Speechmatics`, and `Soniox`. `Soniox` accepts values between 500 and 3000. Other engines may not support this parameter.
-      schema:
-        type: integer
-      example: 500
-    language_2:
-      description: The language spoken in the audio stream.
-      example: en-US
-      in: query
-      name: language
-      required: false
-      schema:
-        type: string
-    input_format_2:
-      description: The format of input audio stream.
-      example: mp3
-      in: query
-      name: input_format
-      required: true
-      schema:
-        enum:
-        - mp3
-        - wav
-        type: string
-    model_2:
-      description: The specific model to use within the selected transcription engine.
-      in: query
+    model:
       name: model
+      in: query
+      description: The specific model to use within the selected transcription engine.
       schema:
         oneOf:
         - $ref: '#/components/schemas/azure_models'
@@ -386,6 +289,72 @@ components:
         - $ref: '#/components/schemas/telnyx_models'
         - $ref: '#/components/schemas/xai_models'
         - $ref: '#/components/schemas/speechmatics_models'
+        - $ref: '#/components/schemas/soniox_models'
+        - $ref: '#/components/schemas/parakeet_models'
+        - $ref: '#/components/schemas/humain_models'
+        - $ref: '#/components/schemas/reson8_models'
+        - $ref: '#/components/schemas/cohere_ar_stt_models'
+    keywords:
+      name: keywords
+      in: query
+      required: false
+      description: Comma-separated list of keywords to boost in the transcription. The engine will prioritize recognition of these words.
+      schema:
+        type: string
+      example: Telnyx,SIP,WebRTC
+    language:
+      name: language
+      in: query
+      required: false
+      description: The language spoken in the audio stream. For `cohere/ar-stt`, this must be `ar` or `en` — unlike other engines, Cohere does not auto-detect the language, and rejects unsupported values including `auto`; omitting it defaults to `ar`.
+      schema:
+        type: string
+      example: en-US
+    endpointing:
+      name: endpointing
+      in: query
+      required: false
+      description: Silence duration (in milliseconds) that triggers end-of-speech detection. When set, the engine uses this value to determine when a speaker has stopped talking. Supported by `xAI`, `Deepgram`, `Google`, `Speechmatics`, and `Soniox`. `Soniox` accepts values between 500 and 3000. Other engines may not support this parameter.
+      schema:
+        type: integer
+      example: 500
+    input_format:
+      name: input_format
+      in: query
+      required: true
+      description: The format of input audio stream.
+      schema:
+        type: string
+        enum:
+        - mp3
+        - wav
+        - linear16
+        - linear32
+      example: mp3
+    redact:
+      name: redact
+      in: query
+      required: false
+      description: Enable redaction of sensitive information (e.g., PCI data, SSN) from transcription results. Supported values depend on the transcription engine.
+      schema:
+        type: string
+      example: pci
+    sample_rate:
+      name: sample_rate
+      in: query
+      required: false
+      description: Audio sample rate in Hz. Required when `input_format` is a raw encoding (`linear16`, `linear32`) — those formats carry no header metadata. Ignored for container formats (`mp3`, `wav`), which self-describe their rate.
+      schema:
+        type: integer
+      example: 16000
+    interim_results:
+      name: interim_results
+      in: query
+      required: false
+      description: Whether to receive interim transcription results.
+      schema:
+        type: boolean
+      example: true
     transcription_engine_2:
       description: The transcription engine to use for processing the audio stream.
       example: Telnyx
@@ -401,6 +370,26 @@ components:
         - xAI
         - Speechmatics
         type: string
+    model_2:
+      description: The specific model to use within the selected transcription engine.
+      in: query
+      name: model
+      schema:
+        oneOf:
+        - $ref: '#/components/schemas/azure_models'
+        - $ref: '#/components/schemas/deepgram_models'
+        - $ref: '#/components/schemas/google_models'
+        - $ref: '#/components/schemas/telnyx_models'
+        - $ref: '#/components/schemas/xai_models'
+        - $ref: '#/components/schemas/speechmatics_models'
+    language_2:
+      description: The language spoken in the audio stream.
+      example: en-US
+      in: query
+      name: language
+      required: false
+      schema:
+        type: string
     endpointing_2:
       description: Silence duration (in milliseconds) that triggers end-of-speech detection. When set, the engine uses this value to determine when a speaker has stopped talking. Supported by `xAI`, `Deepgram`, `Google`, and `Speechmatics`. Other engines may not support this parameter.
       example: 500
@@ -409,6 +398,17 @@ components:
       required: false
       schema:
         type: integer
+    input_format_2:
+      description: The format of input audio stream.
+      example: mp3
+      in: query
+      name: input_format
+      required: true
+      schema:
+        enum:
+        - mp3
+        - wav
+        type: string
     language_3:
       name: language
       in: query
@@ -417,14 +417,6 @@ components:
       schema:
         type: string
       example: en-US
-    sample_rate_2:
-      name: sample_rate
-      in: query
-      required: false
-      description: Audio sample rate in Hz. Required when `input_format` is a raw encoding (`linear16`, `linear32`) — those formats carry no header metadata. Ignored for container formats (`mp3`, `wav`), which self-describe their rate. `speechmatics/linden-1` accepts only `16000`.
-      schema:
-        type: integer
-      example: 16000
     endpointing_3:
       name: endpointing
       in: query
@@ -433,6 +425,14 @@ components:
       schema:
         type: integer
       example: 500
+    sample_rate_2:
+      name: sample_rate
+      in: query
+      required: false
+      description: Audio sample rate in Hz. Required when `input_format` is a raw encoding (`linear16`, `linear32`) — those formats carry no header metadata. Ignored for container formats (`mp3`, `wav`), which self-describe their rate. `speechmatics/linden-1` accepts only `16000`.
+      schema:
+        type: integer
+      example: 16000
   responses:
     speech-to-text_UnprocessableEntityResponse:
       description: Unprocessable entity. The request was well-formed but could not be processed due to semantic errors. This includes validation errors, invalid parameter values and business logic violations.

@@ -177,25 +177,121 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
+  responses:
+    PayloadTooLargeResponse:
+      description: Request body exceeds the 8,000,000-byte limit for this endpoint.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10007'
+              title: Unexpected error
+              detail: An unexpected error occured.
+    email_UnauthorizedResponse:
+      description: Not authorized (10006).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10006'
+              title: Not authorized
+              detail: Invalid API key
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10006
+    IdempotencyConflictResponse:
+      description: A request with the same Idempotency-Key is still being processed (10036). Retry later with the same key and request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10036'
+              title: Resource is being processed
+              detail: A request with this Idempotency-Key is already being processed.
+              source:
+                pointer: /header/Idempotency-Key
+    email_InternalServerErrorResponse:
+      description: Internal server error (10019).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10019'
+              title: Internal Server Error
+              detail: Failed to create batch validation
+    email_ServiceUnavailableResponse:
+      description: Service unavailable (10016), including an unavailable upstream dependency or unavailable Edge idempotency protection for a keyed request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10016'
+              title: Service Unavailable
+              detail: The email domain service is temporarily unavailable. Please try again later.
+    email_NotFoundResponse:
+      description: Resource not found (10001).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10001'
+              title: Not Found
+              detail: The requested resource was not found
   schemas:
-    CreateEmailValidationBatchRequest:
+    CreateEmailValidationRequest:
       type: object
       properties:
-        emails:
-          type: array
-          minItems: 1
-          maxItems: 1000
-          items:
-            type: string
-            description: Email address to validate. Any string is accepted; validation results indicate whether the address is valid. Blank strings are discarded and counted in duplicates_removed; if all entries are blank, returns 400.
-        webhook_url:
+        email:
           type: string
-          format: uri
-          maxLength: 2048
-          pattern: ^https?://
-          description: URL for batch completion webhook. Empty string is treated as omitted. SSRF-protected; private/reserved IPs and internal hostnames are rejected.
+          description: Email address to validate. Any non-empty string is accepted; invalid syntax returns valid=false rather than a request error.
       required:
-      - emails
+      - email
+    EmailValidationBatchDetailResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailValidationBatchDetail'
+      required:
+      - data
+    EmailValidationResult:
+      type: object
+      properties:
+        email:
+          type: string
+        valid:
+          type: boolean
+        risk_score:
+          type: number
+          format: float
+          minimum: 0
+        did_you_mean:
+          type: string
+          description: Suggested correction for typo. Omitted when nil.
+        checks:
+          $ref: '#/components/schemas/EmailValidationChecks'
+      required:
+      - email
+      - valid
+      - risk_score
+      - checks
+    EmailValidationResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailValidation'
+      required:
+      - data
     ErrorObject:
       type: object
       properties:
@@ -238,13 +334,14 @@ components:
       - code
       - title
       - detail
-    EmailValidationBatchStatus:
-      type: string
-      enum:
-      - pending
-      - processing
-      - completed
-      - failed
+    EmailValidationTypoCheck:
+      allOf:
+      - $ref: '#/components/schemas/EmailValidationCheck'
+      - type: object
+        properties:
+          suggestion:
+            type: string
+            description: Suggested correction for common typos. Omitted when nil.
     EmailValidationChecks:
       type: object
       properties:
@@ -264,13 +361,38 @@ components:
       - disposable
       - role_based
       - typo
-    EmailValidationResponse:
+    email_ErrorResponse:
       type: object
       properties:
-        data:
-          $ref: '#/components/schemas/EmailValidation'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorObject'
+        suppressed:
+          type: array
+          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
       required:
-      - data
+      - errors
+    CreateEmailValidationBatchRequest:
+      type: object
+      properties:
+        emails:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items:
+            type: string
+            description: Email address to validate. Any string is accepted; validation results indicate whether the address is valid. Blank strings are discarded and counted in duplicates_removed; if all entries are blank, returns 400.
+        webhook_url:
+          type: string
+          format: uri
+          maxLength: 2048
+          pattern: ^https?://
+          description: URL for batch completion webhook. Empty string is treated as omitted. SSRF-protected; private/reserved IPs and internal hostnames are rejected.
+      required:
+      - emails
     EmailValidationBatchDetail:
       description: Shape returned by the GET endpoint. Does not include duplicates_removed.
       allOf:
@@ -304,27 +426,13 @@ components:
         - id
         - status
         - total
-    EmailValidationCheck:
+    EmailValidation:
       type: object
       properties:
-        pass:
-          type: boolean
-        details:
+        record_type:
           type: string
-          description: Human-readable check detail. Omitted when nil.
-      required:
-      - pass
-    CreateEmailValidationRequest:
-      type: object
-      properties:
-        email:
-          type: string
-          description: Email address to validate. Any non-empty string is accepted; invalid syntax returns valid=false rather than a request error.
-      required:
-      - email
-    EmailValidationResult:
-      type: object
-      properties:
+          enum:
+          - email_validation
         email:
           type: string
         valid:
@@ -339,10 +447,56 @@ components:
         checks:
           $ref: '#/components/schemas/EmailValidationChecks'
       required:
+      - record_type
       - email
       - valid
       - risk_score
       - checks
+    SuppressedRecipient:
+      type: object
+      properties:
+        to:
+          type: string
+          format: email
+          description: Suppressed recipient email address.
+        reason:
+          type: string
+          description: Suppression reason returned by the recipient suppression service.
+        scope:
+          type: string
+          description: Scope at which the suppression applies.
+        override_allowed:
+          type: boolean
+          description: Whether an authorized send may override this suppression.
+      required:
+      - to
+      - reason
+      - scope
+      - override_allowed
+    EmailValidationBatchResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailValidationBatch'
+      required:
+      - data
+    EmailValidationBatchStatus:
+      type: string
+      enum:
+      - pending
+      - processing
+      - completed
+      - failed
+    EmailValidationCheck:
+      type: object
+      properties:
+        pass:
+          type: boolean
+        details:
+          type: string
+          description: Human-readable check detail. Omitted when nil.
+      required:
+      - pass
     EmailValidationBatch:
       type: object
       description: Shape returned by the create endpoint. Includes duplicates_removed.
@@ -371,168 +525,6 @@ components:
       - status
       - total
       - duplicates_removed
-    EmailValidation:
-      type: object
-      properties:
-        record_type:
-          type: string
-          enum:
-          - email_validation
-        email:
-          type: string
-        valid:
-          type: boolean
-        risk_score:
-          type: number
-          format: float
-          minimum: 0
-        did_you_mean:
-          type: string
-          description: Suggested correction for typo. Omitted when nil.
-        checks:
-          $ref: '#/components/schemas/EmailValidationChecks'
-      required:
-      - record_type
-      - email
-      - valid
-      - risk_score
-      - checks
-    EmailValidationTypoCheck:
-      allOf:
-      - $ref: '#/components/schemas/EmailValidationCheck'
-      - type: object
-        properties:
-          suggestion:
-            type: string
-            description: Suggested correction for common typos. Omitted when nil.
-    EmailValidationBatchResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/EmailValidationBatch'
-      required:
-      - data
-    email_ErrorResponse:
-      type: object
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/ErrorObject'
-        suppressed:
-          type: array
-          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
-          items:
-            $ref: '#/components/schemas/SuppressedRecipient'
-      required:
-      - errors
-    SuppressedRecipient:
-      type: object
-      properties:
-        to:
-          type: string
-          format: email
-          description: Suppressed recipient email address.
-        reason:
-          type: string
-          description: Suppression reason returned by the recipient suppression service.
-        scope:
-          type: string
-          description: Scope at which the suppression applies.
-        override_allowed:
-          type: boolean
-          description: Whether an authorized send may override this suppression.
-      required:
-      - to
-      - reason
-      - scope
-      - override_allowed
-    EmailValidationBatchDetailResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/EmailValidationBatchDetail'
-      required:
-      - data
-  responses:
-    PayloadTooLargeResponse:
-      description: Request body exceeds the 8,000,000-byte limit for this endpoint.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/email_ErrorResponse'
-          example:
-            errors:
-            - code: '10007'
-              title: Unexpected error
-              detail: An unexpected error occured.
-    email_UnauthorizedResponse:
-      description: Not authorized (10006).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/email_ErrorResponse'
-          example:
-            errors:
-            - code: '10006'
-              title: Not authorized
-              detail: Invalid API key
-              meta:
-                url: https://developers.telnyx.com/docs/overview/errors/10006
-    email_NotFoundResponse:
-      description: Resource not found (10001).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/email_ErrorResponse'
-          example:
-            errors:
-            - code: '10001'
-              title: Not Found
-              detail: The requested resource was not found
-    IdempotencyConflictResponse:
-      description: A request with the same Idempotency-Key is still being processed (10036). Retry later with the same key and request.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/email_ErrorResponse'
-          example:
-            errors:
-            - code: '10036'
-              title: Resource is being processed
-              detail: A request with this Idempotency-Key is already being processed.
-              source:
-                pointer: /header/Idempotency-Key
-    email_ServiceUnavailableResponse:
-      description: Service unavailable (10016), including an unavailable upstream dependency or unavailable Edge idempotency protection for a keyed request.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/email_ErrorResponse'
-          example:
-            errors:
-            - code: '10016'
-              title: Service Unavailable
-              detail: The email domain service is temporarily unavailable. Please try again later.
-    email_InternalServerErrorResponse:
-      description: Internal server error (10019).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/email_ErrorResponse'
-          example:
-            errors:
-            - code: '10019'
-              title: Internal Server Error
-              detail: Failed to create batch validation
-  headers:
-    IdempotentReplayed:
-      description: Present with value `true` when Edge replayed a stored successful response for the supplied Idempotency-Key. Omitted for first-time requests and error responses.
-      schema:
-        type: boolean
-        enum:
-        - true
-        example: true
   parameters:
     BatchId:
       name: id
@@ -553,6 +545,14 @@ components:
         maxLength: 255
         pattern: ^[A-Za-z0-9_-]{1,255}$
       example: 8e03978e-40d5-43e8-bc93-6894a57f9326
+  headers:
+    IdempotentReplayed:
+      description: Present with value `true` when Edge replayed a stored successful response for the supplied Idempotency-Key. Omitted for first-time requests and error responses.
+      schema:
+        type: boolean
+        enum:
+        - true
+        example: true
   securitySchemes:
     BearerAuth:
       type: http

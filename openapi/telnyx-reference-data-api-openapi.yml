@@ -125,7 +125,65 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
+  responses:
+    branded-calling_GenericErrorResponse:
+      description: An error occurred. The response carries the standard Telnyx error envelope.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/branded-calling_Errors'
+          examples:
+            validation_error:
+              summary: 422 - request body failed validation
+              value:
+                errors:
+                - code: '10005'
+                  title: Invalid parameters
+                  detail: field required
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10005
+                  source:
+                    pointer: /body/legal_name
+            bad_request:
+              summary: 400 - request rejected by a state guard
+              description: Returned when the request itself is well-formed but the resource is in a state that disallows this action (e.g. updating a DIR while it is being vetted, or deleting an enterprise that still has DIRs in vetting).
+              value:
+                errors:
+                - code: '10015'
+                  title: Bad Request
+                  detail: Cannot update DIR in 'verified' status
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10015
+            not_found:
+              summary: 404 - resource does not exist or is not yours
+              value:
+                errors:
+                - code: '10009'
+                  title: Resource not found
+                  detail: Enterprise not found.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10009
+            conflict:
+              summary: 409 - request conflicts with current resource state
+              value:
+                errors:
+                - code: '10021'
+                  title: Resource in use
+                  detail: DIR has 1 active infringement claim(s). Resolve the claim before making this change.
+                  meta:
+                    url: https://developers.telnyx.com/docs/overview/errors/10021
   schemas:
+    ValidateCallReasonsRequest:
+      type: array
+      description: '**Bare JSON array** of candidate call-reason strings (NOT an object - there is no top-level `call_reasons` key on this endpoint). 1–10 strings, each ≤64 characters.'
+      items:
+        type: string
+        maxLength: 64
+      minItems: 1
+      maxItems: 10
+      example:
+      - Appointment reminders
+      - Billing inquiries
     DocumentTypeReferenceList:
       type: object
       required:
@@ -138,6 +196,31 @@ components:
             $ref: '#/components/schemas/DocumentTypeReference'
         meta:
           $ref: '#/components/schemas/branded-calling_PaginationMeta'
+    branded-calling_PaginationMeta:
+      type: object
+      required:
+      - total_pages
+      - total_results
+      - page_number
+      - page_size
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+          description: Total number of pages available given the current `page_size`.
+        total_results:
+          type: integer
+          example: 42
+          description: Total number of items across all pages (excludes soft-deleted rows).
+        page_number:
+          type: integer
+          example: 1
+          description: 1-based index of this page. Echoes the `page[number]` query parameter (default `1`).
+        page_size:
+          type: integer
+          example: 20
+          description: Number of items returned in this page's `data` array. Capped at 250.
+      description: JSON:API pagination metadata returned with every paginated list response. Page numbering is 1-based. `page_size` reports the number of items actually returned in `data` for this page; the requested size is taken from the `page[size]` query parameter.
     CallReasonReferenceList:
       type: object
       required:
@@ -150,56 +233,6 @@ components:
             $ref: '#/components/schemas/CallReasonReference'
         meta:
           $ref: '#/components/schemas/branded-calling_PaginationMeta'
-    branded-calling_Errors:
-      type: object
-      required:
-      - errors
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/branded-calling_Error'
-          description: List of one or more error entries. Order is not significant.
-      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
-    ValidateCallReasonsRequest:
-      type: array
-      description: '**Bare JSON array** of candidate call-reason strings (NOT an object - there is no top-level `call_reasons` key on this endpoint). 1–10 strings, each ≤64 characters.'
-      items:
-        type: string
-        maxLength: 64
-      minItems: 1
-      maxItems: 10
-      example:
-      - Appointment reminders
-      - Billing inquiries
-    ValidateCallReasonsResponse:
-      type: object
-      required:
-      - data
-      properties:
-        data:
-          type: object
-          required:
-          - all_pre_approved
-          - non_approved_reasons
-          - requires_manual_vetting
-          properties:
-            all_pre_approved:
-              type: boolean
-              description: '`true` when every supplied reason matches a pre-vetted entry in the call-reason library. When `true`, the DIR will sail through the call-reasons portion of vetting.'
-              example: false
-            non_approved_reasons:
-              type: array
-              items:
-                type: string
-              description: Subset of the input that does NOT match the pre-vetted library. The DIR can still be submitted with these - they will go through manual review.
-              example:
-              - Appointment reminders
-              - Billing inquiries
-            requires_manual_vetting:
-              type: boolean
-              description: '`true` when at least one supplied reason is in `non_approved_reasons`. Equivalent to `non_approved_reasons.length > 0` and the inverse of `all_pre_approved`.'
-              example: true
     branded-calling_Error:
       type: object
       required:
@@ -257,42 +290,6 @@ components:
               type: string
               example: page[size]
       description: A single entry in the canonical Telnyx error envelope. `code` is the stable Telnyx error catalog id; the human-readable explanation lives at `meta.url`. `detail` is a context-specific message; `source.pointer` (when present) names the offending field of the request.
-    branded-calling_PaginationMeta:
-      type: object
-      required:
-      - total_pages
-      - total_results
-      - page_number
-      - page_size
-      properties:
-        total_pages:
-          type: integer
-          example: 3
-          description: Total number of pages available given the current `page_size`.
-        total_results:
-          type: integer
-          example: 42
-          description: Total number of items across all pages (excludes soft-deleted rows).
-        page_number:
-          type: integer
-          example: 1
-          description: 1-based index of this page. Echoes the `page[number]` query parameter (default `1`).
-        page_size:
-          type: integer
-          example: 20
-          description: Number of items returned in this page's `data` array. Capped at 250.
-      description: JSON:API pagination metadata returned with every paginated list response. Page numbering is 1-based. `page_size` reports the number of items actually returned in `data` for this page; the requested size is taken from the `page[size]` query parameter.
-    DocumentTypeReference:
-      type: object
-      description: Single supported document type.
-      properties:
-        short_name:
-          type: string
-          description: Stable identifier passed to `Document.document_type`.
-          example: letter_of_authorization
-        description:
-          type: string
-          example: Signed authorization from the DIR owner permitting Telnyx to register the DIR and its associated numbers on their behalf
     CallReasonReference:
       type: object
       description: Pre-vetted call-reason library entry.
@@ -308,6 +305,56 @@ components:
         description:
           type: string
           example: Alert about account status or changes
+    branded-calling_Errors:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/branded-calling_Error'
+          description: List of one or more error entries. Order is not significant.
+      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
+    DocumentTypeReference:
+      type: object
+      description: Single supported document type.
+      properties:
+        short_name:
+          type: string
+          description: Stable identifier passed to `Document.document_type`.
+          example: letter_of_authorization
+        description:
+          type: string
+          example: Signed authorization from the DIR owner permitting Telnyx to register the DIR and its associated numbers on their behalf
+    ValidateCallReasonsResponse:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          type: object
+          required:
+          - all_pre_approved
+          - non_approved_reasons
+          - requires_manual_vetting
+          properties:
+            all_pre_approved:
+              type: boolean
+              description: '`true` when every supplied reason matches a pre-vetted entry in the call-reason library. When `true`, the DIR will sail through the call-reasons portion of vetting.'
+              example: false
+            non_approved_reasons:
+              type: array
+              items:
+                type: string
+              description: Subset of the input that does NOT match the pre-vetted library. The DIR can still be submitted with these - they will go through manual review.
+              example:
+              - Appointment reminders
+              - Billing inquiries
+            requires_manual_vetting:
+              type: boolean
+              description: '`true` when at least one supplied reason is in `non_approved_reasons`. Equivalent to `non_approved_reasons.length > 0` and the inverse of `all_pre_approved`.'
+              example: true
   parameters:
     BcPageNumber:
       name: page[number]
@@ -319,53 +366,6 @@ components:
         minimum: 1
         default: 1
         example: 1
-  responses:
-    branded-calling_GenericErrorResponse:
-      description: An error occurred. The response carries the standard Telnyx error envelope.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/branded-calling_Errors'
-          examples:
-            validation_error:
-              summary: 422 - request body failed validation
-              value:
-                errors:
-                - code: '10005'
-                  title: Invalid parameters
-                  detail: field required
-                  meta:
-                    url: https://developers.telnyx.com/docs/overview/errors/10005
-                  source:
-                    pointer: /body/legal_name
-            bad_request:
-              summary: 400 - request rejected by a state guard
-              description: Returned when the request itself is well-formed but the resource is in a state that disallows this action (e.g. updating a DIR while it is being vetted, or deleting an enterprise that still has DIRs in vetting).
-              value:
-                errors:
-                - code: '10015'
-                  title: Bad Request
-                  detail: Cannot update DIR in 'verified' status
-                  meta:
-                    url: https://developers.telnyx.com/docs/overview/errors/10015
-            not_found:
-              summary: 404 - resource does not exist or is not yours
-              value:
-                errors:
-                - code: '10009'
-                  title: Resource not found
-                  detail: Enterprise not found.
-                  meta:
-                    url: https://developers.telnyx.com/docs/overview/errors/10009
-            conflict:
-              summary: 409 - request conflicts with current resource state
-              value:
-                errors:
-                - code: '10021'
-                  title: Resource in use
-                  detail: DIR has 1 active infringement claim(s). Resolve the claim before making this change.
-                  meta:
-                    url: https://developers.telnyx.com/docs/overview/errors/10021
   securitySchemes:
     BearerAuth:
       type: http

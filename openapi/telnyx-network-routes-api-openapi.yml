@@ -1,0 +1,596 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Network Routes API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Network Routes
+  description: Routes on a Network that send a CIDR to a next hop, such as a tunnel.
+paths:
+  /network_routes:
+    get:
+      summary: List all Network Routes
+      operationId: ListNetworkRoutes
+      tags:
+      - Network Routes
+      description: 'Lists the routes of the account''s Networks. A Network''s list is its effective route table: the routes added with `POST /network_routes` (`origin` `static`) and the routes that its attachments install (`origin` `attachment`). Lookup is longest prefix within the Network.'
+      parameters:
+      - name: filter
+        in: query
+        style: deepObject
+        explode: true
+        description: 'Consolidated filter parameter (deepObject style). Originally: filter[network_id], filter[origin], filter[next_hop.type], filter[cidr], filter[status]'
+        schema:
+          type: object
+          required:
+          - network_id
+          properties:
+            network_id:
+              type: string
+              format: uuid
+              description: The id of the Network whose route table is returned. Required.
+              example: 91446ee3-5b1c-4f0e-8d2a-6c7e9b0a1f24
+            origin:
+              type: string
+              enum:
+              - static
+              - attachment
+              description: Only routes of this origin.
+              example: static
+            next_hop.type:
+              type: string
+              enum:
+              - tunnel
+              - wireguard_peer
+              - wireguard_interface
+              - private_wireless_gateway
+              - virtual_cross_connect
+              - ipsec_tunnel
+              - public_internet_gateway
+              description: Only routes whose next hop has this type.
+              example: tunnel
+            cidr:
+              type: string
+              description: Only routes with this CIDR.
+              example: 10.20.0.0/16
+            status:
+              type: string
+              enum:
+              - pending
+              - active
+              - inactive
+              - failed
+              description: Only routes with this status.
+              example: active
+        required: true
+      - name: sort
+        in: query
+        description: Sorts the results by a field, ascending, or descending with a leading `-`. The default is `-created_at`.
+        schema:
+          type: string
+          enum:
+          - cidr
+          - -cidr
+          - status
+          - -status
+          - created_at
+          - -created_at
+          example: -created_at
+      - $ref: '#/components/parameters/PageCursorConsolidated'
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/NetworkRoute'
+                  meta:
+                    $ref: '#/components/schemas/netapps_CursorPaginationMeta'
+              example:
+                data:
+                - id: b6a10cb9-2d4e-4f61-9a3b-7e5c8d1f0a26
+                  record_type: network_route
+                  network_id: 91446ee3-5b1c-4f0e-8d2a-6c7e9b0a1f24
+                  cidr: 172.27.0.0/24
+                  next_hop:
+                    type: wireguard_interface
+                    id: b6a10cb9-2d4e-4f61-9a3b-7e5c8d1f0a26
+                  origin: attachment
+                  status: active
+                  created_at: '2026-10-21T15:04:05.123456Z'
+                - id: e8a2c5d0-3f7b-4a19-b6d2-9c1e0f8a7b53
+                  record_type: network_route
+                  network_id: 91446ee3-5b1c-4f0e-8d2a-6c7e9b0a1f24
+                  cidr: 10.20.0.0/16
+                  next_hop:
+                    type: tunnel
+                    id: 62d438d2-8a51-4c5e-9d0c-1f6b2a7e4c39
+                  origin: static
+                  status: active
+                  created_at: '2026-10-21T15:04:05.123456Z'
+                meta:
+                  cursors: {}
+        '422':
+          description: 'Unprocessable entity: `filter[network_id]` is missing, or a query parameter is not valid, such as an unsupported `sort` field.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10022'
+                  title: Unprocessable Entity
+                  detail: filter[network_id] is required
+                  source:
+                    parameter: filter[network_id]
+        default:
+          $ref: '#/components/responses/GenericErrorResponse'
+    post:
+      summary: Create a Network Route
+      operationId: CreateNetworkRoute
+      tags:
+      - Network Routes
+      description: Adds a route to a Network. Traffic on the Network to an address in `cidr` goes via `next_hop`. With a tunnel as the next hop, functions on the Network reach the CIDR through the tunnel without a redeploy. A Network holds each CIDR once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NetworkRouteCreate'
+            example:
+              network_id: 91446ee3-5b1c-4f0e-8d2a-6c7e9b0a1f24
+              cidr: 10.20.0.0/16
+              next_hop:
+                type: tunnel
+                id: 62d438d2-8a51-4c5e-9d0c-1f6b2a7e4c39
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/NetworkRoute'
+              example:
+                data:
+                  id: e8a2c5d0-3f7b-4a19-b6d2-9c1e0f8a7b53
+                  record_type: network_route
+                  network_id: 91446ee3-5b1c-4f0e-8d2a-6c7e9b0a1f24
+                  cidr: 10.20.0.0/16
+                  next_hop:
+                    type: tunnel
+                    id: 62d438d2-8a51-4c5e-9d0c-1f6b2a7e4c39
+                  origin: static
+                  status: pending
+                  created_at: '2026-10-21T15:04:05.123456Z'
+        '404':
+          description: 'Not found: no tunnel with the `next_hop.id` exists on the account.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10020'
+                  title: Resource not found
+                  detail: tunnel 62d438d2-8a51-4c5e-9d0c-1f6b2a7e4c39 not found
+        '409':
+          description: 'Conflict: the Network already has a route for this CIDR.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10021'
+                  title: Resource conflict
+                  detail: 'create route: resource already exists'
+        '422':
+          description: 'Unprocessable entity: the body failed validation. `source.pointer` names the field.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10022'
+                  title: Unprocessable Entity
+                  detail: cidr must be a valid CIDR range (e.g. 10.20.0.0/16)
+                  source:
+                    pointer: /cidr
+        default:
+          $ref: '#/components/responses/GenericErrorResponse'
+  /network_routes/{id}:
+    delete:
+      summary: Delete a Network Route
+      operationId: DeleteNetworkRoute
+      tags:
+      - Network Routes
+      description: Deletes a route that was added with `POST /network_routes`. Traffic to its CIDR stops going via the next hop at once. Routes that an attachment installs (`origin` `attachment`) leave with the attachment and cannot be deleted here.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: The id of the route.
+        schema:
+          type: string
+          format: uuid
+          example: e8a2c5d0-3f7b-4a19-b6d2-9c1e0f8a7b53
+      responses:
+        '204':
+          description: Deleted.
+        '404':
+          description: 'Not found: no route with this id exists on the account.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10020'
+                  title: Resource not found
+                  detail: 'get route: not found'
+        '409':
+          description: 'Conflict: the route was installed by an attachment.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10021'
+                  title: Resource conflict
+                  detail: network_route b6a10cb9-2d4e-4f61-9a3b-7e5c8d1f0a26 was installed by an attachment (wireguard_interface on network 91446ee3-5b1c-4f0e-8d2a-6c7e9b0a1f24); it is read-only and is removed with the attachment
+        default:
+          $ref: '#/components/responses/GenericErrorResponse'
+    get:
+      summary: Retrieve a Network Route
+      operationId: GetNetworkRoute
+      tags:
+      - Network Routes
+      description: Retrieves a route and its status.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: The id of the route.
+        schema:
+          type: string
+          format: uuid
+          example: e8a2c5d0-3f7b-4a19-b6d2-9c1e0f8a7b53
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/NetworkRoute'
+              example:
+                data:
+                  id: e8a2c5d0-3f7b-4a19-b6d2-9c1e0f8a7b53
+                  record_type: network_route
+                  network_id: 91446ee3-5b1c-4f0e-8d2a-6c7e9b0a1f24
+                  cidr: 10.20.0.0/16
+                  next_hop:
+                    type: tunnel
+                    id: 62d438d2-8a51-4c5e-9d0c-1f6b2a7e4c39
+                  origin: static
+                  status: active
+                  created_at: '2026-10-21T15:04:05.123456Z'
+        '404':
+          description: 'Not found: no route with this id exists on the account.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+              example:
+                errors:
+                - code: '10020'
+                  title: Resource not found
+                  detail: 'get route: not found'
+        default:
+          $ref: '#/components/responses/GenericErrorResponse'
+components:
+  schemas:
+    NetworkRoute:
+      type: object
+      title: NetworkRoute
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Identifies the resource.
+          example: e8a2c5d0-3f7b-4a19-b6d2-9c1e0f8a7b53
+        record_type:
+          type: string
+          readOnly: true
+          description: Identifies the type of the resource.
+          example: network_route
+        network_id:
+          type: string
+          format: uuid
+          description: The id of the Network the route belongs to.
+          example: 91446ee3-5b1c-4f0e-8d2a-6c7e9b0a1f24
+        cidr:
+          type: string
+          description: The IPv4 CIDR the route covers.
+          example: 10.20.0.0/16
+        next_hop:
+          $ref: '#/components/schemas/NetworkRouteNextHop'
+        origin:
+          type: string
+          enum:
+          - static
+          - attachment
+          readOnly: true
+          description: '`static` for a route added with `POST /network_routes`, `attachment` for a route that another resource installed and removes.'
+          example: static
+        status:
+          type: string
+          enum:
+          - pending
+          - active
+          - inactive
+          - failed
+          readOnly: true
+          description: '`pending` until Telnyx installs the route on the Network, then `active`. `inactive` while a tunnel next hop has no connected process. `failed` (Preview, not reported yet) when Telnyx could not install the route.'
+          example: active
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: ISO 8601 formatted date-time indicating when the resource was created.
+          example: '2026-10-21T15:04:05.123456Z'
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+      type: object
+    Error:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+          x-format: int64
+        title:
+          type: string
+        detail:
+          type: string
+          description: A human-readable explanation of the error.
+        description:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          additionalProperties: true
+      example:
+        title: Invalid street address
+        source:
+          pointer: /street_address
+        code: '20207'
+        description: The street address provided is invalid.
+      type: object
+    NetworkRouteNextHop:
+      type: object
+      title: NetworkRouteNextHop
+      required:
+      - type
+      - id
+      description: Where the Network sends traffic for the route's CIDR.
+      properties:
+        type:
+          type: string
+          enum:
+          - tunnel
+          - wireguard_peer
+          - wireguard_interface
+          - private_wireless_gateway
+          - virtual_cross_connect
+          - ipsec_tunnel
+          - public_internet_gateway
+          description: The type of the next hop. Routes added with `POST /network_routes` use `tunnel`. Routes that attachments install carry the attachment's type.
+          example: tunnel
+        id:
+          type: string
+          format: uuid
+          description: The id of the tunnel or attachment.
+          example: 62d438d2-8a51-4c5e-9d0c-1f6b2a7e4c39
+    NetworkRouteCreate:
+      type: object
+      title: NetworkRouteCreate
+      required:
+      - network_id
+      - cidr
+      - next_hop
+      properties:
+        network_id:
+          type: string
+          format: uuid
+          description: The id of the Network to add the route to.
+          example: 91446ee3-5b1c-4f0e-8d2a-6c7e9b0a1f24
+        cidr:
+          type: string
+          description: The IPv4 subnet to route, such as a subnet behind the tunnel. It must be a canonical CIDR. Default, loopback, link-local, multicast, and shared address space (`100.64.0.0/10`) ranges are rejected. So are ranges that overlap the Tailscale Subnet Router ranges, `172.27.254.0/24` and `198.18.0.0/20`, or a subnet already on the Network.
+          example: 10.20.0.0/16
+        next_hop:
+          type: object
+          required:
+          - type
+          - id
+          description: Where the Network sends traffic for `cidr`.
+          properties:
+            type:
+              type: string
+              enum:
+              - tunnel
+              description: The type of the next hop.
+              example: tunnel
+            id:
+              type: string
+              format: uuid
+              description: The id of the tunnel.
+              example: 62d438d2-8a51-4c5e-9d0c-1f6b2a7e4c39
+    netapps_CursorPaginationMeta:
+      type: object
+      title: CursorPaginationMeta
+      properties:
+        cursors:
+          type: object
+          description: Opaque cursors. Absent keys mean there is no such page.
+          properties:
+            after:
+              type: string
+              description: Pass as `page[after]` to fetch the next page. Absent on the last page.
+            before:
+              type: string
+              description: The cursor of the previous page. Present when the request used `page[after]`.
+        next:
+          type: string
+          description: The path of the next page, with the same query parameters. Absent on the last page.
+          example: /v2/network_routes?filter%5Bnetwork_id%5D=91446ee3-5b1c-4f0e-8d2a-6c7e9b0a1f24&page%5Bafter%5D=MjAyNi0xMC0yMVQxNjowNjowMC4wNDMwNDRa&page%5Blimit%5D=1
+        previous:
+          type: string
+          description: The path of the previous page. Present when the request used `page[after]`.
+  responses:
+    GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+  parameters:
+    PageCursorConsolidated:
+      name: page
+      in: query
+      style: deepObject
+      explode: true
+      description: 'Consolidated page parameter (deepObject style). Originally: page[after], page[limit]'
+      schema:
+        type: object
+        properties:
+          after:
+            type: string
+            description: The cursor from `meta.cursors.after` of the previous page.
+          limit:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+            description: The number of results per page.
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pay-connectors_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key, not the processor bearer token.
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    telnyxApiKey:
+      type: http
+      scheme: bearer
+      description: Management-only Telnyx account credential.
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

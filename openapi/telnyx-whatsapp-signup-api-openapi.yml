@@ -1,0 +1,567 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Whatsapp Signup API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Whatsapp Signup
+paths:
+  /whatsapp/hosted_signups:
+    get:
+      tags:
+      - Whatsapp Signup
+      summary: List Whatsapp hosted signups
+      operationId: ListWhatsappHostedSignups
+      parameters:
+      - $ref: '#/components/parameters/PageConsolidated'
+      responses:
+        '200':
+          description: Whatsapp hosted signups list
+          $ref: '#/components/responses/WhatsappHostedSignupListResponse'
+        4XX:
+          $ref: '#/components/responses/management_messaging_GenericErrorResponse'
+      x-latency-category: responsive
+      description: List hosted signups created by the account, newest first. Expired hosted signups are included.
+    post:
+      tags:
+      - Whatsapp Signup
+      summary: Create a Whatsapp hosted signup
+      operationId: CreateWhatsappHostedSignup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WhatsappHostedSignupCreateRequest'
+            example:
+              app_id: '123456789012345'
+              signup_type: coexistence
+      responses:
+        '200':
+          description: Hosted signup created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/WhatsappHostedSignup'
+              example:
+                data:
+                  id: 0192345a-7b8c-7d9e-0f12-3456789abcde
+                  record_type: whatsapp_jwt
+                  app_id: '123456789012345'
+                  created_at: '2026-07-08T12:00:00Z'
+                  expires_at: '2026-07-09T12:00:00Z'
+                  jwt: eyJhbGciOiJSUzI1NiIs...
+                  url: https://acct.fyi?token=eyJhbGciOiJSUzI1NiIs...
+                  solution_id: '987654321098765'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/messaging_Errors'
+              example:
+                errors:
+                - code: '10015'
+                  title: Bad request
+                  detail: expires_at must be at most 3 days in the future
+        4XX:
+          $ref: '#/components/responses/management_messaging_GenericErrorResponse'
+      x-latency-category: responsive
+      description: Create a time-limited onboarding URL on the Telnyx-hosted Embedded Signup page for a Tech Provider's end customer. Set `signup_type` to `coexistence` to launch Meta's WhatsApp Business app coexistence flow instead of standard Cloud API onboarding.
+  /whatsapp/hosted_signups/{id}:
+    get:
+      tags:
+      - Whatsapp Signup
+      summary: Get a Whatsapp hosted signup
+      operationId: GetWhatsappHostedSignup
+      parameters:
+      - $ref: '#/components/parameters/WhatsappHostedSignupId'
+      responses:
+        '200':
+          description: Whatsapp hosted signup
+          $ref: '#/components/responses/WhatsappHostedSignupResponse'
+        '404':
+          description: Hosted signup not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/messaging_Errors'
+              example:
+                errors:
+                - code: '10005'
+                  title: Resource not found
+                  detail: The requested resource or URL could not be found
+        4XX:
+          $ref: '#/components/responses/management_messaging_GenericErrorResponse'
+      x-latency-category: responsive
+      description: Retrieve a hosted signup and its onboarding URL.
+  /whatsapp/signup:
+    get:
+      tags:
+      - Whatsapp Signup
+      summary: List Whatsapp signup sessions
+      operationId: ListWhatsappSignupSessions
+      parameters:
+      - $ref: '#/components/parameters/PageConsolidated'
+      - name: filter[waba_id]
+        in: query
+        schema:
+          type: string
+        description: Filter by Meta WABA ID
+      - name: filter[customer_id]
+        in: query
+        schema:
+          type: string
+        description: Filter by the tech provider customer reference
+      - name: filter[created_at][gte]
+        in: query
+        schema:
+          type: string
+          format: date-time
+        description: Return sessions created at or after this time (RFC 3339)
+      - name: filter[created_at][lte]
+        in: query
+        schema:
+          type: string
+          format: date-time
+        description: Return sessions created at or before this time (RFC 3339)
+      responses:
+        '200':
+          description: Whatsapp signup sessions list
+          $ref: '#/components/responses/WhatsappSignupSessionListResponse'
+        4XX:
+          $ref: '#/components/responses/management_messaging_GenericErrorResponse'
+      x-latency-category: responsive
+      description: List finished WhatsApp Embedded Signup sessions, with status `SUCCESS` or `FAILURE`, newest first. Use the `errors` of a failed session to see why provisioning stopped.
+  /whatsapp/signup/{id}/status:
+    get:
+      tags:
+      - Whatsapp Signup
+      summary: Get Whatsapp signup session status
+      operationId: GetWhatsappSignupSessionStatus
+      parameters:
+      - $ref: '#/components/parameters/WhatsappSignupSessionId'
+      responses:
+        '200':
+          description: Whatsapp signup session
+          $ref: '#/components/responses/WhatsappSignupSessionResponse'
+        '404':
+          description: Signup session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/messaging_Errors'
+              example:
+                errors:
+                - code: '10005'
+                  title: Resource not found
+                  detail: The requested resource or URL could not be found
+        4XX:
+          $ref: '#/components/responses/management_messaging_GenericErrorResponse'
+      x-latency-category: responsive
+      description: Retrieve the current state and status of a WhatsApp Embedded Signup session.
+components:
+  parameters:
+    WhatsappHostedSignupId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Hosted signup ID returned when the hosted signup was created
+    PageConsolidated:
+      name: page
+      in: query
+      style: deepObject
+      explode: true
+      description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
+      schema:
+        type: object
+        properties:
+          number:
+            type: integer
+            minimum: 1
+            default: 1
+            description: The page number to load
+          size:
+            type: integer
+            minimum: 1
+            maximum: 250
+            default: 20
+            description: The size of the page
+    WhatsappSignupSessionId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Signup session ID
+  responses:
+    management_messaging_GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors'
+          example:
+            errors:
+            - code: string
+              title: string
+              detail: string
+              source:
+                pointer: /data/attributes/phone_number
+                parameter: string
+    WhatsappHostedSignupResponse:
+      description: Successful response with a WhatsApp hosted signup
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                $ref: '#/components/schemas/WhatsappHostedSignup'
+          example:
+            data:
+              id: 0192345a-7b8c-7d9e-0f12-3456789abcde
+              record_type: whatsapp_jwt
+              app_id: '123456789012345'
+              created_at: '2026-07-08T12:00:00Z'
+              expires_at: '2026-07-09T12:00:00Z'
+              jwt: eyJhbGciOiJSUzI1NiIs...
+              url: https://acct.fyi?token=eyJhbGciOiJSUzI1NiIs...
+    WhatsappSignupSessionResponse:
+      description: Successful response with a WhatsApp signup session
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                $ref: '#/components/schemas/WhatsappSignupSession'
+          example:
+            data:
+              record_type: whatsapp_session_id
+              session_id: 019f4253-e09a-7622-bc6f-625378711d78
+              user_id: 00000000-0000-4000-8000-000000000000
+              state: SHARE_CREDIT_LINE
+              status: FAILURE
+              created_at: '2026-10-01T09:58:25Z'
+              updated_at: '2026-10-01T09:58:27Z'
+              waba_id: '123456789012345'
+              customer_id: acme-corp-42
+              errors:
+              - '[ShareCreditLine] Bad status received: Invalid parameter Credit Allocation Not Allowed During Month-End Close: This WhatsApp Business Account cannot be moved onto a credit line while the monthly billing close is running. Please try again once the close has completed, usually within the first few days of the month.'
+    WhatsappHostedSignupListResponse:
+      description: Successful response with a list of WhatsApp hosted signups
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WhatsappHostedSignup'
+              meta:
+                $ref: '#/components/schemas/messaging_PaginationMeta'
+          example:
+            data:
+            - id: 0192345a-7b8c-7d9e-0f12-3456789abcde
+              record_type: whatsapp_jwt
+              app_id: '123456789012345'
+              created_at: '2026-07-08T12:00:00Z'
+              expires_at: '2026-07-09T12:00:00Z'
+              jwt: eyJhbGciOiJSUzI1NiIs...
+              url: https://acct.fyi?token=eyJhbGciOiJSUzI1NiIs...
+            meta:
+              page_number: 1
+              page_size: 20
+              total_pages: 1
+              total_results: 1
+    WhatsappSignupSessionListResponse:
+      description: Successful response with a list of WhatsApp signup sessions
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WhatsappSignupSession'
+              meta:
+                $ref: '#/components/schemas/messaging_PaginationMeta'
+          example:
+            data:
+            - record_type: whatsapp_session_id
+              session_id: 019f4253-e09a-7622-bc6f-625378711d78
+              user_id: 00000000-0000-4000-8000-000000000000
+              state: SHARE_CREDIT_LINE
+              status: FAILURE
+              created_at: '2026-10-01T09:58:25Z'
+              updated_at: '2026-10-01T09:58:27Z'
+              waba_id: '123456789012345'
+              customer_id: acme-corp-42
+              errors:
+              - '[ShareCreditLine] Bad status received: Invalid parameter Credit Allocation Not Allowed During Month-End Close: This WhatsApp Business Account cannot be moved onto a credit line while the monthly billing close is running. Please try again once the close has completed, usually within the first few days of the month.'
+            meta:
+              page_number: 1
+              page_size: 20
+              total_pages: 1
+              total_results: 1
+  schemas:
+    WhatsappHostedSignup:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Hosted signup ID
+          example: 0192345a-7b8c-7d9e-0f12-3456789abcde
+        record_type:
+          type: string
+          enum:
+          - whatsapp_jwt
+          example: whatsapp_jwt
+        app_id:
+          type: string
+          description: Meta App ID the hosted signup onboards customers into
+          example: '123456789012345'
+        solution_id:
+          type: string
+          description: Meta Partner Solution ID linked to the app. Returned only when creating a hosted signup.
+          example: '987654321098765'
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-07-08T12:00:00Z'
+        expires_at:
+          type: string
+          format: date-time
+          description: When the onboarding URL stops working
+          example: '2026-07-09T12:00:00Z'
+        jwt:
+          type: string
+          description: Signed token embedded in `url`
+          example: eyJhbGciOiJSUzI1NiIs...
+        url:
+          type: string
+          format: uri
+          description: Hosted onboarding URL to share with the end customer
+          example: https://acct.fyi?token=eyJhbGciOiJSUzI1NiIs...
+    messaging_Error:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+          x-format: integer
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+    messaging_Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/messaging_Error'
+    WhatsappSignupSession:
+      type: object
+      properties:
+        record_type:
+          type: string
+          enum:
+          - whatsapp_session_id
+        session_id:
+          type: string
+          description: Signup session ID
+        user_id:
+          type: string
+          description: Telnyx user ID that owns the signup session
+        state:
+          type: string
+          enum:
+          - SUBSCRIBE_WEBHOOKS
+          - ASSIGNED_USERS
+          - SHARE_CREDIT_LINE
+          - REGISTER_PHONE_NUMBER
+          - ADD_WABA_TO_DB
+          - ADD_PHONE_NUMBERS_TO_DB
+          - COMPLETE
+          description: Current provisioning step, or the step that failed. `REGISTER_PHONE_NUMBER` is skipped for coexistence signups.
+        status:
+          type: string
+          enum:
+          - INCOMPLETE
+          - PENDING
+          - SUCCESS
+          - FAILURE
+          description: '`INCOMPLETE` waits for the Meta signup code, `PENDING` is in progress, `SUCCESS` finished provisioning, and `FAILURE` stopped at `state`.'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        waba_id:
+          type: string
+          description: Meta WhatsApp Business Account ID
+        customer_id:
+          type: string
+          description: Tech provider customer reference submitted with the signup
+        errors:
+          type: array
+          items:
+            type: string
+          description: Errors recorded during provisioning
+    WhatsappHostedSignupCreateRequest:
+      type: object
+      required:
+      - app_id
+      properties:
+        app_id:
+          type: string
+          description: Meta App ID linked to the Telnyx account or its manager account. The app must be enabled.
+          example: '123456789012345'
+        expires_at:
+          type: string
+          format: date-time
+          description: When the onboarding URL expires, in RFC 3339 format. Must be in the future and at most 3 days ahead. Defaults to 24 hours after creation.
+          example: '2026-07-09T12:00:00Z'
+        signup_type:
+          type: string
+          enum:
+          - standard
+          - coexistence
+          default: standard
+          description: Onboarding flow the hosted page launches. Use `coexistence` for a number that remains active in the WhatsApp Business app.
+          example: coexistence
+    messaging_PaginationMeta:
+      type: object
+      required:
+      - total_pages
+      - total_results
+      - page_size
+      - page_number
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 55
+        page_number:
+          type: integer
+          example: 2
+        page_size:
+          type: integer
+          example: 25
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pay-connectors_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key, not the processor bearer token.
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    telnyxApiKey:
+      type: http
+      scheme: bearer
+      description: Management-only Telnyx account credential.
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

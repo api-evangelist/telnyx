@@ -79,21 +79,6 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    WebSearchError:
-      type: object
-      properties:
-        error:
-          type: object
-          required:
-          - message
-          properties:
-            message:
-              type: string
-              description: Human-readable error message.
-            details:
-              type: object
-              additionalProperties: true
-              description: Additional error details (e.g. validation field errors).
     WebSearchRequest:
       type: object
       required:
@@ -151,6 +136,24 @@ components:
           type: boolean
           description: When true, the provider crawls pages in real-time for fresh content. The boolean is translated to the provider's internal enum internally; callers always pass `true` or `false`.
           example: false
+    WebSearchResponse:
+      type: object
+      properties:
+        results:
+          type: object
+          required:
+          - web
+          properties:
+            web:
+              type: array
+              items:
+                $ref: '#/components/schemas/WebSearchResult'
+              description: Web search results.
+            news:
+              type: array
+              items:
+                $ref: '#/components/schemas/WebSearchResult'
+              description: News search results. Present only when the query surfaces news results.
     WebSearchResult:
       type: object
       required:
@@ -216,24 +219,21 @@ components:
                   url:
                     type: string
                     format: uri
-    WebSearchResponse:
+    WebSearchError:
       type: object
       properties:
-        results:
+        error:
           type: object
           required:
-          - web
+          - message
           properties:
-            web:
-              type: array
-              items:
-                $ref: '#/components/schemas/WebSearchResult'
-              description: Web search results.
-            news:
-              type: array
-              items:
-                $ref: '#/components/schemas/WebSearchResult'
-              description: News search results. Present only when the query surfaces news results.
+            message:
+              type: string
+              description: Human-readable error message.
+            details:
+              type: object
+              additionalProperties: true
+              description: Additional error details (e.g. validation field errors).
     web-search_GatewayError:
       type: object
       description: Standard Telnyx JSON:API error envelope returned by the API Gateway for authentication failures (401).
@@ -269,6 +269,15 @@ components:
                     type: string
                     format: uri
   responses:
+    ProviderTimeout:
+      description: The upstream search provider timed out.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/WebSearchError'
+          example:
+            error:
+              message: Provider request timed out
     web-search_BadRequest:
       description: Invalid request — validation error or invalid parameters.
       content:
@@ -279,15 +288,6 @@ components:
             error:
               message: Validation error
               details: {}
-    web-search_ProviderError:
-      description: The upstream search provider returned an error.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/WebSearchError'
-          example:
-            error:
-              message: Provider request failed
     web-search_InternalServerError:
       description: Internal server error.
       content:
@@ -297,15 +297,15 @@ components:
           example:
             error:
               message: Internal server error
-    ProviderTimeout:
-      description: The upstream search provider timed out.
+    web-search_ProviderError:
+      description: The upstream search provider returned an error.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/WebSearchError'
           example:
             error:
-              message: Provider request timed out
+              message: Provider request failed
     web-search_Unauthorized:
       description: 'Unauthorized — missing or invalid API key.
 

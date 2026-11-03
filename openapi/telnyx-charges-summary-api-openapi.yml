@@ -58,64 +58,69 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    SummaryAndTotal:
+    AdjustmentLine:
       type: object
       properties:
-        user_id:
+        amount:
           type: string
-          description: User identifier
-          example: 0db0b4aa-a83d-4d4f-ad9b-3ba7c1ac2ce8
-        start_date:
+          description: Adjustment amount as decimal string
+          example: '-10.00'
+        description:
+          type: string
+          description: Description of the adjustment
+          example: Credit for service outage
+        event_date:
           type: string
           format: date
-          description: Start date of the summary period
-          example: '2025-05-01'
-        end_date:
-          type: string
-          format: date
-          description: End date of the summary period
-          example: '2025-06-01'
-        user_email:
-          type: string
-          format: email
-          description: User email address
-          example: user@example.com
-        currency:
-          type: string
-          description: Currency code
-          example: USD
-        summary:
-          $ref: '#/components/schemas/Summary'
-        total:
-          $ref: '#/components/schemas/TotalSummary'
+          description: Date when the adjustment occurred
+          example: '2025-05-15'
       required:
-      - user_id
-      - start_date
-      - end_date
-      - user_email
-      - currency
-      - summary
-      - total
-    MonthDetail:
+      - amount
+      - description
+      - event_date
+    SummaryLine:
+      oneOf:
+      - $ref: '#/components/schemas/ComparativeLine'
+      - $ref: '#/components/schemas/SimpleLine'
+      discriminator:
+        propertyName: type
+    Summary:
       type: object
       properties:
-        quantity:
-          type: integer
-          description: Number of items
-          example: 10
-        mrc:
-          type: string
-          description: Monthly recurring charge amount as decimal string
-          example: '25.50'
-        otc:
-          type:
-          - string
-          - 'null'
-          description: One-time charge amount as decimal string
-          example: '5.00'
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/SummaryLine'
+          description: List of charge summary lines
+        adjustments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdjustmentLine'
+          description: List of billing adjustments
+      example:
+        lines:
+        - type: comparative
+          name: Local DIDs
+          alias: local
+          new_this_month:
+            quantity: 10
+            mrc: '25.50'
+            otc: '5.00'
+          existing_this_month:
+            quantity: 8
+            mrc: '20.00'
+        - type: simple
+          name: Port Out
+          alias: port_out
+          quantity: 100
+          amount: '15.75'
+        adjustments:
+        - amount: '-10.00'
+          description: Credit for service outage
+          event_date: '2025-05-15'
       required:
-      - quantity
-      - mrc
+      - lines
+      - adjustments
     ComparativeLine:
       type: object
       properties:
@@ -142,6 +147,12 @@ components:
       - alias
       - new_this_month
       - existing_this_month
+    charges_Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/charges_Error'
     TotalSummary:
       type: object
       properties:
@@ -181,6 +192,71 @@ components:
       - credits
       - ledger_adjustments
       - grand_total
+    MonthDetail:
+      type: object
+      properties:
+        quantity:
+          type: integer
+          description: Number of items
+          example: 10
+        mrc:
+          type: string
+          description: Monthly recurring charge amount as decimal string
+          example: '25.50'
+        otc:
+          type:
+          - string
+          - 'null'
+          description: One-time charge amount as decimal string
+          example: '5.00'
+      required:
+      - quantity
+      - mrc
+    SummaryAndTotal:
+      type: object
+      properties:
+        user_id:
+          type: string
+          description: User identifier
+          example: 0db0b4aa-a83d-4d4f-ad9b-3ba7c1ac2ce8
+        start_date:
+          type: string
+          format: date
+          description: Start date of the summary period
+          example: '2025-05-01'
+        end_date:
+          type: string
+          format: date
+          description: End date of the summary period
+          example: '2025-06-01'
+        user_email:
+          type: string
+          format: email
+          description: User email address
+          example: user@example.com
+        currency:
+          type: string
+          description: Currency code
+          example: USD
+        summary:
+          $ref: '#/components/schemas/Summary'
+        total:
+          $ref: '#/components/schemas/TotalSummary'
+      required:
+      - user_id
+      - start_date
+      - end_date
+      - user_email
+      - currency
+      - summary
+      - total
+    MonthlyChargesSummaryResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SummaryAndTotal'
+      required:
+      - data
     charges_Error:
       required:
       - code
@@ -205,56 +281,6 @@ components:
               type: string
         meta:
           type: object
-    MonthlyChargesSummaryResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/SummaryAndTotal'
-      required:
-      - data
-    Summary:
-      type: object
-      properties:
-        lines:
-          type: array
-          items:
-            $ref: '#/components/schemas/SummaryLine'
-          description: List of charge summary lines
-        adjustments:
-          type: array
-          items:
-            $ref: '#/components/schemas/AdjustmentLine'
-          description: List of billing adjustments
-      example:
-        lines:
-        - type: comparative
-          name: Local DIDs
-          alias: local
-          new_this_month:
-            quantity: 10
-            mrc: '25.50'
-            otc: '5.00'
-          existing_this_month:
-            quantity: 8
-            mrc: '20.00'
-        - type: simple
-          name: Port Out
-          alias: port_out
-          quantity: 100
-          amount: '15.75'
-        adjustments:
-        - amount: '-10.00'
-          description: Credit for service outage
-          event_date: '2025-05-15'
-      required:
-      - lines
-      - adjustments
-    SummaryLine:
-      oneOf:
-      - $ref: '#/components/schemas/ComparativeLine'
-      - $ref: '#/components/schemas/SimpleLine'
-      discriminator:
-        propertyName: type
     SimpleLine:
       type: object
       properties:
@@ -285,44 +311,7 @@ components:
       - alias
       - quantity
       - amount
-    charges_Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/charges_Error'
-    AdjustmentLine:
-      type: object
-      properties:
-        amount:
-          type: string
-          description: Adjustment amount as decimal string
-          example: '-10.00'
-        description:
-          type: string
-          description: Description of the adjustment
-          example: Credit for service outage
-        event_date:
-          type: string
-          format: date
-          description: Date when the adjustment occurred
-          example: '2025-05-15'
-      required:
-      - amount
-      - description
-      - event_date
   responses:
-    charges_UnprocessableEntityErrorResponse:
-      description: User account not found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/charges_Errors'
-          example:
-            errors:
-            - code: '10027'
-              title: Unprocessable Entity
-              detail: The server understood the syntax of the request but was unable to process the instructions.
     charges_GenericErrorResponse:
       description: Unexpected error
       content:
@@ -345,12 +334,17 @@ components:
             - code: '10015'
               title: Bad Request
               detail: The request failed because it was not well-formed.
-    charges_UnprocessableEntityErrorResponse_2:
+    charges_UnprocessableEntityErrorResponse:
+      description: User account not found
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/charges_Errors'
-      description: User account not found
+          example:
+            errors:
+            - code: '10027'
+              title: Unprocessable Entity
+              detail: The server understood the syntax of the request but was unable to process the instructions.
     charges_GenericErrorResponse_2:
       content:
         application/json:
@@ -363,6 +357,12 @@ components:
           schema:
             $ref: '#/components/schemas/charges_Errors'
       description: Invalid request parameters or date range
+    charges_UnprocessableEntityErrorResponse_2:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/charges_Errors'
+      description: User account not found
   securitySchemes:
     BearerAuth:
       type: http

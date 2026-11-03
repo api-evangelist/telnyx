@@ -288,13 +288,6 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   parameters:
-    CallControlId:
-      name: call_control_id
-      description: Unique identifier and token for controlling the call
-      in: path
-      required: true
-      schema:
-        type: string
     call-control_PageConsolidated:
       name: page
       in: query
@@ -329,44 +322,251 @@ components:
             minimum: 1
             default: 1
             description: The page number to load
+    CallControlId:
+      name: call_control_id
+      description: Unique identifier and token for controlling the call
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    PaginationMeta:
+      type: object
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 55
+        page_number:
+          type: integer
+          example: 2
+        page_size:
+          type: integer
+          example: 25
+    call-control_Error:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+          format: integer
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+    UpdateQueuedCallRequest:
+      type: object
+      title: Update Queued Call Request
+      properties:
+        keep_after_hangup:
+          description: Whether the call should remain in queue after hangup.
+          example: true
+          type: boolean
+      example:
+        keep_after_hangup: true
+    QueueCall:
+      type: object
+      title: QueueCall
+      required:
+      - call_control_id
+      - call_leg_id
+      - call_session_id
+      - is_alive
+      - record_type
+      - connection_id
+      - from
+      - to
+      - enqueued_at
+      - wait_time_secs
+      - queue_position
+      - queue_id
+      example:
+        call_control_id: v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg
+        call_leg_id: 2dc6fc34-f9e0-11ea-b68e-02420a0f7768
+        call_session_id: 2dc1b3c8-f9e0-11ea-bc5a-02420a0f7768
+        record_type: queue_call
+        connection_id: 7267xxxxxxxxxxxxxx
+        from: '+18005550101'
+        to: '+18005550102'
+        enqueued_at: '2019-01-23T18:10:02.574Z'
+        wait_time_secs: 145
+        queue_position: 3
+        queue_id: ae1626cc-6f42-11ea-becd-02420a0f8b69
+        is_alive: true
+      properties:
+        record_type:
+          type: string
+          enum:
+          - queue_call
+          example: queue_call
+        call_session_id:
+          description: ID that is unique to the call session and can be used to correlate webhook events. Call session is a group of related call legs that logically belong to the same phone call, e.g. an inbound and outbound leg of a transferred call
+          type: string
+          example: 428c31b6-7af4-4bcb-b68e-5013ef9657c1
+        call_leg_id:
+          description: ID that is unique to the call and can be used to correlate webhook events
+          type: string
+          example: 428c31b6-7af4-4bcb-b7f5-5013ef9657c1
+        call_control_id:
+          description: Unique identifier and token for controlling the call.
+          type: string
+          example: v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg
+        connection_id:
+          type: string
+          example: 7267xxxxxxxxxxxxxx
+          description: Call Control App ID (formerly Telnyx connection ID) used in the call.
+        from:
+          type: string
+          example: '+35319605860'
+          description: Number or SIP URI placing the call.
+        to:
+          type: string
+          example: '+13129457420'
+          description: Destination number or SIP URI of the call.
+        enqueued_at:
+          type: string
+          description: ISO 8601 formatted date of when the call was put in the queue
+          example: '2019-01-23T18:10:02.574Z'
+        wait_time_secs:
+          type: integer
+          description: The time the call has been waiting in the queue, given in seconds
+          example: 272
+        queue_position:
+          type: integer
+          description: Current position of the call in the queue
+          example: 3
+        queue_id:
+          type: string
+          description: Unique identifier of the queue the call is in.
+          example: ae1626cc-6f42-11ea-becd-02420a0f8b69
+        is_alive:
+          type: boolean
+          description: Indicates whether the call is still active in the queue.
+          example: true
+    UpdateQueueRequest:
+      type: object
+      title: Update Queue Request
+      required:
+      - max_size
+      properties:
+        max_size:
+          description: The maximum number of calls allowed in the queue.
+          type: integer
+          minimum: 1
+          example: 200
+      example:
+        max_size: 200
+    call-control_Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/call-control_Error'
+    Queue:
+      type: object
+      title: Queue
+      required:
+      - record_type
+      - id
+      - name
+      - current_size
+      - max_size
+      - average_wait_time_secs
+      - created_at
+      - updated_at
+      properties:
+        record_type:
+          type: string
+          enum:
+          - queue
+          example: queue
+        id:
+          type: string
+          description: Uniquely identifies the queue
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        name:
+          type: string
+          description: Name of the queue
+          example: support
+        created_at:
+          type: string
+          description: ISO 8601 formatted date of when the queue was created
+          example: '2019-01-23T18:10:02.574Z'
+        updated_at:
+          type: string
+          description: ISO 8601 formatted date of when the queue was last updated
+          example: '2019-01-23T18:10:02.574Z'
+        current_size:
+          type: integer
+          description: The number of calls currently in the queue
+          example: 20
+        max_size:
+          type: integer
+          description: The maximum number of calls allowed in the queue
+          example: 50
+        average_wait_time_secs:
+          type: integer
+          description: The average time that the calls currently in the queue have spent waiting, given in seconds.
+          example: 175
+      example:
+        record_type: queue
+        id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        name: support
+        created_at: '2019-01-23T18:10:02.574Z'
+        updated_at: '2019-01-23T18:10:02.574Z'
+        current_size: 20
+        max_size: 50
+        average_wait_time_secs: 175
+    CreateQueueRequest:
+      type: object
+      title: Create Queue Request
+      required:
+      - queue_name
+      properties:
+        queue_name:
+          description: The name of the queue. Must be between 1 and 255 characters.
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: tier_1_support
+        max_size:
+          description: The maximum number of calls allowed in the queue.
+          type: integer
+          minimum: 1
+          default: 300
+          example: 100
+      example:
+        queue_name: tier_1_support
+        max_size: 100
   responses:
-    NotFoundResponse:
-      description: 'Resource not found. The requested resource does not exist. Common causes include: invalid call_control_id, conference not found, audio file not found, or recording not found.'
+    UnauthorizedResponse:
+      description: Unauthorized. Authentication failed - the required authentication headers were either invalid or not included in the request.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/call-control_Errors'
-          examples:
-            resource_not_found:
-              summary: Generic resource not found
-              value:
-                errors:
-                - code: '10007'
-                  title: Resource not found
-                  detail: Resource not found
-            conference_not_found:
-              summary: Conference not found
-              value:
-                errors:
-                - code: '90058'
-                  title: Invalid conference_id
-                  detail: The conference does not exist.
-            audio_file_not_found:
-              summary: Audio file not found
-              value:
-                errors:
-                - code: '10005'
-                  title: Audio file not found
-                  detail: Provided audio file URL couldn't be found.
-            recording_not_found:
-              summary: Recording not found
-              value:
-                errors:
-                - code: '10005'
-                  title: Recording not found
-                  detail: The recording could not be found. Please check the recording_id and try again.
-                  source:
-                    pointer: /recording_id
+          example:
+            errors:
+            - code: '10009'
+              title: Authentication failed
+              detail: The required authentication headers were either invalid or not included in the request.
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10009
     UnprocessableEntityResponse:
       description: Unprocessable entity. The request was well-formed but could not be processed due to semantic errors. This includes validation errors, invalid parameter values, call state errors, conference errors, queue errors, recording/transcription errors, and business logic violations.
       content:
@@ -521,19 +721,57 @@ components:
                   detail: The value is outside of allowed range 1 to 5000
                   source:
                     pointer: /max_participants
-    UnauthorizedResponse:
-      description: Unauthorized. Authentication failed - the required authentication headers were either invalid or not included in the request.
+    NotFoundResponse:
+      description: 'Resource not found. The requested resource does not exist. Common causes include: invalid call_control_id, conference not found, audio file not found, or recording not found.'
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/call-control_Errors'
-          example:
-            errors:
-            - code: '10009'
-              title: Authentication failed
-              detail: The required authentication headers were either invalid or not included in the request.
+          examples:
+            resource_not_found:
+              summary: Generic resource not found
+              value:
+                errors:
+                - code: '10007'
+                  title: Resource not found
+                  detail: Resource not found
+            conference_not_found:
+              summary: Conference not found
+              value:
+                errors:
+                - code: '90058'
+                  title: Invalid conference_id
+                  detail: The conference does not exist.
+            audio_file_not_found:
+              summary: Audio file not found
+              value:
+                errors:
+                - code: '10005'
+                  title: Audio file not found
+                  detail: Provided audio file URL couldn't be found.
+            recording_not_found:
+              summary: Recording not found
+              value:
+                errors:
+                - code: '10005'
+                  title: Recording not found
+                  detail: The recording could not be found. Please check the recording_id and try again.
+                  source:
+                    pointer: /recording_id
+    ListQueuesResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/Queue'
+                type: array
               meta:
-                url: https://developers.telnyx.com/docs/overview/errors/10009
+                $ref: '#/components/schemas/PaginationMeta'
+            title: List Queues Response
+            type: object
+      description: Successful response with a list of queues.
     ListQueueCallsResponse:
       content:
         application/json:
@@ -558,20 +796,6 @@ components:
             title: Queue Call Response
             type: object
       description: Successful response with details about a call in a queue.
-    ListQueuesResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/Queue'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            title: List Queues Response
-            type: object
-      description: Successful response with a list of queues.
     QueueResponse:
       content:
         application/json:
@@ -582,230 +806,6 @@ components:
             title: Queue Response
             type: object
       description: Successful response with details about a queue.
-  schemas:
-    PaginationMeta:
-      type: object
-      properties:
-        total_pages:
-          type: integer
-          example: 3
-        total_results:
-          type: integer
-          example: 55
-        page_number:
-          type: integer
-          example: 2
-        page_size:
-          type: integer
-          example: 25
-    Queue:
-      type: object
-      title: Queue
-      required:
-      - record_type
-      - id
-      - name
-      - current_size
-      - max_size
-      - average_wait_time_secs
-      - created_at
-      - updated_at
-      properties:
-        record_type:
-          type: string
-          enum:
-          - queue
-          example: queue
-        id:
-          type: string
-          description: Uniquely identifies the queue
-          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
-        name:
-          type: string
-          description: Name of the queue
-          example: support
-        created_at:
-          type: string
-          description: ISO 8601 formatted date of when the queue was created
-          example: '2019-01-23T18:10:02.574Z'
-        updated_at:
-          type: string
-          description: ISO 8601 formatted date of when the queue was last updated
-          example: '2019-01-23T18:10:02.574Z'
-        current_size:
-          type: integer
-          description: The number of calls currently in the queue
-          example: 20
-        max_size:
-          type: integer
-          description: The maximum number of calls allowed in the queue
-          example: 50
-        average_wait_time_secs:
-          type: integer
-          description: The average time that the calls currently in the queue have spent waiting, given in seconds.
-          example: 175
-      example:
-        record_type: queue
-        id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
-        name: support
-        created_at: '2019-01-23T18:10:02.574Z'
-        updated_at: '2019-01-23T18:10:02.574Z'
-        current_size: 20
-        max_size: 50
-        average_wait_time_secs: 175
-    QueueCall:
-      type: object
-      title: QueueCall
-      required:
-      - call_control_id
-      - call_leg_id
-      - call_session_id
-      - is_alive
-      - record_type
-      - connection_id
-      - from
-      - to
-      - enqueued_at
-      - wait_time_secs
-      - queue_position
-      - queue_id
-      example:
-        call_control_id: v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg
-        call_leg_id: 2dc6fc34-f9e0-11ea-b68e-02420a0f7768
-        call_session_id: 2dc1b3c8-f9e0-11ea-bc5a-02420a0f7768
-        record_type: queue_call
-        connection_id: 7267xxxxxxxxxxxxxx
-        from: '+18005550101'
-        to: '+18005550102'
-        enqueued_at: '2019-01-23T18:10:02.574Z'
-        wait_time_secs: 145
-        queue_position: 3
-        queue_id: ae1626cc-6f42-11ea-becd-02420a0f8b69
-        is_alive: true
-      properties:
-        record_type:
-          type: string
-          enum:
-          - queue_call
-          example: queue_call
-        call_session_id:
-          description: ID that is unique to the call session and can be used to correlate webhook events. Call session is a group of related call legs that logically belong to the same phone call, e.g. an inbound and outbound leg of a transferred call
-          type: string
-          example: 428c31b6-7af4-4bcb-b68e-5013ef9657c1
-        call_leg_id:
-          description: ID that is unique to the call and can be used to correlate webhook events
-          type: string
-          example: 428c31b6-7af4-4bcb-b7f5-5013ef9657c1
-        call_control_id:
-          description: Unique identifier and token for controlling the call.
-          type: string
-          example: v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg
-        connection_id:
-          type: string
-          example: 7267xxxxxxxxxxxxxx
-          description: Call Control App ID (formerly Telnyx connection ID) used in the call.
-        from:
-          type: string
-          example: '+35319605860'
-          description: Number or SIP URI placing the call.
-        to:
-          type: string
-          example: '+13129457420'
-          description: Destination number or SIP URI of the call.
-        enqueued_at:
-          type: string
-          description: ISO 8601 formatted date of when the call was put in the queue
-          example: '2019-01-23T18:10:02.574Z'
-        wait_time_secs:
-          type: integer
-          description: The time the call has been waiting in the queue, given in seconds
-          example: 272
-        queue_position:
-          type: integer
-          description: Current position of the call in the queue
-          example: 3
-        queue_id:
-          type: string
-          description: Unique identifier of the queue the call is in.
-          example: ae1626cc-6f42-11ea-becd-02420a0f8b69
-        is_alive:
-          type: boolean
-          description: Indicates whether the call is still active in the queue.
-          example: true
-    UpdateQueuedCallRequest:
-      type: object
-      title: Update Queued Call Request
-      properties:
-        keep_after_hangup:
-          description: Whether the call should remain in queue after hangup.
-          example: true
-          type: boolean
-      example:
-        keep_after_hangup: true
-    CreateQueueRequest:
-      type: object
-      title: Create Queue Request
-      required:
-      - queue_name
-      properties:
-        queue_name:
-          description: The name of the queue. Must be between 1 and 255 characters.
-          type: string
-          minLength: 1
-          maxLength: 255
-          example: tier_1_support
-        max_size:
-          description: The maximum number of calls allowed in the queue.
-          type: integer
-          minimum: 1
-          default: 300
-          example: 100
-      example:
-        queue_name: tier_1_support
-        max_size: 100
-    UpdateQueueRequest:
-      type: object
-      title: Update Queue Request
-      required:
-      - max_size
-      properties:
-        max_size:
-          description: The maximum number of calls allowed in the queue.
-          type: integer
-          minimum: 1
-          example: 200
-      example:
-        max_size: 200
-    call-control_Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/call-control_Error'
-    call-control_Error:
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: string
-          format: integer
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-              format: json-pointer
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
   securitySchemes:
     BearerAuth:
       type: http

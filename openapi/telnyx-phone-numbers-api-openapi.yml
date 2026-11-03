@@ -274,23 +274,29 @@ webhooks:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    RejectionReason:
+    PhoneNumberBulkDeleteResponse:
       type: object
+      description: Bulk-delete partial-success response. `data` is the list of phone numbers that were soft-deleted. `meta.errors` holds per-number failures (e.g. number not associated with this DIR). When EVERY number in the request fails, the endpoint instead returns 400 with the canonical Telnyx error envelope and `data`/`meta` are absent.
+      required:
+      - data
+      - meta
       properties:
-        code:
-          type: string
-          example: documentation_incomplete
-        title:
-          type: string
-          example: Documentation incomplete
-        detail:
-          type: string
-          example: Provided documents do not establish business identity.
-        message:
-          type: string
-          nullable: true
-          description: Customer-visible free-text comment from the Telnyx vetting team. Only the first entry of `rejection_reasons` carries this; the rest are `null`.
-          example: Please re-upload a clearer scan of the certificate.
+        data:
+          type: array
+          items:
+            type: string
+            example: '+19493253498'
+          description: Phone numbers that were successfully soft-deleted. Bare E.164 strings.
+        meta:
+          type: object
+          required:
+          - errors
+          properties:
+            errors:
+              type: array
+              items:
+                $ref: '#/components/schemas/PhoneNumberItemError'
+              description: Per-number failures that did not block the call. Each entry has `phone_number`, `code`, `title`, `detail`.
     Document:
       type: object
       required:
@@ -325,45 +331,6 @@ components:
           maxLength: 255
           description: An optional note describing this document, for example what it proves.
           example: Certificate of incorporation.
-    branded-calling_PaginationMeta:
-      type: object
-      required:
-      - total_pages
-      - total_results
-      - page_number
-      - page_size
-      properties:
-        total_pages:
-          type: integer
-          example: 3
-          description: Total number of pages available given the current `page_size`.
-        total_results:
-          type: integer
-          example: 42
-          description: Total number of items across all pages (excludes soft-deleted rows).
-        page_number:
-          type: integer
-          example: 1
-          description: 1-based index of this page. Echoes the `page[number]` query parameter (default `1`).
-        page_size:
-          type: integer
-          example: 20
-          description: Number of items returned in this page's `data` array. Capped at 250.
-      description: JSON:API pagination metadata returned with every paginated list response. Page numbering is 1-based. `page_size` reports the number of items actually returned in `data` for this page; the requested size is taken from the `page[size]` query parameter.
-    BulkDeletePhoneNumbersRequest:
-      type: object
-      required:
-      - phone_numbers
-      additionalProperties: false
-      properties:
-        phone_numbers:
-          type: array
-          items:
-            type: string
-            example: '+19493253498'
-          minItems: 1
-          maxItems: 100
-          description: The phone numbers to remove from this brand, in E.164 format, up to 100 per request. They must currently be attached to this brand.
     BulkAddPhoneNumbersRequest:
       type: object
       required:
@@ -386,40 +353,98 @@ components:
           minItems: 1
           maxItems: 20
           description: 'Supporting documents covering this batch. At least one entry with `document_type: letter_of_authorization` is required - the LOA authorises Telnyx to register these numbers under the DIR. Each `document_id` must come from the Telnyx Documents API. Additional document types (e.g. business registration) may be included alongside the LOA.'
-    branded-calling_Errors:
+    DirPhoneNumber:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 1f56eb76-4078-4af7-ad4d-564b027256ee
+          readOnly: true
+        dir_id:
+          type: string
+          format: uuid
+          example: 16635d38-75a6-4481-82e8-69af60e05011
+        enterprise_id:
+          type: string
+          format: uuid
+          example: 4a6192a4-573d-446d-b3ce-aff9117272a6
+        phone_number:
+          type: string
+          description: E.164 with leading `+`.
+          example: '+19493253498'
+        batch_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Id of the batch this number was vetted as part of.
+          example: 0a4b1f5e-2f12-4c0c-9a98-9b3a7d8b8e62
+        loa_document_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Id of the Letter of Authorization document attached to this number's batch.
+          example: null
+        status:
+          $ref: '#/components/schemas/PhoneNumberStatus'
+        rejection_reason:
+          $ref: '#/components/schemas/RejectionReason'
+          nullable: true
+          description: Populated when `status` is `unsuccessful` or `permanently_rejected`.
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-04-26T18:11:42.850928Z'
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          example: '2026-04-26T18:12:11.123456Z'
+          readOnly: true
+        verified_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2026-04-26T18:12:11.123456Z'
+          readOnly: true
+    BulkDeletePhoneNumbersRequest:
       type: object
       required:
-      - errors
+      - phone_numbers
+      additionalProperties: false
       properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/branded-calling_Error'
-          description: List of one or more error entries. Order is not significant.
-      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
-    PhoneNumberBulkDeleteResponse:
-      type: object
-      description: Bulk-delete partial-success response. `data` is the list of phone numbers that were soft-deleted. `meta.errors` holds per-number failures (e.g. number not associated with this DIR). When EVERY number in the request fails, the endpoint instead returns 400 with the canonical Telnyx error envelope and `data`/`meta` are absent.
-      required:
-      - data
-      - meta
-      properties:
-        data:
+        phone_numbers:
           type: array
           items:
             type: string
             example: '+19493253498'
-          description: Phone numbers that were successfully soft-deleted. Bare E.164 strings.
-        meta:
-          type: object
-          required:
-          - errors
-          properties:
-            errors:
-              type: array
-              items:
-                $ref: '#/components/schemas/PhoneNumberItemError'
-              description: Per-number failures that did not block the call. Each entry has `phone_number`, `code`, `title`, `detail`.
+          minItems: 1
+          maxItems: 100
+          description: The phone numbers to remove from this brand, in E.164 format, up to 100 per request. They must currently be attached to this brand.
+    PhoneNumberItemError:
+      type: object
+      description: Per-number error returned by the bulk-delete endpoint. Bulk-add does not use this shape - it returns a 400 with the canonical envelope grouping numbers by failure category.
+      required:
+      - phone_number
+      - code
+      - title
+      - detail
+      properties:
+        phone_number:
+          type: string
+          example: '+19493253498'
+        code:
+          type: string
+          enum:
+          - not_associated
+          description: Stable per-number error code. Currently only `not_associated` is emitted, when the number is not attached to this DIR.
+          example: not_associated
+        title:
+          type: string
+          example: Phone number not associated
+        detail:
+          type: string
+          example: Phone number not associated with this DIR.
     PhoneNumberBulkResponse:
       type: object
       description: Bulk-add success response (HTTP 201). All numbers in the request were accepted into a single new batch. Every entry in `data` shares the same `batch_id` - read it from any element to obtain the batch id for subsequent `GET .../phone_number_batches/{batch_id}` calls. If any number in the request fails (schema-invalid, not in inventory, already attached to another DIR, etc.) the entire request is rejected with HTTP 400 and the canonical Telnyx error envelope; the success body described here is therefore an all-or-nothing payload.
@@ -431,6 +456,18 @@ components:
           description: Phone numbers accepted into the new batch. List order mirrors the request order. Each element shares the same `batch_id`.
           items:
             $ref: '#/components/schemas/DirPhoneNumber'
+    PhoneNumberList:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DirPhoneNumber'
+        meta:
+          $ref: '#/components/schemas/branded-calling_PaginationMeta'
     branded-calling_Error:
       type: object
       required:
@@ -488,96 +525,6 @@ components:
               type: string
               example: page[size]
       description: A single entry in the canonical Telnyx error envelope. `code` is the stable Telnyx error catalog id; the human-readable explanation lives at `meta.url`. `detail` is a context-specific message; `source.pointer` (when present) names the offending field of the request.
-    DirPhoneNumber:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          example: 1f56eb76-4078-4af7-ad4d-564b027256ee
-          readOnly: true
-        dir_id:
-          type: string
-          format: uuid
-          example: 16635d38-75a6-4481-82e8-69af60e05011
-        enterprise_id:
-          type: string
-          format: uuid
-          example: 4a6192a4-573d-446d-b3ce-aff9117272a6
-        phone_number:
-          type: string
-          description: E.164 with leading `+`.
-          example: '+19493253498'
-        batch_id:
-          type: string
-          format: uuid
-          nullable: true
-          description: Id of the batch this number was vetted as part of.
-          example: 0a4b1f5e-2f12-4c0c-9a98-9b3a7d8b8e62
-        loa_document_id:
-          type: string
-          format: uuid
-          nullable: true
-          description: Id of the Letter of Authorization document attached to this number's batch.
-          example: null
-        status:
-          $ref: '#/components/schemas/PhoneNumberStatus'
-        rejection_reason:
-          $ref: '#/components/schemas/RejectionReason'
-          nullable: true
-          description: Populated when `status` is `unsuccessful` or `permanently_rejected`.
-        created_at:
-          type: string
-          format: date-time
-          example: '2026-04-26T18:11:42.850928Z'
-          readOnly: true
-        updated_at:
-          type: string
-          format: date-time
-          example: '2026-04-26T18:12:11.123456Z'
-          readOnly: true
-        verified_at:
-          type: string
-          format: date-time
-          nullable: true
-          example: '2026-04-26T18:12:11.123456Z'
-          readOnly: true
-    PhoneNumberList:
-      type: object
-      required:
-      - data
-      - meta
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/DirPhoneNumber'
-        meta:
-          $ref: '#/components/schemas/branded-calling_PaginationMeta'
-    PhoneNumberItemError:
-      type: object
-      description: Per-number error returned by the bulk-delete endpoint. Bulk-add does not use this shape - it returns a 400 with the canonical envelope grouping numbers by failure category.
-      required:
-      - phone_number
-      - code
-      - title
-      - detail
-      properties:
-        phone_number:
-          type: string
-          example: '+19493253498'
-        code:
-          type: string
-          enum:
-          - not_associated
-          description: Stable per-number error code. Currently only `not_associated` is emitted, when the number is not attached to this DIR.
-          example: not_associated
-        title:
-          type: string
-          example: Phone number not associated
-        detail:
-          type: string
-          example: Phone number not associated with this DIR.
     PhoneNumberStatus:
       type: string
       enum:
@@ -601,156 +548,59 @@ components:
         - `expired` - verification expired; re-add to renew.
 
         - `permanently_rejected` - terminal; cannot be re-added on this or any other DIR you own.'
-    ReputationNumberSource:
-      type: string
-      enum:
-      - telnyx
-      - external
-      description: 'Where the phone number is hosted. `telnyx`: in your Telnyx inventory. `external`: a number you own that is hosted with another provider.'
-      example: external
-    Document_2:
+    branded-calling_Errors:
       type: object
       required:
-      - document_id
-      - document_type
+      - errors
       properties:
-        document_id:
-          type: string
-          format: uuid
-          description: Id returned by the Telnyx Documents API after you upload the file (upload via `POST /v2/documents`; see https://developers.telnyx.com/api/documents).
-          example: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
-        document_type:
-          type: string
-          enum:
-          - letter_of_authorization
-          - business_registration
-          - articles_of_incorporation
-          - certificate_of_good_standing
-          - tax_document
-          - ein_letter
-          - trademark_registration
-          - website_ownership
-          - business_license
-          - professional_license
-          - government_id
-          - utility_bill
-          - bank_statement
-          - business_credit_report
-          - bank_reference_letter
-          - other
-          example: business_registration
-          description: Type of supporting document. Pick the closest match to what the file actually contains; `other` triggers manual vetting and may slow approval. The matching short_name reference list is at `GET /v2/dir/document_types`.
-        description:
-          type: string
-          maxLength: 255
-          description: An optional note describing this document, for example what it proves.
-          example: Certificate of incorporation.
-    NumberReputationNumberFlaggedEvent:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/branded-calling_Error'
+          description: List of one or more error entries. Order is not significant.
+      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
+    branded-calling_PaginationMeta:
       type: object
       required:
-      - data
-      - meta
+      - total_pages
+      - total_results
+      - page_number
+      - page_size
       properties:
-        data:
-          type: object
-          required:
-          - record_type
-          - id
-          - occurred_at
-          - event_type
-          - payload
-          properties:
-            record_type:
-              type: string
-              enum:
-              - event
-              example: event
-            id:
-              type: string
-              format: uuid
-              description: Identifies the event; the same id is reused if the event is redelivered.
-              example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
-            occurred_at:
-              type: string
-              format: date-time
-              example: '2026-10-05T07:00:12.521992Z'
-            event_type:
-              type: string
-              enum:
-              - number_reputation.number.flagged
-              example: number_reputation.number.flagged
-            payload:
-              type: object
-              required:
-              - record_type
-              - phone_number
-              - enterprise_id
-              - source
-              - ownership_status
-              - flag_reason
-              - confirm_by
-              properties:
-                record_type:
-                  type: string
-                  enum:
-                  - reputation_phone_number
-                  example: reputation_phone_number
-                phone_number:
-                  type: string
-                  example: '+13125550142'
-                enterprise_id:
-                  type: string
-                  format: uuid
-                  example: 4a6192a4-573d-446d-b3ce-aff9117272a6
-                source:
-                  $ref: '#/components/schemas/ReputationNumberSource'
-                ownership_status:
-                  type: string
-                  enum:
-                  - pending_confirmation
-                  example: pending_confirmation
-                flag_reason:
-                  type: string
-                  enum:
-                  - carrier_changed
-                  - reverification_due
-                  description: '`carrier_changed`: the number moved to a different carrier. `reverification_due`: the periodic ownership re-verification is due.'
-                  example: carrier_changed
-                confirm_by:
-                  type: string
-                  format: date-time
-                  description: Confirm ownership before this time or the number is removed (carrier change) or flagged (re-verification).
-                  example: '2026-10-08T07:00:00+00:00'
-        meta:
-          type: object
-          properties:
-            attempt:
-              type: integer
-              example: 1
-            delivered_to:
-              type: string
-              format: uri
-              example: https://example.com/webhooks/telnyx
-          required:
-          - attempt
-          - delivered_to
-      example:
-        data:
-          record_type: event
-          id: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
-          occurred_at: '2026-10-05T07:00:12.521992Z'
-          event_type: number_reputation.number.flagged
-          payload:
-            record_type: reputation_phone_number
-            phone_number: '+13125550142'
-            enterprise_id: 4a6192a4-573d-446d-b3ce-aff9117272a6
-            source: external
-            ownership_status: pending_confirmation
-            flag_reason: carrier_changed
-            confirm_by: '2026-10-08T07:00:00+00:00'
-        meta:
-          attempt: 1
-          delivered_to: https://example.com/webhooks/telnyx
+        total_pages:
+          type: integer
+          example: 3
+          description: Total number of pages available given the current `page_size`.
+        total_results:
+          type: integer
+          example: 42
+          description: Total number of items across all pages (excludes soft-deleted rows).
+        page_number:
+          type: integer
+          example: 1
+          description: 1-based index of this page. Echoes the `page[number]` query parameter (default `1`).
+        page_size:
+          type: integer
+          example: 20
+          description: Number of items returned in this page's `data` array. Capped at 250.
+      description: JSON:API pagination metadata returned with every paginated list response. Page numbering is 1-based. `page_size` reports the number of items actually returned in `data` for this page; the requested size is taken from the `page[size]` query parameter.
+    RejectionReason:
+      type: object
+      properties:
+        code:
+          type: string
+          example: documentation_incomplete
+        title:
+          type: string
+          example: Documentation incomplete
+        detail:
+          type: string
+          example: Provided documents do not establish business identity.
+        message:
+          type: string
+          nullable: true
+          description: Customer-visible free-text comment from the Telnyx vetting team. Only the first entry of `rejection_reasons` carries this; the rest are `null`.
+          example: Please re-upload a clearer scan of the certificate.
     NumberReputationNumberRemovedEvent:
       type: object
       required:
@@ -858,6 +708,156 @@ components:
         meta:
           attempt: 1
           delivered_to: https://example.com/webhooks/telnyx
+    ReputationNumberSource:
+      type: string
+      enum:
+      - telnyx
+      - external
+      description: 'Where the phone number is hosted. `telnyx`: in your Telnyx inventory. `external`: a number you own that is hosted with another provider.'
+      example: external
+    NumberReputationNumberFlaggedEvent:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: object
+          required:
+          - record_type
+          - id
+          - occurred_at
+          - event_type
+          - payload
+          properties:
+            record_type:
+              type: string
+              enum:
+              - event
+              example: event
+            id:
+              type: string
+              format: uuid
+              description: Identifies the event; the same id is reused if the event is redelivered.
+              example: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+            occurred_at:
+              type: string
+              format: date-time
+              example: '2026-10-05T07:00:12.521992Z'
+            event_type:
+              type: string
+              enum:
+              - number_reputation.number.flagged
+              example: number_reputation.number.flagged
+            payload:
+              type: object
+              required:
+              - record_type
+              - phone_number
+              - enterprise_id
+              - source
+              - ownership_status
+              - flag_reason
+              - confirm_by
+              properties:
+                record_type:
+                  type: string
+                  enum:
+                  - reputation_phone_number
+                  example: reputation_phone_number
+                phone_number:
+                  type: string
+                  example: '+13125550142'
+                enterprise_id:
+                  type: string
+                  format: uuid
+                  example: 4a6192a4-573d-446d-b3ce-aff9117272a6
+                source:
+                  $ref: '#/components/schemas/ReputationNumberSource'
+                ownership_status:
+                  type: string
+                  enum:
+                  - pending_confirmation
+                  example: pending_confirmation
+                flag_reason:
+                  type: string
+                  enum:
+                  - carrier_changed
+                  - reverification_due
+                  description: '`carrier_changed`: the number moved to a different carrier. `reverification_due`: the periodic ownership re-verification is due.'
+                  example: carrier_changed
+                confirm_by:
+                  type: string
+                  format: date-time
+                  description: Confirm ownership before this time or the number is removed (carrier change) or flagged (re-verification).
+                  example: '2026-10-08T07:00:00+00:00'
+        meta:
+          type: object
+          properties:
+            attempt:
+              type: integer
+              example: 1
+            delivered_to:
+              type: string
+              format: uri
+              example: https://example.com/webhooks/telnyx
+          required:
+          - attempt
+          - delivered_to
+      example:
+        data:
+          record_type: event
+          id: 0ccc7b54-4df3-4bca-a65a-3da1ecc777f0
+          occurred_at: '2026-10-05T07:00:12.521992Z'
+          event_type: number_reputation.number.flagged
+          payload:
+            record_type: reputation_phone_number
+            phone_number: '+13125550142'
+            enterprise_id: 4a6192a4-573d-446d-b3ce-aff9117272a6
+            source: external
+            ownership_status: pending_confirmation
+            flag_reason: carrier_changed
+            confirm_by: '2026-10-08T07:00:00+00:00'
+        meta:
+          attempt: 1
+          delivered_to: https://example.com/webhooks/telnyx
+    Document_2:
+      type: object
+      required:
+      - document_id
+      - document_type
+      properties:
+        document_id:
+          type: string
+          format: uuid
+          description: Id returned by the Telnyx Documents API after you upload the file (upload via `POST /v2/documents`; see https://developers.telnyx.com/api/documents).
+          example: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
+        document_type:
+          type: string
+          enum:
+          - letter_of_authorization
+          - business_registration
+          - articles_of_incorporation
+          - certificate_of_good_standing
+          - tax_document
+          - ein_letter
+          - trademark_registration
+          - website_ownership
+          - business_license
+          - professional_license
+          - government_id
+          - utility_bill
+          - bank_statement
+          - business_credit_report
+          - bank_reference_letter
+          - other
+          example: business_registration
+          description: Type of supporting document. Pick the closest match to what the file actually contains; `other` triggers manual vetting and may slow approval. The matching short_name reference list is at `GET /v2/dir/document_types`.
+        description:
+          type: string
+          maxLength: 255
+          description: An optional note describing this document, for example what it proves.
+          example: Certificate of incorporation.
     NumberReputationExternalVerificationStatusChangedEvent:
       type: object
       required:
@@ -955,37 +955,6 @@ components:
         meta:
           attempt: 1
           delivered_to: https://example.com/webhooks/telnyx
-  parameters:
-    BcPageNumber:
-      name: page[number]
-      in: query
-      description: 1-based page number. Out-of-range values return an empty page with correct meta.
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        default: 1
-        example: 1
-    BcPageSize:
-      name: page[size]
-      in: query
-      description: Items per page. Maximum 250; values above are clamped to 250.
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 250
-        default: 20
-        example: 20
-    DirId:
-      name: dir_id
-      in: path
-      description: The DIR id. Lowercase UUID.
-      required: true
-      schema:
-        type: string
-        format: uuid
-        example: 16635d38-75a6-4481-82e8-69af60e05011
   responses:
     branded-calling_GenericErrorResponse:
       description: An error occurred. The response carries the standard Telnyx error envelope.
@@ -1033,6 +1002,37 @@ components:
                   detail: DIR has 1 active infringement claim(s). Resolve the claim before making this change.
                   meta:
                     url: https://developers.telnyx.com/docs/overview/errors/10021
+  parameters:
+    BcPageNumber:
+      name: page[number]
+      in: query
+      description: 1-based page number. Out-of-range values return an empty page with correct meta.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+        example: 1
+    DirId:
+      name: dir_id
+      in: path
+      description: The DIR id. Lowercase UUID.
+      required: true
+      schema:
+        type: string
+        format: uuid
+        example: 16635d38-75a6-4481-82e8-69af60e05011
+    BcPageSize:
+      name: page[size]
+      in: query
+      description: Items per page. Maximum 250; values above are clamped to 250.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 250
+        default: 20
+        example: 20
   securitySchemes:
     BearerAuth:
       type: http

@@ -162,6 +162,30 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
+    EmailVerificationConfirmRequest:
+      type: object
+      required:
+      - code
+      properties:
+        code:
+          type: string
+          minLength: 6
+          maxLength: 6
+          pattern: ^\d{6}$
+          description: The 6-digit code sent to the authorizer email.
+          example: '482915'
+    EnterpriseEmailVerificationConfirmRequest:
+      type: object
+      required:
+      - code
+      properties:
+        code:
+          type: string
+          minLength: 6
+          maxLength: 6
+          pattern: ^\d{6}$
+          description: The 6-digit code sent to the enterprise account's contact email.
+          example: '482915'
     EnterpriseEmailVerificationStatus:
       type: object
       description: Verification state for an enterprise account's contact email.
@@ -199,69 +223,6 @@ components:
           type: integer
           nullable: true
           description: How many more codes may be requested for this enterprise account today. Present on a send response; null on a confirm response.
-          example: 9
-          readOnly: true
-    branded-calling_Errors:
-      type: object
-      required:
-      - errors
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/branded-calling_Error'
-          description: List of one or more error entries. Order is not significant.
-      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
-    EnterpriseEmailVerificationConfirmRequest:
-      type: object
-      required:
-      - code
-      properties:
-        code:
-          type: string
-          minLength: 6
-          maxLength: 6
-          pattern: ^\d{6}$
-          description: The 6-digit code sent to the enterprise account's contact email.
-          example: '482915'
-    EmailVerificationStatus:
-      type: object
-      description: Verification state for a DIR's authorizer email.
-      required:
-      - record_type
-      - email_verified
-      - status
-      properties:
-        record_type:
-          type: string
-          enum:
-          - email_verification
-          description: Always `email_verification`.
-          example: email_verification
-          readOnly: true
-        email_verified:
-          type: boolean
-          description: Whether the DIR's authorizer email has been confirmed.
-          example: false
-        status:
-          type: string
-          enum:
-          - sent
-          - verified
-          - unverified
-          description: '`sent` after a code is emailed; `verified` after a successful confirm; `unverified` when no verification is in progress.'
-          example: sent
-        expires_at:
-          type: string
-          format: date-time
-          nullable: true
-          description: When the outstanding code stops being accepted. Null when no verification is in progress.
-          example: '2026-07-30T17:15:00Z'
-          readOnly: true
-        sends_remaining_today:
-          type: integer
-          nullable: true
-          description: How many more codes may be requested for this DIR today. Null when the daily cap does not apply.
           example: 9
           readOnly: true
     EnterpriseEmailVerificationStatusWrapped:
@@ -328,18 +289,57 @@ components:
               type: string
               example: page[size]
       description: A single entry in the canonical Telnyx error envelope. `code` is the stable Telnyx error catalog id; the human-readable explanation lives at `meta.url`. `detail` is a context-specific message; `source.pointer` (when present) names the offending field of the request.
-    EmailVerificationConfirmRequest:
+    branded-calling_Errors:
       type: object
       required:
-      - code
+      - errors
       properties:
-        code:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/branded-calling_Error'
+          description: List of one or more error entries. Order is not significant.
+      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
+    EmailVerificationStatus:
+      type: object
+      description: Verification state for a DIR's authorizer email.
+      required:
+      - record_type
+      - email_verified
+      - status
+      properties:
+        record_type:
           type: string
-          minLength: 6
-          maxLength: 6
-          pattern: ^\d{6}$
-          description: The 6-digit code sent to the authorizer email.
-          example: '482915'
+          enum:
+          - email_verification
+          description: Always `email_verification`.
+          example: email_verification
+          readOnly: true
+        email_verified:
+          type: boolean
+          description: Whether the DIR's authorizer email has been confirmed.
+          example: false
+        status:
+          type: string
+          enum:
+          - sent
+          - verified
+          - unverified
+          description: '`sent` after a code is emailed; `verified` after a successful confirm; `unverified` when no verification is in progress.'
+          example: sent
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the outstanding code stops being accepted. Null when no verification is in progress.
+          example: '2026-07-30T17:15:00Z'
+          readOnly: true
+        sends_remaining_today:
+          type: integer
+          nullable: true
+          description: How many more codes may be requested for this DIR today. Null when the daily cap does not apply.
+          example: 9
+          readOnly: true
     EmailVerificationStatusWrapped:
       type: object
       required:
@@ -347,6 +347,25 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/EmailVerificationStatus'
+  parameters:
+    EnterpriseId:
+      name: enterprise_id
+      in: path
+      description: The enterprise id. Lowercase UUID.
+      required: true
+      schema:
+        type: string
+        format: uuid
+        example: 4a6192a4-573d-446d-b3ce-aff9117272a6
+    DirId:
+      name: dir_id
+      in: path
+      description: The DIR id. Lowercase UUID.
+      required: true
+      schema:
+        type: string
+        format: uuid
+        example: 16635d38-75a6-4481-82e8-69af60e05011
   responses:
     branded-calling_GenericErrorResponse:
       description: An error occurred. The response carries the standard Telnyx error envelope.
@@ -394,25 +413,6 @@ components:
                   detail: DIR has 1 active infringement claim(s). Resolve the claim before making this change.
                   meta:
                     url: https://developers.telnyx.com/docs/overview/errors/10021
-  parameters:
-    EnterpriseId:
-      name: enterprise_id
-      in: path
-      description: The enterprise id. Lowercase UUID.
-      required: true
-      schema:
-        type: string
-        format: uuid
-        example: 4a6192a4-573d-446d-b3ce-aff9117272a6
-    DirId:
-      name: dir_id
-      in: path
-      description: The DIR id. Lowercase UUID.
-      required: true
-      schema:
-        type: string
-        format: uuid
-        example: 16635d38-75a6-4481-82e8-69af60e05011
   securitySchemes:
     BearerAuth:
       type: http

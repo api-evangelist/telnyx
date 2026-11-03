@@ -194,6 +194,33 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
+    TosStatusWrapped:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/TosStatus'
+    TermsOfServiceInfo:
+      type: object
+      properties:
+        agreements:
+          type: array
+          items:
+            $ref: '#/components/schemas/TermsOfServiceInfoItem'
+    TosAgreementList:
+      type: object
+      description: Paginated list of Terms of Service agreements for the calling user.
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TosAgreement'
+        meta:
+          $ref: '#/components/schemas/branded-calling_PaginationMeta'
     number-reputation_Error:
       type: object
       required:
@@ -251,13 +278,17 @@ components:
               type: string
               example: page[size]
       description: A single entry in the canonical Telnyx error envelope. `code` is the stable Telnyx error catalog id; the human-readable explanation lives at `meta.url`. `detail` is a context-specific message; `source.pointer` (when present) names the offending field of the request.
-    TosProductType:
-      type: string
-      enum:
-      - branded_calling
-      - number_reputation
-      description: Telnyx product the Terms of Service apply to.
-      example: branded_calling
+    number-reputation_Errors:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/number-reputation_Error'
+          description: List of one or more error entries. Order is not significant.
+      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
     TosAgreement:
       type: object
       description: A recorded user agreement to a product's Terms of Service. The `user_id` is intentionally NOT echoed back on this public surface - the caller already knows their own identity.
@@ -291,65 +322,6 @@ components:
           description: When this agreement record was created.
           example: '2025-07-10T10:30:00Z'
           readOnly: true
-    TosStatus:
-      type: object
-      description: Whether the calling user has agreed to a product's current Terms of Service. The `user_id` is intentionally omitted on this public surface.
-      required:
-      - product_type
-      - current_terms_version
-      - has_agreed
-      - agreement_required
-      properties:
-        product_type:
-          $ref: '#/components/schemas/TosProductType'
-        current_terms_version:
-          type: string
-          description: Latest published version of the ToS for this product.
-          example: v1.1.0
-        has_agreed:
-          type: boolean
-          description: '`true` if the user has agreed to the latest version.'
-          example: false
-        agreed_version:
-          type: string
-          nullable: true
-          description: Version the user previously agreed to (may be older than `current_terms_version`). `null` if the user has never agreed.
-          example: v1.0.0
-        agreed_at:
-          type: string
-          format: date-time
-          nullable: true
-          description: When you accepted the terms, or null if you have not.
-          example: '2025-07-10T10:30:00Z'
-        agreement_required:
-          type: boolean
-          description: '`true` when the user must agree to the latest version before using the product. Equivalent to `!has_agreed`.'
-          example: true
-    branded-calling_Errors:
-      type: object
-      required:
-      - errors
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/branded-calling_Error'
-          description: List of one or more error entries. Order is not significant.
-      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
-    TosStatusWrapped:
-      type: object
-      required:
-      - data
-      properties:
-        data:
-          $ref: '#/components/schemas/TosStatus'
-    TermsOfServiceInfo:
-      type: object
-      properties:
-        agreements:
-          type: array
-          items:
-            $ref: '#/components/schemas/TermsOfServiceInfoItem'
     TermsOfServiceInfoItem:
       type: object
       properties:
@@ -429,19 +401,47 @@ components:
               type: string
               example: page[size]
       description: A single entry in the canonical Telnyx error envelope. `code` is the stable Telnyx error catalog id; the human-readable explanation lives at `meta.url`. `detail` is a context-specific message; `source.pointer` (when present) names the offending field of the request.
-    TosAgreementList:
+    TosProductType:
+      type: string
+      enum:
+      - branded_calling
+      - number_reputation
+      description: Telnyx product the Terms of Service apply to.
+      example: branded_calling
+    TosStatus:
       type: object
-      description: Paginated list of Terms of Service agreements for the calling user.
+      description: Whether the calling user has agreed to a product's current Terms of Service. The `user_id` is intentionally omitted on this public surface.
       required:
-      - data
-      - meta
+      - product_type
+      - current_terms_version
+      - has_agreed
+      - agreement_required
       properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/TosAgreement'
-        meta:
-          $ref: '#/components/schemas/branded-calling_PaginationMeta'
+        product_type:
+          $ref: '#/components/schemas/TosProductType'
+        current_terms_version:
+          type: string
+          description: Latest published version of the ToS for this product.
+          example: v1.1.0
+        has_agreed:
+          type: boolean
+          description: '`true` if the user has agreed to the latest version.'
+          example: false
+        agreed_version:
+          type: string
+          nullable: true
+          description: Version the user previously agreed to (may be older than `current_terms_version`). `null` if the user has never agreed.
+          example: v1.0.0
+        agreed_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When you accepted the terms, or null if you have not.
+          example: '2025-07-10T10:30:00Z'
+        agreement_required:
+          type: boolean
+          description: '`true` when the user must agree to the latest version before using the product. Equivalent to `!has_agreed`.'
+          example: true
     TosAgreementWrapped:
       type: object
       required:
@@ -449,6 +449,17 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/TosAgreement'
+    branded-calling_Errors:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/branded-calling_Error'
+          description: List of one or more error entries. Order is not significant.
+      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
     branded-calling_PaginationMeta:
       type: object
       required:
@@ -474,17 +485,6 @@ components:
           example: 20
           description: Number of items returned in this page's `data` array. Capped at 250.
       description: JSON:API pagination metadata returned with every paginated list response. Page numbering is 1-based. `page_size` reports the number of items actually returned in `data` for this page; the requested size is taken from the `page[size]` query parameter.
-    number-reputation_Errors:
-      type: object
-      required:
-      - errors
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/number-reputation_Error'
-          description: List of one or more error entries. Order is not significant.
-      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
     TelnyxError:
       properties:
         code:
@@ -525,28 +525,6 @@ components:
             $ref: '#/components/schemas/TelnyxError'
           type: array
       type: object
-  parameters:
-    BcPageNumber:
-      name: page[number]
-      in: query
-      description: 1-based page number. Out-of-range values return an empty page with correct meta.
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        default: 1
-        example: 1
-    BcPageSize:
-      name: page[size]
-      in: query
-      description: Items per page. Maximum 250; values above are clamped to 250.
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 250
-        default: 20
-        example: 20
   responses:
     number-reputation_GenericErrorResponse:
       description: An error occurred. The response carries the standard Telnyx error envelope.
@@ -640,12 +618,6 @@ components:
                   detail: DIR has 1 active infringement claim(s). Resolve the claim before making this change.
                   meta:
                     url: https://developers.telnyx.com/docs/overview/errors/10021
-    Unauthorized:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/branded-calling_ErrorResponse'
-      description: Unauthorized — missing or invalid API key
     BadRequestTelnyx:
       content:
         application/json:
@@ -658,6 +630,34 @@ components:
           schema:
             $ref: '#/components/schemas/branded-calling_ErrorResponse'
       description: Unprocessable entity — request structure is valid but contains semantic errors
+    Unauthorized:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/branded-calling_ErrorResponse'
+      description: Unauthorized — missing or invalid API key
+  parameters:
+    BcPageNumber:
+      name: page[number]
+      in: query
+      description: 1-based page number. Out-of-range values return an empty page with correct meta.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+        example: 1
+    BcPageSize:
+      name: page[size]
+      in: query
+      description: Items per page. Maximum 250; values above are clamped to 250.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 250
+        default: 20
+        example: 20
   securitySchemes:
     BearerAuth:
       type: http

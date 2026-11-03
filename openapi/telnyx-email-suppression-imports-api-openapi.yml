@@ -224,19 +224,6 @@ components:
             - code: '406'
               title: Not Acceptable
               detail: Not Acceptable
-    ValidationErrorQuery:
-      description: Query-param validation error (`source.pointer /<field>`).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorList'
-          example:
-            errors:
-            - code: '10015'
-              title: Validation Failed
-              detail: is invalid
-              source:
-                pointer: /filter[reason]
     ChangesetError:
       description: Validation error (changeset or internal `Params`). One error object per field, `source.pointer /data/attributes/<field>`.
       content:
@@ -250,17 +237,6 @@ components:
               detail: can't be blank
               source:
                 pointer: /data/attributes/to
-    BlocksNotFound:
-      description: Resource not found (cross-account lookups and malformed UUIDs also return 404 — no leak).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorList'
-          example:
-            errors:
-            - code: '10001'
-              title: Not Found
-              detail: The requested email block was not found
     email_Unauthorized:
       description: Missing or invalid gateway auth.
       content:
@@ -272,6 +248,39 @@ components:
             - code: '10007'
               title: Unauthorized
               detail: Missing authentication
+    ValidationErrorQuery:
+      description: Query-param validation error (`source.pointer /<field>`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorList'
+          example:
+            errors:
+            - code: '10015'
+              title: Validation Failed
+              detail: is invalid
+              source:
+                pointer: /filter[reason]
+    BlocksNotFound:
+      description: Resource not found (cross-account lookups and malformed UUIDs also return 404 — no leak).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorList'
+          example:
+            errors:
+            - code: '10001'
+              title: Not Found
+              detail: The requested email block was not found
+  parameters:
+    PathId:
+      name: id
+      in: path
+      required: true
+      description: Resource UUID. Malformed UUIDs are treated as not-found (not 400).
+      schema:
+        type: string
+        format: uuid
   schemas:
     EmailBlockImport:
       type: object
@@ -355,36 +364,6 @@ components:
         `block_ttl_days`. Nullable fields use the omit-nullable pattern.
 
         '
-    EmailBlockImportResponse:
-      type: object
-      required:
-      - data
-      properties:
-        data:
-          $ref: '#/components/schemas/EmailBlockImport'
-    CreateImportRequest:
-      type: object
-      required:
-      - file
-      properties:
-        file:
-          type: string
-          format: binary
-          description: The CSV file (Plug.Upload). Missing/non-upload → 400.
-        block_ttl_days:
-          type: integer
-          minimum: 1
-          default: 30
-          description: 'TTL for imported `manual_block` rows; other reasons get `expires_at: null`. Invalid/missing → falls back to 30.'
-    ErrorList:
-      type: object
-      required:
-      - errors
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/BlocksErrorObject'
     BlocksErrorObject:
       type: object
       required:
@@ -411,15 +390,36 @@ components:
             pointer:
               type: string
           description: '`/data/attributes/<field>` for changeset/Params; `/<field>` for query-param errors.'
-  parameters:
-    PathId:
-      name: id
-      in: path
-      required: true
-      description: Resource UUID. Malformed UUIDs are treated as not-found (not 400).
-      schema:
-        type: string
-        format: uuid
+    CreateImportRequest:
+      type: object
+      required:
+      - file
+      properties:
+        file:
+          type: string
+          format: binary
+          description: The CSV file (Plug.Upload). Missing/non-upload → 400.
+        block_ttl_days:
+          type: integer
+          minimum: 1
+          default: 30
+          description: 'TTL for imported `manual_block` rows; other reasons get `expires_at: null`. Invalid/missing → falls back to 30.'
+    ErrorList:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/BlocksErrorObject'
+    EmailBlockImportResponse:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailBlockImport'
   securitySchemes:
     BearerAuth:
       type: http

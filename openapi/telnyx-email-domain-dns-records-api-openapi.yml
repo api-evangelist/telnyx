@@ -72,60 +72,19 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    EmailDomainResponse:
+    InboundConfig:
       type: object
       required:
-      - data
+      - enabled
+      - catch_all
+      - mx_required
       properties:
-        data:
-          $ref: '#/components/schemas/EmailDomain'
-    EmailDomainType:
-      type: string
-      enum:
-      - custom
-      - shared
-      - shared_inbound
-    EmailDomainVerification:
-      type: object
-      required:
-      - ownership
-      - spf
-      - dkim
-      - dmarc
-      - mx
-      properties:
-        ownership:
-          type: string
-          enum:
-          - pending
-          - verified
-          - not_required
-        spf:
-          type: string
-          enum:
-          - missing_optional
-          - verified
-          - failed
-          - not_required
-        dkim:
-          type: string
-          enum:
-          - pending
-          - verified
-          - failed
-        dmarc:
-          type: string
-          enum:
-          - missing_optional
-          - verified
-          - failed
-        mx:
-          type: string
-          enum:
-          - not_required
-          - pending
-          - verified
-          - failed
+        enabled:
+          type: boolean
+        catch_all:
+          type: boolean
+        mx_required:
+          type: boolean
     EmailDMARCPolicy:
       type: object
       description: DMARC policy for a sending domain. Drives the recommended _dmarc.<domain> TXT record. DMARC is advisory and never blocks sending. When omitted or null, the domain uses the advisory default (v=DMARC1; p=none; rua=mailto:dmarc@telnyx.com).
@@ -156,173 +115,6 @@ components:
           - reject
           nullable: true
           description: Policy for subdomains. Omitted from the record when null.
-    DomainsErrorResponse:
-      type: object
-      required:
-      - errors
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/email_Error'
-    DNSRecord:
-      type: object
-      required:
-      - id
-      - purpose
-      - record_type
-      - host
-      - value
-      - required
-      - status
-      properties:
-        id:
-          type: string
-          format: uuid
-        purpose:
-          type: string
-          enum:
-          - ownership
-          - spf
-          - dkim
-          - dmarc
-          - mx
-        record_type:
-          type: string
-          enum:
-          - TXT
-          - MX
-        host:
-          type: string
-        value:
-          type: string
-        actual_value:
-          type: string
-          nullable: true
-        priority:
-          type: integer
-          nullable: true
-        required:
-          type: boolean
-        status:
-          type: string
-          enum:
-          - pending
-          - verified
-          - failed
-          - not_required
-      example:
-        id: 123e4567-e89b-12d3-a456-426614174001
-        purpose: ownership
-        record_type: TXT
-        host: _telnyx-email.example.com
-        value: telnyx-domain-verification=abc123
-        actual_value: null
-        priority: null
-        required: true
-        status: pending
-    DomainsTrackingSettings:
-      type: object
-      properties:
-        open_tracking:
-          type: boolean
-          default: false
-          description: Inject a tracking pixel into HTML messages to record open events.
-        click_tracking:
-          type: boolean
-          default: false
-          description: Rewrite HTML links through a tracking redirect to record click events.
-        unsubscribe_tracking:
-          type: boolean
-          default: true
-          description: Add RFC 8058 List-Unsubscribe headers with a signed one-click unsubscribe URL. Enabled by default; Gmail/Yahoo bulk-sender rules require one-click unsubscribe support.
-    DKIMStatus:
-      type: object
-      required:
-      - selector
-      - algorithm
-      - key_length
-      - active
-      - rotated_at
-      properties:
-        selector:
-          type: string
-          nullable: true
-        algorithm:
-          type: string
-          enum:
-          - rsa-sha256
-          - null
-          nullable: true
-        key_length:
-          type: integer
-          enum:
-          - 2048
-          - null
-          nullable: true
-        active:
-          type: boolean
-        rotated_at:
-          type: string
-          format: date-time
-          nullable: true
-    DNSRecordListResponse:
-      type: object
-      required:
-      - data
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/DNSRecord'
-    email_Error:
-      type: object
-      required:
-      - code
-      - title
-      - detail
-      properties:
-        code:
-          type: string
-          enum:
-          - '10001'
-          - '10015'
-          - '500'
-          - '10007'
-          - '10008'
-          - '10020'
-          - '40901'
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              type: string
-    EmailDomainStatus:
-      type: string
-      enum:
-      - pending
-      - verifying
-      - verified
-      - failed
-      - degraded
-      - suspended
-    InboundConfig:
-      type: object
-      required:
-      - enabled
-      - catch_all
-      - mx_required
-      properties:
-        enabled:
-          type: boolean
-        catch_all:
-          type: boolean
-        mx_required:
-          type: boolean
     EmailDomain:
       type: object
       required:
@@ -441,15 +233,214 @@ components:
         created_at: '2026-01-01T00:00:00Z'
         updated_at: '2026-01-01T00:00:00Z'
         verified_at: null
-  parameters:
-    EmailDomainDomainId:
-      name: domain_id
-      in: path
-      required: true
-      description: Email domain UUID
-      schema:
-        type: string
-        format: uuid
+    DomainsErrorResponse:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/email_Error'
+    EmailDomainStatus:
+      type: string
+      enum:
+      - pending
+      - verifying
+      - verified
+      - failed
+      - degraded
+      - suspended
+    EmailDomainType:
+      type: string
+      enum:
+      - custom
+      - shared
+      - shared_inbound
+    EmailDomainResponse:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailDomain'
+    DKIMStatus:
+      type: object
+      required:
+      - selector
+      - algorithm
+      - key_length
+      - active
+      - rotated_at
+      properties:
+        selector:
+          type: string
+          nullable: true
+        algorithm:
+          type: string
+          enum:
+          - rsa-sha256
+          - null
+          nullable: true
+        key_length:
+          type: integer
+          enum:
+          - 2048
+          - null
+          nullable: true
+        active:
+          type: boolean
+        rotated_at:
+          type: string
+          format: date-time
+          nullable: true
+    EmailDomainVerification:
+      type: object
+      required:
+      - ownership
+      - spf
+      - dkim
+      - dmarc
+      - mx
+      properties:
+        ownership:
+          type: string
+          enum:
+          - pending
+          - verified
+          - not_required
+        spf:
+          type: string
+          enum:
+          - missing_optional
+          - verified
+          - failed
+          - not_required
+        dkim:
+          type: string
+          enum:
+          - pending
+          - verified
+          - failed
+        dmarc:
+          type: string
+          enum:
+          - missing_optional
+          - verified
+          - failed
+        mx:
+          type: string
+          enum:
+          - not_required
+          - pending
+          - verified
+          - failed
+    DomainsTrackingSettings:
+      type: object
+      properties:
+        open_tracking:
+          type: boolean
+          default: false
+          description: Inject a tracking pixel into HTML messages to record open events.
+        click_tracking:
+          type: boolean
+          default: false
+          description: Rewrite HTML links through a tracking redirect to record click events.
+        unsubscribe_tracking:
+          type: boolean
+          default: true
+          description: Add RFC 8058 List-Unsubscribe headers with a signed one-click unsubscribe URL. Enabled by default; Gmail/Yahoo bulk-sender rules require one-click unsubscribe support.
+    DNSRecordListResponse:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DNSRecord'
+    email_Error:
+      type: object
+      required:
+      - code
+      - title
+      - detail
+      properties:
+        code:
+          type: string
+          enum:
+          - '10001'
+          - '10015'
+          - '500'
+          - '10007'
+          - '10008'
+          - '10020'
+          - '40901'
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              type: string
+    DNSRecord:
+      type: object
+      required:
+      - id
+      - purpose
+      - record_type
+      - host
+      - value
+      - required
+      - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        purpose:
+          type: string
+          enum:
+          - ownership
+          - spf
+          - dkim
+          - dmarc
+          - mx
+        record_type:
+          type: string
+          enum:
+          - TXT
+          - MX
+        host:
+          type: string
+        value:
+          type: string
+        actual_value:
+          type: string
+          nullable: true
+        priority:
+          type: integer
+          nullable: true
+        required:
+          type: boolean
+        status:
+          type: string
+          enum:
+          - pending
+          - verified
+          - failed
+          - not_required
+      example:
+        id: 123e4567-e89b-12d3-a456-426614174001
+        purpose: ownership
+        record_type: TXT
+        host: _telnyx-email.example.com
+        value: telnyx-domain-verification=abc123
+        actual_value: null
+        priority: null
+        required: true
+        status: pending
   responses:
     email_NotFound:
       description: Resource not found
@@ -486,6 +477,15 @@ components:
               detail: domain is invalid
               source:
                 pointer: /data/attributes/domain
+  parameters:
+    EmailDomainDomainId:
+      name: domain_id
+      in: path
+      required: true
+      description: Email domain UUID
+      schema:
+        type: string
+        format: uuid
   securitySchemes:
     BearerAuth:
       type: http

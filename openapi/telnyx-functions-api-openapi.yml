@@ -711,6 +711,228 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
+    FuncRuntimeLog:
+      type: object
+      properties:
+        record_type:
+          type: string
+          const: compute_func_runtime_log
+        timestamp:
+          type: string
+          format: date-time
+        level:
+          type: string
+        message:
+          type: string
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    FunctionMetricAggregateListResponse:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/functions-observability_PaginationMeta'
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/FunctionMetricAggregate'
+    FuncInvocationLogsResponse:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/LogsMeta'
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/FuncInvocationLog'
+    FuncLogExportConfigResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/FuncLogExportConfig'
+    Revision:
+      type: object
+      properties:
+        record_type:
+          type: string
+        revision_id:
+          type: string
+        image:
+          type: string
+        commit_sha:
+          type: string
+        shipped_by:
+          type: string
+        shipped_at:
+          type: string
+          format: date-time
+        build_status:
+          type: string
+        deploy_status:
+          type: string
+        active:
+          type: boolean
+        failure_stage:
+          type: string
+        failure_reason:
+          type: string
+        build_ok_at:
+          type: string
+          format: date-time
+    FuncRuntimeLogsResponse:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/LogsMeta'
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/FuncRuntimeLog'
+    ShipInspection:
+      type: object
+      properties:
+        record_type:
+          type: string
+          const: build_log_inspection
+          description: Stable record type retained by both inspection path aliases.
+        runtime:
+          type: string
+        stage:
+          type: string
+          enum:
+          - build
+          - platform
+          - pre_build
+          - deploy
+          - security_review
+          - none
+          - pending
+        reason:
+          type: string
+        snippet:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    FuncLogExportConfigSetRequest:
+      type: object
+      description: 'Full-replace configuration body. All fields are required on every call: the API treats PUT as a replace (RFC 7231), so omitting any field is a 422, not "keep the current value".'
+      required:
+      - endpoint
+      - headers
+      - runtime_export_enabled
+      - invocation_export_enabled
+      properties:
+        endpoint:
+          type: string
+          format: uri
+          description: HTTPS URL to push logs to
+        headers:
+          type: object
+          description: Headers attached to every export push, as key-value pairs (e.g. an auth token the collector expects). Required even when empty — {} means "no headers". Encrypted at rest; never returned.
+          additionalProperties:
+            type: string
+        runtime_export_enabled:
+          type: boolean
+          description: Export runtime logs (function stdout/stderr) to this destination
+        invocation_export_enabled:
+          type: boolean
+          description: Export invocation records (one per HTTP request) to this destination
+    ShipInspectionResponseWrapper:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/ShipInspection'
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
+    LogsMeta:
+      type: object
+      properties:
+        has_more:
+          type: boolean
+        partial:
+          type: boolean
+    RevisionListResponse:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/functions-observability_PaginationMeta'
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Revision'
+    FuncLogExportConfig:
+      type: object
+      description: Metadata-only view of a function's log export destination. Header values are write-only (encrypted server-side) and never appear in any response.
+      properties:
+        record_type:
+          type: string
+          enum:
+          - compute_func_log_export_config
+        id:
+          type: string
+          description: Configuration record ID
+        func_id:
+          type: string
+          description: Function ID this configuration belongs to
+        endpoint:
+          type: string
+          format: uri
+          description: HTTPS OTLP endpoint URL logs are pushed to
+        enabled:
+          type: boolean
+          description: Whether export is enabled for this function
+        runtime_export_enabled:
+          type: boolean
+          description: Whether runtime logs (function stdout/stderr) are exported
+        invocation_export_enabled:
+          type: boolean
+          description: Whether invocation records (one per HTTP request) are exported
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    functions-observability_PaginationMeta:
+      type: object
+      properties:
+        total_pages:
+          type: integer
+        total_results:
+          type: integer
+        page_number:
+          type: integer
+        page_size:
+          type: integer
     FunctionMetricAggregate:
       type: object
       properties:
@@ -776,84 +998,6 @@ components:
           type:
           - number
           - 'null'
-    FunctionMetricAggregateListResponse:
-      type: object
-      properties:
-        meta:
-          $ref: '#/components/schemas/functions-observability_PaginationMeta'
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/FunctionMetricAggregate'
-    FuncRuntimeLog:
-      type: object
-      properties:
-        record_type:
-          type: string
-          const: compute_func_runtime_log
-        timestamp:
-          type: string
-          format: date-time
-        level:
-          type: string
-        message:
-          type: string
-    functions-observability_PaginationMeta:
-      type: object
-      properties:
-        total_pages:
-          type: integer
-        total_results:
-          type: integer
-        page_number:
-          type: integer
-        page_size:
-          type: integer
-    billing-group_Error:
-      type: object
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: integer
-          format: int32
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-          properties: {}
-          additionalProperties: true
-    ShipInspectionResponseWrapper:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/ShipInspection'
-    Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/billing-group_Error'
-      type: object
-    LogsMeta:
-      type: object
-      properties:
-        has_more:
-          type: boolean
-        partial:
-          type: boolean
     FuncInvocationLog:
       type: object
       properties:
@@ -877,150 +1021,28 @@ components:
           type: integer
         region:
           type: string
-    Revision:
+    edge-compute_Error:
       type: object
       properties:
-        record_type:
+        code:
           type: string
-        revision_id:
+          example: '10005'
+        detail:
           type: string
-        image:
-          type: string
-        commit_sha:
-          type: string
-        shipped_by:
-          type: string
-        shipped_at:
-          type: string
-          format: date-time
-        build_status:
-          type: string
-        deploy_status:
-          type: string
-        active:
-          type: boolean
-        failure_stage:
-          type: string
-        failure_reason:
-          type: string
-        build_ok_at:
-          type: string
-          format: date-time
-    FuncLogExportConfigResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/FuncLogExportConfig'
-    RevisionListResponse:
-      type: object
-      properties:
+          example: The requested function does not exist or you don't have access to it
         meta:
-          $ref: '#/components/schemas/functions-observability_PaginationMeta'
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/Revision'
-    FuncInvocationLogsResponse:
+          $ref: '#/components/schemas/ErrorMeta'
+        source:
+          $ref: '#/components/schemas/ErrorSource'
+        title:
+          type: string
+          example: Function not found
+    ErrorMeta:
       type: object
       properties:
-        meta:
-          $ref: '#/components/schemas/LogsMeta'
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/FuncInvocationLog'
-    FuncLogExportConfig:
-      type: object
-      description: Metadata-only view of a function's log export destination. Header values are write-only (encrypted server-side) and never appear in any response.
-      properties:
-        record_type:
+        url:
           type: string
-          enum:
-          - compute_func_log_export_config
-        id:
-          type: string
-          description: Configuration record ID
-        func_id:
-          type: string
-          description: Function ID this configuration belongs to
-        endpoint:
-          type: string
-          format: uri
-          description: HTTPS OTLP endpoint URL logs are pushed to
-        enabled:
-          type: boolean
-          description: Whether export is enabled for this function
-        runtime_export_enabled:
-          type: boolean
-          description: Whether runtime logs (function stdout/stderr) are exported
-        invocation_export_enabled:
-          type: boolean
-          description: Whether invocation records (one per HTTP request) are exported
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-    FuncLogExportConfigSetRequest:
-      type: object
-      description: 'Full-replace configuration body. All fields are required on every call: the API treats PUT as a replace (RFC 7231), so omitting any field is a 422, not "keep the current value".'
-      required:
-      - endpoint
-      - headers
-      - runtime_export_enabled
-      - invocation_export_enabled
-      properties:
-        endpoint:
-          type: string
-          format: uri
-          description: HTTPS URL to push logs to
-        headers:
-          type: object
-          description: Headers attached to every export push, as key-value pairs (e.g. an auth token the collector expects). Required even when empty — {} means "no headers". Encrypted at rest; never returned.
-          additionalProperties:
-            type: string
-        runtime_export_enabled:
-          type: boolean
-          description: Export runtime logs (function stdout/stderr) to this destination
-        invocation_export_enabled:
-          type: boolean
-          description: Export invocation records (one per HTTP request) to this destination
-    FuncRuntimeLogsResponse:
-      type: object
-      properties:
-        meta:
-          $ref: '#/components/schemas/LogsMeta'
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/FuncRuntimeLog'
-    ShipInspection:
-      type: object
-      properties:
-        record_type:
-          type: string
-          const: build_log_inspection
-          description: Stable record type retained by both inspection path aliases.
-        runtime:
-          type: string
-        stage:
-          type: string
-          enum:
-          - build
-          - platform
-          - pre_build
-          - deploy
-          - security_review
-          - none
-          - pending
-        reason:
-          type: string
-        snippet:
-          type: string
-        created_at:
-          type: string
-          format: date-time
+          example: https://docs.telnyx.com/api/errors/10005
     ComputeBinding:
       type: object
       description: A function-scoped binding persisted at ship time. For binding_type=actor, actor_type is the referenced Stateful Actor type and env_name is the binding name exposed to the function.
@@ -1055,21 +1077,50 @@ components:
           type: string
         updated_at:
           type: string
-    ComputeFunctionListResponse:
+    ErrorSource:
       type: object
       properties:
-        data:
+        parameter:
+          type: string
+          example: id
+        pointer:
+          type: string
+          example: /id
+    GenericErrorResponse:
+      type: object
+      properties:
+        errors:
           type: array
           items:
-            $ref: '#/components/schemas/ComputeFunction'
-        meta:
-          $ref: '#/components/schemas/edge-compute_PaginationMeta'
-    ErrorMeta:
+            $ref: '#/components/schemas/edge-compute_Error'
+    ComputeFunction:
       type: object
       properties:
-        url:
+        record_type:
           type: string
-          example: https://docs.telnyx.com/api/errors/10005
+          example: compute_func
+        id:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+        status_detail:
+          type: string
+        invoke_url:
+          type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
+        bindings:
+          type: array
+          description: Always present; empty when the function has no bindings.
+          items:
+            $ref: '#/components/schemas/ComputeBinding'
+        message:
+          type: string
+          example: Function deployed successfully
     Errors_2:
       properties:
         errors:
@@ -1092,6 +1143,15 @@ components:
         total_results:
           type: integer
           example: 52
+    ComputeFunctionListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComputeFunction'
+        meta:
+          $ref: '#/components/schemas/edge-compute_PaginationMeta'
     Error:
       required:
       - code
@@ -1127,66 +1187,6 @@ components:
         code: '20207'
         description: The street address provided is invalid.
       type: object
-    ComputeFunction:
-      type: object
-      properties:
-        record_type:
-          type: string
-          example: compute_func
-        id:
-          type: string
-        name:
-          type: string
-        status:
-          type: string
-        status_detail:
-          type: string
-        invoke_url:
-          type: string
-        created_at:
-          type: string
-        updated_at:
-          type: string
-        bindings:
-          type: array
-          description: Always present; empty when the function has no bindings.
-          items:
-            $ref: '#/components/schemas/ComputeBinding'
-        message:
-          type: string
-          example: Function deployed successfully
-    edge-compute_Error:
-      type: object
-      properties:
-        code:
-          type: string
-          example: '10005'
-        detail:
-          type: string
-          example: The requested function does not exist or you don't have access to it
-        meta:
-          $ref: '#/components/schemas/ErrorMeta'
-        source:
-          $ref: '#/components/schemas/ErrorSource'
-        title:
-          type: string
-          example: Function not found
-    ErrorSource:
-      type: object
-      properties:
-        parameter:
-          type: string
-          example: id
-        pointer:
-          type: string
-          example: /id
-    GenericErrorResponse:
-      type: object
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/edge-compute_Error'
   securitySchemes:
     BearerAuth:
       type: http

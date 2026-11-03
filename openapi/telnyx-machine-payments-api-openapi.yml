@@ -191,31 +191,66 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
-  headers:
-    WWWAuthenticateChallenge:
-      description: 'Machine Payment Protocol challenge(s) returned on a 402 response, following the HTTP WWW-Authenticate format (RFC 9110). Construct a payment credential from a challenge and retry the same request with an `Authorization: Payment ...` header carrying it.'
-      schema:
-        type: string
-    PaymentReceipt:
-      description: Machine Payment Protocol receipt returned on successful paid responses. Contains the receipt token identifying the settled payment; keep it for audit and reconciliation alongside the credited transaction.
-      schema:
-        type: string
   schemas:
+    machine-payments_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              title:
+                type: string
+              detail:
+                type: string
+              meta:
+                type: object
+                properties:
+                  url:
+                    type: string
+              source:
+                type: object
+                properties:
+                  pointer:
+                    type: string
+      required:
+      - errors
+    MachinePaymentSuspendedAccountFailure:
+      type: object
+      description: Legacy failure envelope returned when the account is suspended.
+      properties:
+        success:
+          type: boolean
+          description: Always false for a failure response.
+        message:
+          type: string
+          description: Human-readable reason the request failed.
+        reasons:
+          type: array
+          items:
+            type: string
+          description: Additional machine-readable reasons for the failure.
+      required:
+      - success
+      - message
+      - reasons
     MachinePaymentAccountCreditResponse:
       type: object
       properties:
         data:
           $ref: '#/components/schemas/MachinePaymentAccountCredit'
-    MachinePaymentUpstreamError:
+    MachinePaymentAccountCreditRequest:
       type: object
-      description: Error envelope proxied verbatim from the upstream machine payment service. Unlike the standard Telnyx `errors` array, it carries a single top-level `error` message.
       required:
-      - error
+      - amount_usd
       properties:
-        error:
+        amount_usd:
           type: string
-          description: Upstream error message.
-          example: Invalid Payment authorization credential
+          description: Amount to credit in USD, as a decimal string with up to two fractional digits (by default between 5.00 and 500.00). The request body is required on the initial challenge request and remains required on a paid retry, where you re-send the identical body plus the payment credential — the credential, not the body, selects the payment, and the retried body is not re-validated.
+          example: '10.00'
     MachinePaymentAccountCredit:
       type: object
       description: An account-credit transaction settled through the Machine Payment Protocol.
@@ -295,60 +330,25 @@ components:
       - amount
       - currency
       - payment_source
-    MachinePaymentSuspendedAccountFailure:
+    MachinePaymentUpstreamError:
       type: object
-      description: Legacy failure envelope returned when the account is suspended.
+      description: Error envelope proxied verbatim from the upstream machine payment service. Unlike the standard Telnyx `errors` array, it carries a single top-level `error` message.
+      required:
+      - error
       properties:
-        success:
-          type: boolean
-          description: Always false for a failure response.
-        message:
+        error:
           type: string
-          description: Human-readable reason the request failed.
-        reasons:
-          type: array
-          items:
-            type: string
-          description: Additional machine-readable reasons for the failure.
-      required:
-      - success
-      - message
-      - reasons
-    MachinePaymentAccountCreditRequest:
-      type: object
-      required:
-      - amount_usd
-      properties:
-        amount_usd:
-          type: string
-          description: Amount to credit in USD, as a decimal string with up to two fractional digits (by default between 5.00 and 500.00). The request body is required on the initial challenge request and remains required on a paid retry, where you re-send the identical body plus the payment credential — the credential, not the body, selects the payment, and the retried body is not re-validated.
-          example: '10.00'
-    machine-payments_ErrorResponse:
-      type: object
-      properties:
-        errors:
-          type: array
-          items:
-            type: object
-            properties:
-              code:
-                type: string
-              title:
-                type: string
-              detail:
-                type: string
-              meta:
-                type: object
-                properties:
-                  url:
-                    type: string
-              source:
-                type: object
-                properties:
-                  pointer:
-                    type: string
-      required:
-      - errors
+          description: Upstream error message.
+          example: Invalid Payment authorization credential
+  headers:
+    WWWAuthenticateChallenge:
+      description: 'Machine Payment Protocol challenge(s) returned on a 402 response, following the HTTP WWW-Authenticate format (RFC 9110). Construct a payment credential from a challenge and retry the same request with an `Authorization: Payment ...` header carrying it.'
+      schema:
+        type: string
+    PaymentReceipt:
+      description: Machine Payment Protocol receipt returned on successful paid responses. Contains the receipt token identifying the settled payment; keep it for audit and reconciliation alongside the credited transaction.
+      schema:
+        type: string
   securitySchemes:
     BearerAuth:
       type: http

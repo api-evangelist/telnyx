@@ -1,0 +1,760 @@
+openapi: 3.2.0
+info:
+  version: 2.0.0
+  x-latency-category: responsive
+  x-endpoint-cost: light
+  title: Telnyx Actions API
+  description: SIP trunking, SMS, MMS, Call Control and Telephony Data Services.
+  contact:
+    email: support@telnyx.com
+servers:
+- url: https://api.telnyx.com/v2
+  description: Version 2.0.0 of the Telnyx API
+security:
+- bearerAuth: []
+tags:
+- name: Actions
+  description: 'Execute browser actions: navigate, observe, click, fill, select, press, scroll, wait_for, screenshot, batch.'
+paths:
+  /browser_sessions/{id}/actions:
+    post:
+      summary: Execute browser action
+      description: 'Executes a browser action on the session. Returns 200 if completed within wait_seconds, 202 if still in-flight.
+
+
+        Action types: navigate, observe, click, fill, select, press, scroll, wait_for, screenshot, batch.'
+      operationId: ExecuteBrowserAction
+      tags:
+      - Actions
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: wait_seconds
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 25
+          default: 10
+        description: Maximum seconds the submission request waits for completion, not an execution timeout. If still queued or running, returns 202 without cancelling execution; poll the returned action ID.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActionRequest'
+            examples:
+              navigate:
+                summary: Navigate
+                value:
+                  type: navigate
+                  url: https://example.com/
+              observe:
+                summary: Observe
+                value:
+                  type: observe
+              click:
+                summary: Click
+                value:
+                  type: click
+                  observation_id: obs_...
+                  ref: e1
+              screenshot:
+                summary: Screenshot
+                value:
+                  type: screenshot
+              batch:
+                summary: Batch
+                value:
+                  type: batch
+                  actions:
+                  - type: navigate
+                    url: https://example.com/
+                  - type: observe
+      responses:
+        '200':
+          description: 'Terminal action: succeeded, failed, or unknown. Inspect data.status and data.error; HTTP 200 does not imply successful execution.'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ActionResponse'
+        '202':
+          description: Action still in-flight — poll for result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ActionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: 'session_not_ready: new actions require a ready session; poll while provisioning, but do not retry new actions on closing or terminal sessions. concurrent_action: wait for the in-flight action. idempotency_conflict: the key was reused with a different normalized request.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: session_not_ready
+                  message: session is provisioning
+                  retryable: true
+        '503':
+          description: The request could not be completed reliably. Retrieve action and session state before retrying; a mutation may already have taken effect. Do not blindly repeat it with a new idempotency key or session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: execution_lost
+                  message: Request could not be completed reliably
+                  retryable: true
+  /browser_sessions/{id}/actions/{actionId}:
+    get:
+      summary: Get action result
+      description: Returns the stored status and result of an action. Use this to poll actions that returned 202; HTTP 200 can contain any action status. Stored observations contain metadata with empty tree and refs, not the full snapshot; submit a fresh observe action to obtain current refs.
+      operationId: GetBrowserAction
+      tags:
+      - Actions
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: actionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Action details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ActionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  schemas:
+    FillAction:
+      type: object
+      description: Type text into the element identified by observation_id + ref.
+      required:
+      - type
+      - observation_id
+      - ref
+      - value
+      properties:
+        type:
+          const: fill
+        observation_id:
+          type: string
+          minLength: 1
+        ref:
+          type: string
+          minLength: 1
+        value:
+          type: string
+          maxLength: 4096
+        include_observation:
+          type: boolean
+          default: false
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 255
+      additionalProperties: false
+    SelectAction:
+      type: object
+      description: Select an option on the element identified by observation_id + ref.
+      required:
+      - type
+      - observation_id
+      - ref
+      - value
+      properties:
+        type:
+          const: select
+        observation_id:
+          type: string
+          minLength: 1
+        ref:
+          type: string
+          minLength: 1
+        value:
+          type: string
+          maxLength: 1024
+        include_observation:
+          type: boolean
+          default: false
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 255
+      additionalProperties: false
+    WaitForAction:
+      type: object
+      description: Wait for a condition before continuing.
+      required:
+      - type
+      - condition
+      properties:
+        type:
+          const: wait_for
+        condition:
+          oneOf:
+          - type: object
+            required:
+            - kind
+            - pattern
+            properties:
+              kind:
+                const: url_pattern
+              pattern:
+                type: string
+                minLength: 1
+                maxLength: 1024
+            additionalProperties: false
+          - type: object
+            required:
+            - kind
+            - observation_id
+            - ref
+            properties:
+              kind:
+                const: ref
+              observation_id:
+                type: string
+                minLength: 1
+              ref:
+                type: string
+                minLength: 1
+            additionalProperties: false
+          - type: object
+            required:
+            - kind
+            - text
+            properties:
+              kind:
+                const: text
+              text:
+                type: string
+                minLength: 1
+                maxLength: 1024
+            additionalProperties: false
+          - type: object
+            required:
+            - kind
+            properties:
+              kind:
+                const: dom_stable
+            additionalProperties: false
+        timeout_ms:
+          type: integer
+          minimum: 100
+          maximum: 15000
+          default: 5000
+        include_observation:
+          type: boolean
+          default: false
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 255
+      additionalProperties: false
+    PressAction:
+      type: object
+      description: Press a keyboard key.
+      required:
+      - type
+      - key
+      properties:
+        type:
+          const: press
+        key:
+          type: string
+          enum:
+          - Enter
+          - Tab
+          - Escape
+          - Backspace
+          - ArrowUp
+          - ArrowDown
+          - ArrowLeft
+          - ArrowRight
+          - PageUp
+          - PageDown
+          - Home
+          - End
+        include_observation:
+          type: boolean
+          default: false
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 255
+      additionalProperties: false
+    ActionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          example: bact_075cfdc9-...
+        session_id:
+          type: string
+        seq:
+          type: integer
+        type:
+          type: string
+        status:
+          type: string
+          enum:
+          - queued
+          - running
+          - succeeded
+          - failed
+          - unknown
+          description: POST returns 202 for queued or running actions. Terminal states are succeeded, failed, and unknown (the execution outcome could not be determined, with error.code=execution_lost). GET returns 200 for both nonterminal and terminal states.
+        result:
+          type:
+          - object
+          - 'null'
+          properties:
+            url:
+              type: string
+            title:
+              type: string
+            observation:
+              type: object
+              properties:
+                observation_id:
+                  type: string
+                url:
+                  type: string
+                title:
+                  type: string
+                refs:
+                  type: object
+                  additionalProperties: true
+                tree:
+                  type: string
+                truncated:
+                  type: boolean
+                ref_count:
+                  type: integer
+                  description: Number of refs in the original observation, present on stored observation metadata.
+              description: Full tree and refs are delivered only in the original successful POST response when completed within wait_seconds. GET polling and idempotent replays return metadata with an empty tree and refs plus ref_count. Submit a fresh observe action to obtain usable refs.
+            artifact:
+              type: object
+              properties:
+                artifact_id:
+                  type: string
+                content_type:
+                  type: string
+                size_bytes:
+                  type: integer
+            results:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+              description: Present only for batch actions.
+        request:
+          type: object
+          description: 'Normalized request metadata; defaults may be materialized and fill values are redacted as {redacted: true, length: number}, including inside batch actions.'
+          additionalProperties: true
+        error:
+          type:
+          - object
+          - 'null'
+          properties:
+            code:
+              type: string
+            retryable:
+              type: boolean
+          description: Null unless an execution failure is recorded. Action failures (policy_denied, stale_observation, stale_ref, navigation_blocked, timeout, execution_lost, result_too_large) are returned on the action resource with HTTP 200. An unknown action with execution_lost has retryable=false; inspect session state and reconcile possible effects before any new action. Separately, a request may return HTTP 503 with a top-level execution_lost error and retryable=true; that is not proof of safe re-execution.
+          required:
+          - code
+          - retryable
+        created_at:
+          type: string
+          format: date-time
+        started_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        completed_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+      required:
+      - id
+      - session_id
+      - seq
+      - type
+      - status
+      - result
+      - request
+      - error
+      - created_at
+      - started_at
+      - completed_at
+    ActionRequest:
+      description: 'Discriminated union on type. Variants are strict: unknown fields are rejected with 400. Reusing an idempotency_key with an identical request replays the original resource; with a different request it returns 409 idempotency_conflict.'
+      oneOf:
+      - $ref: '#/components/schemas/NavigateAction'
+      - $ref: '#/components/schemas/ObserveAction'
+      - $ref: '#/components/schemas/ClickAction'
+      - $ref: '#/components/schemas/FillAction'
+      - $ref: '#/components/schemas/SelectAction'
+      - $ref: '#/components/schemas/PressAction'
+      - $ref: '#/components/schemas/ScrollAction'
+      - $ref: '#/components/schemas/ScreenshotAction'
+      - $ref: '#/components/schemas/WaitForAction'
+      - $ref: '#/components/schemas/BatchAction'
+    GatewayError:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            required:
+            - code
+            - title
+            properties:
+              code:
+                type: string
+              title:
+                type: string
+              detail:
+                type: string
+              source:
+                type: object
+                properties:
+                  pointer:
+                    type: string
+              meta:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+    NavigateAction:
+      type: object
+      description: Navigate to a URL.
+      required:
+      - type
+      - url
+      properties:
+        type:
+          const: navigate
+        url:
+          type: string
+          format: uri
+          maxLength: 2048
+        wait_until:
+          type: string
+          enum:
+          - load
+          - dom_stable
+          - none
+          default: load
+        include_observation:
+          type: boolean
+          default: false
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 255
+      additionalProperties: false
+    BatchAction:
+      type: object
+      description: 'Execute 1-50 sub-actions sequentially. Non-recursive: a batch inside a batch is rejected (400). An empty array is rejected (400). A failed sub-action stops the batch; earlier browser mutations are not rolled back, but partial sub-action results are not returned.'
+      required:
+      - type
+      - actions
+      properties:
+        type:
+          const: batch
+        actions:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            oneOf:
+            - $ref: '#/components/schemas/NavigateAction'
+            - $ref: '#/components/schemas/ObserveAction'
+            - $ref: '#/components/schemas/ClickAction'
+            - $ref: '#/components/schemas/FillAction'
+            - $ref: '#/components/schemas/SelectAction'
+            - $ref: '#/components/schemas/PressAction'
+            - $ref: '#/components/schemas/ScrollAction'
+            - $ref: '#/components/schemas/ScreenshotAction'
+            - $ref: '#/components/schemas/WaitForAction'
+        include_observation:
+          type: boolean
+          default: false
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 255
+      additionalProperties: false
+    ScrollAction:
+      type: object
+      description: Scroll the page.
+      required:
+      - type
+      properties:
+        type:
+          const: scroll
+        delta_x:
+          type: integer
+          minimum: -5000
+          maximum: 5000
+          default: 0
+        delta_y:
+          type: integer
+          minimum: -5000
+          maximum: 5000
+          default: 0
+        include_observation:
+          type: boolean
+          default: false
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 255
+      additionalProperties: false
+    ScreenshotAction:
+      type: object
+      description: Capture a screenshot of the current page.
+      required:
+      - type
+      properties:
+        type:
+          const: screenshot
+        include_observation:
+          type: boolean
+          default: false
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 255
+      additionalProperties: false
+    ObserveAction:
+      type: object
+      description: Capture an observation (DOM snapshot) of the current page.
+      required:
+      - type
+      properties:
+        type:
+          const: observe
+        include_observation:
+          type: boolean
+          default: false
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 255
+      additionalProperties: false
+    ClickAction:
+      type: object
+      description: Click an element identified by observation_id + ref.
+      required:
+      - type
+      - observation_id
+      - ref
+      properties:
+        type:
+          const: click
+        observation_id:
+          type: string
+          minLength: 1
+        ref:
+          type: string
+          minLength: 1
+        wait:
+          type: string
+          enum:
+          - no_wait
+          - dom_stable
+          - url_change
+          default: dom_stable
+        timeout_ms:
+          type: integer
+          minimum: 100
+          maximum: 15000
+          default: 5000
+        include_observation:
+          type: boolean
+          default: false
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 255
+      additionalProperties: false
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            retryable:
+              type: boolean
+          required:
+          - code
+          - message
+          - retryable
+      required:
+      - error
+  responses:
+    BadRequest:
+      description: Invalid request — validation error or invalid parameters.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: validation_error
+              message: 'invalid request: policy.allowed_domains must have at least 1 item(s)'
+              retryable: false
+    Unauthorized:
+      description: Unauthorized — missing or invalid API key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GatewayError'
+          example:
+            errors:
+            - code: '10009'
+              title: Authentication failed
+              detail: Could not find any usable credentials in the request.
+              source:
+                pointer: /
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10009
+    NotFound:
+      description: Session or artifact not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: not_found
+              message: session not found
+              retryable: false
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: 'Telnyx API key supplied as `Authorization: Bearer <token>`. In production, auth may be validated by the API gateway and forwarded via Telnyx auth headers.'
+    Payment:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Machine Payment Protocol credential used on paid retries, sent as `Authorization: Payment ...`. Obtained by paying a challenge returned in the `WWW-Authenticate` header of a 402 response. This is not a Telnyx API key; initial challenge requests use standard bearer authentication instead.'
+    agent-memory_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+    bearerAuth:
+      type: http
+      scheme: bearer
+    branded-calling_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    collections_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Collections and results are automatically scoped to the authenticated user's organization.
+    number-reputation_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Generate one at https://portal.telnyx.com/#/app/api-keys.
+    oauthClientAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+        authorizationCode:
+          authorizationUrl: https://api.telnyx.com/v2/oauth/authorize
+          tokenUrl: https://api.telnyx.com/v2/oauth/token
+          refreshUrl: https://api.telnyx.com/v2/oauth/token
+          scopes:
+            admin: Administrative access to Telnyx resources
+      description: OAuth 2.0 authentication for Telnyx API and MCP integrations
+    outbound-voice-profiles_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    pay-connectors_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key, not the processor bearer token.
+    pronunciation-dicts_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API v2 key. Obtain from https://portal.telnyx.com
+    rcs-registration_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+    stored-payment-transactions_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    telnyxApiKey:
+      type: http
+      scheme: bearer
+      description: Management-only Telnyx account credential.
+    transcriptions-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key. Results are automatically scoped to the authenticated user's organization.
+    web-search_bearerAuth:
+      type: http
+      scheme: bearer
+      description: Telnyx API key
+x-service-info:
+  categories:
+  - communication
+  - developer-tools
+  docs:
+    apiReference: https://developers.telnyx.com
+    homepage: https://telnyx.com
+    llms: https://telnyx.com/llms.txt

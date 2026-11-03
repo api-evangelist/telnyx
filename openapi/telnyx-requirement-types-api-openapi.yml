@@ -109,32 +109,13 @@ components:
         page_size:
           type: integer
           example: 25
-    billing-group_Error:
-      type: object
-      required:
-      - code
-      - title
+    Errors:
       properties:
-        code:
-          type: integer
-          format: int32
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-          properties: {}
-          additionalProperties: true
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
     DocReqsRequirementTypeList:
       type: array
       items:
@@ -223,12 +204,38 @@ components:
           description: ISO 8601 formatted date-time indicating when the resource was last updated.
           readOnly: true
           example: '2021-04-12T20:20:20.020Z'
-    Errors:
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
+    documents_Errors:
       properties:
         errors:
-          type: array
           items:
-            $ref: '#/components/schemas/billing-group_Error'
+            $ref: '#/components/schemas/documents_Error'
+          type: array
       type: object
     documents_Error:
       properties:
@@ -253,13 +260,6 @@ components:
       required:
       - code
       - title
-      type: object
-    documents_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/documents_Error'
-          type: array
       type: object
     Errors_2:
       properties:
@@ -304,25 +304,15 @@ components:
         description: The street address provided is invalid.
       type: object
   parameters:
-    FilterRequirementTypesConsolidated:
-      name: filter
-      in: query
-      style: deepObject
-      explode: true
-      required: false
-      description: 'Consolidated filter parameter for requirement types (deepObject style). Originally: filter[name]'
+    DocReqsRequirementTypeId:
+      name: id
+      in: path
+      description: Uniquely identifies the requirement_type record
+      example: a38c217a-8019-48f8-bff6-0fdd9939075b
+      required: true
       schema:
-        type: object
-        additionalProperties: false
-        properties:
-          name:
-            type: object
-            additionalProperties: false
-            properties:
-              contains:
-                type: string
-                example: utility bill
-                description: Filters requirement types to those whose name contains a certain string.
+        type: string
+        format: uuid
     SortRequirementTypesConsolidated:
       name: sort
       in: query
@@ -342,15 +332,25 @@ components:
         example:
         - name
         description: Specifies the sort order for results. If you want to sort by a field in ascending order, include it as a sort parameter. If you want to sort in descending order, prepend a `-` in front of the field name.
-    DocReqsRequirementTypeId:
-      name: id
-      in: path
-      description: Uniquely identifies the requirement_type record
-      example: a38c217a-8019-48f8-bff6-0fdd9939075b
-      required: true
+    FilterRequirementTypesConsolidated:
+      name: filter
+      in: query
+      style: deepObject
+      explode: true
+      required: false
+      description: 'Consolidated filter parameter for requirement types (deepObject style). Originally: filter[name]'
       schema:
-        type: string
-        format: uuid
+        type: object
+        additionalProperties: false
+        properties:
+          name:
+            type: object
+            additionalProperties: false
+            properties:
+              contains:
+                type: string
+                example: utility bill
+                description: Filters requirement types to those whose name contains a certain string.
   responses:
     documents_GenericErrorResponse:
       description: Unexpected error
@@ -363,6 +363,15 @@ components:
             - code: '10007'
               title: Unexpected error
               detail: An unexpected error occured.
+    DocReqsRequirementTypeResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/DocReqsRequirementType'
+            type: object
+      description: Successful response
     DocReqsListRequirementTypesResponse:
       content:
         application/json:
@@ -380,15 +389,6 @@ components:
           schema:
             $ref: '#/components/schemas/documents_Errors'
       description: Unexpected error
-    DocReqsRequirementTypeResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/DocReqsRequirementType'
-            type: object
-      description: Successful response
   securitySchemes:
     BearerAuth:
       type: http

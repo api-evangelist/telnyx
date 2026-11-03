@@ -515,46 +515,6 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    CollectionEnvelope:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/Collection'
-    billing-group_Error:
-      type: object
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: integer
-          format: int32
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-          properties: {}
-          additionalProperties: true
-    SourceType:
-      type: string
-      description: The type of Telnyx data attached as a source. `bucket` requires an additional `bucket_id`. Only `voice` is searchable today; `meeting_bot`, `message`, and `bucket` attach but are not yet searchable (Coming soon).
-      enum:
-      - voice
-      - meeting_bot
-      - message
-      - bucket
-      example: voice
     Collection:
       type: object
       properties:
@@ -592,49 +552,69 @@ components:
           type: string
           format: date-time
           example: '2026-08-04T12:00:00Z'
-    RetrievalSettingsWrapper:
+    CollectionListEnvelope:
       type: object
       properties:
-        record_type:
-          type: string
-          description: Identifies the record type. Always `ai_collection_settings`.
-          example: ai_collection_settings
-          readOnly: true
-        retrieval:
-          $ref: '#/components/schemas/RetrievalSettings'
-    CreateCollectionRequest:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Collection'
+        meta:
+          $ref: '#/components/schemas/ListMeta'
+    ListMeta:
+      type: object
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 42
+        page_number:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 20
+    ReplaceSourcesRequest:
       type: object
       required:
-      - name
+      - sources
       properties:
-        name:
-          type: string
-          description: Human-readable collection name.
-          example: Support Transcripts
-        description:
-          type: string
-          description: Optional description.
-          example: All customer support voice transcripts.
-        slug:
-          type: string
-          description: Optional slug (unique per organization). Derived from `name` when omitted.
-          example: support-transcripts
         sources:
           type: array
-          description: Optional sources to attach at creation time.
           items:
             $ref: '#/components/schemas/SourceRequest'
-        settings:
-          description: Optional retrieval settings.
-          allOf:
-          - $ref: '#/components/schemas/RetrievalSettingsWrapper'
-    Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/billing-group_Error'
+    SourceRequest:
       type: object
+      required:
+      - source_type
+      properties:
+        source_type:
+          $ref: '#/components/schemas/SourceType'
+        bucket_id:
+          type: string
+          description: The Telnyx Storage bucket name. Required when `source_type` is `bucket`; ignored otherwise.
+          example: policy-docs
+      allOf:
+      - if:
+          properties:
+            source_type:
+              const: bucket
+          required:
+          - source_type
+        then:
+          properties:
+            bucket_id:
+              type: string
+          required:
+          - bucket_id
+    SourceEnvelope:
+      type: object
+      description: Envelope containing a single collection source.
+      properties:
+        data:
+          $ref: '#/components/schemas/collections_Source'
     CollectionSearchResponse:
       type: object
       properties:
@@ -644,22 +624,49 @@ components:
             $ref: '#/components/schemas/CollectionDocumentRecord'
         meta:
           $ref: '#/components/schemas/CollectionSearchMeta'
-    SourceReconcileMeta:
+    SettingsRequest:
       type: object
-      description: Reports which source IDs were added, retained, and removed by a replace operation.
       properties:
-        added:
+        retrieval:
+          $ref: '#/components/schemas/RetrievalSettings'
+    SourceReconcileEnvelope:
+      type: object
+      properties:
+        data:
           type: array
           items:
-            type: string
-        retained:
+            $ref: '#/components/schemas/collections_Source'
+        meta:
+          $ref: '#/components/schemas/SourceReconcileMeta'
+    SettingsEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/RetrievalSettingsWrapper'
+    Errors:
+      properties:
+        errors:
           type: array
           items:
-            type: string
-        removed:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    UpdateCollectionRequest:
+      type: object
+      description: Metadata-only update. Provide either or both fields.
+      properties:
+        name:
+          type: string
+          example: Support Transcripts (2026)
+        description:
+          type: string
+          example: Updated description.
+    SourceListEnvelope:
+      type: object
+      properties:
+        data:
           type: array
           items:
-            type: string
+            $ref: '#/components/schemas/collections_Source'
     CollectionDocumentRecord:
       type: object
       properties:
@@ -696,58 +703,58 @@ components:
         metadata:
           type: object
           additionalProperties: true
-    SourceRequest:
+    billing-group_Error:
       type: object
       required:
-      - source_type
+      - code
+      - title
       properties:
-        source_type:
-          $ref: '#/components/schemas/SourceType'
-        bucket_id:
+        code:
+          type: integer
+          format: int32
+        title:
           type: string
-          description: The Telnyx Storage bucket name. Required when `source_type` is `bucket`; ignored otherwise.
-          example: policy-docs
-      allOf:
-      - if:
+        detail:
+          type: string
+        source:
+          type: object
           properties:
-            source_type:
-              const: bucket
-          required:
-          - source_type
-        then:
-          properties:
-            bucket_id:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
               type: string
-          required:
-          - bucket_id
-    ReplaceSourcesRequest:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
+    CreateCollectionRequest:
       type: object
       required:
-      - sources
-      properties:
-        sources:
-          type: array
-          items:
-            $ref: '#/components/schemas/SourceRequest'
-    UpdateCollectionRequest:
-      type: object
-      description: Metadata-only update. Provide either or both fields.
+      - name
       properties:
         name:
           type: string
-          example: Support Transcripts (2026)
+          description: Human-readable collection name.
+          example: Support Transcripts
         description:
           type: string
-          example: Updated description.
-    SourceReconcileEnvelope:
-      type: object
-      properties:
-        data:
+          description: Optional description.
+          example: All customer support voice transcripts.
+        slug:
+          type: string
+          description: Optional slug (unique per organization). Derived from `name` when omitted.
+          example: support-transcripts
+        sources:
           type: array
+          description: Optional sources to attach at creation time.
           items:
-            $ref: '#/components/schemas/collections_Source'
-        meta:
-          $ref: '#/components/schemas/SourceReconcileMeta'
+            $ref: '#/components/schemas/SourceRequest'
+        settings:
+          description: Optional retrieval settings.
+          allOf:
+          - $ref: '#/components/schemas/RetrievalSettingsWrapper'
     CollectionSearchMeta:
       type: object
       properties:
@@ -779,65 +786,37 @@ components:
         page_size:
           type: integer
           example: 20
-    RetrievalSettings:
+    RetrievalSettingsWrapper:
       type: object
-      description: How documents are retrieved when searching the collection.
       properties:
-        top_k:
-          type: integer
-          description: Number of top results to retrieve (1–50).
-          minimum: 1
-          maximum: 50
-          default: 5
-          example: 5
-        retrieval_type:
+        record_type:
           type: string
-          description: 'Retrieval strategy. `vector` runs semantic similarity search; `hybrid` combines vector similarity with keyword matching; `keyword` runs lexical (BM25) matching. `keyword` is not accepted yet: setting it returns 422 `unsupported_retrieval_type`. A collection set to `hybrid` is accepted here but cannot be searched until hybrid execution ships.'
-          enum:
-          - vector
-          - hybrid
-          default: vector
-          example: vector
-    SettingsRequest:
-      type: object
-      properties:
+          description: Identifies the record type. Always `ai_collection_settings`.
+          example: ai_collection_settings
+          readOnly: true
         retrieval:
           $ref: '#/components/schemas/RetrievalSettings'
-    ListMeta:
+    SourceReconcileMeta:
       type: object
+      description: Reports which source IDs were added, retained, and removed by a replace operation.
       properties:
-        total_pages:
-          type: integer
-          example: 3
-        total_results:
-          type: integer
-          example: 42
-        page_number:
-          type: integer
-          example: 1
-        page_size:
-          type: integer
-          example: 20
-    SourceEnvelope:
-      type: object
-      description: Envelope containing a single collection source.
-      properties:
-        data:
-          $ref: '#/components/schemas/collections_Source'
-    SettingsEnvelope:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/RetrievalSettingsWrapper'
-    CollectionListEnvelope:
-      type: object
-      properties:
-        data:
+        added:
           type: array
           items:
-            $ref: '#/components/schemas/Collection'
-        meta:
-          $ref: '#/components/schemas/ListMeta'
+            type: string
+        retained:
+          type: array
+          items:
+            type: string
+        removed:
+          type: array
+          items:
+            type: string
+    CollectionEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Collection'
     collections_Source:
       type: object
       properties:
@@ -861,13 +840,34 @@ components:
         status:
           type: string
           example: ready
-    SourceListEnvelope:
+    RetrievalSettings:
       type: object
+      description: How documents are retrieved when searching the collection.
       properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/collections_Source'
+        top_k:
+          type: integer
+          description: Number of top results to retrieve (1–50).
+          minimum: 1
+          maximum: 50
+          default: 5
+          example: 5
+        retrieval_type:
+          type: string
+          description: 'Retrieval strategy. `vector` runs semantic similarity search; `hybrid` combines vector similarity with keyword matching; `keyword` runs lexical (BM25) matching. `keyword` is not accepted yet: setting it returns 422 `unsupported_retrieval_type`. A collection set to `hybrid` is accepted here but cannot be searched until hybrid execution ships.'
+          enum:
+          - vector
+          - hybrid
+          default: vector
+          example: vector
+    SourceType:
+      type: string
+      description: The type of Telnyx data attached as a source. `bucket` requires an additional `bucket_id`. Only `voice` is searchable today; `meeting_bot`, `message`, and `bucket` attach but are not yet searchable (Coming soon).
+      enum:
+      - voice
+      - meeting_bot
+      - message
+      - bucket
+      example: voice
     Errors_2:
       properties:
         errors:
@@ -924,6 +924,17 @@ components:
               detail: The required authentication headers were either invalid or not included in the request.
               meta:
                 url: https://developers.telnyx.com/docs/overview/errors/10009
+    NotFound:
+      description: The requested resource does not exist.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          example:
+            errors:
+            - code: collection_not_found
+              title: Collection not found
+              detail: No collection with uuid 'b3b1c8a2-9f4e-4d2a-9c1e-2f7a6d5b4c3a' exists for this account.
     Conflict:
       description: The request conflicts with existing state (e.g. duplicate slug or duplicate source).
       content:
@@ -937,17 +948,6 @@ components:
               detail: A collection with slug 'support-transcripts' already exists for this account.
               meta:
                 pointer: /slug
-    NotFound:
-      description: The requested resource does not exist.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Errors'
-          example:
-            errors:
-            - code: collection_not_found
-              title: Collection not found
-              detail: No collection with uuid 'b3b1c8a2-9f4e-4d2a-9c1e-2f7a6d5b4c3a' exists for this account.
     BadRequest:
       description: The request was malformed or failed validation.
       content:
@@ -961,17 +961,6 @@ components:
               detail: The request failed because it was not well-formed.
               meta:
                 url: https://developers.telnyx.com/docs/overview/errors/10015
-    collections_NotFound:
-      description: The requested resource does not exist.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Errors_2'
-          example:
-            errors:
-            - code: collection_not_found
-              title: Collection not found
-              detail: No collection with uuid 'b3b1c8a2-9f4e-4d2a-9c1e-2f7a6d5b4c3a' exists for this account.
     collections_Unauthorized:
       description: Missing or invalid authentication.
       content:
@@ -998,6 +987,17 @@ components:
               detail: The request failed because it was not well-formed.
               meta:
                 url: https://developers.telnyx.com/docs/overview/errors/10015
+    collections_NotFound:
+      description: The requested resource does not exist.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors_2'
+          example:
+            errors:
+            - code: collection_not_found
+              title: Collection not found
+              detail: No collection with uuid 'b3b1c8a2-9f4e-4d2a-9c1e-2f7a6d5b4c3a' exists for this account.
   parameters:
     Slug:
       name: slug
@@ -1007,14 +1007,15 @@ components:
       schema:
         type: string
         example: support-transcripts
-    SourceId:
-      name: sourceId
+    Uuid:
+      name: uuid
       in: path
       required: true
-      description: The identifier of the source to remove.
+      description: The collection's unique identifier.
       schema:
         type: string
-        example: '42'
+        format: uuid
+        example: 6a09ccbd-8f9b-4c3a-9b0e-2f1d3c4b5a6e
     collections_PageSize:
       name: page[size]
       in: query
@@ -1026,15 +1027,6 @@ components:
         maximum: 100
         default: 20
         example: 20
-    Uuid:
-      name: uuid
-      in: path
-      required: true
-      description: The collection's unique identifier.
-      schema:
-        type: string
-        format: uuid
-        example: 6a09ccbd-8f9b-4c3a-9b0e-2f1d3c4b5a6e
     PageNumber:
       name: page[number]
       in: query
@@ -1045,6 +1037,14 @@ components:
         minimum: 1
         default: 1
         example: 1
+    SourceId:
+      name: sourceId
+      in: path
+      required: true
+      description: The identifier of the source to remove.
+      schema:
+        type: string
+        example: '42'
   securitySchemes:
     BearerAuth:
       type: http
