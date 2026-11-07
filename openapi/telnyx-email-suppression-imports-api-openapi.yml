@@ -203,6 +203,17 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   responses:
+    email_Unauthorized:
+      description: Missing or invalid gateway auth.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorList'
+          example:
+            errors:
+            - code: '10007'
+              title: Unauthorized
+              detail: Missing authentication
     FrameworkError:
       description: 'Framework-rendered error (e.g. 406 Not Acceptable, 405 Method Not
 
@@ -237,17 +248,17 @@ components:
               detail: can't be blank
               source:
                 pointer: /data/attributes/to
-    email_Unauthorized:
-      description: Missing or invalid gateway auth.
+    BlocksNotFound:
+      description: Resource not found (cross-account lookups and malformed UUIDs also return 404 — no leak).
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorList'
           example:
             errors:
-            - code: '10007'
-              title: Unauthorized
-              detail: Missing authentication
+            - code: '10001'
+              title: Not Found
+              detail: The requested email block was not found
     ValidationErrorQuery:
       description: Query-param validation error (`source.pointer /<field>`).
       content:
@@ -261,27 +272,54 @@ components:
               detail: is invalid
               source:
                 pointer: /filter[reason]
-    BlocksNotFound:
-      description: Resource not found (cross-account lookups and malformed UUIDs also return 404 — no leak).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorList'
-          example:
-            errors:
-            - code: '10001'
-              title: Not Found
-              detail: The requested email block was not found
-  parameters:
-    PathId:
-      name: id
-      in: path
-      required: true
-      description: Resource UUID. Malformed UUIDs are treated as not-found (not 400).
-      schema:
-        type: string
-        format: uuid
   schemas:
+    BlocksErrorObject:
+      type: object
+      required:
+      - code
+      - title
+      - detail
+      properties:
+        code:
+          type: string
+          description: 'Error codes: `10001` (Not Found), `10007` (Unauthorized),
+
+            `10015` (Validation Failed), `10019` (Internal — import create
+
+            fallback), `40901` (Conflict), `500` (framework/catch-all).
+
+            '
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              type: string
+          description: '`/data/attributes/<field>` for changeset/Params; `/<field>` for query-param errors.'
+    EmailBlockImportResponse:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailBlockImport'
+    CreateImportRequest:
+      type: object
+      required:
+      - file
+      properties:
+        file:
+          type: string
+          format: binary
+          description: The CSV file (Plug.Upload). Missing/non-upload → 400.
+        block_ttl_days:
+          type: integer
+          minimum: 1
+          default: 30
+          description: 'TTL for imported `manual_block` rows; other reasons get `expires_at: null`. Invalid/missing → falls back to 30.'
     EmailBlockImport:
       type: object
       required:
@@ -364,46 +402,6 @@ components:
         `block_ttl_days`. Nullable fields use the omit-nullable pattern.
 
         '
-    BlocksErrorObject:
-      type: object
-      required:
-      - code
-      - title
-      - detail
-      properties:
-        code:
-          type: string
-          description: 'Error codes: `10001` (Not Found), `10007` (Unauthorized),
-
-            `10015` (Validation Failed), `10019` (Internal — import create
-
-            fallback), `40901` (Conflict), `500` (framework/catch-all).
-
-            '
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              type: string
-          description: '`/data/attributes/<field>` for changeset/Params; `/<field>` for query-param errors.'
-    CreateImportRequest:
-      type: object
-      required:
-      - file
-      properties:
-        file:
-          type: string
-          format: binary
-          description: The CSV file (Plug.Upload). Missing/non-upload → 400.
-        block_ttl_days:
-          type: integer
-          minimum: 1
-          default: 30
-          description: 'TTL for imported `manual_block` rows; other reasons get `expires_at: null`. Invalid/missing → falls back to 30.'
     ErrorList:
       type: object
       required:
@@ -413,13 +411,15 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/BlocksErrorObject'
-    EmailBlockImportResponse:
-      type: object
-      required:
-      - data
-      properties:
-        data:
-          $ref: '#/components/schemas/EmailBlockImport'
+  parameters:
+    PathId:
+      name: id
+      in: path
+      required: true
+      description: Resource UUID. Malformed UUIDs are treated as not-found (not 400).
+      schema:
+        type: string
+        format: uuid
   securitySchemes:
     BearerAuth:
       type: http

@@ -287,49 +287,38 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
-  parameters:
-    call-control_PageConsolidated:
-      name: page
-      in: query
-      style: deepObject
-      explode: true
-      description: 'Consolidated page parameter (deepObject style). Originally: page[after], page[before], page[limit], page[size], page[number]'
-      schema:
-        type: object
-        properties:
-          after:
-            type: string
-            default: 'null'
-            description: Opaque identifier of next page
-          before:
-            type: string
-            default: 'null'
-            description: Opaque identifier of previous page
-          limit:
-            type: integer
-            minimum: 1
-            maximum: 250
-            default: 20
-            description: Limit of records per single page
-          size:
-            type: integer
-            minimum: 1
-            maximum: 250
-            default: 20
-            description: The size of the page
-          number:
-            type: integer
-            minimum: 1
-            default: 1
-            description: The page number to load
-    CallControlId:
-      name: call_control_id
-      description: Unique identifier and token for controlling the call
-      in: path
-      required: true
-      schema:
-        type: string
   schemas:
+    CreateQueueRequest:
+      type: object
+      title: Create Queue Request
+      required:
+      - queue_name
+      properties:
+        queue_name:
+          description: The name of the queue. Must be between 1 and 255 characters.
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: tier_1_support
+        max_size:
+          description: The maximum number of calls allowed in the queue.
+          type: integer
+          minimum: 1
+          default: 300
+          example: 100
+      example:
+        queue_name: tier_1_support
+        max_size: 100
+    UpdateQueuedCallRequest:
+      type: object
+      title: Update Queued Call Request
+      properties:
+        keep_after_hangup:
+          description: Whether the call should remain in queue after hangup.
+          example: true
+          type: boolean
+      example:
+        keep_after_hangup: true
     PaginationMeta:
       type: object
       properties:
@@ -369,16 +358,12 @@ components:
               type: string
         meta:
           type: object
-    UpdateQueuedCallRequest:
-      type: object
-      title: Update Queued Call Request
+    call-control_Errors:
       properties:
-        keep_after_hangup:
-          description: Whether the call should remain in queue after hangup.
-          example: true
-          type: boolean
-      example:
-        keep_after_hangup: true
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/call-control_Error'
     QueueCall:
       type: object
       title: QueueCall
@@ -458,25 +443,6 @@ components:
           type: boolean
           description: Indicates whether the call is still active in the queue.
           example: true
-    UpdateQueueRequest:
-      type: object
-      title: Update Queue Request
-      required:
-      - max_size
-      properties:
-        max_size:
-          description: The maximum number of calls allowed in the queue.
-          type: integer
-          minimum: 1
-          example: 200
-      example:
-        max_size: 200
-    call-control_Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/call-control_Error'
     Queue:
       type: object
       title: Queue
@@ -532,41 +498,62 @@ components:
         current_size: 20
         max_size: 50
         average_wait_time_secs: 175
-    CreateQueueRequest:
+    UpdateQueueRequest:
       type: object
-      title: Create Queue Request
+      title: Update Queue Request
       required:
-      - queue_name
+      - max_size
       properties:
-        queue_name:
-          description: The name of the queue. Must be between 1 and 255 characters.
-          type: string
-          minLength: 1
-          maxLength: 255
-          example: tier_1_support
         max_size:
           description: The maximum number of calls allowed in the queue.
           type: integer
           minimum: 1
-          default: 300
-          example: 100
+          example: 200
       example:
-        queue_name: tier_1_support
-        max_size: 100
+        max_size: 200
+  parameters:
+    CallControlId:
+      name: call_control_id
+      description: Unique identifier and token for controlling the call
+      in: path
+      required: true
+      schema:
+        type: string
+    call-control_PageConsolidated:
+      name: page
+      in: query
+      style: deepObject
+      explode: true
+      description: 'Consolidated page parameter (deepObject style). Originally: page[after], page[before], page[limit], page[size], page[number]'
+      schema:
+        type: object
+        properties:
+          after:
+            type: string
+            default: 'null'
+            description: Opaque identifier of next page
+          before:
+            type: string
+            default: 'null'
+            description: Opaque identifier of previous page
+          limit:
+            type: integer
+            minimum: 1
+            maximum: 250
+            default: 20
+            description: Limit of records per single page
+          size:
+            type: integer
+            minimum: 1
+            maximum: 250
+            default: 20
+            description: The size of the page
+          number:
+            type: integer
+            minimum: 1
+            default: 1
+            description: The page number to load
   responses:
-    UnauthorizedResponse:
-      description: Unauthorized. Authentication failed - the required authentication headers were either invalid or not included in the request.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/call-control_Errors'
-          example:
-            errors:
-            - code: '10009'
-              title: Authentication failed
-              detail: The required authentication headers were either invalid or not included in the request.
-              meta:
-                url: https://developers.telnyx.com/docs/overview/errors/10009
     UnprocessableEntityResponse:
       description: Unprocessable entity. The request was well-formed but could not be processed due to semantic errors. This includes validation errors, invalid parameter values, call state errors, conference errors, queue errors, recording/transcription errors, and business logic violations.
       content:
@@ -721,6 +708,19 @@ components:
                   detail: The value is outside of allowed range 1 to 5000
                   source:
                     pointer: /max_participants
+    UnauthorizedResponse:
+      description: Unauthorized. Authentication failed - the required authentication headers were either invalid or not included in the request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/call-control_Errors'
+          example:
+            errors:
+            - code: '10009'
+              title: Authentication failed
+              detail: The required authentication headers were either invalid or not included in the request.
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10009
     NotFoundResponse:
       description: 'Resource not found. The requested resource does not exist. Common causes include: invalid call_control_id, conference not found, audio file not found, or recording not found.'
       content:
@@ -758,20 +758,6 @@ components:
                   detail: The recording could not be found. Please check the recording_id and try again.
                   source:
                     pointer: /recording_id
-    ListQueuesResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/Queue'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            title: List Queues Response
-            type: object
-      description: Successful response with a list of queues.
     ListQueueCallsResponse:
       content:
         application/json:
@@ -786,16 +772,20 @@ components:
             title: List Queue Calls Response
             type: object
       description: Successful response with a list of calls in a queue.
-    QueueCallResponse:
+    ListQueuesResponse:
       content:
         application/json:
           schema:
             properties:
               data:
-                $ref: '#/components/schemas/QueueCall'
-            title: Queue Call Response
+                items:
+                  $ref: '#/components/schemas/Queue'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            title: List Queues Response
             type: object
-      description: Successful response with details about a call in a queue.
+      description: Successful response with a list of queues.
     QueueResponse:
       content:
         application/json:
@@ -806,6 +796,16 @@ components:
             title: Queue Response
             type: object
       description: Successful response with details about a queue.
+    QueueCallResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/QueueCall'
+            title: Queue Call Response
+            type: object
+      description: Successful response with details about a call in a queue.
   securitySchemes:
     BearerAuth:
       type: http

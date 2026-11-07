@@ -322,6 +322,15 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   parameters:
+    wireless_PageSize_c5290d5308:
+      name: page[size]
+      in: query
+      description: The size of the page.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 250
+        default: 20
     wireless_PageNumber_c5290d5308:
       name: page[number]
       in: query
@@ -339,15 +348,6 @@ components:
         format: uuid
         type: string
         example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-    wireless_PageSize_c5290d5308:
-      name: page[size]
-      in: query
-      description: The size of the page.
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 250
-        default: 20
     wireless_PageNumber:
       description: The page number to load.
       in: query
@@ -365,121 +365,76 @@ components:
         maximum: 250
         minimum: 1
         type: integer
-  responses:
-    wireless_GenericErrorResponse_c5290d5308:
-      description: Unexpected error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Errors'
-          examples:
-            unexpectedError:
-              summary: Unexpected API error
-              value:
-                errors:
-                - code: '10007'
-                  title: Unexpected error
-                  detail: An unexpected error occured.
-    ResourceNotFound:
-      description: Resource not found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/documents_Error'
-    wireless_UnprocessableEntity_c5290d5308:
-      description: Unprocessable entity. Check the 'detail' field in response for details.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Errors'
-          examples:
-            unprocessableEntity:
-              summary: Request could not be processed
-              value:
-                errors:
-                - code: '10027'
-                  title: Unprocessable Entity
-                  detail: The server understood the syntax of the request but was unable to process the instructions.
-    DeleteWirelessBlocklistResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/WirelessBlocklist'
-            type: object
-      description: Successful Response
-    wireless_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/wireless_Errors'
-      description: Unexpected error
-    GetAllWirelessBlocklistsResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/WirelessBlocklist'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful Response
-    wireless_ResourceNotFound:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/wireless_Error'
-      description: Resource not found
-    wireless_UnprocessableEntity:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/wireless_Errors'
-      description: Unprocessable entity. Check the 'detail' field in response for details.
-    UpdateWirelessBlocklistResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/WirelessBlocklist'
-            type: object
-      description: Successful response
-    CreateWirelessBlocklistResponse:
-      content:
-        application/json:
-          schema:
-            example:
-              data:
-                created_at: '2018-02-02T22:25:27.521Z'
-                id: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-                name: North American Wireless Blocklist
-                record_type: wireless_blocklist
-                type: country
-                updated_at: '2018-02-02T22:25:27.521Z'
-                values:
-                - CA
-                - MX
-                - US
-            properties:
-              data:
-                $ref: '#/components/schemas/WirelessBlocklist'
-            type: object
-      description: Successful Response
-    GetWirelessBlocklistResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/WirelessBlocklist'
-            type: object
-      description: Successful Response
   schemas:
+    documents_Error:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          additionalProperties: true
+      type: object
+    wireless_MCC:
+      type: object
+      title: Mobile Country Code
+      properties:
+        mcc:
+          type: string
+          description: Mobile Country Code.
+          example: '310'
+      required:
+      - mcc
+    CountryCode:
+      type: string
+      description: ISO 3166-1 Alpha-2 Country Code.
+      example: US
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    wireless_Error_c5290d5308:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          additionalProperties: true
+      type: object
     PaginationMeta:
       type: object
       properties:
@@ -495,13 +450,50 @@ components:
         page_size:
           type: integer
           example: 25
-    Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/billing-group_Error'
+    PLMNCode:
+      type: string
+      description: Public land mobile network code (MCC + MNC).
+      example: '311210'
+    billing-group_Error:
       type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
+    MobileCountryCode:
+      type: string
+      description: Mobile Country Code.
+      example: '311'
+    wireless_Country:
+      type: object
+      title: Country
+      properties:
+        country_code:
+          type: string
+          description: ISO 3166-1 Alpha-2 Country Code.
+          example: US
+      required:
+      - country_code
     wireless_WirelessBlocklist:
       type: object
       properties:
@@ -546,26 +538,6 @@ components:
           - CA
           - MX
           - US
-    wireless_Country:
-      type: object
-      title: Country
-      properties:
-        country_code:
-          type: string
-          description: ISO 3166-1 Alpha-2 Country Code.
-          example: US
-      required:
-      - country_code
-    wireless_MCC:
-      type: object
-      title: Mobile Country Code
-      properties:
-        mcc:
-          type: string
-          description: Mobile Country Code.
-          example: '310'
-      required:
-      - mcc
     wireless_PLMN:
       type: object
       title: Public land mobile network
@@ -576,114 +548,6 @@ components:
           example: '310260'
       required:
       - plmn
-    PLMNCode:
-      type: string
-      description: Public land mobile network code (MCC + MNC).
-      example: '311210'
-    billing-group_Error:
-      type: object
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: integer
-          format: int32
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-          properties: {}
-          additionalProperties: true
-    wireless_Error_c5290d5308:
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: string
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-          additionalProperties: true
-      type: object
-    MobileCountryCode:
-      type: string
-      description: Mobile Country Code.
-      example: '311'
-    documents_Error:
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: string
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-          additionalProperties: true
-      type: object
-    CountryCode:
-      type: string
-      description: ISO 3166-1 Alpha-2 Country Code.
-      example: US
-    Country:
-      properties:
-        code:
-          description: ISO 3166-1 Alpha-2 Country Code.
-          example: US
-          type: string
-        name:
-          description: The name of the country.
-          example: United States of America
-          type: string
-      required:
-      - code
-      - name
-      title: Country
-      type: object
-    wireless_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/wireless_Error'
-          type: array
-      type: object
     PLMN:
       properties:
         code:
@@ -698,6 +562,28 @@ components:
       - code
       - name
       title: Public land mobile network
+      type: object
+    wireless_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/wireless_Error'
+          type: array
+      type: object
+    MCC:
+      properties:
+        code:
+          description: Mobile Country Code.
+          example: '311'
+          type: string
+        name:
+          description: The name of the country.
+          example: United States of America
+          type: string
+      required:
+      - code
+      - name
+      title: Mobile Country Code
       type: object
     wireless_Error:
       properties:
@@ -722,21 +608,6 @@ components:
       required:
       - code
       - title
-      type: object
-    MCC:
-      properties:
-        code:
-          description: Mobile Country Code.
-          example: '311'
-          type: string
-        name:
-          description: The name of the country.
-          example: United States of America
-          type: string
-      required:
-      - code
-      - name
-      title: Mobile Country Code
       type: object
     WirelessBlocklist:
       properties:
@@ -786,6 +657,21 @@ components:
             - $ref: '#/components/schemas/PLMNCode'
           type: array
       type: object
+    Country:
+      properties:
+        code:
+          description: ISO 3166-1 Alpha-2 Country Code.
+          example: US
+          type: string
+        name:
+          description: The name of the country.
+          example: United States of America
+          type: string
+      required:
+      - code
+      - name
+      title: Country
+      type: object
     Errors_2:
       properties:
         errors:
@@ -828,6 +714,120 @@ components:
         code: '20207'
         description: The street address provided is invalid.
       type: object
+  responses:
+    wireless_GenericErrorResponse_c5290d5308:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          examples:
+            unexpectedError:
+              summary: Unexpected API error
+              value:
+                errors:
+                - code: '10007'
+                  title: Unexpected error
+                  detail: An unexpected error occured.
+    ResourceNotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/documents_Error'
+    wireless_UnprocessableEntity_c5290d5308:
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          examples:
+            unprocessableEntity:
+              summary: Request could not be processed
+              value:
+                errors:
+                - code: '10027'
+                  title: Unprocessable Entity
+                  detail: The server understood the syntax of the request but was unable to process the instructions.
+    wireless_ResourceNotFound:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/wireless_Error'
+      description: Resource not found
+    GetWirelessBlocklistResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/WirelessBlocklist'
+            type: object
+      description: Successful Response
+    UpdateWirelessBlocklistResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/WirelessBlocklist'
+            type: object
+      description: Successful response
+    wireless_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/wireless_Errors'
+      description: Unexpected error
+    DeleteWirelessBlocklistResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/WirelessBlocklist'
+            type: object
+      description: Successful Response
+    CreateWirelessBlocklistResponse:
+      content:
+        application/json:
+          schema:
+            example:
+              data:
+                created_at: '2018-02-02T22:25:27.521Z'
+                id: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+                name: North American Wireless Blocklist
+                record_type: wireless_blocklist
+                type: country
+                updated_at: '2018-02-02T22:25:27.521Z'
+                values:
+                - CA
+                - MX
+                - US
+            properties:
+              data:
+                $ref: '#/components/schemas/WirelessBlocklist'
+            type: object
+      description: Successful Response
+    GetAllWirelessBlocklistsResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/WirelessBlocklist'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful Response
+    wireless_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/wireless_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
   securitySchemes:
     BearerAuth:
       type: http

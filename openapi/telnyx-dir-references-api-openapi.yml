@@ -141,24 +141,49 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    ReferenceSubmissionRequest:
+    ReferenceUpdateRequest:
       type: object
-      description: Exactly two business references plus one financial reference. The DIR's authorizer email must be verified before this is accepted.
-      required:
-      - business_references
-      - financial_reference
+      minProperties: 1
+      description: Partial update for a single reference; supply at least one field. Cosmetic fields are always editable. phone_e164 and timezone may only be changed while a scheduled call has not yet been dialed.
       properties:
-        business_references:
-          type: array
-          minItems: 2
-          maxItems: 2
-          description: 'Exactly two business references. Array order determines each one''s slot: the first entry becomes slot 1 and the second becomes slot 2. Those slots are what you pass when updating a single reference later. Each should be a senior contact who can speak to your company''s reputation and operations: a C-suite executive (CEO, CFO, CTO, COO), an owner or founder as reflected in your corporate records, or a senior manager, director, or executive at an organization you work with, such as a vendor, partner, or client.'
-          items:
-            $ref: '#/components/schemas/ReferenceInput'
-        financial_reference:
-          description: 'One financial reference who can confirm the company pays its bills: a licensed certified public accountant (CPA) the company uses, a contact at a bank or financial institution that has a relationship with the company, or a reasonable alternative banking or financial reference.'
-          allOf:
-          - $ref: '#/components/schemas/ReferenceInput'
+        full_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: The full name of the person we should contact as your reference.
+          example: Dana Reyes
+        job_title:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: The reference contact's job title, for example CFO or Owner.
+          example: VP of Operations
+        organization:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: The name of the organization the reference contact works for.
+          example: Acme Logistics
+        relationship_to_registrant:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: How the reference contact is related to the registering business.
+          example: Supplier
+        phone_e164:
+          type: string
+          pattern: ^\+[1-9]\d{1,14}$
+          description: The reference's phone number in E.164 format, for example +14155550123. We call this number during their local business hours.
+          example: '+14155550123'
+        email:
+          type: string
+          format: email
+          description: The reference's email address. We email them scheduling and dial-in instructions before we call, so use an address they check.
+          example: dana.reyes@example.com
+        timezone:
+          type: string
+          description: The reference's IANA time zone, for example America/New_York. We only call during their local 8am to 9pm hours, which is why we need it.
+          example: America/New_York
     Reference:
       type: object
       description: A reference (business or financial) on a DIR, in the customer-facing shape. No internal identifiers are exposed.
@@ -227,65 +252,6 @@ components:
           type: string
           description: IANA timezone id for the reference. Calls are only placed within the reference's local 8am-9pm window.
           example: America/New_York
-    ReferenceUpdateRequest:
-      type: object
-      minProperties: 1
-      description: Partial update for a single reference; supply at least one field. Cosmetic fields are always editable. phone_e164 and timezone may only be changed while a scheduled call has not yet been dialed.
-      properties:
-        full_name:
-          type: string
-          minLength: 1
-          maxLength: 255
-          description: The full name of the person we should contact as your reference.
-          example: Dana Reyes
-        job_title:
-          type: string
-          maxLength: 255
-          nullable: true
-          description: The reference contact's job title, for example CFO or Owner.
-          example: VP of Operations
-        organization:
-          type: string
-          maxLength: 255
-          nullable: true
-          description: The name of the organization the reference contact works for.
-          example: Acme Logistics
-        relationship_to_registrant:
-          type: string
-          maxLength: 255
-          nullable: true
-          description: How the reference contact is related to the registering business.
-          example: Supplier
-        phone_e164:
-          type: string
-          pattern: ^\+[1-9]\d{1,14}$
-          description: The reference's phone number in E.164 format, for example +14155550123. We call this number during their local business hours.
-          example: '+14155550123'
-        email:
-          type: string
-          format: email
-          description: The reference's email address. We email them scheduling and dial-in instructions before we call, so use an address they check.
-          example: dana.reyes@example.com
-        timezone:
-          type: string
-          description: The reference's IANA time zone, for example America/New_York. We only call during their local 8am to 9pm hours, which is why we need it.
-          example: America/New_York
-    ReferenceWrapped:
-      type: object
-      required:
-      - data
-      properties:
-        data:
-          $ref: '#/components/schemas/Reference'
-    ReferenceList:
-      type: object
-      required:
-      - data
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/Reference'
     branded-calling_Error:
       type: object
       required:
@@ -343,6 +309,24 @@ components:
               type: string
               example: page[size]
       description: A single entry in the canonical Telnyx error envelope. `code` is the stable Telnyx error catalog id; the human-readable explanation lives at `meta.url`. `detail` is a context-specific message; `source.pointer` (when present) names the offending field of the request.
+    ReferenceWrapped:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/Reference'
+    branded-calling_Errors:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/branded-calling_Error'
+          description: List of one or more error entries. Order is not significant.
+      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
     ReferenceInput:
       type: object
       description: One reference supplied at submit. The reference type is implied by the field that carries it (business_references vs financial_reference).
@@ -390,17 +374,33 @@ components:
           type: string
           description: 'IANA timezone id for the reference (e.g. America/New_York). Required: calls are only placed within the reference''s local 8am-9pm window.'
           example: America/New_York
-    branded-calling_Errors:
+    ReferenceSubmissionRequest:
+      type: object
+      description: Exactly two business references plus one financial reference. The DIR's authorizer email must be verified before this is accepted.
+      required:
+      - business_references
+      - financial_reference
+      properties:
+        business_references:
+          type: array
+          minItems: 2
+          maxItems: 2
+          description: 'Exactly two business references. Array order determines each one''s slot: the first entry becomes slot 1 and the second becomes slot 2. Those slots are what you pass when updating a single reference later. Each should be a senior contact who can speak to your company''s reputation and operations: a C-suite executive (CEO, CFO, CTO, COO), an owner or founder as reflected in your corporate records, or a senior manager, director, or executive at an organization you work with, such as a vendor, partner, or client.'
+          items:
+            $ref: '#/components/schemas/ReferenceInput'
+        financial_reference:
+          description: 'One financial reference who can confirm the company pays its bills: a licensed certified public accountant (CPA) the company uses, a contact at a bank or financial institution that has a relationship with the company, or a reasonable alternative banking or financial reference.'
+          allOf:
+          - $ref: '#/components/schemas/ReferenceInput'
+    ReferenceList:
       type: object
       required:
-      - errors
+      - data
       properties:
-        errors:
+        data:
           type: array
           items:
-            $ref: '#/components/schemas/branded-calling_Error'
-          description: List of one or more error entries. Order is not significant.
-      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
+            $ref: '#/components/schemas/Reference'
     ReferenceSubmissionRequest_2:
       type: object
       description: Exactly two business references plus one financial reference.

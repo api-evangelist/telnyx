@@ -78,7 +78,108 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
+  responses:
+    web-search_ProviderError:
+      description: The upstream search provider returned an error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/WebSearchError'
+          example:
+            error:
+              message: Provider request failed
+    web-search_BadRequest:
+      description: Invalid request — validation error or invalid parameters.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/WebSearchError'
+          example:
+            error:
+              message: Validation error
+              details: {}
+    web-search_InternalServerError:
+      description: Internal server error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/WebSearchError'
+          example:
+            error:
+              message: Internal server error
+    web-search_Unauthorized:
+      description: 'Unauthorized — missing or invalid API key.
+
+
+        The API Gateway returns this response before the request reaches the backend service. The error format follows the standard Telnyx JSON:API error envelope with `errors[]`, not the backend-level `WebSearchError` shape.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GatewayError'
+          example:
+            errors:
+            - code: '10009'
+              title: Authentication failed
+              detail: Could not find any usable credentials in the request.
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10009
+    ProviderTimeout:
+      description: The upstream search provider timed out.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/WebSearchError'
+          example:
+            error:
+              message: Provider request timed out
+    web-search_Unauthorized_2:
+      description: 'Unauthorized — missing or invalid API key.
+
+
+        The API Gateway returns this response before the request reaches the backend service. The error format follows the standard Telnyx JSON:API error envelope with `errors[]`, not the backend-level `WebSearchError` shape.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/web-search_GatewayError'
+          example:
+            errors:
+            - code: '10009'
+              title: Authentication failed
+              detail: Could not find any usable credentials in the request.
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10009
   schemas:
+    WebSearchResult:
+      type: object
+      required:
+      - url
+      - title
+      - description
+      - snippets
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Result URL.
+        title:
+          type: string
+          description: Result title.
+        description:
+          type: string
+          description: Short description or excerpt.
+        snippets:
+          type: array
+          items:
+            type: string
+          description: Relevant text snippets from the page.
+        thumbnail_url:
+          type: string
+          format: uri
+          description: Thumbnail image URL (if available).
+        favicon_url:
+          type: string
+          format: uri
+          description: Favicon URL (if available).
     WebSearchRequest:
       type: object
       required:
@@ -136,55 +237,6 @@ components:
           type: boolean
           description: When true, the provider crawls pages in real-time for fresh content. The boolean is translated to the provider's internal enum internally; callers always pass `true` or `false`.
           example: false
-    WebSearchResponse:
-      type: object
-      properties:
-        results:
-          type: object
-          required:
-          - web
-          properties:
-            web:
-              type: array
-              items:
-                $ref: '#/components/schemas/WebSearchResult'
-              description: Web search results.
-            news:
-              type: array
-              items:
-                $ref: '#/components/schemas/WebSearchResult'
-              description: News search results. Present only when the query surfaces news results.
-    WebSearchResult:
-      type: object
-      required:
-      - url
-      - title
-      - description
-      - snippets
-      properties:
-        url:
-          type: string
-          format: uri
-          description: Result URL.
-        title:
-          type: string
-          description: Result title.
-        description:
-          type: string
-          description: Short description or excerpt.
-        snippets:
-          type: array
-          items:
-            type: string
-          description: Relevant text snippets from the page.
-        thumbnail_url:
-          type: string
-          format: uri
-          description: Thumbnail image URL (if available).
-        favicon_url:
-          type: string
-          format: uri
-          description: Favicon URL (if available).
     GatewayError:
       type: object
       description: Standard Telnyx JSON:API error envelope returned by the API Gateway for authentication failures (401).
@@ -234,6 +286,24 @@ components:
               type: object
               additionalProperties: true
               description: Additional error details (e.g. validation field errors).
+    WebSearchResponse:
+      type: object
+      properties:
+        results:
+          type: object
+          required:
+          - web
+          properties:
+            web:
+              type: array
+              items:
+                $ref: '#/components/schemas/WebSearchResult'
+              description: Web search results.
+            news:
+              type: array
+              items:
+                $ref: '#/components/schemas/WebSearchResult'
+              description: News search results. Present only when the query surfaces news results.
     web-search_GatewayError:
       type: object
       description: Standard Telnyx JSON:API error envelope returned by the API Gateway for authentication failures (401).
@@ -268,76 +338,6 @@ components:
                   url:
                     type: string
                     format: uri
-  responses:
-    ProviderTimeout:
-      description: The upstream search provider timed out.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/WebSearchError'
-          example:
-            error:
-              message: Provider request timed out
-    web-search_BadRequest:
-      description: Invalid request — validation error or invalid parameters.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/WebSearchError'
-          example:
-            error:
-              message: Validation error
-              details: {}
-    web-search_InternalServerError:
-      description: Internal server error.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/WebSearchError'
-          example:
-            error:
-              message: Internal server error
-    web-search_ProviderError:
-      description: The upstream search provider returned an error.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/WebSearchError'
-          example:
-            error:
-              message: Provider request failed
-    web-search_Unauthorized:
-      description: 'Unauthorized — missing or invalid API key.
-
-
-        The API Gateway returns this response before the request reaches the backend service. The error format follows the standard Telnyx JSON:API error envelope with `errors[]`, not the backend-level `WebSearchError` shape.'
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/GatewayError'
-          example:
-            errors:
-            - code: '10009'
-              title: Authentication failed
-              detail: Could not find any usable credentials in the request.
-              meta:
-                url: https://developers.telnyx.com/docs/overview/errors/10009
-    web-search_Unauthorized_2:
-      description: 'Unauthorized — missing or invalid API key.
-
-
-        The API Gateway returns this response before the request reaches the backend service. The error format follows the standard Telnyx JSON:API error envelope with `errors[]`, not the backend-level `WebSearchError` shape.'
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/web-search_GatewayError'
-          example:
-            errors:
-            - code: '10009'
-              title: Authentication failed
-              detail: Could not find any usable credentials in the request.
-              meta:
-                url: https://developers.telnyx.com/docs/overview/errors/10009
   securitySchemes:
     BearerAuth:
       type: http

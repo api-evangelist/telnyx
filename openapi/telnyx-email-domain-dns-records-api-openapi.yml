@@ -72,19 +72,56 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    InboundConfig:
+    DomainsTrackingSettings:
+      type: object
+      properties:
+        open_tracking:
+          type: boolean
+          default: false
+          description: Inject a tracking pixel into HTML messages to record open events.
+        click_tracking:
+          type: boolean
+          default: false
+          description: Rewrite HTML links through a tracking redirect to record click events.
+        unsubscribe_tracking:
+          type: boolean
+          default: true
+          description: Add RFC 8058 List-Unsubscribe headers with a signed one-click unsubscribe URL. Enabled by default; Gmail/Yahoo bulk-sender rules require one-click unsubscribe support.
+    DNSRecordListResponse:
       type: object
       required:
-      - enabled
-      - catch_all
-      - mx_required
+      - data
       properties:
-        enabled:
-          type: boolean
-        catch_all:
-          type: boolean
-        mx_required:
-          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DNSRecord'
+    email_Error:
+      type: object
+      required:
+      - code
+      - title
+      - detail
+      properties:
+        code:
+          type: string
+          enum:
+          - '10001'
+          - '10015'
+          - '500'
+          - '10007'
+          - '10008'
+          - '10020'
+          - '40901'
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              type: string
     EmailDMARCPolicy:
       type: object
       description: DMARC policy for a sending domain. Drives the recommended _dmarc.<domain> TXT record. DMARC is advisory and never blocks sending. When omitted or null, the domain uses the advisory default (v=DMARC1; p=none; rua=mailto:dmarc@telnyx.com).
@@ -115,6 +152,56 @@ components:
           - reject
           nullable: true
           description: Policy for subdomains. Omitted from the record when null.
+    DomainsErrorResponse:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/email_Error'
+    EmailDomainVerification:
+      type: object
+      required:
+      - ownership
+      - spf
+      - dkim
+      - dmarc
+      - mx
+      properties:
+        ownership:
+          type: string
+          enum:
+          - pending
+          - verified
+          - not_required
+        spf:
+          type: string
+          enum:
+          - missing_optional
+          - verified
+          - failed
+          - not_required
+        dkim:
+          type: string
+          enum:
+          - pending
+          - verified
+          - failed
+        dmarc:
+          type: string
+          enum:
+          - missing_optional
+          - verified
+          - failed
+        mx:
+          type: string
+          enum:
+          - not_required
+          - pending
+          - verified
+          - failed
     EmailDomain:
       type: object
       required:
@@ -233,37 +320,12 @@ components:
         created_at: '2026-01-01T00:00:00Z'
         updated_at: '2026-01-01T00:00:00Z'
         verified_at: null
-    DomainsErrorResponse:
-      type: object
-      required:
-      - errors
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/email_Error'
-    EmailDomainStatus:
-      type: string
-      enum:
-      - pending
-      - verifying
-      - verified
-      - failed
-      - degraded
-      - suspended
     EmailDomainType:
       type: string
       enum:
       - custom
       - shared
       - shared_inbound
-    EmailDomainResponse:
-      type: object
-      required:
-      - data
-      properties:
-        data:
-          $ref: '#/components/schemas/EmailDomain'
     DKIMStatus:
       type: object
       required:
@@ -294,97 +356,6 @@ components:
           type: string
           format: date-time
           nullable: true
-    EmailDomainVerification:
-      type: object
-      required:
-      - ownership
-      - spf
-      - dkim
-      - dmarc
-      - mx
-      properties:
-        ownership:
-          type: string
-          enum:
-          - pending
-          - verified
-          - not_required
-        spf:
-          type: string
-          enum:
-          - missing_optional
-          - verified
-          - failed
-          - not_required
-        dkim:
-          type: string
-          enum:
-          - pending
-          - verified
-          - failed
-        dmarc:
-          type: string
-          enum:
-          - missing_optional
-          - verified
-          - failed
-        mx:
-          type: string
-          enum:
-          - not_required
-          - pending
-          - verified
-          - failed
-    DomainsTrackingSettings:
-      type: object
-      properties:
-        open_tracking:
-          type: boolean
-          default: false
-          description: Inject a tracking pixel into HTML messages to record open events.
-        click_tracking:
-          type: boolean
-          default: false
-          description: Rewrite HTML links through a tracking redirect to record click events.
-        unsubscribe_tracking:
-          type: boolean
-          default: true
-          description: Add RFC 8058 List-Unsubscribe headers with a signed one-click unsubscribe URL. Enabled by default; Gmail/Yahoo bulk-sender rules require one-click unsubscribe support.
-    DNSRecordListResponse:
-      type: object
-      required:
-      - data
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/DNSRecord'
-    email_Error:
-      type: object
-      required:
-      - code
-      - title
-      - detail
-      properties:
-        code:
-          type: string
-          enum:
-          - '10001'
-          - '10015'
-          - '500'
-          - '10007'
-          - '10008'
-          - '10020'
-          - '40901'
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              type: string
     DNSRecord:
       type: object
       required:
@@ -441,18 +412,45 @@ components:
         priority: null
         required: true
         status: pending
+    InboundConfig:
+      type: object
+      required:
+      - enabled
+      - catch_all
+      - mx_required
+      properties:
+        enabled:
+          type: boolean
+        catch_all:
+          type: boolean
+        mx_required:
+          type: boolean
+    EmailDomainResponse:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailDomain'
+    EmailDomainStatus:
+      type: string
+      enum:
+      - pending
+      - verifying
+      - verified
+      - failed
+      - degraded
+      - suspended
+  parameters:
+    EmailDomainDomainId:
+      name: domain_id
+      in: path
+      required: true
+      description: Email domain UUID
+      schema:
+        type: string
+        format: uuid
   responses:
-    email_NotFound:
-      description: Resource not found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/DomainsErrorResponse'
-          example:
-            errors:
-            - code: '10001'
-              title: Not Found
-              detail: The requested email domain was not found
     InternalServerError:
       description: Internal server error
       content:
@@ -464,6 +462,17 @@ components:
             - code: '500'
               title: Internal Server Error
               detail: An unexpected error occurred
+    email_NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DomainsErrorResponse'
+          example:
+            errors:
+            - code: '10001'
+              title: Not Found
+              detail: The requested email domain was not found
     ValidationFailed:
       description: Validation failed
       content:
@@ -477,15 +486,6 @@ components:
               detail: domain is invalid
               source:
                 pointer: /data/attributes/domain
-  parameters:
-    EmailDomainDomainId:
-      name: domain_id
-      in: path
-      required: true
-      description: Email domain UUID
-      schema:
-        type: string
-        format: uuid
   securitySchemes:
     BearerAuth:
       type: http

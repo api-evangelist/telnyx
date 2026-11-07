@@ -627,6 +627,106 @@ paths:
       url: https://api.telnyx.com/v2
 components:
   schemas:
+    X402QuoteRequest:
+      type: object
+      required:
+      - amount_usd
+      properties:
+        amount_usd:
+          type: string
+          description: Amount in USD to fund (minimum 5.00, maximum 10000.00).
+          example: '50.00'
+    X402SettleRequest:
+      type: object
+      required:
+      - id
+      properties:
+        id:
+          type: string
+          description: The quote ID to settle.
+        payment_signature:
+          type: string
+          description: Base64-encoded signed payment authorization (x402 PaymentPayload). Can alternatively be provided via the PAYMENT-SIGNATURE header.
+    X402QuoteResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              description: Unique quote identifier. Use this to settle the payment.
+            record_type:
+              type: string
+              enum:
+              - quote
+            amount_usd:
+              type: string
+              description: The quoted amount in USD.
+            amount_crypto:
+              type: string
+              description: The equivalent amount in the payment cryptocurrency's smallest unit (e.g. USDC has 6 decimals, so $50.00 = "50000000").
+            network:
+              type: string
+              description: The blockchain network for the payment in CAIP-2 format (e.g. eip155:8453 for Base).
+            expires_at:
+              type: string
+              format: date-time
+              description: ISO 8601 timestamp when the quote expires.
+            payment_requirements:
+              $ref: '#/components/schemas/X402PaymentRequirements'
+    X402TransactionDetailResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/X402TransactionRecord'
+    X402TransactionRecord:
+      type: object
+      description: An x402 payment transaction.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique transaction identifier.
+        record_type:
+          type: string
+          enum:
+          - x402_transaction
+        amount:
+          type: string
+          description: The transaction amount in the specified currency.
+        currency:
+          type: string
+          description: The currency of the transaction amount (e.g. USD).
+        status:
+          type: string
+          description: The settlement status of the transaction. x402 transactions are created after successful on-chain settlement, so the status is `settled`.
+          enum:
+          - settled
+        quote_id:
+          type: string
+          description: The original quote ID associated with this transaction.
+        tx_hash:
+          type: string
+          nullable: true
+          description: The on-chain transaction hash, if available.
+        created_at:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when the transaction was created.
+        updated_at:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when the transaction was last updated.
+    X402TransactionListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/X402TransactionRecord'
+        meta:
+          $ref: '#/components/schemas/x402-transactions_PaginationMeta'
     X402SettlementErrorResponse:
       type: object
       description: Error response for x402 settlement failures. Uses string error codes from the x402 error handling system.
@@ -657,15 +757,6 @@ components:
               detail:
                 type: string
                 description: Human-readable error description with guidance.
-    X402TransactionListResponse:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/X402TransactionRecord'
-        meta:
-          $ref: '#/components/schemas/x402-transactions_PaginationMeta'
     x402-transactions_ErrorResponse:
       type: object
       properties:
@@ -705,6 +796,41 @@ components:
         total_results:
           type: integer
           description: The total number of results.
+    X402TransactionResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              description: Unique transaction identifier.
+            record_type:
+              type: string
+              enum:
+              - x402_transaction
+            amount:
+              type: string
+              description: The transaction amount in the specified currency.
+            currency:
+              type: string
+              description: The currency of the transaction amount (e.g. USD).
+            status:
+              type: string
+              description: The settlement status of the transaction.
+              enum:
+              - settled
+            quote_id:
+              type: string
+              description: The original quote ID associated with this transaction.
+            tx_hash:
+              type: string
+              nullable: true
+              description: The on-chain transaction hash, if available.
+            created_at:
+              type: string
+              format: date-time
+              description: ISO 8601 timestamp when the transaction was created.
     X402PaymentRequirements:
       type: object
       description: x402 protocol v2 payment requirements. Contains all information needed to construct and sign a payment authorization.
@@ -765,132 +891,6 @@ components:
                   version:
                     type: string
                     description: EIP-712 domain version.
-    X402TransactionResponse:
-      type: object
-      properties:
-        data:
-          type: object
-          properties:
-            id:
-              type: string
-              description: Unique transaction identifier.
-            record_type:
-              type: string
-              enum:
-              - x402_transaction
-            amount:
-              type: string
-              description: The transaction amount in the specified currency.
-            currency:
-              type: string
-              description: The currency of the transaction amount (e.g. USD).
-            status:
-              type: string
-              description: The settlement status of the transaction.
-              enum:
-              - settled
-            quote_id:
-              type: string
-              description: The original quote ID associated with this transaction.
-            tx_hash:
-              type: string
-              nullable: true
-              description: The on-chain transaction hash, if available.
-            created_at:
-              type: string
-              format: date-time
-              description: ISO 8601 timestamp when the transaction was created.
-    X402TransactionRecord:
-      type: object
-      description: An x402 payment transaction.
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Unique transaction identifier.
-        record_type:
-          type: string
-          enum:
-          - x402_transaction
-        amount:
-          type: string
-          description: The transaction amount in the specified currency.
-        currency:
-          type: string
-          description: The currency of the transaction amount (e.g. USD).
-        status:
-          type: string
-          description: The settlement status of the transaction. x402 transactions are created after successful on-chain settlement, so the status is `settled`.
-          enum:
-          - settled
-        quote_id:
-          type: string
-          description: The original quote ID associated with this transaction.
-        tx_hash:
-          type: string
-          nullable: true
-          description: The on-chain transaction hash, if available.
-        created_at:
-          type: string
-          format: date-time
-          description: ISO 8601 timestamp when the transaction was created.
-        updated_at:
-          type: string
-          format: date-time
-          description: ISO 8601 timestamp when the transaction was last updated.
-    X402TransactionDetailResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/X402TransactionRecord'
-    X402SettleRequest:
-      type: object
-      required:
-      - id
-      properties:
-        id:
-          type: string
-          description: The quote ID to settle.
-        payment_signature:
-          type: string
-          description: Base64-encoded signed payment authorization (x402 PaymentPayload). Can alternatively be provided via the PAYMENT-SIGNATURE header.
-    X402QuoteResponse:
-      type: object
-      properties:
-        data:
-          type: object
-          properties:
-            id:
-              type: string
-              description: Unique quote identifier. Use this to settle the payment.
-            record_type:
-              type: string
-              enum:
-              - quote
-            amount_usd:
-              type: string
-              description: The quoted amount in USD.
-            amount_crypto:
-              type: string
-              description: The equivalent amount in the payment cryptocurrency's smallest unit (e.g. USDC has 6 decimals, so $50.00 = "50000000").
-            network:
-              type: string
-              description: The blockchain network for the payment in CAIP-2 format (e.g. eip155:8453 for Base).
-            expires_at:
-              type: string
-              format: date-time
-              description: ISO 8601 timestamp when the quote expires.
-            payment_requirements:
-              $ref: '#/components/schemas/X402PaymentRequirements'
-    X402QuoteRequest:
-      type: object
-      required:
-      - amount_usd
-      properties:
-        amount_usd:
-          type: string
-          description: Amount in USD to fund (minimum 5.00, maximum 10000.00).
-          example: '50.00'
   parameters:
     x402-transactions_PageSize:
       name: page[size]

@@ -482,6 +482,43 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
+    AcceptedMemory:
+      properties:
+        operation_id:
+          type: string
+          title: Operation Id
+        profile_id:
+          type: string
+          title: Profile Id
+        source_id:
+          type: string
+          title: Source Id
+          description: 'Identifies one source within its profile: an ingested session, or one remembered fact. Returned by `ingest` and `remember` when the write is accepted. Re-ingesting a session keeps its source id.'
+      type: object
+      required:
+      - operation_id
+      - profile_id
+      - source_id
+      title: AcceptedMemory
+    RecallResponse:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/RecalledMemory'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: RecallResponse
+    SummaryResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/ProfileSummary'
+      type: object
+      required:
+      - data
+      title: SummaryResponse
     AcceptedIngest:
       properties:
         operation_id:
@@ -504,51 +541,16 @@ components:
       - session_id
       - source_id
       title: AcceptedIngest
-    AcceptedMemory:
+    RememberRequest:
       properties:
-        operation_id:
+        text:
           type: string
-          title: Operation Id
-        profile_id:
-          type: string
-          title: Profile Id
-        source_id:
-          type: string
-          title: Source Id
-          description: 'Identifies one source within its profile: an ingested session, or one remembered fact. Returned by `ingest` and `remember` when the write is accepted. Re-ingesting a session keeps its source id.'
+          minLength: 1
+          title: Text
       type: object
       required:
-      - operation_id
-      - profile_id
-      - source_id
-      title: AcceptedMemory
-    SummaryResponse:
-      properties:
-        data:
-          $ref: '#/components/schemas/ProfileSummary'
-      type: object
-      required:
-      - data
-      title: SummaryResponse
-    TelnyxError:
-      type: object
-      properties:
-        code:
-          type: string
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              type: string
-        meta:
-          type: object
-          properties:
-            url:
-              type: string
+      - text
+      title: RememberRequest
     RememberResponse:
       properties:
         data:
@@ -557,24 +559,6 @@ components:
       required:
       - data
       title: RememberResponse
-    RecallResponse:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/RecalledMemory'
-          type: array
-          title: Data
-      type: object
-      required:
-      - data
-      title: RecallResponse
-    TelnyxErrors:
-      type: object
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/TelnyxError'
     RecalledMemory:
       properties:
         id:
@@ -601,16 +585,58 @@ components:
       - id
       - text
       title: RecalledMemory
-    RememberRequest:
+    RecallRequest:
       properties:
-        text:
+        query:
           type: string
+          maxLength: 4096
           minLength: 1
-          title: Text
+          title: Query
+        top_k:
+          anyOf:
+          - type: integer
+            maximum: 100
+            minimum: 1
+          - type: 'null'
+          title: Top K
       type: object
       required:
-      - text
-      title: RememberRequest
+      - query
+      title: RecallRequest
+    IngestResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/AcceptedIngest'
+      type: object
+      required:
+      - data
+      title: IngestResponse
+    TelnyxErrors:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/TelnyxError'
+    TelnyxError:
+      type: object
+      properties:
+        code:
+          type: string
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              type: string
+        meta:
+          type: object
+          properties:
+            url:
+              type: string
     ProfileSummary:
       properties:
         profile_id:
@@ -637,24 +663,6 @@ components:
       - profile_id
       - is_stale
       title: ProfileSummary
-    RecallRequest:
-      properties:
-        query:
-          type: string
-          maxLength: 4096
-          minLength: 1
-          title: Query
-        top_k:
-          anyOf:
-          - type: integer
-            maximum: 100
-            minimum: 1
-          - type: 'null'
-          title: Top K
-      type: object
-      required:
-      - query
-      title: RecallRequest
     IngestPayload:
       title: Payload
       description: 'The session''s messages, in whatever shape your framework produces. Any JSON value but null is accepted and stored whole, as long as it holds something to remember: a body with no content anywhere in it -- `{}`, `[]`, `""`, `{"messages": []}` -- is a 422.'
@@ -666,26 +674,6 @@ components:
         - string
         - number
         - boolean
-    IngestResponse:
-      properties:
-        data:
-          $ref: '#/components/schemas/AcceptedIngest'
-      type: object
-      required:
-      - data
-      title: IngestResponse
-    PreviewSummaryRequest:
-      properties:
-        instructions:
-          anyOf:
-          - type: string
-            maxLength: 2000
-          - type: 'null'
-          title: Instructions
-          description: The candidate note to try. `null`, empty, or whitespace-only previews the neutral default -- the summary a profile returns to when instructions are cleared. Capped at 2000 characters, the same cap `PATCH /settings` applies on save; a longer note is refused with `422` before anything is generated.
-      type: object
-      title: PreviewSummaryRequest
-      description: A candidate note to preview against one profile. The field is optional; omitting it, or sending null/empty/whitespace, previews the neutral default.
     PreviewedSummary:
       properties:
         profile_id:
@@ -702,6 +690,18 @@ components:
       - profile_id
       - text
       title: PreviewedSummary
+    PreviewSummaryRequest:
+      properties:
+        instructions:
+          anyOf:
+          - type: string
+            maxLength: 2000
+          - type: 'null'
+          title: Instructions
+          description: The candidate note to try. `null`, empty, or whitespace-only previews the neutral default -- the summary a profile returns to when instructions are cleared. Capped at 2000 characters, the same cap `PATCH /settings` applies on save; a longer note is refused with `422` before anything is generated.
+      type: object
+      title: PreviewSummaryRequest
+      description: A candidate note to preview against one profile. The field is optional; omitting it, or sending null/empty/whitespace, previews the neutral default.
     PreviewSummaryResponse:
       properties:
         data:

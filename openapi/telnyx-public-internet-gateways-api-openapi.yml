@@ -134,21 +134,44 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
+  parameters:
+    ResourceId:
+      name: id
+      description: Identifies the resource.
+      in: path
+      required: true
+      schema:
+        format: uuid
+        type: string
+        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+    PageConsolidated:
+      name: page
+      in: query
+      style: deepObject
+      explode: true
+      description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
+      schema:
+        type: object
+        properties:
+          number:
+            type: integer
+            minimum: 1
+            default: 1
+            description: The page number to load
+          size:
+            type: integer
+            minimum: 1
+            maximum: 250
+            default: 20
+            description: The size of the page
   schemas:
-    Interface:
-      type: object
+    Errors:
       properties:
-        network_id:
-          description: The id of the network associated with the interface.
-          type: string
-          format: uuid
-          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-        name:
-          type: string
-          description: A user specified name for the interface.
-          example: test interface
-        status:
-          $ref: '#/components/schemas/InterfaceStatus'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
     PaginationMeta:
       type: object
       properties:
@@ -164,76 +187,9 @@ components:
         page_size:
           type: integer
           example: 25
-    Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/billing-group_Error'
-      type: object
     PublicInternetGatewayRead:
       allOf:
       - $ref: '#/components/schemas/PublicInternetGateway'
-    PublicInternetGatewayCreate:
-      allOf:
-      - $ref: '#/components/schemas/PublicInternetGateway'
-      - type: object
-        title: PublicInternetGatewayCreate
-    Record:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Identifies the resource.
-          readOnly: true
-          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-        record_type:
-          type: string
-          description: Identifies the type of the resource.
-          readOnly: true
-          example: sample_record_type
-        created_at:
-          type: string
-          description: ISO 8601 formatted date-time indicating when the resource was created.
-          readOnly: true
-          example: '2018-02-02T22:25:27.521Z'
-        updated_at:
-          type: string
-          description: ISO 8601 formatted date-time indicating when the resource was updated.
-          readOnly: true
-          example: '2018-02-02T22:25:27.521Z'
-    PublicInternetGateway:
-      allOf:
-      - $ref: '#/components/schemas/Record'
-      - $ref: '#/components/schemas/Interface'
-      - type: object
-        title: PublicInternetGateway
-        properties:
-          region_code:
-            description: The region interface is deployed to.
-            type: string
-            example: ashburn-va
-          record_type:
-            type: string
-            description: Identifies the type of the resource.
-            readOnly: true
-            example: public_internet_gateway
-          public_ip:
-            description: The publically accessible ip for this interface.
-            type: string
-            example: 127.0.0.1
-            readOnly: true
-    InterfaceStatus:
-      type: string
-      enum:
-      - created
-      - provisioning
-      - provisioned
-      - deleting
-      description: The current status of the interface deployment.
-      readOnly: true
-      example: provisioned
     billing-group_Error:
       type: object
       required:
@@ -260,6 +216,87 @@ components:
           type: object
           properties: {}
           additionalProperties: true
+    InterfaceStatus:
+      type: string
+      enum:
+      - created
+      - provisioning
+      - provisioned
+      - deleting
+      description: The current status of the interface deployment.
+      readOnly: true
+      example: provisioned
+    Interface:
+      type: object
+      properties:
+        network_id:
+          description: The id of the network associated with the interface.
+          type: string
+          format: uuid
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+        name:
+          type: string
+          description: A user specified name for the interface.
+          example: test interface
+        status:
+          $ref: '#/components/schemas/InterfaceStatus'
+    Record:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identifies the resource.
+          readOnly: true
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+        record_type:
+          type: string
+          description: Identifies the type of the resource.
+          readOnly: true
+          example: sample_record_type
+        created_at:
+          type: string
+          description: ISO 8601 formatted date-time indicating when the resource was created.
+          readOnly: true
+          example: '2018-02-02T22:25:27.521Z'
+        updated_at:
+          type: string
+          description: ISO 8601 formatted date-time indicating when the resource was updated.
+          readOnly: true
+          example: '2018-02-02T22:25:27.521Z'
+    PublicInternetGatewayCreate:
+      allOf:
+      - $ref: '#/components/schemas/PublicInternetGateway'
+      - type: object
+        title: PublicInternetGatewayCreate
+    PublicInternetGateway:
+      allOf:
+      - $ref: '#/components/schemas/Record'
+      - $ref: '#/components/schemas/Interface'
+      - type: object
+        title: PublicInternetGateway
+        properties:
+          region_code:
+            description: The region interface is deployed to.
+            type: string
+            example: ashburn-va
+          record_type:
+            type: string
+            description: Identifies the type of the resource.
+            readOnly: true
+            example: public_internet_gateway
+          public_ip:
+            description: The publically accessible ip for this interface.
+            type: string
+            example: 127.0.0.1
+            readOnly: true
+    netapps_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/netapps_Error'
+          type: array
+      type: object
     netapps_Error:
       properties:
         code:
@@ -283,13 +320,6 @@ components:
       required:
       - code
       - title
-      type: object
-    netapps_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/netapps_Error'
-          type: array
       type: object
     Errors_2:
       properties:
@@ -333,37 +363,13 @@ components:
         code: '20207'
         description: The street address provided is invalid.
       type: object
-  parameters:
-    PageConsolidated:
-      name: page
-      in: query
-      style: deepObject
-      explode: true
-      description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
-      schema:
-        type: object
-        properties:
-          number:
-            type: integer
-            minimum: 1
-            default: 1
-            description: The page number to load
-          size:
-            type: integer
-            minimum: 1
-            maximum: 250
-            default: 20
-            description: The size of the page
-    ResourceId:
-      name: id
-      description: Identifies the resource.
-      in: path
-      required: true
-      schema:
-        format: uuid
-        type: string
-        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
   responses:
+    GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
     UnprocessableEntity:
       description: Unprocessable entity. Check the 'detail' field in response for details.
       content:
@@ -375,33 +381,6 @@ components:
             - code: '10027'
               title: Unprocessable Entity
               detail: The server understood the syntax of the request but was unable to process the instructions.
-    GenericErrorResponse:
-      description: Unexpected error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Errors'
-    PublicInternetGatewayResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/PublicInternetGatewayRead'
-            type: object
-      description: Successful response
-    netapps_UnprocessableEntity:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/netapps_Errors'
-      description: Unprocessable entity. Check the 'detail' field in response for details.
-    netapps_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/netapps_Errors'
-      description: Unexpected error
     PublicInternetGatewayListResponse:
       content:
         application/json:
@@ -415,6 +394,27 @@ components:
                 $ref: '#/components/schemas/PaginationMeta'
             type: object
       description: Successful response
+    PublicInternetGatewayResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/PublicInternetGatewayRead'
+            type: object
+      description: Successful response
+    netapps_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/netapps_Errors'
+      description: Unexpected error
+    netapps_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/netapps_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
     netapps_UnprocessableEntity_17904fcfbc:
       description: Unprocessable entity. Check the 'detail' field in response for details.
       content:

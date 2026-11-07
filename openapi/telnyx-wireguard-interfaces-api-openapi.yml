@@ -319,36 +319,37 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
+  parameters:
+    ResourceId:
+      name: id
+      description: Identifies the resource.
+      in: path
+      required: true
+      schema:
+        format: uuid
+        type: string
+        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+    PageConsolidated:
+      name: page
+      in: query
+      style: deepObject
+      explode: true
+      description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
+      schema:
+        type: object
+        properties:
+          number:
+            type: integer
+            minimum: 1
+            default: 1
+            description: The page number to load
+          size:
+            type: integer
+            minimum: 1
+            maximum: 250
+            default: 20
+            description: The size of the page
   schemas:
-    Interface:
-      type: object
-      properties:
-        network_id:
-          description: The id of the network associated with the interface.
-          type: string
-          format: uuid
-          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-        name:
-          type: string
-          description: A user specified name for the interface.
-          example: test interface
-        status:
-          $ref: '#/components/schemas/InterfaceStatus'
-    PaginationMeta:
-      type: object
-      properties:
-        total_pages:
-          type: integer
-          example: 3
-        total_results:
-          type: integer
-          example: 55
-        page_number:
-          type: integer
-          example: 2
-        page_size:
-          type: integer
-          example: 25
     Errors:
       properties:
         errors:
@@ -356,47 +357,6 @@ components:
           items:
             $ref: '#/components/schemas/billing-group_Error'
       type: object
-    Record:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Identifies the resource.
-          readOnly: true
-          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-        record_type:
-          type: string
-          description: Identifies the type of the resource.
-          readOnly: true
-          example: sample_record_type
-        created_at:
-          type: string
-          description: ISO 8601 formatted date-time indicating when the resource was created.
-          readOnly: true
-          example: '2018-02-02T22:25:27.521Z'
-        updated_at:
-          type: string
-          description: ISO 8601 formatted date-time indicating when the resource was updated.
-          readOnly: true
-          example: '2018-02-02T22:25:27.521Z'
-    RegionIn:
-      type: object
-      properties:
-        region_code:
-          description: The region the interface should be deployed to.
-          type: string
-          example: ashburn-va
-    InterfaceStatus:
-      type: string
-      enum:
-      - created
-      - provisioning
-      - provisioned
-      - deleting
-      description: The current status of the interface deployment.
-      readOnly: true
-      example: provisioned
     WireguardPeerPatch:
       type: object
       title: WireguardPeerPatch
@@ -405,6 +365,15 @@ components:
           type: string
           description: The WireGuard `PublicKey`.<br /><br />If you do not provide a Public Key, a new Public and Private key pair will be generated for you.
           example: qF4EqlZq+5JL2IKYY8ij49daYyfKVhevJrcDxdqC8GU=
+    WireguardInterfaceCreate:
+      allOf:
+      - $ref: '#/components/schemas/WireguardInterface'
+      - $ref: '#/components/schemas/RegionIn'
+      - type: object
+        title: WireguardInterfaceCreate
+        required:
+        - network_id
+        - region_code
     RegionOut:
       type: object
       properties:
@@ -428,6 +397,101 @@ components:
               description: Identifies the type of the resource.
               readOnly: true
               example: region
+    PaginationMeta:
+      type: object
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 55
+        page_number:
+          type: integer
+          example: 2
+        page_size:
+          type: integer
+          example: 25
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
+    WireguardPeerCreate:
+      allOf:
+      - $ref: '#/components/schemas/WireguardPeer'
+      - type: object
+        title: WireguardPeerCreate
+        required:
+        - wireguard_interface_id
+    WireguardInterfaceRead:
+      allOf:
+      - $ref: '#/components/schemas/WireguardInterface'
+      - $ref: '#/components/schemas/RegionOut'
+    RegionIn:
+      type: object
+      properties:
+        region_code:
+          description: The region the interface should be deployed to.
+          type: string
+          example: ashburn-va
+    WireguardInterface:
+      allOf:
+      - $ref: '#/components/schemas/Record'
+      - $ref: '#/components/schemas/Interface'
+      - type: object
+        title: WireguardInterface
+        properties:
+          record_type:
+            type: string
+            description: Identifies the type of the resource.
+            readOnly: true
+            example: wireguard_interface
+          endpoint:
+            type: string
+            description: The Telnyx WireGuard peers `Peer.endpoint` value.
+            example: 203.0.113.0:51871
+            readOnly: true
+          public_key:
+            type: string
+            description: The Telnyx WireGuard peers `Peer.PublicKey`.
+            readOnly: true
+            example: qF4EqlZq+5JL2IKYY8ij49daYyfKVhevJrcDxdqC8GU=
+          enable_sip_trunking:
+            type: boolean
+            description: Enable SIP traffic forwarding over VPN interface.
+            example: false
+    InterfaceStatus:
+      type: string
+      enum:
+      - created
+      - provisioning
+      - provisioned
+      - deleting
+      description: The current status of the interface deployment.
+      readOnly: true
+      example: provisioned
     WireguardPeer:
       allOf:
       - $ref: '#/components/schemas/Record'
@@ -455,78 +519,51 @@ components:
             description: Your WireGuard `Interface.PrivateKey`.<br /><br />This attribute is only ever utlised if, on POST, you do NOT provide your own `public_key`. In which case, a new Public and Private key pair will be generated for you. When your `private_key` is returned, you must save this immediately as we do not save it within Telnyx. If you lose your Private Key, it can not be recovered.
             example: qF4EqlZq+5JL2IKYY8ij49daYyfKVhevJrcDxdqC8GU=
             readOnly: true
-    WireguardPeerCreate:
-      allOf:
-      - $ref: '#/components/schemas/WireguardPeer'
-      - type: object
-        title: WireguardPeerCreate
-        required:
-        - wireguard_interface_id
-    WireguardInterface:
-      allOf:
-      - $ref: '#/components/schemas/Record'
-      - $ref: '#/components/schemas/Interface'
-      - type: object
-        title: WireguardInterface
-        properties:
-          record_type:
-            type: string
-            description: Identifies the type of the resource.
-            readOnly: true
-            example: wireguard_interface
-          endpoint:
-            type: string
-            description: The Telnyx WireGuard peers `Peer.endpoint` value.
-            example: 203.0.113.0:51871
-            readOnly: true
-          public_key:
-            type: string
-            description: The Telnyx WireGuard peers `Peer.PublicKey`.
-            readOnly: true
-            example: qF4EqlZq+5JL2IKYY8ij49daYyfKVhevJrcDxdqC8GU=
-          enable_sip_trunking:
-            type: boolean
-            description: Enable SIP traffic forwarding over VPN interface.
-            example: false
-    WireguardInterfaceCreate:
-      allOf:
-      - $ref: '#/components/schemas/WireguardInterface'
-      - $ref: '#/components/schemas/RegionIn'
-      - type: object
-        title: WireguardInterfaceCreate
-        required:
-        - network_id
-        - region_code
-    billing-group_Error:
+    Interface:
       type: object
-      required:
-      - code
-      - title
       properties:
-        code:
-          type: integer
-          format: int32
-        title:
+        network_id:
+          description: The id of the network associated with the interface.
           type: string
-        detail:
+          format: uuid
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+        name:
           type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-          properties: {}
-          additionalProperties: true
-    WireguardInterfaceRead:
-      allOf:
-      - $ref: '#/components/schemas/WireguardInterface'
-      - $ref: '#/components/schemas/RegionOut'
+          description: A user specified name for the interface.
+          example: test interface
+        status:
+          $ref: '#/components/schemas/InterfaceStatus'
+    Record:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identifies the resource.
+          readOnly: true
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+        record_type:
+          type: string
+          description: Identifies the type of the resource.
+          readOnly: true
+          example: sample_record_type
+        created_at:
+          type: string
+          description: ISO 8601 formatted date-time indicating when the resource was created.
+          readOnly: true
+          example: '2018-02-02T22:25:27.521Z'
+        updated_at:
+          type: string
+          description: ISO 8601 formatted date-time indicating when the resource was updated.
+          readOnly: true
+          example: '2018-02-02T22:25:27.521Z'
+    netapps_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/netapps_Error'
+          type: array
+      type: object
     netapps_Error:
       properties:
         code:
@@ -550,13 +587,6 @@ components:
       required:
       - code
       - title
-      type: object
-    netapps_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/netapps_Error'
-          type: array
       type: object
     Errors_2:
       properties:
@@ -600,37 +630,13 @@ components:
         code: '20207'
         description: The street address provided is invalid.
       type: object
-  parameters:
-    PageConsolidated:
-      name: page
-      in: query
-      style: deepObject
-      explode: true
-      description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
-      schema:
-        type: object
-        properties:
-          number:
-            type: integer
-            minimum: 1
-            default: 1
-            description: The page number to load
-          size:
-            type: integer
-            minimum: 1
-            maximum: 250
-            default: 20
-            description: The size of the page
-    ResourceId:
-      name: id
-      description: Identifies the resource.
-      in: path
-      required: true
-      schema:
-        format: uuid
-        type: string
-        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
   responses:
+    GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
     UnprocessableEntity:
       description: Unprocessable entity. Check the 'detail' field in response for details.
       content:
@@ -642,12 +648,19 @@ components:
             - code: '10027'
               title: Unprocessable Entity
               detail: The server understood the syntax of the request but was unable to process the instructions.
-    GenericErrorResponse:
-      description: Unexpected error
+    WireguardInterfaceListResponse:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Errors'
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/WireguardInterfaceRead'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful response
     WireguardPeerListResponse:
       content:
         application/json:
@@ -670,31 +683,6 @@ components:
                 $ref: '#/components/schemas/WireguardInterfaceRead'
             type: object
       description: Successful response
-    netapps_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/netapps_Errors'
-      description: Unexpected error
-    WireguardInterfaceListResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/WireguardInterfaceRead'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful response
-    netapps_UnprocessableEntity:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/netapps_Errors'
-      description: Unprocessable entity. Check the 'detail' field in response for details.
     WireguardPeerResponse:
       content:
         application/json:
@@ -704,6 +692,18 @@ components:
                 $ref: '#/components/schemas/WireguardPeer'
             type: object
       description: Successful response
+    netapps_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/netapps_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+    netapps_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/netapps_Errors'
+      description: Unexpected error
     netapps_UnprocessableEntity_17904fcfbc:
       description: Unprocessable entity. Check the 'detail' field in response for details.
       content:

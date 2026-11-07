@@ -818,20 +818,201 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    brands_HTTPValidationError:
-      title: HTTPValidationError
+    10dlc_Error:
+      required:
+      - code
+      - title
       type: object
       properties:
+        code:
+          type: string
+        title:
+          type: string
         detail:
-          title: Detail
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+    10dlc_Errors:
+      properties:
+        errors:
           type: array
           items:
-            $ref: '#/components/schemas/ValidationError'
-    OrderExternalVetting:
-      title: OrderExternalVetting
+            $ref: '#/components/schemas/10dlc_Error'
+      type: object
+    BrandFeedbackCategory:
+      title: BrandFeedbackCategory
       required:
-      - evpId
-      - vettingClass
+      - id
+      - displayName
+      - description
+      - fields
+      type: object
+      properties:
+        id:
+          title: Id
+          type: string
+          description: One of `TAX_ID`, `STOCK_SYMBOL`, `GOVERNMENT_ENTITY`, `NONPROFIT`, and `OTHERS`
+          example: TAX_ID
+        displayName:
+          title: Displayname
+          type: string
+          description: Human-readable version of the `id` field
+          example: Tax Id
+        description:
+          title: Description
+          type: string
+          description: Long-form description of the feedback with additional information
+          example: Tax Id does not match with the company name or business type.
+        fields:
+          title: Fields
+          type: array
+          items:
+            type: string
+          description: List of relevant fields in the originally-submitted brand json
+          example:
+          - ein
+          - companyName
+          - entityType
+    Vertical:
+      title: Vertical
+      enum:
+      - AGRICULTURE
+      - COMMUNICATION
+      - CONSTRUCTION
+      - EDUCATION
+      - ENERGY
+      - ENTERTAINMENT
+      - FINANCIAL
+      - GAMBLING
+      - GOVERNMENT
+      - HEALTHCARE
+      - HOSPITALITY
+      - HUMAN_RESOURCES
+      - INSURANCE
+      - LEGAL
+      - MANUFACTURING
+      - NGO
+      - POLITICAL
+      - POSTAL
+      - PROFESSIONAL
+      - REAL_ESTATE
+      - RETAIL
+      - TECHNOLOGY
+      - TRANSPORTATION
+      description: Vertical or industry segment of the brand or campaign.
+      example: TECHNOLOGY
+      type: string
+    BrandIdentityStatus:
+      title: BrandIdentityStatus
+      enum:
+      - VERIFIED
+      - UNVERIFIED
+      - SELF_DECLARED
+      - VETTED_VERIFIED
+      description: The verification status of an active brand
+      type: string
+    TelnyxBrandWithCampaignsCount:
+      allOf:
+      - $ref: '#/components/schemas/TelnyxBrand'
+      - type: object
+        title: TelnyxBrandWithCampaignsCount
+        properties:
+          assignedCampaignsCount:
+            title: AssignedCampaignsCount
+            description: Number of campaigns associated with the brand
+            type: number
+            example: 3
+    10dlc_Error_ca4eb0ad6f:
+      required:
+      - code
+      - title
+      type: object
+      properties:
+        code:
+          type: string
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    BrandSmsOtpStatus:
+      title: BrandSmsOtpStatus
+      required:
+      - brandId
+      - referenceId
+      - mobilePhone
+      - requestDate
+      - deliveryStatus
+      type: object
+      properties:
+        brandId:
+          title: Brandid
+          type: string
+          description: The Brand ID associated with this OTP request
+          example: B123ABC
+        referenceId:
+          title: Referenceid
+          type: string
+          description: The reference ID for this OTP request, used for status queries
+          example: OTP4B2001
+        mobilePhone:
+          title: Mobilephone
+          type: string
+          description: The mobile phone number where the OTP was sent, in E.164 format
+          example: '+11234567890'
+        requestDate:
+          title: Requestdate
+          type: string
+          format: date-time
+          description: The timestamp when the OTP request was initiated
+          example: '2024-12-03T17:12:33.560000+00:00'
+        verifyDate:
+          title: Verifydate
+          type: string
+          format: date-time
+          description: The timestamp when the OTP was successfully verified (if applicable)
+          example: '2024-12-03T17:12:33.560000+00:00'
+        deliveryStatus:
+          title: Deliverystatus
+          type: string
+          description: 'The current delivery status of the OTP SMS message. Common values include: `DELIVERED_HANDSET`, `PENDING`, `FAILED`, `EXPIRED`'
+          example: DELIVERED_HANDSET
+        deliveryStatusDate:
+          title: Deliverystatusdate
+          type: string
+          format: date-time
+          description: The timestamp when the delivery status was last updated
+          example: '2024-12-03T17:12:33.560000+00:00'
+        deliveryStatusDetails:
+          title: Deliverystatusdetails
+          type: string
+          description: Additional details about the delivery status
+          example: Delivered to handset
+      description: Status information for an SMS OTP sent during Sole Proprietor brand verification
+    ExternalVetting:
+      title: ExternalVetting
       type: object
       properties:
         evpId:
@@ -839,10 +1020,30 @@ components:
           maxLength: 10
           type: string
           description: External vetting provider ID for the brand.
+        vettingId:
+          title: vettingId
+          type: string
+          description: Unique ID that identifies a vetting transaction performed by a vetting provider. This ID is provided by the vetting provider at time of vetting.
+        vettingToken:
+          title: vettingToken
+          type: string
+          description: Required by some providers for vetting record confirmation.
+        vettingScore:
+          title: vettingScore
+          type: integer
+          description: Vetting score ranging from 0-100.
         vettingClass:
           title: Vettingclass
           type: string
           description: Identifies the vetting classification.
+        vettedDate:
+          title: vettedDate
+          type: string
+          description: Vetting effective date. This is the date when vetting was completed, or the starting effective date in ISO 8601 format. If this date is missing, then the vetting was not complete or not valid.
+        createDate:
+          title: createDate
+          type: string
+          description: Vetting submission date. This is the date when the vetting request is generated in ISO 8601 format.
     CreateBrand:
       title: CreateBrand
       required:
@@ -987,36 +1188,87 @@ components:
           type: string
           description: Webhook failover URL for brand status updates.
           example: https://webhook.com/9010a453-4df8-4be6-a551-1070892888d6
-    AltBusinessIdType:
-      title: AltBusinessIdType
-      enum:
-      - NONE
-      - DUNS
-      - GIIN
-      - LEI
-      description: An enumeration.
-      type: string
-    TelnyxBrandWithCampaignsCount:
-      allOf:
-      - $ref: '#/components/schemas/TelnyxBrand'
-      - type: object
-        title: TelnyxBrandWithCampaignsCount
-        properties:
-          assignedCampaignsCount:
-            title: AssignedCampaignsCount
-            description: Number of campaigns associated with the brand
-            type: number
-            example: 3
-    BrandRelationship:
-      title: BrandRelationship
-      enum:
-      - BASIC_ACCOUNT
-      - SMALL_ACCOUNT
-      - MEDIUM_ACCOUNT
-      - LARGE_ACCOUNT
-      - KEY_ACCOUNT
-      description: Brand relationship to the CSP.
-      type: string
+    ExternalVettingList:
+      title: External vetting list
+      type: array
+      items:
+        $ref: '#/components/schemas/ExternalVetting'
+    ImportExternalVetting:
+      title: ImportExternalVetting
+      required:
+      - evpId
+      - vettingId
+      type: object
+      properties:
+        evpId:
+          title: Evpid
+          maxLength: 10
+          type: string
+          description: External vetting provider ID for the brand.
+        vettingId:
+          title: Vettingid
+          type: string
+          description: Unique ID that identifies a vetting transaction performed by a vetting provider. This ID is provided by the vetting provider at time of vetting.
+        vettingToken:
+          title: Vettingtoken
+          type: string
+          description: Required by some providers for vetting record confirmation.
+    ValidationError:
+      title: ValidationError
+      required:
+      - loc
+      - msg
+      - type
+      type: object
+      properties:
+        loc:
+          title: Location
+          type: array
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+    BrandOptionalAttributes:
+      title: BrandOptionalAttributes
+      type: object
+      properties:
+        taxExemptStatus:
+          title: Taxexemptstatus
+          type: string
+          description: The tax exempt status of the brand
+    brands_HTTPValidationError:
+      title: HTTPValidationError
+      type: object
+      properties:
+        detail:
+          title: Detail
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+    TriggerBrandSmsOtpResponse:
+      title: TriggerBrandSmsOtpResponse
+      required:
+      - brandId
+      - referenceId
+      type: object
+      properties:
+        brandId:
+          title: Brandid
+          type: string
+          description: The Brand ID for which the OTP was triggered
+          example: 4b20019b-043a-78f8-0657-b3be3f4b4002
+        referenceId:
+          title: Referenceid
+          type: string
+          description: The reference ID that can be used to check OTP status
+          example: OTP4B2001
+      description: Response after successfully triggering a Brand SMS OTP
     BrandRecordSetCSP:
       title: BrandRecordSetCSP
       type: object
@@ -1034,39 +1286,17 @@ components:
           title: Totalrecords
           type: integer
           example: 1
-    ExternalVetting:
-      title: ExternalVetting
-      type: object
-      properties:
-        evpId:
-          title: Evpid
-          maxLength: 10
-          type: string
-          description: External vetting provider ID for the brand.
-        vettingId:
-          title: vettingId
-          type: string
-          description: Unique ID that identifies a vetting transaction performed by a vetting provider. This ID is provided by the vetting provider at time of vetting.
-        vettingToken:
-          title: vettingToken
-          type: string
-          description: Required by some providers for vetting record confirmation.
-        vettingScore:
-          title: vettingScore
-          type: integer
-          description: Vetting score ranging from 0-100.
-        vettingClass:
-          title: Vettingclass
-          type: string
-          description: Identifies the vetting classification.
-        vettedDate:
-          title: vettedDate
-          type: string
-          description: Vetting effective date. This is the date when vetting was completed, or the starting effective date in ISO 8601 format. If this date is missing, then the vetting was not complete or not valid.
-        createDate:
-          title: createDate
-          type: string
-          description: Vetting submission date. This is the date when the vetting request is generated in ISO 8601 format.
+    EntityType:
+      title: EntityType
+      enum:
+      - PRIVATE_PROFIT
+      - PUBLIC_PROFIT
+      - NON_PROFIT
+      - GOVERNMENT
+      - SOLE_PROPRIETOR
+      description: Entity type behind the brand. This is the form of business establishment.
+      example: PRIVATE_PROFIT
+      type: string
     BrandBasic:
       title: ListedBrand
       type: object
@@ -1123,140 +1353,15 @@ components:
           type: integer
           description: Number of campaigns associated with the brand
           example: 2
-    BrandIdentityStatus:
-      title: BrandIdentityStatus
-      enum:
-      - VERIFIED
-      - UNVERIFIED
-      - SELF_DECLARED
-      - VETTED_VERIFIED
-      description: The verification status of an active brand
-      type: string
-    BrandFeedbackCategory:
-      title: BrandFeedbackCategory
-      required:
-      - id
-      - displayName
-      - description
-      - fields
+    10dlc_HTTPValidationError:
+      title: HTTPValidationError
       type: object
       properties:
-        id:
-          title: Id
-          type: string
-          description: One of `TAX_ID`, `STOCK_SYMBOL`, `GOVERNMENT_ENTITY`, `NONPROFIT`, and `OTHERS`
-          example: TAX_ID
-        displayName:
-          title: Displayname
-          type: string
-          description: Human-readable version of the `id` field
-          example: Tax Id
-        description:
-          title: Description
-          type: string
-          description: Long-form description of the feedback with additional information
-          example: Tax Id does not match with the company name or business type.
-        fields:
-          title: Fields
+        detail:
+          title: Detail
           type: array
           items:
-            type: string
-          description: List of relevant fields in the originally-submitted brand json
-          example:
-          - ein
-          - companyName
-          - entityType
-    Vertical:
-      title: Vertical
-      enum:
-      - AGRICULTURE
-      - COMMUNICATION
-      - CONSTRUCTION
-      - EDUCATION
-      - ENERGY
-      - ENTERTAINMENT
-      - FINANCIAL
-      - GAMBLING
-      - GOVERNMENT
-      - HEALTHCARE
-      - HOSPITALITY
-      - HUMAN_RESOURCES
-      - INSURANCE
-      - LEGAL
-      - MANUFACTURING
-      - NGO
-      - POLITICAL
-      - POSTAL
-      - PROFESSIONAL
-      - REAL_ESTATE
-      - RETAIL
-      - TECHNOLOGY
-      - TRANSPORTATION
-      description: Vertical or industry segment of the brand or campaign.
-      example: TECHNOLOGY
-      type: string
-    EntityType:
-      title: EntityType
-      enum:
-      - PRIVATE_PROFIT
-      - PUBLIC_PROFIT
-      - NON_PROFIT
-      - GOVERNMENT
-      - SOLE_PROPRIETOR
-      description: Entity type behind the brand. This is the form of business establishment.
-      example: PRIVATE_PROFIT
-      type: string
-    ExternalVettingList:
-      title: External vetting list
-      type: array
-      items:
-        $ref: '#/components/schemas/ExternalVetting'
-    ValidationError:
-      title: ValidationError
-      required:
-      - loc
-      - msg
-      - type
-      type: object
-      properties:
-        loc:
-          title: Location
-          type: array
-          items:
-            anyOf:
-            - type: string
-            - type: integer
-        msg:
-          title: Message
-          type: string
-        type:
-          title: Error Type
-          type: string
-    Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/billing-group_Error'
-      type: object
-    BrandFeedback:
-      title: BrandFeedback
-      required:
-      - brandId
-      - category
-      type: object
-      properties:
-        brandId:
-          title: Brandid
-          type: string
-          description: ID of the brand being queried about
-          example: d88dd2aa-1bb9-4ef0-9ec8-1752b80316a5
-        category:
-          title: Category
-          type: array
-          items:
-            $ref: '#/components/schemas/BrandFeedbackCategory'
-          description: A list of reasons why brand creation/revetting didn't go as planned
+            $ref: '#/components/schemas/ValidationError'
     billing-group_Error:
       type: object
       required:
@@ -1314,6 +1419,50 @@ components:
       description: (Required for public company) stock exchange.
       example: NASDAQ
       type: string
+    BrandRelationship:
+      title: BrandRelationship
+      enum:
+      - BASIC_ACCOUNT
+      - SMALL_ACCOUNT
+      - MEDIUM_ACCOUNT
+      - LARGE_ACCOUNT
+      - KEY_ACCOUNT
+      description: Brand relationship to the CSP.
+      type: string
+    OrderExternalVetting:
+      title: OrderExternalVetting
+      required:
+      - evpId
+      - vettingClass
+      type: object
+      properties:
+        evpId:
+          title: Evpid
+          maxLength: 10
+          type: string
+          description: External vetting provider ID for the brand.
+        vettingClass:
+          title: Vettingclass
+          type: string
+          description: Identifies the vetting classification.
+    BrandFeedback:
+      title: BrandFeedback
+      required:
+      - brandId
+      - category
+      type: object
+      properties:
+        brandId:
+          title: Brandid
+          type: string
+          description: ID of the brand being queried about
+          example: d88dd2aa-1bb9-4ef0-9ec8-1752b80316a5
+        category:
+          title: Category
+          type: array
+          items:
+            $ref: '#/components/schemas/BrandFeedbackCategory'
+          description: A list of reasons why brand creation/revetting didn't go as planned
     VerifyBrandSmsOtpRequest:
       title: VerifyBrandSmsOtpRequest
       required:
@@ -1328,42 +1477,156 @@ components:
           minLength: 4
           maxLength: 10
       description: Request body for verifying a Brand SMS OTP
-    BrandOptionalAttributes:
-      title: BrandOptionalAttributes
-      type: object
-      properties:
-        taxExemptStatus:
-          title: Taxexemptstatus
-          type: string
-          description: The tax exempt status of the brand
-    10dlc_Error_ca4eb0ad6f:
+    UpdateBrand:
+      title: UpdateBrand
       required:
-      - code
-      - title
+      - entityType
+      - displayName
+      - country
+      - email
+      - vertical
       type: object
       properties:
-        code:
+        entityType:
+          allOf:
+          - $ref: '#/components/schemas/EntityType'
+          description: Entity type behind the brand. This is the form of business establishment.
+        displayName:
+          title: Displayname
+          maxLength: 100
           type: string
-        title:
+          description: Display or marketing name of the brand.
+          example: ABC Mobile
+        companyName:
+          title: Companyname
+          maxLength: 100
           type: string
-        detail:
+          description: (Required for Non-profit/private/public) Legal company name.
+          example: ABC Inc.
+        firstName:
+          title: Firstname
+          maxLength: 100
           type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-    10dlc_Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/10dlc_Error'
-      type: object
+          description: First name of business contact.
+          example: John
+        lastName:
+          title: Lastname
+          maxLength: 100
+          type: string
+          description: Last name of business contact.
+          example: Smith
+        ein:
+          title: Ein
+          maxLength: 20
+          type: string
+          description: (Required for Non-profit) Government assigned corporate tax ID. EIN is 9-digits in U.S.
+          example: '111111111'
+        phone:
+          title: Phone
+          maxLength: 20
+          type: string
+          description: Valid phone number in e.164 international format.
+          example: '+12024567890'
+        street:
+          title: Street
+          maxLength: 100
+          type: string
+          description: Street number and name.
+          example: '123'
+        city:
+          title: City
+          maxLength: 100
+          type: string
+          description: City name
+          example: New York
+        state:
+          title: State
+          maxLength: 20
+          type: string
+          description: State. Must be 2 letters code for United States.
+          example: NY
+        postalCode:
+          title: Postalcode
+          maxLength: 10
+          type: string
+          description: Postal codes. Use 5 digit zipcode for United States
+          example: '10001'
+        country:
+          title: Country
+          maxLength: 2
+          type: string
+          description: 'ISO2 2 characters country code. Example: US - United States'
+          example: US
+        email:
+          title: Email
+          maxLength: 100
+          type: string
+          description: Valid email address of brand support contact.
+        stockSymbol:
+          title: Stocksymbol
+          maxLength: 10
+          type: string
+          description: (Required for public company) stock symbol.
+          example: ABC
+        stockExchange:
+          allOf:
+          - $ref: '#/components/schemas/StockExchange'
+          description: (Required for public company) stock exchange.
+          example: NASDAQ
+        ipAddress:
+          title: Ipaddress
+          maxLength: 50
+          type: string
+          description: IP address of the browser requesting to create brand identity.
+        website:
+          title: Website
+          maxLength: 100
+          type: string
+          description: Brand website URL.
+          example: http://www.abcmobile.com
+        vertical:
+          allOf:
+          - $ref: '#/components/schemas/Vertical'
+          description: Vertical or industry segment of the brand.
+        altBusinessIdType:
+          $ref: '#/components/schemas/AltBusinessIdType'
+        isReseller:
+          title: Isreseller
+          type: boolean
+        identityStatus:
+          $ref: '#/components/schemas/BrandIdentityStatus'
+        businessContactEmail:
+          title: BusinessContactEmail
+          type: string
+          description: 'Business contact email.
+
+
+            Required if `entityType` will be changed to `PUBLIC_PROFIT`. Otherwise, it is recommended to either omit this field or set it to `null`.'
+          example: name@example.com
+        webhookURL:
+          title: WebhookURL
+          type: string
+          description: Webhook URL for brand status updates.
+          example: https://webhook.com/67ea78a8-9f32-4d04-b62d-f9502e8e5f93
+        webhookFailoverURL:
+          title: WebhookFailoverURL
+          type: string
+          description: Webhook failover URL for brand status updates.
+          example: https://webhook.com/9010a453-4df8-4be6-a551-1070892888d6
+        altBusinessId:
+          title: Altbusiness Id
+          maxLength: 50
+          type: string
+          description: Alternate business identifier such as DUNS, LEI, or GIIN
+    AltBusinessIdType:
+      title: AltBusinessIdType
+      enum:
+      - NONE
+      - DUNS
+      - GIIN
+      - LEI
+      description: An enumeration.
+      type: string
     TelnyxBrand:
       title: TelnyxBrand
       required:
@@ -1586,269 +1849,6 @@ components:
           description: SMS message to send upon successful OTP verification
           example: Verification successful!
       description: Request body for triggering a Brand SMS OTP
-    ImportExternalVetting:
-      title: ImportExternalVetting
-      required:
-      - evpId
-      - vettingId
-      type: object
-      properties:
-        evpId:
-          title: Evpid
-          maxLength: 10
-          type: string
-          description: External vetting provider ID for the brand.
-        vettingId:
-          title: Vettingid
-          type: string
-          description: Unique ID that identifies a vetting transaction performed by a vetting provider. This ID is provided by the vetting provider at time of vetting.
-        vettingToken:
-          title: Vettingtoken
-          type: string
-          description: Required by some providers for vetting record confirmation.
-    BrandSmsOtpStatus:
-      title: BrandSmsOtpStatus
-      required:
-      - brandId
-      - referenceId
-      - mobilePhone
-      - requestDate
-      - deliveryStatus
-      type: object
-      properties:
-        brandId:
-          title: Brandid
-          type: string
-          description: The Brand ID associated with this OTP request
-          example: B123ABC
-        referenceId:
-          title: Referenceid
-          type: string
-          description: The reference ID for this OTP request, used for status queries
-          example: OTP4B2001
-        mobilePhone:
-          title: Mobilephone
-          type: string
-          description: The mobile phone number where the OTP was sent, in E.164 format
-          example: '+11234567890'
-        requestDate:
-          title: Requestdate
-          type: string
-          format: date-time
-          description: The timestamp when the OTP request was initiated
-          example: '2024-12-03T17:12:33.560000+00:00'
-        verifyDate:
-          title: Verifydate
-          type: string
-          format: date-time
-          description: The timestamp when the OTP was successfully verified (if applicable)
-          example: '2024-12-03T17:12:33.560000+00:00'
-        deliveryStatus:
-          title: Deliverystatus
-          type: string
-          description: 'The current delivery status of the OTP SMS message. Common values include: `DELIVERED_HANDSET`, `PENDING`, `FAILED`, `EXPIRED`'
-          example: DELIVERED_HANDSET
-        deliveryStatusDate:
-          title: Deliverystatusdate
-          type: string
-          format: date-time
-          description: The timestamp when the delivery status was last updated
-          example: '2024-12-03T17:12:33.560000+00:00'
-        deliveryStatusDetails:
-          title: Deliverystatusdetails
-          type: string
-          description: Additional details about the delivery status
-          example: Delivered to handset
-      description: Status information for an SMS OTP sent during Sole Proprietor brand verification
-    10dlc_Error:
-      required:
-      - code
-      - title
-      type: object
-      properties:
-        code:
-          type: string
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-    UpdateBrand:
-      title: UpdateBrand
-      required:
-      - entityType
-      - displayName
-      - country
-      - email
-      - vertical
-      type: object
-      properties:
-        entityType:
-          allOf:
-          - $ref: '#/components/schemas/EntityType'
-          description: Entity type behind the brand. This is the form of business establishment.
-        displayName:
-          title: Displayname
-          maxLength: 100
-          type: string
-          description: Display or marketing name of the brand.
-          example: ABC Mobile
-        companyName:
-          title: Companyname
-          maxLength: 100
-          type: string
-          description: (Required for Non-profit/private/public) Legal company name.
-          example: ABC Inc.
-        firstName:
-          title: Firstname
-          maxLength: 100
-          type: string
-          description: First name of business contact.
-          example: John
-        lastName:
-          title: Lastname
-          maxLength: 100
-          type: string
-          description: Last name of business contact.
-          example: Smith
-        ein:
-          title: Ein
-          maxLength: 20
-          type: string
-          description: (Required for Non-profit) Government assigned corporate tax ID. EIN is 9-digits in U.S.
-          example: '111111111'
-        phone:
-          title: Phone
-          maxLength: 20
-          type: string
-          description: Valid phone number in e.164 international format.
-          example: '+12024567890'
-        street:
-          title: Street
-          maxLength: 100
-          type: string
-          description: Street number and name.
-          example: '123'
-        city:
-          title: City
-          maxLength: 100
-          type: string
-          description: City name
-          example: New York
-        state:
-          title: State
-          maxLength: 20
-          type: string
-          description: State. Must be 2 letters code for United States.
-          example: NY
-        postalCode:
-          title: Postalcode
-          maxLength: 10
-          type: string
-          description: Postal codes. Use 5 digit zipcode for United States
-          example: '10001'
-        country:
-          title: Country
-          maxLength: 2
-          type: string
-          description: 'ISO2 2 characters country code. Example: US - United States'
-          example: US
-        email:
-          title: Email
-          maxLength: 100
-          type: string
-          description: Valid email address of brand support contact.
-        stockSymbol:
-          title: Stocksymbol
-          maxLength: 10
-          type: string
-          description: (Required for public company) stock symbol.
-          example: ABC
-        stockExchange:
-          allOf:
-          - $ref: '#/components/schemas/StockExchange'
-          description: (Required for public company) stock exchange.
-          example: NASDAQ
-        ipAddress:
-          title: Ipaddress
-          maxLength: 50
-          type: string
-          description: IP address of the browser requesting to create brand identity.
-        website:
-          title: Website
-          maxLength: 100
-          type: string
-          description: Brand website URL.
-          example: http://www.abcmobile.com
-        vertical:
-          allOf:
-          - $ref: '#/components/schemas/Vertical'
-          description: Vertical or industry segment of the brand.
-        altBusinessIdType:
-          $ref: '#/components/schemas/AltBusinessIdType'
-        isReseller:
-          title: Isreseller
-          type: boolean
-        identityStatus:
-          $ref: '#/components/schemas/BrandIdentityStatus'
-        businessContactEmail:
-          title: BusinessContactEmail
-          type: string
-          description: 'Business contact email.
-
-
-            Required if `entityType` will be changed to `PUBLIC_PROFIT`. Otherwise, it is recommended to either omit this field or set it to `null`.'
-          example: name@example.com
-        webhookURL:
-          title: WebhookURL
-          type: string
-          description: Webhook URL for brand status updates.
-          example: https://webhook.com/67ea78a8-9f32-4d04-b62d-f9502e8e5f93
-        webhookFailoverURL:
-          title: WebhookFailoverURL
-          type: string
-          description: Webhook failover URL for brand status updates.
-          example: https://webhook.com/9010a453-4df8-4be6-a551-1070892888d6
-        altBusinessId:
-          title: Altbusiness Id
-          maxLength: 50
-          type: string
-          description: Alternate business identifier such as DUNS, LEI, or GIIN
-    TriggerBrandSmsOtpResponse:
-      title: TriggerBrandSmsOtpResponse
-      required:
-      - brandId
-      - referenceId
-      type: object
-      properties:
-        brandId:
-          title: Brandid
-          type: string
-          description: The Brand ID for which the OTP was triggered
-          example: 4b20019b-043a-78f8-0657-b3be3f4b4002
-        referenceId:
-          title: Referenceid
-          type: string
-          description: The reference ID that can be used to check OTP status
-          example: OTP4B2001
-      description: Response after successfully triggering a Brand SMS OTP
-    10dlc_HTTPValidationError:
-      title: HTTPValidationError
-      type: object
-      properties:
-        detail:
-          title: Detail
-          type: array
-          items:
-            $ref: '#/components/schemas/ValidationError'
     HTTPValidationError:
       properties:
         detail:

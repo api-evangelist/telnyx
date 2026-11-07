@@ -168,13 +168,109 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    InfringementClaimStatus:
+    ContestSubmission:
+      type: object
+      description: One round of customer contest evidence on an infringement claim. The aggregated documents across rounds live on the parent claim's `contest_documents`; this submission record carries only the per-round notes and document count.
+      properties:
+        notes:
+          type: string
+          example: We own the trademark outright; our registration precedes the claimant by three years.
+        submitted_at:
+          type: string
+          format: date-time
+          example: '2026-04-22T02:13:06.629473Z'
+          readOnly: true
+        document_count:
+          type: integer
+          minimum: 0
+          example: 1
+          readOnly: true
+    Document:
+      type: object
+      required:
+      - document_id
+      - document_type
+      properties:
+        document_id:
+          type: string
+          format: uuid
+          description: Id returned by the Telnyx Documents API after you upload the file (upload via `POST /v2/documents`; see https://developers.telnyx.com/api/documents).
+          example: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
+        document_type:
+          type: string
+          enum:
+          - letter_of_authorization
+          - business_registration
+          - articles_of_incorporation
+          - tax_document
+          - ein_letter
+          - trademark_registration
+          - website_ownership
+          - business_license
+          - professional_license
+          - government_id
+          - utility_bill
+          - bank_statement
+          - other
+          example: business_registration
+          description: Type of supporting document. Pick the closest match to what the file actually contains; `other` triggers manual vetting and may slow approval. The matching short_name reference list is at `GET /v2/dir/document_types`.
+        description:
+          type: string
+          maxLength: 255
+          description: An optional note describing this document, for example what it proves.
+          example: Certificate of incorporation.
+    DirStatus:
       type: string
       enum:
-      - pending
-      - contested
-      - resolved
-      description: Lifecycle status. `pending` - newly filed; the DIR is auto-suspended. `contested` - you have submitted contest evidence; awaiting Telnyx review. `resolved` - final.
+      - draft
+      - submitted
+      - in_review
+      - verified
+      - rejected
+      - unsuccessful
+      - suspended
+      - expired
+      - infringement_claimed
+      - permanently_rejected
+      - delete_requested
+      description: 'DIR lifecycle status.
+
+        - `draft` - newly created; editable; not yet submitted.
+
+        - `submitted` / `in_review` - Telnyx is reviewing.
+
+        - `verified` - approved; phone numbers may be attached.
+
+        - `rejected` - Telnyx rejected this submission; `rejection_reasons` is populated; customer can edit and resubmit.
+
+        - `unsuccessful` - system-side error during processing; customer can edit and resubmit.
+
+        - `suspended` - temporarily disabled (e.g. by an active infringement claim).
+
+        - `expired` - verification expired; customer must resubmit.
+
+        - `infringement_claimed` - a trademark/impersonation claim is open against this DIR.
+
+        - `permanently_rejected` - terminal; cannot be resubmitted.
+
+        - `delete_requested` - you have requested deletion; the DIR still exists and Telnyx is completing the removal (de-registration and cleanup). A verified DIR keeps serving its branded identity, and keeps billing, until the removal finishes.'
+    RejectionReason:
+      type: object
+      properties:
+        code:
+          type: string
+          example: documentation_incomplete
+        title:
+          type: string
+          example: Documentation incomplete
+        detail:
+          type: string
+          example: Provided documents do not establish business identity.
+        message:
+          type: string
+          nullable: true
+          description: Customer-visible free-text comment from the Telnyx vetting team. Only the first entry of `rejection_reasons` carries this; the rest are `null`.
+          example: Please re-upload a clearer scan of the certificate.
     InfringementClaim:
       type: object
       properties:
@@ -257,107 +353,6 @@ components:
           format: date-time
           example: '2026-04-22T02:12:55.908417Z'
           readOnly: true
-    branded-calling_Errors:
-      type: object
-      required:
-      - errors
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/branded-calling_Error'
-          description: List of one or more error entries. Order is not significant.
-      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
-    branded-calling_PaginationMeta:
-      type: object
-      required:
-      - total_pages
-      - total_results
-      - page_number
-      - page_size
-      properties:
-        total_pages:
-          type: integer
-          example: 3
-          description: Total number of pages available given the current `page_size`.
-        total_results:
-          type: integer
-          example: 42
-          description: Total number of items across all pages (excludes soft-deleted rows).
-        page_number:
-          type: integer
-          example: 1
-          description: 1-based index of this page. Echoes the `page[number]` query parameter (default `1`).
-        page_size:
-          type: integer
-          example: 20
-          description: Number of items returned in this page's `data` array. Capped at 250.
-      description: JSON:API pagination metadata returned with every paginated list response. Page numbering is 1-based. `page_size` reports the number of items actually returned in `data` for this page; the requested size is taken from the `page[size]` query parameter.
-    DirStatus:
-      type: string
-      enum:
-      - draft
-      - submitted
-      - in_review
-      - verified
-      - rejected
-      - unsuccessful
-      - suspended
-      - expired
-      - infringement_claimed
-      - permanently_rejected
-      - delete_requested
-      description: 'DIR lifecycle status.
-
-        - `draft` - newly created; editable; not yet submitted.
-
-        - `submitted` / `in_review` - Telnyx is reviewing.
-
-        - `verified` - approved; phone numbers may be attached.
-
-        - `rejected` - Telnyx rejected this submission; `rejection_reasons` is populated; customer can edit and resubmit.
-
-        - `unsuccessful` - system-side error during processing; customer can edit and resubmit.
-
-        - `suspended` - temporarily disabled (e.g. by an active infringement claim).
-
-        - `expired` - verification expired; customer must resubmit.
-
-        - `infringement_claimed` - a trademark/impersonation claim is open against this DIR.
-
-        - `permanently_rejected` - terminal; cannot be resubmitted.
-
-        - `delete_requested` - you have requested deletion; the DIR still exists and Telnyx is completing the removal (de-registration and cleanup). A verified DIR keeps serving its branded identity, and keeps billing, until the removal finishes.'
-    CallReason:
-      type: object
-      properties:
-        reason:
-          type: string
-          maxLength: 64
-          example: Appointment reminders
-        created_at:
-          type: string
-          format: date-time
-          example: '2026-04-26T18:06:51.940749Z'
-          readOnly: true
-    InfringementClaimContest:
-      type: object
-      required:
-      - contest_notes
-      additionalProperties: false
-      properties:
-        contest_notes:
-          type: string
-          minLength: 10
-          maxLength: 2000
-          description: Customer's response to the claim. 10–2000 characters.
-          example: We own the trademark outright; our registration precedes the claimant by three years.
-        documents:
-          type: array
-          items:
-            $ref: '#/components/schemas/Document'
-          maxItems: 20
-          description: Up to 20 supporting documents per submission. `document_id` must be unique within this submission. Documents are aggregated into the claim's `contest_documents` across all submissions.
     branded-calling_Error:
       type: object
       required:
@@ -415,6 +410,48 @@ components:
               type: string
               example: page[size]
       description: A single entry in the canonical Telnyx error envelope. `code` is the stable Telnyx error catalog id; the human-readable explanation lives at `meta.url`. `detail` is a context-specific message; `source.pointer` (when present) names the offending field of the request.
+    InfringementClaimType:
+      type: string
+      enum:
+      - trademark
+      - copyright
+      description: Category of infringement being claimed.
+    branded-calling_Errors:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/branded-calling_Error'
+          description: List of one or more error entries. Order is not significant.
+      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
+    branded-calling_PaginationMeta:
+      type: object
+      required:
+      - total_pages
+      - total_results
+      - page_number
+      - page_size
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+          description: Total number of pages available given the current `page_size`.
+        total_results:
+          type: integer
+          example: 42
+          description: Total number of items across all pages (excludes soft-deleted rows).
+        page_number:
+          type: integer
+          example: 1
+          description: 1-based index of this page. Echoes the `page[number]` query parameter (default `1`).
+        page_size:
+          type: integer
+          example: 20
+          description: Number of items returned in this page's `data` array. Capped at 250.
+      description: JSON:API pagination metadata returned with every paginated list response. Page numbering is 1-based. `page_size` reports the number of items actually returned in `data` for this page; the requested size is taken from the `page[size]` query parameter.
     DirWrapped:
       type: object
       required:
@@ -422,41 +459,6 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/Dir'
-    ContestSubmission:
-      type: object
-      description: One round of customer contest evidence on an infringement claim. The aggregated documents across rounds live on the parent claim's `contest_documents`; this submission record carries only the per-round notes and document count.
-      properties:
-        notes:
-          type: string
-          example: We own the trademark outright; our registration precedes the claimant by three years.
-        submitted_at:
-          type: string
-          format: date-time
-          example: '2026-04-22T02:13:06.629473Z'
-          readOnly: true
-        document_count:
-          type: integer
-          minimum: 0
-          example: 1
-          readOnly: true
-    InfringementClaimDirRef:
-      type: object
-      description: Snapshot of the DIR the claim is filed against, embedded for convenience.
-      properties:
-        id:
-          type: string
-          format: uuid
-          example: 42a3f554-7ce3-44c2-bfe9-6e1afe0d7991
-          readOnly: true
-        display_name:
-          type: string
-          example: Acme Plumbing
-        enterprise_id:
-          type: string
-          format: uuid
-          example: 7eca8226-8081-4e11-abdc-437b5f53a81f
-        status:
-          $ref: '#/components/schemas/DirStatus'
     DirInfringementUpdateRequest:
       type: object
       required:
@@ -516,58 +518,38 @@ components:
           nullable: true
           maxItems: 20
           description: Append-only supporting documents to attach while resolving the claim (e.g. authorization or licensing proof).
-    Document:
-      type: object
-      required:
-      - document_id
-      - document_type
-      properties:
-        document_id:
-          type: string
-          format: uuid
-          description: Id returned by the Telnyx Documents API after you upload the file (upload via `POST /v2/documents`; see https://developers.telnyx.com/api/documents).
-          example: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
-        document_type:
-          type: string
-          enum:
-          - letter_of_authorization
-          - business_registration
-          - articles_of_incorporation
-          - tax_document
-          - ein_letter
-          - trademark_registration
-          - website_ownership
-          - business_license
-          - professional_license
-          - government_id
-          - utility_bill
-          - bank_statement
-          - other
-          example: business_registration
-          description: Type of supporting document. Pick the closest match to what the file actually contains; `other` triggers manual vetting and may slow approval. The matching short_name reference list is at `GET /v2/dir/document_types`.
-        description:
-          type: string
-          maxLength: 255
-          description: An optional note describing this document, for example what it proves.
-          example: Certificate of incorporation.
-    InfringementClaimType:
-      type: string
-      enum:
-      - trademark
-      - copyright
-      description: Category of infringement being claimed.
-    InfringementClaimList:
+    InfringementClaimWrapped:
       type: object
       required:
       - data
-      - meta
       properties:
         data:
+          $ref: '#/components/schemas/InfringementClaim'
+    InfringementClaimStatus:
+      type: string
+      enum:
+      - pending
+      - contested
+      - resolved
+      description: Lifecycle status. `pending` - newly filed; the DIR is auto-suspended. `contested` - you have submitted contest evidence; awaiting Telnyx review. `resolved` - final.
+    InfringementClaimContest:
+      type: object
+      required:
+      - contest_notes
+      additionalProperties: false
+      properties:
+        contest_notes:
+          type: string
+          minLength: 10
+          maxLength: 2000
+          description: Customer's response to the claim. 10–2000 characters.
+          example: We own the trademark outright; our registration precedes the claimant by three years.
+        documents:
           type: array
           items:
-            $ref: '#/components/schemas/InfringementClaim'
-        meta:
-          $ref: '#/components/schemas/branded-calling_PaginationMeta'
+            $ref: '#/components/schemas/Document'
+          maxItems: 20
+          description: Up to 20 supporting documents per submission. `document_id` must be unique within this submission. Documents are aggregated into the claim's `contest_documents` across all submissions.
     Dir:
       type: object
       properties:
@@ -672,30 +654,48 @@ components:
           nullable: true
           description: '`https://` URL that receives webhook notifications for this DIR''s compliance-review outcomes. `null` when not subscribed.'
           example: https://acmehealthcare.example.com/webhooks/branded-calling
-    InfringementClaimWrapped:
+    InfringementClaimDirRef:
+      type: object
+      description: Snapshot of the DIR the claim is filed against, embedded for convenience.
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 42a3f554-7ce3-44c2-bfe9-6e1afe0d7991
+          readOnly: true
+        display_name:
+          type: string
+          example: Acme Plumbing
+        enterprise_id:
+          type: string
+          format: uuid
+          example: 7eca8226-8081-4e11-abdc-437b5f53a81f
+        status:
+          $ref: '#/components/schemas/DirStatus'
+    CallReason:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 64
+          example: Appointment reminders
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-04-26T18:06:51.940749Z'
+          readOnly: true
+    InfringementClaimList:
       type: object
       required:
       - data
+      - meta
       properties:
         data:
-          $ref: '#/components/schemas/InfringementClaim'
-    RejectionReason:
-      type: object
-      properties:
-        code:
-          type: string
-          example: documentation_incomplete
-        title:
-          type: string
-          example: Documentation incomplete
-        detail:
-          type: string
-          example: Provided documents do not establish business identity.
-        message:
-          type: string
-          nullable: true
-          description: Customer-visible free-text comment from the Telnyx vetting team. Only the first entry of `rejection_reasons` carries this; the rest are `null`.
-          example: Please re-upload a clearer scan of the certificate.
+          type: array
+          items:
+            $ref: '#/components/schemas/InfringementClaim'
+        meta:
+          $ref: '#/components/schemas/branded-calling_PaginationMeta'
     Document_2:
       type: object
       required:
@@ -733,6 +733,37 @@ components:
           maxLength: 255
           description: An optional note describing this document, for example what it proves.
           example: Certificate of incorporation.
+  parameters:
+    BcPageSize:
+      name: page[size]
+      in: query
+      description: Items per page. Maximum 250; values above are clamped to 250.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 250
+        default: 20
+        example: 20
+    BcPageNumber:
+      name: page[number]
+      in: query
+      description: 1-based page number. Out-of-range values return an empty page with correct meta.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+        example: 1
+    DirId:
+      name: dir_id
+      in: path
+      description: The DIR id. Lowercase UUID.
+      required: true
+      schema:
+        type: string
+        format: uuid
+        example: 16635d38-75a6-4481-82e8-69af60e05011
   responses:
     branded-calling_GenericErrorResponse:
       description: An error occurred. The response carries the standard Telnyx error envelope.
@@ -780,37 +811,6 @@ components:
                   detail: DIR has 1 active infringement claim(s). Resolve the claim before making this change.
                   meta:
                     url: https://developers.telnyx.com/docs/overview/errors/10021
-  parameters:
-    BcPageNumber:
-      name: page[number]
-      in: query
-      description: 1-based page number. Out-of-range values return an empty page with correct meta.
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        default: 1
-        example: 1
-    DirId:
-      name: dir_id
-      in: path
-      description: The DIR id. Lowercase UUID.
-      required: true
-      schema:
-        type: string
-        format: uuid
-        example: 16635d38-75a6-4481-82e8-69af60e05011
-    BcPageSize:
-      name: page[size]
-      in: query
-      description: Items per page. Maximum 250; values above are clamped to 250.
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 250
-        default: 20
-        example: 20
   securitySchemes:
     BearerAuth:
       type: http

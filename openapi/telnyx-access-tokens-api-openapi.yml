@@ -83,7 +83,50 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
+  headers:
+    IdempotentReplayed:
+      description: Present with value `true` when Edge replayed a stored successful response for the supplied Idempotency-Key. Omitted for first-time requests and error responses.
+      schema:
+        type: boolean
+        enum:
+        - true
+        example: true
   schemas:
+    email_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorObject'
+        suppressed:
+          type: array
+          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
+      required:
+      - errors
+    SuppressedRecipient:
+      type: object
+      properties:
+        to:
+          type: string
+          format: email
+          description: Suppressed recipient email address.
+        reason:
+          type: string
+          description: Suppression reason returned by the recipient suppression service.
+        scope:
+          type: string
+          description: Scope at which the suppression applies.
+        override_allowed:
+          type: boolean
+          description: Whether an authorized send may override this suppression.
+      required:
+      - to
+      - reason
+      - scope
+      - override_allowed
     ErrorObject:
       type: object
       properties:
@@ -126,20 +169,31 @@ components:
       - code
       - title
       - detail
-    email_ErrorResponse:
+    telephony-credentials_ErrorObject:
       type: object
       properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/ErrorObject'
-        suppressed:
-          type: array
-          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
-          items:
-            $ref: '#/components/schemas/SuppressedRecipient'
+        code:
+          description: Telnyx error code. Edge idempotency errors use 10027 or 10036. Fallback 404/500 responses from the framework may use string status codes ('404', '500') instead.
+          enum:
+          - '10015'
+          - '10016'
+          - '10027'
+          - '10036'
+          - '404'
+          - '500'
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              type: string
+        title:
+          type: string
       required:
-      - errors
+      - code
+      - title
     telephony-credentials_ErrorResponse:
       type: object
       properties:
@@ -166,64 +220,6 @@ components:
           type: string
           description: The HMAC-SHA256 key the token is signed with, base64url without padding.
           example: cCL985ACi7wpbe_2xh1VDF3NabPJ90u1wCKmJCPNpxw
-    SuppressedRecipient:
-      type: object
-      properties:
-        to:
-          type: string
-          format: email
-          description: Suppressed recipient email address.
-        reason:
-          type: string
-          description: Suppression reason returned by the recipient suppression service.
-        scope:
-          type: string
-          description: Scope at which the suppression applies.
-        override_allowed:
-          type: boolean
-          description: Whether an authorized send may override this suppression.
-      required:
-      - to
-      - reason
-      - scope
-      - override_allowed
-    telephony-credentials_ErrorObject:
-      type: object
-      properties:
-        code:
-          description: Telnyx error code. Edge idempotency errors use 10027 or 10036. Fallback 404/500 responses from the framework may use string status codes ('404', '500') instead.
-          enum:
-          - '10015'
-          - '10016'
-          - '10027'
-          - '10036'
-          - '404'
-          - '500'
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              type: string
-        title:
-          type: string
-      required:
-      - code
-      - title
-  parameters:
-    telephony-credentials_IdempotencyKey:
-      description: 'Unique key for safely retrying the same logical request. Generate a UUID v4 for each operation and reuse it only when retrying that operation with the same request body. Valid characters: A-Z, a-z, 0-9, -, and _. Length: 1-255 characters. Do not include sensitive data in the key.'
-      in: header
-      name: Idempotency-Key
-      required: false
-      example: 8e03978e-40d5-43e8-bc93-6894a57f9326
-      schema:
-        type: string
-        minLength: 1
-        maxLength: 255
-        pattern: ^[A-Za-z0-9_-]{1,255}$
   responses:
     IdempotencyConflictResponse:
       description: A request with the same Idempotency-Key is still being processed (10036). Retry later with the same key and request.
@@ -238,14 +234,18 @@ components:
               source:
                 pointer: /header/Idempotency-Key
               title: Resource is being processed
-  headers:
-    IdempotentReplayed:
-      description: Present with value `true` when Edge replayed a stored successful response for the supplied Idempotency-Key. Omitted for first-time requests and error responses.
+  parameters:
+    telephony-credentials_IdempotencyKey:
+      description: 'Unique key for safely retrying the same logical request. Generate a UUID v4 for each operation and reuse it only when retrying that operation with the same request body. Valid characters: A-Z, a-z, 0-9, -, and _. Length: 1-255 characters. Do not include sensitive data in the key.'
+      in: header
+      name: Idempotency-Key
+      required: false
+      example: 8e03978e-40d5-43e8-bc93-6894a57f9326
       schema:
-        type: boolean
-        enum:
-        - true
-        example: true
+        type: string
+        minLength: 1
+        maxLength: 255
+        pattern: ^[A-Za-z0-9_-]{1,255}$
   securitySchemes:
     BearerAuth:
       type: http

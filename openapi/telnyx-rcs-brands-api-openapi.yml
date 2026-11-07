@@ -144,68 +144,12 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
-  parameters:
-    BrandId:
-      name: id
-      in: path
-      required: true
-      description: The Telnyx-assigned brand identifier.
-      schema:
-        type: string
-        format: uuid
   schemas:
-    BrandLegalEntityType:
+    HttpUrl:
       type: string
-      enum:
-      - LIMITED_LIABILITY_COMPANY
-      - SOLE_PROPRIETORSHIP
-      - PARTNERSHIP
-      - CORPORATION
-      - S_CORPORATION
-    BrandOrganizationType:
-      type: string
-      enum:
-      - PRIVATE_PROFIT
-      - PUBLIC_PROFIT
-      - NON_PROFIT
-      - GOVERNMENT
-      - UNKNOWN
-    BrandAddress:
-      type: object
-      additionalProperties: false
-      properties:
-        line_1:
-          type: string
-          minLength: 1
-          maxLength: 255
-        line_2:
-          type:
-          - string
-          - 'null'
-          minLength: 1
-          maxLength: 255
-        city:
-          type: string
-          minLength: 1
-          maxLength: 100
-        administrative_area:
-          type: string
-          minLength: 1
-          maxLength: 100
-        postal_code:
-          type: string
-          minLength: 1
-          maxLength: 32
-        country_code:
-          type: string
-          pattern: ^[A-Z]{2}$
-          description: The two-letter ISO 3166-1 country code.
-      required:
-      - line_1
-      - city
-      - administrative_area
-      - postal_code
-      - country_code
+      format: uri
+      minLength: 1
+      pattern: ^[Hh][Tt][Tt][Pp][Ss]?://
     BrandContactType:
       type: string
       enum:
@@ -216,38 +160,63 @@ components:
       - RESPONSIBLE_PARTY
       - BILLING
       - UNKNOWN
-    CapabilitiesResponse:
+    BrandIdentifiers:
+      type: object
+      minProperties: 1
+      properties:
+        ein:
+          $ref: '#/components/schemas/EinBrandIdentifier'
+        stock_symbol:
+          $ref: '#/components/schemas/StockSymbolBrandIdentifier'
+      additionalProperties:
+        $ref: '#/components/schemas/BrandIdentifier'
+      required:
+      - ein
+      description: Named business identifiers. Use the `ein` key for the required EIN and `stock_symbol` for a public-profit brand's stock symbol.
+    BrandState:
+      type: string
+      enum:
+      - CREATED
+      - CONFIGURED
+      - SUBMITTED
+      - REVIEWING
+      - VETTING
+      - VERIFIED
+      - REJECTED
+      - FAILED
+    BrandUpdateRequest:
       type: object
       additionalProperties: false
+      minProperties: 1
       properties:
-        brand_entity:
-          type: boolean
-        brand_verification:
-          type: boolean
-        submission_sections:
-          type: boolean
-        distinct_launch_phase:
-          type: boolean
-        per_carrier_approval:
-          type: boolean
-        templates:
-          type: boolean
-        campaigns:
-          type: boolean
-        vendor_webhooks:
-          type: boolean
-        invite_test_devices:
-          type: boolean
-      required:
-      - brand_entity
-      - brand_verification
-      - submission_sections
-      - distinct_launch_phase
-      - per_carrier_approval
-      - templates
-      - campaigns
-      - vendor_webhooks
-      - invite_test_devices
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        legal_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        legal_entity_type:
+          $ref: '#/components/schemas/BrandLegalEntityType'
+        organization_type:
+          $ref: '#/components/schemas/BrandOrganizationType'
+        website_url:
+          $ref: '#/components/schemas/HttpUrl'
+        profile_id:
+          type: string
+          maxLength: 36
+        identifiers:
+          $ref: '#/components/schemas/BrandIdentifiers'
+        addresses:
+          type: object
+          minProperties: 1
+          additionalProperties:
+            $ref: '#/components/schemas/BrandAddress'
+        contacts:
+          $ref: '#/components/schemas/BrandContacts'
+      example:
+        display_name: Acme Communications
     BrandContact:
       type: object
       propertyNames:
@@ -291,11 +260,6 @@ components:
       - last_name
       - email
       - phone_number
-    HttpUrl:
-      type: string
-      format: uri
-      minLength: 1
-      pattern: ^[Hh][Tt][Tt][Pp][Ss]?://
     BrandResponse:
       type: object
       additionalProperties: false
@@ -384,82 +348,46 @@ components:
           campaigns: false
           vendor_webhooks: false
           invite_test_devices: false
-    BrandState:
+    CapabilitiesResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        brand_entity:
+          type: boolean
+        brand_verification:
+          type: boolean
+        submission_sections:
+          type: boolean
+        distinct_launch_phase:
+          type: boolean
+        per_carrier_approval:
+          type: boolean
+        templates:
+          type: boolean
+        campaigns:
+          type: boolean
+        vendor_webhooks:
+          type: boolean
+        invite_test_devices:
+          type: boolean
+      required:
+      - brand_entity
+      - brand_verification
+      - submission_sections
+      - distinct_launch_phase
+      - per_carrier_approval
+      - templates
+      - campaigns
+      - vendor_webhooks
+      - invite_test_devices
+    BrandLegalEntityType:
       type: string
       enum:
-      - CREATED
-      - CONFIGURED
-      - SUBMITTED
-      - REVIEWING
-      - VETTING
-      - VERIFIED
-      - REJECTED
-      - FAILED
-    BrandIdentifiers:
-      type: object
-      minProperties: 1
-      properties:
-        ein:
-          $ref: '#/components/schemas/EinBrandIdentifier'
-        stock_symbol:
-          $ref: '#/components/schemas/StockSymbolBrandIdentifier'
-      additionalProperties:
-        $ref: '#/components/schemas/BrandIdentifier'
-      required:
-      - ein
-      description: Named business identifiers. Use the `ein` key for the required EIN and `stock_symbol` for a public-profit brand's stock symbol.
-    BrandIdentifier:
-      oneOf:
-      - $ref: '#/components/schemas/EinBrandIdentifier'
-      - $ref: '#/components/schemas/StockSymbolBrandIdentifier'
-    StockSymbolBrandIdentifier:
-      type: object
-      additionalProperties: false
-      properties:
-        identifier_type:
-          const: STOCK_SYMBOL
-        value:
-          type: string
-          minLength: 1
-          maxLength: 255
-          pattern: ^\S+:\S+$
-          description: A stock symbol using EXCHANGE:SYMBOL.
-      required:
-      - identifier_type
-      - value
-    BrandUpdateRequest:
-      type: object
-      additionalProperties: false
-      minProperties: 1
-      properties:
-        display_name:
-          type: string
-          minLength: 1
-          maxLength: 100
-        legal_name:
-          type: string
-          minLength: 1
-          maxLength: 100
-        legal_entity_type:
-          $ref: '#/components/schemas/BrandLegalEntityType'
-        organization_type:
-          $ref: '#/components/schemas/BrandOrganizationType'
-        website_url:
-          $ref: '#/components/schemas/HttpUrl'
-        profile_id:
-          type: string
-          maxLength: 36
-        identifiers:
-          $ref: '#/components/schemas/BrandIdentifiers'
-        addresses:
-          type: object
-          minProperties: 1
-          additionalProperties:
-            $ref: '#/components/schemas/BrandAddress'
-        contacts:
-          $ref: '#/components/schemas/BrandContacts'
-      example:
-        display_name: Acme Communications
+      - LIMITED_LIABILITY_COMPANY
+      - SOLE_PROPRIETORSHIP
+      - PARTNERSHIP
+      - CORPORATION
+      - S_CORPORATION
     ValidationErrorResponse:
       type: object
       properties:
@@ -490,36 +418,6 @@ components:
           - display_name
           msg: Field required
           type: missing
-    EinBrandIdentifier:
-      type: object
-      additionalProperties: false
-      properties:
-        identifier_type:
-          const: EIN
-        value:
-          type: string
-          minLength: 1
-          maxLength: 255
-          pattern: ^(?:[0-9]{9}|[0-9]{2}-[0-9]{7})$
-          description: Nine digits, optionally formatted as NN-NNNNNNN.
-      required:
-      - identifier_type
-      - value
-    BrandContacts:
-      type: object
-      minProperties: 1
-      properties:
-        brand:
-          allOf:
-          - $ref: '#/components/schemas/BrandContact'
-          - properties:
-              contact_type:
-                const: BRAND
-      additionalProperties:
-        $ref: '#/components/schemas/BrandContact'
-      required:
-      - brand
-      description: Named business contacts. Use the `brand` key for the required BRAND contact.
     rcs-registration_ErrorResponse:
       type: object
       properties:
@@ -616,27 +514,102 @@ components:
             title: Messaging Operations Manager
             email: jane@example.com
             phone_number: '+13125550100'
+    StockSymbolBrandIdentifier:
+      type: object
+      additionalProperties: false
+      properties:
+        identifier_type:
+          const: STOCK_SYMBOL
+        value:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^\S+:\S+$
+          description: A stock symbol using EXCHANGE:SYMBOL.
+      required:
+      - identifier_type
+      - value
+    EinBrandIdentifier:
+      type: object
+      additionalProperties: false
+      properties:
+        identifier_type:
+          const: EIN
+        value:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^(?:[0-9]{9}|[0-9]{2}-[0-9]{7})$
+          description: Nine digits, optionally formatted as NN-NNNNNNN.
+      required:
+      - identifier_type
+      - value
+    BrandContacts:
+      type: object
+      minProperties: 1
+      properties:
+        brand:
+          allOf:
+          - $ref: '#/components/schemas/BrandContact'
+          - properties:
+              contact_type:
+                const: BRAND
+      additionalProperties:
+        $ref: '#/components/schemas/BrandContact'
+      required:
+      - brand
+      description: Named business contacts. Use the `brand` key for the required BRAND contact.
+    BrandOrganizationType:
+      type: string
+      enum:
+      - PRIVATE_PROFIT
+      - PUBLIC_PROFIT
+      - NON_PROFIT
+      - GOVERNMENT
+      - UNKNOWN
+    BrandAddress:
+      type: object
+      additionalProperties: false
+      properties:
+        line_1:
+          type: string
+          minLength: 1
+          maxLength: 255
+        line_2:
+          type:
+          - string
+          - 'null'
+          minLength: 1
+          maxLength: 255
+        city:
+          type: string
+          minLength: 1
+          maxLength: 100
+        administrative_area:
+          type: string
+          minLength: 1
+          maxLength: 100
+        postal_code:
+          type: string
+          minLength: 1
+          maxLength: 32
+        country_code:
+          type: string
+          pattern: ^[A-Z]{2}$
+          description: The two-letter ISO 3166-1 country code.
+      required:
+      - line_1
+      - city
+      - administrative_area
+      - postal_code
+      - country_code
+    BrandIdentifier:
+      oneOf:
+      - $ref: '#/components/schemas/EinBrandIdentifier'
+      - $ref: '#/components/schemas/StockSymbolBrandIdentifier'
   responses:
-    ValidationError:
-      description: The request body or parameters failed validation.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ValidationErrorResponse'
     DependencyUnavailable:
       description: A registration dependency is temporarily unavailable.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/rcs-registration_ErrorResponse'
-    rcs-registration_Unauthorized:
-      description: The request is not authenticated.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/rcs-registration_ErrorResponse'
-    rcs-registration_NotFound:
-      description: The resource does not exist, is not owned by the organization, or the provider does not support the requested capability.
       content:
         application/json:
           schema:
@@ -647,6 +620,33 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/rcs-registration_ErrorResponse'
+    rcs-registration_Unauthorized:
+      description: The request is not authenticated.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/rcs-registration_ErrorResponse'
+    ValidationError:
+      description: The request body or parameters failed validation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+    rcs-registration_NotFound:
+      description: The resource does not exist, is not owned by the organization, or the provider does not support the requested capability.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/rcs-registration_ErrorResponse'
+  parameters:
+    BrandId:
+      name: id
+      in: path
+      required: true
+      description: The Telnyx-assigned brand identifier.
+      schema:
+        type: string
+        format: uuid
   securitySchemes:
     BearerAuth:
       type: http

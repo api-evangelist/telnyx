@@ -653,11 +653,17 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    CreateSpendLimitRequest:
-      description: 'Send exactly one of `amount` and `unlimited: true`.'
-      oneOf:
-      - $ref: '#/components/schemas/CreateSpendLimitWithAmount'
-      - $ref: '#/components/schemas/CreateSpendLimitUnlimited'
+    SpendLimitListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpendLimit'
+        meta:
+          $ref: '#/components/schemas/spend-limits_PaginationMeta'
+      required:
+      - data
     SpendLimitPeriod:
       type: string
       description: '`daily` is the current UTC day; `monthly` is the current UTC calendar month.'
@@ -666,12 +672,18 @@ components:
       - monthly
       default: daily
       example: daily
-    UpdateSpendLimitWithAmount:
+    CreateSpendLimitWithAmount:
       title: Amount
-      description: A new limit in USD.
+      description: A limit in USD.
       type: object
       additionalProperties: false
       properties:
+        product:
+          type: string
+          description: Product to limit, as returned in `product` by the list operation.
+          example: inference
+        period:
+          $ref: '#/components/schemas/SpendLimitPeriod'
         amount:
           type: number
           minimum: 0
@@ -687,9 +699,67 @@ components:
           type: string
           maxLength: 500
           description: Why the limit is set or changed, kept for audit.
-          example: Raised for the product launch
+          example: Team budget
       required:
+      - product
       - amount
+    SpendLimitBlock:
+      type: object
+      nullable: true
+      description: The active block of the period. `null` when the period is not blocked.
+      properties:
+        detected_at:
+          type: string
+          format: date-time
+          description: When the block started.
+          example: '2026-09-24T08:41:17Z'
+        spend_usd:
+          type: string
+          description: Spend in USD when the block started, as a decimal string.
+          example: '10.20'
+        limit_usd:
+          type: string
+          description: The limit in USD that the spend went above, as a decimal string.
+          example: '10'
+        blocked_until:
+          type: string
+          format: date
+          description: 'Exclusive end of the block: it is lifted at 00:00 UTC on this date at the latest.'
+          example: '2026-09-25'
+      required:
+      - detected_at
+      - spend_usd
+      - limit_usd
+      - blocked_until
+    ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            required:
+            - code
+            - title
+            properties:
+              code:
+                type: string
+              title:
+                type: string
+              detail:
+                type: string
+              meta:
+                type: object
+                properties:
+                  url:
+                    type: string
+              source:
+                type: object
+                properties:
+                  pointer:
+                    type: string
+      required:
+      - errors
     SpendLimit:
       type: object
       description: The spend limit, spend and block state of one product and period.
@@ -756,21 +826,11 @@ components:
       - spend_error
       - blocked
       - block
-    spend-limits_PaginationMeta:
-      type: object
-      properties:
-        total_pages:
-          type: integer
-          example: 1
-        total_results:
-          type: integer
-          example: 2
-        page_number:
-          type: integer
-          example: 1
-        page_size:
-          type: integer
-          example: 2
+    UpdateSpendLimitRequest:
+      description: 'Send exactly one of `amount` and `unlimited: true`.'
+      oneOf:
+      - $ref: '#/components/schemas/UpdateSpendLimitWithAmount'
+      - $ref: '#/components/schemas/UpdateSpendLimitUnlimited'
     UpdateSpendLimitUnlimited:
       title: Unlimited
       description: Explicitly no cap.
@@ -790,57 +850,12 @@ components:
           example: Raised for the product launch
       required:
       - unlimited
-    SpendLimitBlock:
-      type: object
-      nullable: true
-      description: The active block of the period. `null` when the period is not blocked.
-      properties:
-        detected_at:
-          type: string
-          format: date-time
-          description: When the block started.
-          example: '2026-09-24T08:41:17Z'
-        spend_usd:
-          type: string
-          description: Spend in USD when the block started, as a decimal string.
-          example: '10.20'
-        limit_usd:
-          type: string
-          description: The limit in USD that the spend went above, as a decimal string.
-          example: '10'
-        blocked_until:
-          type: string
-          format: date
-          description: 'Exclusive end of the block: it is lifted at 00:00 UTC on this date at the latest.'
-          example: '2026-09-25'
-      required:
-      - detected_at
-      - spend_usd
-      - limit_usd
-      - blocked_until
-    SpendLimitListResponse:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/SpendLimit'
-        meta:
-          $ref: '#/components/schemas/spend-limits_PaginationMeta'
-      required:
-      - data
-    CreateSpendLimitWithAmount:
+    UpdateSpendLimitWithAmount:
       title: Amount
-      description: A limit in USD.
+      description: A new limit in USD.
       type: object
       additionalProperties: false
       properties:
-        product:
-          type: string
-          description: Product to limit, as returned in `product` by the list operation.
-          example: inference
-        period:
-          $ref: '#/components/schemas/SpendLimitPeriod'
         amount:
           type: number
           minimum: 0
@@ -856,10 +871,93 @@ components:
           type: string
           maxLength: 500
           description: Why the limit is set or changed, kept for audit.
+          example: Raised for the product launch
+      required:
+      - amount
+    SpendLimitResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SpendLimit'
+      required:
+      - data
+    spend-limits_PaginationMeta:
+      type: object
+      properties:
+        total_pages:
+          type: integer
+          example: 1
+        total_results:
+          type: integer
+          example: 2
+        page_number:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 2
+    SpendLimitLimit:
+      type: object
+      nullable: true
+      description: The limit set on the account for the product and period, whoever set it. `null` when none is set.
+      properties:
+        amount:
+          type: string
+          nullable: true
+          description: Limit in USD, as a decimal string. `null` when `unlimited` is true.
+          example: '100'
+        unlimited:
+          type: boolean
+          description: True when the limit was set to explicitly no cap.
+          example: false
+        origin:
+          type: string
+          enum:
+          - self_service
+          - operator
+          description: '`self_service` when a user of the account set it, `operator` when Telnyx support did.'
+          example: self_service
+        updated_at:
+          type: string
+          format: date-time
+          description: When the limit was last set or changed.
+          example: '2026-09-24T09:12:03.412Z'
+      required:
+      - amount
+      - unlimited
+      - origin
+      - updated_at
+    CreateSpendLimitRequest:
+      description: 'Send exactly one of `amount` and `unlimited: true`.'
+      oneOf:
+      - $ref: '#/components/schemas/CreateSpendLimitWithAmount'
+      - $ref: '#/components/schemas/CreateSpendLimitUnlimited'
+    CreateSpendLimitUnlimited:
+      title: Unlimited
+      description: Explicitly no cap.
+      type: object
+      additionalProperties: false
+      properties:
+        product:
+          type: string
+          description: Product to limit, as returned in `product` by the list operation.
+          example: inference
+        period:
+          $ref: '#/components/schemas/SpendLimitPeriod'
+        unlimited:
+          type: boolean
+          enum:
+          - true
+          description: '`true`: explicitly no cap.'
+          example: true
+        reason:
+          type: string
+          maxLength: 500
+          description: Why the limit is set or changed, kept for audit.
           example: Team budget
       required:
       - product
-      - amount
+      - unlimited
     SpendLimitEvaluation:
       type: object
       description: What a create, update or delete did to the period at once. Only present in write responses.
@@ -900,40 +998,46 @@ components:
       - still_over_limit
       - still_blocked_other_period
       - evaluation_deferred
-    SpendLimitLimit:
+    SpendLimitCredentialLimit:
       type: object
-      nullable: true
-      description: The limit set on the account for the product and period, whoever set it. `null` when none is set.
+      description: The limit, spend and block state of one API key in the product and period.
       properties:
-        amount:
+        credential_id:
+          type: string
+          description: Identifier of the API key as recorded on usage. Never the key's secret.
+          example: KEY0192F3A1B2C3D4E5F6A7B8C9D0E1F2
+        limit:
+          $ref: '#/components/schemas/SpendLimitCredentialLimitValue'
+        spend_usd:
           type: string
           nullable: true
-          description: Limit in USD, as a decimal string. `null` when `unlimited` is true.
-          example: '100'
-        unlimited:
+          description: Spend in USD in the period made with exactly this API key, as a decimal string. Usage without an API key identifier, or with another one, counts only toward the total. `null` when it could not be read.
+          example: '120.00'
+        spend_error:
+          type: string
+          nullable: true
+          description: Set when `spend_usd` is `null`.
+          example: null
+        exceeds_total:
           type: boolean
-          description: True when the limit was set to explicitly no cap.
+          description: The API key's limit is above the period's total limit. Only a change by Telnyx support can cause it; the total limit still applies to the whole account. Lower the API key limit or raise the total.
           example: false
-        origin:
-          type: string
-          enum:
-          - self_service
-          - operator
-          description: '`self_service` when a user of the account set it, `operator` when Telnyx support did.'
-          example: self_service
-        updated_at:
-          type: string
-          format: date-time
-          description: When the limit was last set or changed.
-          example: '2026-09-24T09:12:03.412Z'
+        blocked:
+          type: boolean
+          description: This API key is blocked for the period.
+          example: false
+        block:
+          $ref: '#/components/schemas/SpendLimitBlock'
       required:
-      - amount
-      - unlimited
-      - origin
-      - updated_at
-    CreateSpendLimitUnlimited:
-      title: Unlimited
-      description: Explicitly no cap.
+      - credential_id
+      - limit
+      - spend_usd
+      - spend_error
+      - blocked
+      - block
+    CreateSpendLimitWithAmount_2:
+      title: Amount
+      description: A limit in USD.
       type: object
       additionalProperties: false
       properties:
@@ -943,12 +1047,24 @@ components:
           example: inference
         period:
           $ref: '#/components/schemas/SpendLimitPeriod'
+        credential_id:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 255
+          description: 'Optional. Identifier of one API key as recorded on usage, never the key''s secret: the limit then applies to that key only. Absent or `null` sets the total limit. A blank value, or one with control characters, is refused; it never means the total limit. An API key limit always has an `amount`.'
+          example: KEY0192F3A1B2C3D4E5F6A7B8C9D0E1F2
+        amount:
+          type: number
+          minimum: 0
+          description: Limit in USD. `0` blocks at the first cent of spend.
+          example: 100
         unlimited:
           type: boolean
           enum:
-          - true
-          description: '`true`: explicitly no cap.'
-          example: true
+          - false
+          description: Optional; only `false` is allowed together with `amount`.
+          example: false
         reason:
           type: string
           maxLength: 500
@@ -956,20 +1072,8 @@ components:
           example: Team budget
       required:
       - product
-      - unlimited
-    SpendLimitResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/SpendLimit'
-      required:
-      - data
-    UpdateSpendLimitRequest:
-      description: 'Send exactly one of `amount` and `unlimited: true`.'
-      oneOf:
-      - $ref: '#/components/schemas/UpdateSpendLimitWithAmount'
-      - $ref: '#/components/schemas/UpdateSpendLimitUnlimited'
-    ErrorResponse:
+      - amount
+    spend-limits_ErrorResponse:
       type: object
       properties:
         errors:
@@ -998,31 +1102,6 @@ components:
                     type: string
       required:
       - errors
-    SpendLimitCredentialLimitValue:
-      type: object
-      nullable: true
-      description: The limit of one API key. It always has an amount. `null` for an API key that is still blocked after its limit was removed.
-      properties:
-        amount:
-          type: string
-          description: Limit in USD, as a decimal string.
-          example: '300.00'
-        origin:
-          type: string
-          enum:
-          - self_service
-          - operator
-          description: '`self_service` when a user of the account set it, `operator` when Telnyx support did.'
-          example: self_service
-        updated_at:
-          type: string
-          format: date-time
-          description: When the limit was last set or changed.
-          example: '2026-10-20T08:03:40Z'
-      required:
-      - amount
-      - origin
-      - updated_at
     SpendLimit_2:
       type: object
       description: The spend limit, spend and block state of one product and period. The top-level fields describe the total limit of the account; API key limits are nested in `credential_limits`.
@@ -1099,72 +1178,57 @@ components:
       - spend_error
       - blocked
       - block
-    SpendLimitCredentialLimit:
+    SpendLimitCredentialLimitValue:
       type: object
-      description: The limit, spend and block state of one API key in the product and period.
+      nullable: true
+      description: The limit of one API key. It always has an amount. `null` for an API key that is still blocked after its limit was removed.
       properties:
-        credential_id:
+        amount:
           type: string
-          description: Identifier of the API key as recorded on usage. Never the key's secret.
-          example: KEY0192F3A1B2C3D4E5F6A7B8C9D0E1F2
-        limit:
-          $ref: '#/components/schemas/SpendLimitCredentialLimitValue'
-        spend_usd:
+          description: Limit in USD, as a decimal string.
+          example: '300.00'
+        origin:
           type: string
-          nullable: true
-          description: Spend in USD in the period made with exactly this API key, as a decimal string. Usage without an API key identifier, or with another one, counts only toward the total. `null` when it could not be read.
-          example: '120.00'
-        spend_error:
+          enum:
+          - self_service
+          - operator
+          description: '`self_service` when a user of the account set it, `operator` when Telnyx support did.'
+          example: self_service
+        updated_at:
           type: string
-          nullable: true
-          description: Set when `spend_usd` is `null`.
-          example: null
-        exceeds_total:
-          type: boolean
-          description: The API key's limit is above the period's total limit. Only a change by Telnyx support can cause it; the total limit still applies to the whole account. Lower the API key limit or raise the total.
-          example: false
-        blocked:
-          type: boolean
-          description: This API key is blocked for the period.
-          example: false
-        block:
-          $ref: '#/components/schemas/SpendLimitBlock'
+          format: date-time
+          description: When the limit was last set or changed.
+          example: '2026-10-20T08:03:40Z'
       required:
-      - credential_id
-      - limit
-      - spend_usd
-      - spend_error
-      - blocked
-      - block
-    spend-limits_ErrorResponse:
+      - amount
+      - origin
+      - updated_at
+    CreateSpendLimitUnlimited_2:
+      title: Unlimited
+      description: Explicitly no cap. Not available for API key limits.
       type: object
+      additionalProperties: false
       properties:
-        errors:
-          type: array
-          items:
-            type: object
-            required:
-            - code
-            - title
-            properties:
-              code:
-                type: string
-              title:
-                type: string
-              detail:
-                type: string
-              meta:
-                type: object
-                properties:
-                  url:
-                    type: string
-              source:
-                type: object
-                properties:
-                  pointer:
-                    type: string
+        product:
+          type: string
+          description: Product to limit, as returned in `product` by the list operation.
+          example: inference
+        period:
+          $ref: '#/components/schemas/SpendLimitPeriod'
+        unlimited:
+          type: boolean
+          enum:
+          - true
+          description: '`true`: explicitly no cap.'
+          example: true
+        reason:
+          type: string
+          maxLength: 500
+          description: Why the limit is set or changed, kept for audit.
+          example: Team budget
       required:
-      - errors
+      - product
+      - unlimited
     SpendLimitEvaluation_2:
       type: object
       description: What a create, update or delete did to the period at once. Only present in write responses.
@@ -1209,70 +1273,6 @@ components:
       - still_over_limit
       - still_blocked_other_period
       - evaluation_deferred
-    CreateSpendLimitWithAmount_2:
-      title: Amount
-      description: A limit in USD.
-      type: object
-      additionalProperties: false
-      properties:
-        product:
-          type: string
-          description: Product to limit, as returned in `product` by the list operation.
-          example: inference
-        period:
-          $ref: '#/components/schemas/SpendLimitPeriod'
-        credential_id:
-          type: string
-          nullable: true
-          minLength: 1
-          maxLength: 255
-          description: 'Optional. Identifier of one API key as recorded on usage, never the key''s secret: the limit then applies to that key only. Absent or `null` sets the total limit. A blank value, or one with control characters, is refused; it never means the total limit. An API key limit always has an `amount`.'
-          example: KEY0192F3A1B2C3D4E5F6A7B8C9D0E1F2
-        amount:
-          type: number
-          minimum: 0
-          description: Limit in USD. `0` blocks at the first cent of spend.
-          example: 100
-        unlimited:
-          type: boolean
-          enum:
-          - false
-          description: Optional; only `false` is allowed together with `amount`.
-          example: false
-        reason:
-          type: string
-          maxLength: 500
-          description: Why the limit is set or changed, kept for audit.
-          example: Team budget
-      required:
-      - product
-      - amount
-    CreateSpendLimitUnlimited_2:
-      title: Unlimited
-      description: Explicitly no cap. Not available for API key limits.
-      type: object
-      additionalProperties: false
-      properties:
-        product:
-          type: string
-          description: Product to limit, as returned in `product` by the list operation.
-          example: inference
-        period:
-          $ref: '#/components/schemas/SpendLimitPeriod'
-        unlimited:
-          type: boolean
-          enum:
-          - true
-          description: '`true`: explicitly no cap.'
-          example: true
-        reason:
-          type: string
-          maxLength: 500
-          description: Why the limit is set or changed, kept for audit.
-          example: Team budget
-      required:
-      - product
-      - unlimited
   securitySchemes:
     BearerAuth:
       type: http

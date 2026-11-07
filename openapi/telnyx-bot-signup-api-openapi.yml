@@ -640,7 +640,39 @@ components:
           example: agent-owner@example.com
       required:
       - email
-    BotChallengeResponse:
+    bot-signup_Error:
+      type: object
+      description: API error. General errors carry only `detail`; structured errors also include `code`, `title`, `source`, and `meta`.
+      properties:
+        code:
+          type: string
+          description: Machine-readable Telnyx error code.
+          example: '10005'
+        title:
+          type: string
+          description: Short human-readable summary.
+          example: Resource not found
+        detail:
+          type: string
+          description: Human-readable explanation of the error.
+          example: The requested resource or URL could not be found.
+        source:
+          type: object
+          properties:
+            pointer:
+              type: string
+              description: JSON pointer to the offending attribute.
+              example: /
+        meta:
+          type: object
+          properties:
+            url:
+              type: string
+              description: Link to the error documentation.
+              example: https://developers.telnyx.com/docs/overview/errors/10005
+      required:
+      - detail
+    BotSessionResponse:
       type: object
       required:
       - data
@@ -648,41 +680,43 @@ components:
         data:
           type: object
           required:
-          - nonce
-          - problem
-          - challenge_type
-          - terms_and_conditions_url
-          - privacy_policy_url
+          - api_v2_token
           properties:
-            nonce:
+            api_v2_token:
               type: string
-              format: uuid
-              description: Single-use challenge identifier. Submit it as `bot_challenge_nonce` on the signup request.
-              example: c6feda4e-6501-4db9-a21f-665e5b4ce2ba
-            problem:
-              type: string
-              description: Problem text to solve. Math problems are obfuscated and end with an unobfuscated rounding instruction; string and binary problems are returned as-is.
-              example: W#hAt iS f!Ve tImEs sEvEn? Round to 0 decimal places. Omit units.
-            challenge_type:
-              type: string
-              description: Type of challenge.
-              enum:
-              - math
-              - string
-              - binary
-              example: math
-            precision:
-              type: integer
-              description: Decimal places expected in the answer. Present only for math challenges.
-              example: 0
-            terms_and_conditions_url:
-              type: string
-              description: Current terms-and-conditions URL. Echo this back on the signup request.
-              example: https://telnyx.com/terms-and-conditions-of-service
-            privacy_policy_url:
-              type: string
-              description: Current privacy-policy URL. Echo this back on the signup request.
-              example: https://telnyx.com/privacy-policy
+              description: API v2 session token for the signed-in user. Use it as a bearer token on authenticated endpoints.
+              example: KEY0189A1B2C3D4E5F6071829AB3C4D5E_5FhZonmFvcw8Yq0dME27Bg
+    SuccessResponse:
+      type: object
+      description: Status envelope used by the signup and magic-link flows.
+      required:
+      - success
+      - message
+      properties:
+        success:
+          type: boolean
+          description: Whether the request was accepted.
+          example: true
+        message:
+          type: string
+          description: Human-readable status message.
+          example: A one-time sign-in link has been sent to your email address.
+    BotChallengeRequest:
+      type: object
+      description: Optional self-reported metadata about the LLM solving the challenge. Analytics only; values are truncated to 50 characters.
+      properties:
+        llm_model_name:
+          type: string
+          description: Name of the LLM the client is using.
+          example: claude-opus-4
+        llm_parameter_count:
+          type: string
+          description: Parameter count of the client LLM.
+          example: 175B
+        llm_quantization:
+          type: string
+          description: Quantization of the client LLM.
+          example: int8
     BotSignupRequest:
       type: object
       properties:
@@ -730,38 +764,7 @@ components:
       - privacy_policy_url
       - bot_challenge_nonce
       - bot_challenge_answer
-    BotChallengeRequest:
-      type: object
-      description: Optional self-reported metadata about the LLM solving the challenge. Analytics only; values are truncated to 50 characters.
-      properties:
-        llm_model_name:
-          type: string
-          description: Name of the LLM the client is using.
-          example: claude-opus-4
-        llm_parameter_count:
-          type: string
-          description: Parameter count of the client LLM.
-          example: 175B
-        llm_quantization:
-          type: string
-          description: Quantization of the client LLM.
-          example: int8
-    SuccessResponse:
-      type: object
-      description: Status envelope used by the signup and magic-link flows.
-      required:
-      - success
-      - message
-      properties:
-        success:
-          type: boolean
-          description: Whether the request was accepted.
-          example: true
-        message:
-          type: string
-          description: Human-readable status message.
-          example: A one-time sign-in link has been sent to your email address.
-    BotSessionResponse:
+    BotChallengeResponse:
       type: object
       required:
       - data
@@ -769,44 +772,41 @@ components:
         data:
           type: object
           required:
-          - api_v2_token
+          - nonce
+          - problem
+          - challenge_type
+          - terms_and_conditions_url
+          - privacy_policy_url
           properties:
-            api_v2_token:
+            nonce:
               type: string
-              description: API v2 session token for the signed-in user. Use it as a bearer token on authenticated endpoints.
-              example: KEY0189A1B2C3D4E5F6071829AB3C4D5E_5FhZonmFvcw8Yq0dME27Bg
-    bot-signup_Error:
-      type: object
-      description: API error. General errors carry only `detail`; structured errors also include `code`, `title`, `source`, and `meta`.
-      properties:
-        code:
-          type: string
-          description: Machine-readable Telnyx error code.
-          example: '10005'
-        title:
-          type: string
-          description: Short human-readable summary.
-          example: Resource not found
-        detail:
-          type: string
-          description: Human-readable explanation of the error.
-          example: The requested resource or URL could not be found.
-        source:
-          type: object
-          properties:
-            pointer:
+              format: uuid
+              description: Single-use challenge identifier. Submit it as `bot_challenge_nonce` on the signup request.
+              example: c6feda4e-6501-4db9-a21f-665e5b4ce2ba
+            problem:
               type: string
-              description: JSON pointer to the offending attribute.
-              example: /
-        meta:
-          type: object
-          properties:
-            url:
+              description: Problem text to solve. Math problems are obfuscated and end with an unobfuscated rounding instruction; string and binary problems are returned as-is.
+              example: W#hAt iS f!Ve tImEs sEvEn? Round to 0 decimal places. Omit units.
+            challenge_type:
               type: string
-              description: Link to the error documentation.
-              example: https://developers.telnyx.com/docs/overview/errors/10005
-      required:
-      - detail
+              description: Type of challenge.
+              enum:
+              - math
+              - string
+              - binary
+              example: math
+            precision:
+              type: integer
+              description: Decimal places expected in the answer. Present only for math challenges.
+              example: 0
+            terms_and_conditions_url:
+              type: string
+              description: Current terms-and-conditions URL. Echo this back on the signup request.
+              example: https://telnyx.com/terms-and-conditions-of-service
+            privacy_policy_url:
+              type: string
+              description: Current privacy-policy URL. Echo this back on the signup request.
+              example: https://telnyx.com/privacy-policy
     bot-signup_ErrorResponse:
       type: object
       properties:

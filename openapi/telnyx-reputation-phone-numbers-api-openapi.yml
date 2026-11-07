@@ -274,27 +274,25 @@ paths:
       - Reputation Phone Numbers
       x-latency-category: responsive
 components:
+  parameters:
+    PhoneNumber:
+      description: Phone number in E.164 format
+      in: path
+      name: phone_number
+      required: true
+      schema:
+        example: '+16035551234'
+        type: string
+    EnterpriseId:
+      description: Unique identifier of the enterprise (UUID)
+      in: path
+      name: enterprise_id
+      required: true
+      schema:
+        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+        format: uuid
+        type: string
   schemas:
-    ReputationPhoneNumberWithReputationData:
-      allOf:
-      - $ref: '#/components/schemas/ReputationPhoneNumberPublic'
-      - properties:
-          reputation_data:
-            description: Reputation metrics (null if not yet fetched)
-            oneOf:
-            - $ref: '#/components/schemas/ReputationData'
-            - nullable: true
-              type: object
-        type: object
-    ReputationPhoneNumberList:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/ReputationPhoneNumberPublic'
-          type: array
-        meta:
-          $ref: '#/components/schemas/MetaInfo'
-      type: object
     ReputationPhoneNumberCreate:
       properties:
         phone_numbers:
@@ -309,26 +307,49 @@ components:
       required:
       - phone_numbers
       type: object
-    ReputationPhoneNumberWithReputation:
+    ReputationPhoneNumberList:
       properties:
         data:
-          $ref: '#/components/schemas/ReputationPhoneNumberWithReputationData'
+          items:
+            $ref: '#/components/schemas/ReputationPhoneNumberPublic'
+          type: array
+        meta:
+          $ref: '#/components/schemas/MetaInfo'
       type: object
-    MetaInfo:
+    ReputationPhoneNumberPublic:
       properties:
-        page_number:
-          description: Current page number
-          type: integer
-        page_size:
-          description: Items per page
-          type: integer
-        total_pages:
-          description: Total number of pages
-          type: integer
-        total_results:
-          description: Total number of results
-          type: integer
+        created_at:
+          description: When the number was associated
+          format: date-time
+          type: string
+        enterprise_id:
+          description: ID of the associated enterprise
+          format: uuid
+          type: string
+        id:
+          description: Unique identifier
+          format: uuid
+          type: string
+        phone_number:
+          description: Phone number in E.164 format
+          example: '+16035551234'
+          type: string
+        updated_at:
+          description: When the record was last updated
+          format: date-time
+          type: string
       type: object
+    ReputationPhoneNumberWithReputationData:
+      allOf:
+      - $ref: '#/components/schemas/ReputationPhoneNumberPublic'
+      - properties:
+          reputation_data:
+            description: Reputation metrics (null if not yet fetched)
+            oneOf:
+            - $ref: '#/components/schemas/ReputationData'
+            - nullable: true
+              type: object
+        type: object
     TelnyxError:
       properties:
         code:
@@ -361,6 +382,20 @@ components:
       required:
       - code
       - title
+      type: object
+    ReputationPhoneNumberWithReputation:
+      properties:
+        data:
+          $ref: '#/components/schemas/ReputationPhoneNumberWithReputationData'
+      type: object
+    ReputationPhoneNumberListWithReputation:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/ReputationPhoneNumberWithReputationData'
+          type: array
+        meta:
+          $ref: '#/components/schemas/MetaInfo'
       type: object
     ReputationData:
       description: Reputation metrics
@@ -407,29 +442,6 @@ components:
           nullable: true
           type: string
       type: object
-    ReputationPhoneNumberPublic:
-      properties:
-        created_at:
-          description: When the number was associated
-          format: date-time
-          type: string
-        enterprise_id:
-          description: ID of the associated enterprise
-          format: uuid
-          type: string
-        id:
-          description: Unique identifier
-          format: uuid
-          type: string
-        phone_number:
-          description: Phone number in E.164 format
-          example: '+16035551234'
-          type: string
-        updated_at:
-          description: When the record was last updated
-          format: date-time
-          type: string
-      type: object
     branded-calling_ErrorResponse:
       properties:
         errors:
@@ -437,52 +449,40 @@ components:
             $ref: '#/components/schemas/TelnyxError'
           type: array
       type: object
-    ReputationPhoneNumberListWithReputation:
+    MetaInfo:
       properties:
-        data:
-          items:
-            $ref: '#/components/schemas/ReputationPhoneNumberWithReputationData'
-          type: array
-        meta:
-          $ref: '#/components/schemas/MetaInfo'
+        page_number:
+          description: Current page number
+          type: integer
+        page_size:
+          description: Items per page
+          type: integer
+        total_pages:
+          description: Total number of pages
+          type: integer
+        total_results:
+          description: Total number of results
+          type: integer
       type: object
   responses:
-    BadRequest:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/branded-calling_ErrorResponse'
-      description: Bad request — invalid input or validation error
     Unauthorized:
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/branded-calling_ErrorResponse'
       description: Unauthorized — missing or invalid API key
+    BadRequest:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/branded-calling_ErrorResponse'
+      description: Bad request — invalid input or validation error
     NotFound:
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/branded-calling_ErrorResponse'
       description: Resource not found
-  parameters:
-    EnterpriseId:
-      description: Unique identifier of the enterprise (UUID)
-      in: path
-      name: enterprise_id
-      required: true
-      schema:
-        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-        format: uuid
-        type: string
-    PhoneNumber:
-      description: Phone number in E.164 format
-      in: path
-      name: phone_number
-      required: true
-      schema:
-        example: '+16035551234'
-        type: string
   securitySchemes:
     bearerAuth:
       scheme: bearer

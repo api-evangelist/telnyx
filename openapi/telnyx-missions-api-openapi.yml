@@ -1901,20 +1901,68 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    MissionsListResponse:
+    TelnyxAgentsListResponse:
       properties:
         data:
           items:
-            $ref: '#/components/schemas/MissionData'
+            $ref: '#/components/schemas/TelnyxAgentData'
           type: array
           title: Data
-        meta:
-          $ref: '#/components/schemas/Meta'
       type: object
       required:
       - data
-      - meta
-      title: MissionsListResponse
+      title: TelnyxAgentsListResponse
+    PlanResponse:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/PlanStepData'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: PlanResponse
+    UpdateMissionRequest:
+      properties:
+        name:
+          title: Name
+          type: string
+        description:
+          title: Description
+          type: string
+        model:
+          title: Model
+          type: string
+        instructions:
+          title: Instructions
+          type: string
+        execution_mode:
+          $ref: '#/components/schemas/ExecutionMode'
+        metadata:
+          title: Metadata
+          additionalProperties: true
+          type: object
+      type: object
+      title: UpdateMissionRequest
+    RunStatus:
+      type: string
+      enum:
+      - pending
+      - running
+      - paused
+      - succeeded
+      - failed
+      - cancelled
+      title: RunStatus
+    MissionResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/MissionData'
+      type: object
+      required:
+      - data
+      title: MissionResponse
     MissionRunResponse:
       properties:
         data:
@@ -1923,11 +1971,11 @@ components:
       required:
       - data
       title: MissionRunResponse
-    MissionRunsListResponse:
+    EventsListResponse:
       properties:
         data:
           items:
-            $ref: '#/components/schemas/MissionRunData'
+            $ref: '#/components/schemas/EventData'
           type: array
           title: Data
         meta:
@@ -1936,7 +1984,229 @@ components:
       required:
       - data
       - meta
-      title: MissionRunsListResponse
+      title: EventsListResponse
+    PlanStepData:
+      properties:
+        step_id:
+          type: string
+          title: Step Id
+        run_id:
+          type: string
+          format: uuid
+          title: Run Id
+        parent_step_id:
+          title: Parent Step Id
+          type: string
+        sequence:
+          type: integer
+          title: Sequence
+        description:
+          type: string
+          title: Description
+        status:
+          $ref: '#/components/schemas/StepStatus'
+        started_at:
+          title: Started At
+          type: string
+          format: date-time
+        completed_at:
+          title: Completed At
+          type: string
+          format: date-time
+        metadata:
+          title: Metadata
+          additionalProperties: true
+          type: object
+      type: object
+      required:
+      - step_id
+      - run_id
+      - sequence
+      - description
+      - status
+      title: PlanStepData
+    EventType:
+      type: string
+      enum:
+      - status_change
+      - step_started
+      - step_completed
+      - step_failed
+      - tool_call
+      - tool_result
+      - message
+      - error
+      - custom
+      title: EventType
+    EventData:
+      properties:
+        event_id:
+          type: string
+          title: Event Id
+        run_id:
+          type: string
+          title: Run Id
+        type:
+          $ref: '#/components/schemas/EventType'
+        summary:
+          type: string
+          title: Summary
+        timestamp:
+          type: string
+          format: date-time
+          title: Timestamp
+        step_id:
+          title: Step Id
+          type: string
+        agent_id:
+          title: Agent Id
+          type: string
+        payload:
+          title: Payload
+          additionalProperties: true
+          type: object
+        idempotency_key:
+          title: Idempotency Key
+          type: string
+      type: object
+      required:
+      - event_id
+      - run_id
+      - type
+      - summary
+      - timestamp
+      title: EventData
+    TelnyxAgentResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/TelnyxAgentData'
+      type: object
+      required:
+      - data
+      title: TelnyxAgentResponse
+    CreatePlanRequest:
+      properties:
+        steps:
+          items:
+            $ref: '#/components/schemas/CreatePlanStepRequest'
+          type: array
+          title: Steps
+      type: object
+      required:
+      - steps
+      title: CreatePlanRequest
+    ValidationError:
+      title: ValidationError
+      required:
+      - loc
+      - msg
+      - type
+      type: object
+      properties:
+        loc:
+          title: Location
+          type: array
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+    MissionData:
+      properties:
+        mission_id:
+          type: string
+          format: uuid
+          title: Mission Id
+        name:
+          type: string
+          title: Name
+        description:
+          title: Description
+          type: string
+        model:
+          title: Model
+          type: string
+        instructions:
+          title: Instructions
+          type: string
+        execution_mode:
+          $ref: '#/components/schemas/ExecutionMode'
+        metadata:
+          title: Metadata
+          additionalProperties: true
+          type: object
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - mission_id
+      - name
+      - execution_mode
+      - created_at
+      - updated_at
+      title: MissionData
+    StepStatus:
+      type: string
+      enum:
+      - pending
+      - in_progress
+      - completed
+      - skipped
+      - failed
+      title: StepStatus
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+      example:
+        detail:
+        - loc:
+          - body
+          - name
+          msg: Field required
+          type: missing
+    TelnyxAgentData:
+      properties:
+        run_id:
+          type: string
+          title: Run Id
+        telnyx_agent_id:
+          type: string
+          title: Telnyx Agent Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+      type: object
+      required:
+      - run_id
+      - telnyx_agent_id
+      - created_at
+      title: TelnyxAgentData
+    EventResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/EventData'
+      type: object
+      required:
+      - data
+      title: EventResponse
     MissionRunData:
       properties:
         run_id:
@@ -2012,22 +2282,20 @@ components:
       required:
       - name
       title: CreateMissionRequest
-    HTTPValidationError:
+    MissionRunsListResponse:
       properties:
-        detail:
+        data:
           items:
-            $ref: '#/components/schemas/ValidationError'
+            $ref: '#/components/schemas/MissionRunData'
           type: array
-          title: Detail
+          title: Data
+        meta:
+          $ref: '#/components/schemas/Meta'
       type: object
-      title: HTTPValidationError
-      example:
-        detail:
-        - loc:
-          - body
-          - name
-          msg: Field required
-          type: missing
+      required:
+      - data
+      - meta
+      title: MissionRunsListResponse
     CreatePlanStepRequest:
       properties:
         step_id:
@@ -2052,208 +2320,6 @@ components:
       - description
       - sequence
       title: CreatePlanStepRequest
-    UpdateMissionRequest:
-      properties:
-        name:
-          title: Name
-          type: string
-        description:
-          title: Description
-          type: string
-        model:
-          title: Model
-          type: string
-        instructions:
-          title: Instructions
-          type: string
-        execution_mode:
-          $ref: '#/components/schemas/ExecutionMode'
-        metadata:
-          title: Metadata
-          additionalProperties: true
-          type: object
-      type: object
-      title: UpdateMissionRequest
-    EventResponse:
-      properties:
-        data:
-          $ref: '#/components/schemas/EventData'
-      type: object
-      required:
-      - data
-      title: EventResponse
-    PlanStepData:
-      properties:
-        step_id:
-          type: string
-          title: Step Id
-        run_id:
-          type: string
-          format: uuid
-          title: Run Id
-        parent_step_id:
-          title: Parent Step Id
-          type: string
-        sequence:
-          type: integer
-          title: Sequence
-        description:
-          type: string
-          title: Description
-        status:
-          $ref: '#/components/schemas/StepStatus'
-        started_at:
-          title: Started At
-          type: string
-          format: date-time
-        completed_at:
-          title: Completed At
-          type: string
-          format: date-time
-        metadata:
-          title: Metadata
-          additionalProperties: true
-          type: object
-      type: object
-      required:
-      - step_id
-      - run_id
-      - sequence
-      - description
-      - status
-      title: PlanStepData
-    UpdatePlanStepRequest:
-      properties:
-        status:
-          $ref: '#/components/schemas/StepStatus'
-        metadata:
-          title: Metadata
-          additionalProperties: true
-          type: object
-      type: object
-      title: UpdatePlanStepRequest
-    TelnyxAgentsListResponse:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/TelnyxAgentData'
-          type: array
-          title: Data
-      type: object
-      required:
-      - data
-      title: TelnyxAgentsListResponse
-    StepStatus:
-      type: string
-      enum:
-      - pending
-      - in_progress
-      - completed
-      - skipped
-      - failed
-      title: StepStatus
-    PlanStepResponse:
-      properties:
-        data:
-          $ref: '#/components/schemas/PlanStepData'
-      type: object
-      required:
-      - data
-      title: PlanStepResponse
-    AddPlanStepsRequest:
-      properties:
-        steps:
-          items:
-            $ref: '#/components/schemas/CreatePlanStepRequest'
-          type: array
-          title: Steps
-      type: object
-      required:
-      - steps
-      title: AddPlanStepsRequest
-    LinkTelnyxAgentRequest:
-      properties:
-        telnyx_agent_id:
-          type: string
-          title: Telnyx Agent Id
-          description: The Telnyx AI agent ID to link
-      type: object
-      required:
-      - telnyx_agent_id
-      title: LinkTelnyxAgentRequest
-    EventData:
-      properties:
-        event_id:
-          type: string
-          title: Event Id
-        run_id:
-          type: string
-          title: Run Id
-        type:
-          $ref: '#/components/schemas/EventType'
-        summary:
-          type: string
-          title: Summary
-        timestamp:
-          type: string
-          format: date-time
-          title: Timestamp
-        step_id:
-          title: Step Id
-          type: string
-        agent_id:
-          title: Agent Id
-          type: string
-        payload:
-          title: Payload
-          additionalProperties: true
-          type: object
-        idempotency_key:
-          title: Idempotency Key
-          type: string
-      type: object
-      required:
-      - event_id
-      - run_id
-      - type
-      - summary
-      - timestamp
-      title: EventData
-    EventsListResponse:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/EventData'
-          type: array
-          title: Data
-        meta:
-          $ref: '#/components/schemas/Meta'
-      type: object
-      required:
-      - data
-      - meta
-      title: EventsListResponse
-    ValidationError:
-      title: ValidationError
-      required:
-      - loc
-      - msg
-      - type
-      type: object
-      properties:
-        loc:
-          title: Location
-          type: array
-          items:
-            anyOf:
-            - type: string
-            - type: integer
-        msg:
-          title: Message
-          type: string
-        type:
-          title: Error Type
-          type: string
     PlanStepsCreatedResponse:
       properties:
         data:
@@ -2265,39 +2331,20 @@ components:
       required:
       - data
       title: PlanStepsCreatedResponse
-    UpdateMissionRunRequest:
+    MissionsListResponse:
       properties:
-        status:
-          $ref: '#/components/schemas/RunStatus'
-        result_summary:
-          title: Result Summary
-          type: string
-        result_payload:
-          title: Result Payload
-          additionalProperties: true
-          type: object
-        error:
-          title: Error
-          type: string
-        metadata:
-          title: Metadata
-          additionalProperties: true
-          type: object
+        data:
+          items:
+            $ref: '#/components/schemas/MissionData'
+          type: array
+          title: Data
+        meta:
+          $ref: '#/components/schemas/Meta'
       type: object
-      title: UpdateMissionRunRequest
-    EventType:
-      type: string
-      enum:
-      - status_change
-      - step_started
-      - step_completed
-      - step_failed
-      - tool_call
-      - tool_result
-      - message
-      - error
-      - custom
-      title: EventType
+      required:
+      - data
+      - meta
+      title: MissionsListResponse
     CreateMissionRunRequest:
       properties:
         input:
@@ -2310,100 +2357,51 @@ components:
           type: object
       type: object
       title: CreateMissionRunRequest
-    TelnyxAgentData:
+    LinkTelnyxAgentRequest:
       properties:
-        run_id:
-          type: string
-          title: Run Id
         telnyx_agent_id:
           type: string
           title: Telnyx Agent Id
-        created_at:
-          type: string
-          format: date-time
-          title: Created At
+          description: The Telnyx AI agent ID to link
       type: object
       required:
-      - run_id
       - telnyx_agent_id
-      - created_at
-      title: TelnyxAgentData
-    Meta:
-      properties:
-        total_pages:
-          type: integer
-        total_results:
-          type: integer
-        page_number:
-          type: integer
-        page_size:
-          type: integer
-      type: object
-      required:
-      - total_pages
-      - total_results
-      - page_number
-      - page_size
-      title: Meta
-    PlanResponse:
+      title: LinkTelnyxAgentRequest
+    PlanStepResponse:
       properties:
         data:
-          items:
-            $ref: '#/components/schemas/PlanStepData'
-          type: array
-          title: Data
+          $ref: '#/components/schemas/PlanStepData'
       type: object
       required:
       - data
-      title: PlanResponse
-    MissionResponse:
+      title: PlanStepResponse
+    UpdatePlanStepRequest:
       properties:
-        data:
-          $ref: '#/components/schemas/MissionData'
-      type: object
-      required:
-      - data
-      title: MissionResponse
-    MissionData:
-      properties:
-        mission_id:
-          type: string
-          format: uuid
-          title: Mission Id
-        name:
-          type: string
-          title: Name
-        description:
-          title: Description
-          type: string
-        model:
-          title: Model
-          type: string
-        instructions:
-          title: Instructions
-          type: string
-        execution_mode:
-          $ref: '#/components/schemas/ExecutionMode'
+        status:
+          $ref: '#/components/schemas/StepStatus'
         metadata:
           title: Metadata
           additionalProperties: true
           type: object
-        created_at:
-          type: string
-          format: date-time
-          title: Created At
-        updated_at:
-          type: string
-          format: date-time
-          title: Updated At
+      type: object
+      title: UpdatePlanStepRequest
+    ExecutionMode:
+      type: string
+      enum:
+      - external
+      - managed
+      title: ExecutionMode
+    AddPlanStepsRequest:
+      properties:
+        steps:
+          items:
+            $ref: '#/components/schemas/CreatePlanStepRequest'
+          type: array
+          title: Steps
       type: object
       required:
-      - mission_id
-      - name
-      - execution_mode
-      - created_at
-      - updated_at
-      title: MissionData
+      - steps
+      title: AddPlanStepsRequest
     CreateEventRequest:
       properties:
         type:
@@ -2430,41 +2428,43 @@ components:
       - type
       - summary
       title: CreateEventRequest
-    CreatePlanRequest:
+    UpdateMissionRunRequest:
       properties:
-        steps:
-          items:
-            $ref: '#/components/schemas/CreatePlanStepRequest'
-          type: array
-          title: Steps
+        status:
+          $ref: '#/components/schemas/RunStatus'
+        result_summary:
+          title: Result Summary
+          type: string
+        result_payload:
+          title: Result Payload
+          additionalProperties: true
+          type: object
+        error:
+          title: Error
+          type: string
+        metadata:
+          title: Metadata
+          additionalProperties: true
+          type: object
+      type: object
+      title: UpdateMissionRunRequest
+    Meta:
+      properties:
+        total_pages:
+          type: integer
+        total_results:
+          type: integer
+        page_number:
+          type: integer
+        page_size:
+          type: integer
       type: object
       required:
-      - steps
-      title: CreatePlanRequest
-    TelnyxAgentResponse:
-      properties:
-        data:
-          $ref: '#/components/schemas/TelnyxAgentData'
-      type: object
-      required:
-      - data
-      title: TelnyxAgentResponse
-    RunStatus:
-      type: string
-      enum:
-      - pending
-      - running
-      - paused
-      - succeeded
-      - failed
-      - cancelled
-      title: RunStatus
-    ExecutionMode:
-      type: string
-      enum:
-      - external
-      - managed
-      title: ExecutionMode
+      - total_pages
+      - total_results
+      - page_number
+      - page_size
+      title: Meta
     HTTPValidationError_2:
       properties:
         detail:

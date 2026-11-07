@@ -311,6 +311,129 @@ paths:
           $ref: '#/components/responses/GenericErrorResponse'
 components:
   schemas:
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+      type: object
+    netapps_CursorPaginationMeta:
+      type: object
+      title: CursorPaginationMeta
+      properties:
+        cursors:
+          type: object
+          description: Opaque cursors. Absent keys mean there is no such page.
+          properties:
+            after:
+              type: string
+              description: Pass as `page[after]` to fetch the next page. Absent on the last page.
+            before:
+              type: string
+              description: The cursor of the previous page. Present when the request used `page[after]`.
+        next:
+          type: string
+          description: The path of the next page, with the same query parameters. Absent on the last page.
+          example: /v2/network_routes?filter%5Bnetwork_id%5D=91446ee3-5b1c-4f0e-8d2a-6c7e9b0a1f24&page%5Bafter%5D=MjAyNi0xMC0yMVQxNjowNjowMC4wNDMwNDRa&page%5Blimit%5D=1
+        previous:
+          type: string
+          description: The path of the previous page. Present when the request used `page[after]`.
+    NetworkRouteNextHop:
+      type: object
+      title: NetworkRouteNextHop
+      required:
+      - type
+      - id
+      description: Where the Network sends traffic for the route's CIDR.
+      properties:
+        type:
+          type: string
+          enum:
+          - tunnel
+          - wireguard_peer
+          - wireguard_interface
+          - private_wireless_gateway
+          - virtual_cross_connect
+          - ipsec_tunnel
+          - public_internet_gateway
+          description: The type of the next hop. Routes added with `POST /network_routes` use `tunnel`. Routes that attachments install carry the attachment's type.
+          example: tunnel
+        id:
+          type: string
+          format: uuid
+          description: The id of the tunnel or attachment.
+          example: 62d438d2-8a51-4c5e-9d0c-1f6b2a7e4c39
+    Error:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+          x-format: int64
+        title:
+          type: string
+        detail:
+          type: string
+          description: A human-readable explanation of the error.
+        description:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          additionalProperties: true
+      example:
+        title: Invalid street address
+        source:
+          pointer: /street_address
+        code: '20207'
+        description: The street address provided is invalid.
+      type: object
+    NetworkRouteCreate:
+      type: object
+      title: NetworkRouteCreate
+      required:
+      - network_id
+      - cidr
+      - next_hop
+      properties:
+        network_id:
+          type: string
+          format: uuid
+          description: The id of the Network to add the route to.
+          example: 91446ee3-5b1c-4f0e-8d2a-6c7e9b0a1f24
+        cidr:
+          type: string
+          description: The IPv4 subnet to route, such as a subnet behind the tunnel. It must be a canonical CIDR. Default, loopback, link-local, multicast, and shared address space (`100.64.0.0/10`) ranges are rejected. So are ranges that overlap the Tailscale Subnet Router ranges, `172.27.254.0/24` and `198.18.0.0/20`, or a subnet already on the Network.
+          example: 10.20.0.0/16
+        next_hop:
+          type: object
+          required:
+          - type
+          - id
+          description: Where the Network sends traffic for `cidr`.
+          properties:
+            type:
+              type: string
+              enum:
+              - tunnel
+              description: The type of the next hop.
+              example: tunnel
+            id:
+              type: string
+              format: uuid
+              description: The id of the tunnel.
+              example: 62d438d2-8a51-4c5e-9d0c-1f6b2a7e4c39
     NetworkRoute:
       type: object
       title: NetworkRoute
@@ -361,136 +484,6 @@ components:
           readOnly: true
           description: ISO 8601 formatted date-time indicating when the resource was created.
           example: '2026-10-21T15:04:05.123456Z'
-    Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/Error'
-      type: object
-    Error:
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: string
-          x-format: int64
-        title:
-          type: string
-        detail:
-          type: string
-          description: A human-readable explanation of the error.
-        description:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-              format: json-pointer
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-          additionalProperties: true
-      example:
-        title: Invalid street address
-        source:
-          pointer: /street_address
-        code: '20207'
-        description: The street address provided is invalid.
-      type: object
-    NetworkRouteNextHop:
-      type: object
-      title: NetworkRouteNextHop
-      required:
-      - type
-      - id
-      description: Where the Network sends traffic for the route's CIDR.
-      properties:
-        type:
-          type: string
-          enum:
-          - tunnel
-          - wireguard_peer
-          - wireguard_interface
-          - private_wireless_gateway
-          - virtual_cross_connect
-          - ipsec_tunnel
-          - public_internet_gateway
-          description: The type of the next hop. Routes added with `POST /network_routes` use `tunnel`. Routes that attachments install carry the attachment's type.
-          example: tunnel
-        id:
-          type: string
-          format: uuid
-          description: The id of the tunnel or attachment.
-          example: 62d438d2-8a51-4c5e-9d0c-1f6b2a7e4c39
-    NetworkRouteCreate:
-      type: object
-      title: NetworkRouteCreate
-      required:
-      - network_id
-      - cidr
-      - next_hop
-      properties:
-        network_id:
-          type: string
-          format: uuid
-          description: The id of the Network to add the route to.
-          example: 91446ee3-5b1c-4f0e-8d2a-6c7e9b0a1f24
-        cidr:
-          type: string
-          description: The IPv4 subnet to route, such as a subnet behind the tunnel. It must be a canonical CIDR. Default, loopback, link-local, multicast, and shared address space (`100.64.0.0/10`) ranges are rejected. So are ranges that overlap the Tailscale Subnet Router ranges, `172.27.254.0/24` and `198.18.0.0/20`, or a subnet already on the Network.
-          example: 10.20.0.0/16
-        next_hop:
-          type: object
-          required:
-          - type
-          - id
-          description: Where the Network sends traffic for `cidr`.
-          properties:
-            type:
-              type: string
-              enum:
-              - tunnel
-              description: The type of the next hop.
-              example: tunnel
-            id:
-              type: string
-              format: uuid
-              description: The id of the tunnel.
-              example: 62d438d2-8a51-4c5e-9d0c-1f6b2a7e4c39
-    netapps_CursorPaginationMeta:
-      type: object
-      title: CursorPaginationMeta
-      properties:
-        cursors:
-          type: object
-          description: Opaque cursors. Absent keys mean there is no such page.
-          properties:
-            after:
-              type: string
-              description: Pass as `page[after]` to fetch the next page. Absent on the last page.
-            before:
-              type: string
-              description: The cursor of the previous page. Present when the request used `page[after]`.
-        next:
-          type: string
-          description: The path of the next page, with the same query parameters. Absent on the last page.
-          example: /v2/network_routes?filter%5Bnetwork_id%5D=91446ee3-5b1c-4f0e-8d2a-6c7e9b0a1f24&page%5Bafter%5D=MjAyNi0xMC0yMVQxNjowNjowMC4wNDMwNDRa&page%5Blimit%5D=1
-        previous:
-          type: string
-          description: The path of the previous page. Present when the request used `page[after]`.
-  responses:
-    GenericErrorResponse:
-      description: Unexpected error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Errors'
   parameters:
     PageCursorConsolidated:
       name: page
@@ -510,6 +503,13 @@ components:
             maximum: 100
             default: 20
             description: The number of results per page.
+  responses:
+    GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
   securitySchemes:
     BearerAuth:
       type: http

@@ -253,28 +253,96 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
+  headers:
+    IdempotentReplayed:
+      description: Present with value `true` when Edge replayed a stored successful response for the supplied Idempotency-Key. Omitted for first-time requests and error responses.
+      schema:
+        type: boolean
+        enum:
+        - true
+        example: true
   schemas:
-    ValidationError:
-      title: ValidationError
-      required:
-      - loc
-      - msg
-      - type
+    email_ErrorResponse:
       type: object
       properties:
-        loc:
-          title: Location
+        errors:
           type: array
           items:
-            anyOf:
-            - type: string
-            - type: integer
-        msg:
-          title: Message
+            $ref: '#/components/schemas/ErrorObject'
+        suppressed:
+          type: array
+          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
+      required:
+      - errors
+    inference-embedding_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/inference-embedding_ErrorObject'
+      required:
+      - errors
+    UpdateMCPServerRequest:
+      type: object
+      properties:
+        id:
           type: string
+          title: Id
+        name:
+          type: string
+          title: Name
         type:
-          title: Error Type
           type: string
+          title: Type
+        url:
+          type: string
+          title: Url
+        api_key_ref:
+          type:
+          - string
+          - 'null'
+          title: Api Key Ref
+        allowed_tools:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+          title: Allowed Tools
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+      title: UpdateMCPServerRequest
+    SuppressedRecipient:
+      type: object
+      properties:
+        to:
+          type: string
+          format: email
+          description: Suppressed recipient email address.
+        reason:
+          type: string
+          description: Suppression reason returned by the recipient suppression service.
+        scope:
+          type: string
+          description: Scope at which the suppression applies.
+        override_allowed:
+          type: boolean
+          description: Whether an authorized send may override this suppression.
+      required:
+      - to
+      - reason
+      - scope
+      - override_allowed
+    MCPServersListResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/MCPServer'
+      title: MCPServersListResponse
     ErrorObject:
       type: object
       properties:
@@ -317,103 +385,6 @@ components:
       - code
       - title
       - detail
-    inference-embedding_ErrorObject:
-      type: object
-      properties:
-        code:
-          type: string
-          description: Telnyx error code. Edge idempotency errors use 10015, 10027, or 10036; idempotency protection outages use 10016; replay-cap 413s surface 10007. Fallback 404/500 responses from the framework may use string status codes ('404', '500') instead.
-          enum:
-          - '10007'
-          - '10015'
-          - '10016'
-          - '10027'
-          - '10036'
-          - '404'
-          - '500'
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              type: string
-      required:
-      - code
-      - title
-    email_ErrorResponse:
-      type: object
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/ErrorObject'
-        suppressed:
-          type: array
-          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
-          items:
-            $ref: '#/components/schemas/SuppressedRecipient'
-      required:
-      - errors
-    UpdateMCPServerRequest:
-      type: object
-      properties:
-        id:
-          type: string
-          title: Id
-        name:
-          type: string
-          title: Name
-        type:
-          type: string
-          title: Type
-        url:
-          type: string
-          title: Url
-        api_key_ref:
-          type:
-          - string
-          - 'null'
-          title: Api Key Ref
-        allowed_tools:
-          type:
-          - array
-          - 'null'
-          items:
-            type: string
-          title: Allowed Tools
-        created_at:
-          type: string
-          format: date-time
-          title: Created At
-      title: UpdateMCPServerRequest
-    inference-embedding_ErrorResponse:
-      type: object
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/inference-embedding_ErrorObject'
-      required:
-      - errors
-    HTTPValidationError:
-      properties:
-        detail:
-          items:
-            $ref: '#/components/schemas/ValidationError'
-          type: array
-          title: Detail
-      type: object
-      title: HTTPValidationError
-      example:
-        detail:
-        - loc:
-          - body
-          - name
-          msg: Field required
-          type: missing
     CreateMCPServerRequest:
       type: object
       properties:
@@ -443,11 +414,6 @@ components:
       - type
       - url
       title: CreateMCPServerRequest
-    MCPServersListResponse:
-      type: array
-      items:
-        $ref: '#/components/schemas/MCPServer'
-      title: MCPServersListResponse
     MCPServer:
       type: object
       properties:
@@ -486,27 +452,69 @@ components:
       - url
       - created_at
       title: MCPServer
-    SuppressedRecipient:
+    inference-embedding_ErrorObject:
       type: object
       properties:
-        to:
+        code:
           type: string
-          format: email
-          description: Suppressed recipient email address.
-        reason:
+          description: Telnyx error code. Edge idempotency errors use 10015, 10027, or 10036; idempotency protection outages use 10016; replay-cap 413s surface 10007. Fallback 404/500 responses from the framework may use string status codes ('404', '500') instead.
+          enum:
+          - '10007'
+          - '10015'
+          - '10016'
+          - '10027'
+          - '10036'
+          - '404'
+          - '500'
+        title:
           type: string
-          description: Suppression reason returned by the recipient suppression service.
-        scope:
+        detail:
           type: string
-          description: Scope at which the suppression applies.
-        override_allowed:
-          type: boolean
-          description: Whether an authorized send may override this suppression.
+        source:
+          type: object
+          properties:
+            pointer:
+              type: string
       required:
-      - to
-      - reason
-      - scope
-      - override_allowed
+      - code
+      - title
+    ValidationError:
+      title: ValidationError
+      required:
+      - loc
+      - msg
+      - type
+      type: object
+      properties:
+        loc:
+          title: Location
+          type: array
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+      example:
+        detail:
+        - loc:
+          - body
+          - name
+          msg: Field required
+          type: missing
     HTTPValidationError_2:
       properties:
         detail:
@@ -542,14 +550,6 @@ components:
         maxLength: 255
         pattern: ^[A-Za-z0-9_-]{1,255}$
       example: 8e03978e-40d5-43e8-bc93-6894a57f9326
-  headers:
-    IdempotentReplayed:
-      description: Present with value `true` when Edge replayed a stored successful response for the supplied Idempotency-Key. Omitted for first-time requests and error responses.
-      schema:
-        type: boolean
-        enum:
-        - true
-        example: true
   securitySchemes:
     BearerAuth:
       type: http

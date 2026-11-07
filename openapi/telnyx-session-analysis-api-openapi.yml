@@ -246,35 +246,42 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    SessionAnalysisResponse:
+    RecordTypeMetadataResponse:
       type: object
       required:
-      - session_id
-      - cost
-      - root
+      - record_type
+      - aliases
+      - product
+      - event
+      - child_relationships
+      - parent_relationships
+      - examples
       - meta
       properties:
-        session_id:
+        record_type:
           type: string
-          description: Identifier for the analyzed session.
-        cost:
-          $ref: '#/components/schemas/CostSummary'
-        root:
-          $ref: '#/components/schemas/EventNode'
+        aliases:
+          type: array
+          items:
+            type: string
+        product:
+          type: string
+        event:
+          type: string
+        child_relationships:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChildRelationshipInfo'
+        parent_relationships:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParentRelationshipInfo'
+        examples:
+          type: object
+          additionalProperties: true
+          description: Example queries and responses for this record type.
         meta:
-          $ref: '#/components/schemas/ResponseMeta'
-    SessionAnalysisError:
-      type: object
-      required:
-      - code
-      - message
-      properties:
-        code:
-          type: string
-        message:
-          type: string
-        detail:
-          type: string
+          $ref: '#/components/schemas/RelationshipMetadata'
     CostInfo:
       type: object
       required:
@@ -291,121 +298,18 @@ components:
         currency:
           type: string
           description: ISO 4217 currency code.
-    RelationshipInfo:
+    CostSummary:
       type: object
       required:
-      - type
-      - via
-      - parent_id
+      - total
+      - currency
       properties:
-        type:
+        total:
           type: string
-          description: Relationship type identifier.
-        via:
-          $ref: '#/components/schemas/FieldMapping'
-        parent_id:
+          description: Total session cost as a decimal string.
+        currency:
           type: string
-          description: Identifier of the parent event.
-    MetadataInfo:
-      type: object
-      required:
-      - total_record_types
-      - last_updated
-      properties:
-        total_record_types:
-          type: integer
-        last_updated:
-          type: string
-          format: date-time
-    Links:
-      type: object
-      required:
-      - self
-      - records
-      properties:
-        self:
-          type: string
-          description: Link to this session analysis node.
-        records:
-          type: string
-          description: Link to the underlying detail records.
-    SessionAnalysisErrorResponse:
-      type: object
-      required:
-      - errors
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/SessionAnalysisError'
-    ChildRelationshipInfo:
-      type: object
-      required:
-      - relationship_type
-      - via
-      - cost_rollup
-      - traversal_enabled
-      - description
-      - child_product
-      - child_event
-      - child_record_type
-      properties:
-        relationship_type:
-          type: string
-        via:
-          $ref: '#/components/schemas/MetadataFieldMapping'
-        cost_rollup:
-          type: boolean
-        traversal_enabled:
-          type: boolean
-        description:
-          type: string
-        child_product:
-          type: string
-        child_event:
-          type: string
-        child_record_type:
-          type: string
-    ParentRelationshipInfo:
-      type: object
-      required:
-      - relationship_type
-      - via
-      - cost_rollup
-      - traversal_enabled
-      - description
-      - parent_product
-      - parent_event
-      - parent_record_type
-      properties:
-        relationship_type:
-          type: string
-        via:
-          $ref: '#/components/schemas/MetadataFieldMapping'
-        cost_rollup:
-          type: boolean
-        traversal_enabled:
-          type: boolean
-        description:
-          type: string
-        parent_product:
-          type: string
-        parent_event:
-          type: string
-        parent_record_type:
-          type: string
-    FieldMapping:
-      type: object
-      required:
-      - local_field
-      - parent_field
-      properties:
-        local_field:
-          type: string
-          description: Field name on the child record.
-        parent_field:
-          type: string
-          description: Field name on the parent record.
+          description: ISO 4217 currency code.
     EventNode:
       type: object
       required:
@@ -447,6 +351,58 @@ components:
             description: 'Recursive reference to EventNode. Nesting is elided here so every $ref chain stays finite for function-calling tooling; see #/components/schemas/EventNode for the full structure.'
             additionalProperties: true
           description: Child events in the session tree.
+    ChildRelationshipInfo:
+      type: object
+      required:
+      - relationship_type
+      - via
+      - cost_rollup
+      - traversal_enabled
+      - description
+      - child_product
+      - child_event
+      - child_record_type
+      properties:
+        relationship_type:
+          type: string
+        via:
+          $ref: '#/components/schemas/MetadataFieldMapping'
+        cost_rollup:
+          type: boolean
+        traversal_enabled:
+          type: boolean
+        description:
+          type: string
+        child_product:
+          type: string
+        child_event:
+          type: string
+        child_record_type:
+          type: string
+    Links:
+      type: object
+      required:
+      - self
+      - records
+      properties:
+        self:
+          type: string
+          description: Link to this session analysis node.
+        records:
+          type: string
+          description: Link to the underlying detail records.
+    SessionAnalysisError:
+      type: object
+      required:
+      - code
+      - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        detail:
+          type: string
     MetadataFieldMapping:
       type: object
       required:
@@ -457,6 +413,17 @@ components:
           type: string
         parent_field:
           type: string
+    MetadataInfo:
+      type: object
+      required:
+      - total_record_types
+      - last_updated
+      properties:
+        total_record_types:
+          type: integer
+        last_updated:
+          type: string
+          format: date-time
     RelationshipMetadata:
       type: object
       required:
@@ -473,6 +440,65 @@ components:
           type: integer
         max_recommended_depth:
           type: integer
+    ParentRelationshipInfo:
+      type: object
+      required:
+      - relationship_type
+      - via
+      - cost_rollup
+      - traversal_enabled
+      - description
+      - parent_product
+      - parent_event
+      - parent_record_type
+      properties:
+        relationship_type:
+          type: string
+        via:
+          $ref: '#/components/schemas/MetadataFieldMapping'
+        cost_rollup:
+          type: boolean
+        traversal_enabled:
+          type: boolean
+        description:
+          type: string
+        parent_product:
+          type: string
+        parent_event:
+          type: string
+        parent_record_type:
+          type: string
+    SessionAnalysisResponse:
+      type: object
+      required:
+      - session_id
+      - cost
+      - root
+      - meta
+      properties:
+        session_id:
+          type: string
+          description: Identifier for the analyzed session.
+        cost:
+          $ref: '#/components/schemas/CostSummary'
+        root:
+          $ref: '#/components/schemas/EventNode'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    ResponseMeta:
+      type: object
+      required:
+      - event_count
+      - products
+      properties:
+        event_count:
+          type: integer
+          description: Total number of events in the session tree.
+        products:
+          type: array
+          items:
+            type: string
+          description: List of distinct products involved in the session.
     QueryParameterInfo:
       type: object
       required:
@@ -500,20 +526,42 @@ components:
             type: string
         description:
           type: string
-    ResponseMeta:
+    RelationshipInfo:
       type: object
       required:
-      - event_count
-      - products
+      - type
+      - via
+      - parent_id
       properties:
-        event_count:
-          type: integer
-          description: Total number of events in the session tree.
-        products:
+        type:
+          type: string
+          description: Relationship type identifier.
+        via:
+          $ref: '#/components/schemas/FieldMapping'
+        parent_id:
+          type: string
+          description: Identifier of the parent event.
+    FieldMapping:
+      type: object
+      required:
+      - local_field
+      - parent_field
+      properties:
+        local_field:
+          type: string
+          description: Field name on the child record.
+        parent_field:
+          type: string
+          description: Field name on the parent record.
+    SessionAnalysisErrorResponse:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
           type: array
           items:
-            type: string
-          description: List of distinct products involved in the session.
+            $ref: '#/components/schemas/SessionAnalysisError'
     RecordTypeInfo:
       type: object
       required:
@@ -545,18 +593,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ParentRelationshipInfo'
-    CostSummary:
-      type: object
-      required:
-      - total
-      - currency
-      properties:
-        total:
-          type: string
-          description: Total session cost as a decimal string.
-        currency:
-          type: string
-          description: ISO 4217 currency code.
     MetadataOverviewResponse:
       type: object
       required:
@@ -575,42 +611,6 @@ components:
           description: Map of supported query parameter names to their definitions.
         meta:
           $ref: '#/components/schemas/MetadataInfo'
-    RecordTypeMetadataResponse:
-      type: object
-      required:
-      - record_type
-      - aliases
-      - product
-      - event
-      - child_relationships
-      - parent_relationships
-      - examples
-      - meta
-      properties:
-        record_type:
-          type: string
-        aliases:
-          type: array
-          items:
-            type: string
-        product:
-          type: string
-        event:
-          type: string
-        child_relationships:
-          type: array
-          items:
-            $ref: '#/components/schemas/ChildRelationshipInfo'
-        parent_relationships:
-          type: array
-          items:
-            $ref: '#/components/schemas/ParentRelationshipInfo'
-        examples:
-          type: object
-          additionalProperties: true
-          description: Example queries and responses for this record type.
-        meta:
-          $ref: '#/components/schemas/RelationshipMetadata'
     EventNode_2:
       properties:
         children:

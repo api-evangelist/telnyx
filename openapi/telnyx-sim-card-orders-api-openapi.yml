@@ -141,113 +141,84 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
-  parameters:
-    FilterSIMCardOrdersConsolidated:
-      name: filter
-      in: query
-      explode: true
-      description: 'Consolidated filter parameter for SIM card orders (deepObject style). Originally: filter[created_at], filter[updated_at], filter[quantity], filter[cost.amount], filter[cost.currency], filter[address.id], filter[address.street_address], filter[address.extended_address], filter[address.locality], filter[address.administrative_area], filter[address.country_code], filter[address.postal_code]'
-      schema:
-        type: object
-        properties:
-          created_at:
-            type: string
-            format: date-time
-            example: '2018-02-02T22:25:27.521Z'
-            description: Filter by ISO 8601 formatted date-time string matching resource creation date-time.
-          updated_at:
-            type: string
-            format: date-time
-            example: '2018-02-02T22:25:27.521Z'
-            description: Filter by ISO 8601 formatted date-time string matching resource last update date-time.
-          quantity:
-            type: integer
-            example: 21
-            description: Filter orders by how many SIM cards were ordered.
-          cost.amount:
-            description: The total monetary amount of the order.
-            type: string
-            example: '2.53'
-          cost.currency:
-            description: Filter by ISO 4217 currency string.
-            type: string
-            example: USD
-          address.id:
-            type: string
-            example: '1293384261075731499'
-            description: Uniquely identifies the address for the order.
-          address.street_address:
-            type: string
-            example: 600 Congress Avenue
-            description: Returns entries with matching name of the street where the address is located.
-          address.extended_address:
-            type: string
-            example: 14th Floor
-            description: Returns entries with matching name of the supplemental field for address information.
-          address.locality:
-            type: string
-            example: Austin
-            description: Filter by the name of the city where the address is located.
-          address.administrative_area:
-            type: string
-            example: TX
-            description: Filter by state or province where the address is located.
-          address.country_code:
-            type: string
-            example: US
-            description: Filter by the mobile operator two-character (ISO 3166-1 alpha-2) origin country code.
-          address.postal_code:
-            type: string
-            example: '78701'
-            description: Filter by postal code for the address.
-    wireless_PageConsolidated_c5290d5308:
-      name: page
-      in: query
-      explode: true
-      description: 'Consolidated pagination parameter (deepObject style). Originally: page[number], page[size]'
-      schema:
-        type: object
-        properties:
-          number:
-            type: integer
-            minimum: 1
-            default: 1
-            description: The page number to load.
-          size:
-            type: integer
-            minimum: 1
-            maximum: 250
-            default: 20
-            description: The size of the page.
-    ResourceId:
-      name: id
-      description: Identifies the resource.
-      in: path
-      required: true
-      schema:
-        format: uuid
-        type: string
-        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-    wireless_PageConsolidated:
-      description: 'Consolidated pagination parameter (deepObject style). Originally: page[number], page[size]'
-      explode: true
-      in: query
-      name: page
-      schema:
-        properties:
-          number:
-            default: 1
-            description: The page number to load.
-            minimum: 1
-            type: integer
-          size:
-            default: 20
-            description: The size of the page.
-            maximum: 250
-            minimum: 1
-            type: integer
-        type: object
   schemas:
+    documents_Error:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          additionalProperties: true
+      type: object
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    SIMCardOrderPreview:
+      title: SIMCardOrderPreview
+      type: object
+      properties:
+        total_cost:
+          type: object
+          properties:
+            amount:
+              type: string
+              description: A string representing the cost amount.
+              example: '2.32'
+            currency:
+              type: string
+              description: ISO 4217 currency string.
+              example: USD
+        shipping_cost:
+          type: object
+          properties:
+            amount:
+              type: string
+              description: A string representing the cost amount.
+              example: '2.32'
+            currency:
+              type: string
+              description: ISO 4217 currency string.
+              example: USD
+        sim_cards_cost:
+          type: object
+          properties:
+            amount:
+              type: string
+              description: A string representing the cost amount.
+              example: '2.32'
+            currency:
+              type: string
+              description: ISO 4217 currency string.
+              example: USD
+        record_type:
+          type: string
+          description: Identifies the type of the resource.
+          example: sim_card_order_preview
+          readOnly: true
+        quantity:
+          type: integer
+          description: The amount of SIM cards requested in the SIM card order.
+          example: 21
     PaginationMeta:
       type: object
       properties:
@@ -263,13 +234,32 @@ components:
         page_size:
           type: integer
           example: 25
-    Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/billing-group_Error'
+    billing-group_Error:
       type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
     SIMCardOrder:
       title: SIMCardOrder
       type: object
@@ -400,102 +390,6 @@ components:
       required:
       - address_id
       - quantity
-    SIMCardOrderPreview:
-      title: SIMCardOrderPreview
-      type: object
-      properties:
-        total_cost:
-          type: object
-          properties:
-            amount:
-              type: string
-              description: A string representing the cost amount.
-              example: '2.32'
-            currency:
-              type: string
-              description: ISO 4217 currency string.
-              example: USD
-        shipping_cost:
-          type: object
-          properties:
-            amount:
-              type: string
-              description: A string representing the cost amount.
-              example: '2.32'
-            currency:
-              type: string
-              description: ISO 4217 currency string.
-              example: USD
-        sim_cards_cost:
-          type: object
-          properties:
-            amount:
-              type: string
-              description: A string representing the cost amount.
-              example: '2.32'
-            currency:
-              type: string
-              description: ISO 4217 currency string.
-              example: USD
-        record_type:
-          type: string
-          description: Identifies the type of the resource.
-          example: sim_card_order_preview
-          readOnly: true
-        quantity:
-          type: integer
-          description: The amount of SIM cards requested in the SIM card order.
-          example: 21
-    billing-group_Error:
-      type: object
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: integer
-          format: int32
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-          properties: {}
-          additionalProperties: true
-    documents_Error:
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: string
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-          additionalProperties: true
-      type: object
     wireless_Errors:
       properties:
         errors:
@@ -570,6 +464,20 @@ components:
         description: The street address provided is invalid.
       type: object
   responses:
+    wireless_GenericErrorResponse_c5290d5308:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          examples:
+            unexpectedError:
+              summary: Unexpected API error
+              value:
+                errors:
+                - code: '10007'
+                  title: Unexpected error
+                  detail: An unexpected error occured.
     ResourceNotFound:
       description: Resource not found
       content:
@@ -590,20 +498,12 @@ components:
                 - code: '10027'
                   title: Unprocessable Entity
                   detail: The server understood the syntax of the request but was unable to process the instructions.
-    wireless_GenericErrorResponse_c5290d5308:
-      description: Unexpected error
+    wireless_GenericErrorResponse:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Errors'
-          examples:
-            unexpectedError:
-              summary: Unexpected API error
-              value:
-                errors:
-                - code: '10007'
-                  title: Unexpected error
-                  detail: An unexpected error occured.
+            $ref: '#/components/schemas/wireless_Errors'
+      description: Unexpected error
     SIMCardOrdersPreviewResponse:
       content:
         application/json:
@@ -611,15 +511,6 @@ components:
             properties:
               data:
                 $ref: '#/components/schemas/SIMCardOrderPreview'
-            type: object
-      description: Successful Response
-    GetSimCardOrderResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/SIMCardOrder'
             type: object
       description: Successful Response
     CreateSimCardOrderResponse:
@@ -631,24 +522,15 @@ components:
                 $ref: '#/components/schemas/SIMCardOrder'
             type: object
       description: Successful Response
-    wireless_GenericErrorResponse:
+    GetSimCardOrderResponse:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/wireless_Errors'
-      description: Unexpected error
-    wireless_UnprocessableEntity:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/wireless_Errors'
-      description: Unprocessable entity. Check the 'detail' field in response for details.
-    wireless_ResourceNotFound:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/wireless_Error'
-      description: Resource not found
+            properties:
+              data:
+                $ref: '#/components/schemas/SIMCardOrder'
+            type: object
+      description: Successful Response
     GetAllSimCardOrdersResponse:
       content:
         application/json:
@@ -662,6 +544,124 @@ components:
                 $ref: '#/components/schemas/PaginationMeta'
             type: object
       description: Successful Response
+    wireless_ResourceNotFound:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/wireless_Error'
+      description: Resource not found
+    wireless_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/wireless_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+  parameters:
+    wireless_PageConsolidated_c5290d5308:
+      name: page
+      in: query
+      explode: true
+      description: 'Consolidated pagination parameter (deepObject style). Originally: page[number], page[size]'
+      schema:
+        type: object
+        properties:
+          number:
+            type: integer
+            minimum: 1
+            default: 1
+            description: The page number to load.
+          size:
+            type: integer
+            minimum: 1
+            maximum: 250
+            default: 20
+            description: The size of the page.
+    ResourceId:
+      name: id
+      description: Identifies the resource.
+      in: path
+      required: true
+      schema:
+        format: uuid
+        type: string
+        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+    FilterSIMCardOrdersConsolidated:
+      name: filter
+      in: query
+      explode: true
+      description: 'Consolidated filter parameter for SIM card orders (deepObject style). Originally: filter[created_at], filter[updated_at], filter[quantity], filter[cost.amount], filter[cost.currency], filter[address.id], filter[address.street_address], filter[address.extended_address], filter[address.locality], filter[address.administrative_area], filter[address.country_code], filter[address.postal_code]'
+      schema:
+        type: object
+        properties:
+          created_at:
+            type: string
+            format: date-time
+            example: '2018-02-02T22:25:27.521Z'
+            description: Filter by ISO 8601 formatted date-time string matching resource creation date-time.
+          updated_at:
+            type: string
+            format: date-time
+            example: '2018-02-02T22:25:27.521Z'
+            description: Filter by ISO 8601 formatted date-time string matching resource last update date-time.
+          quantity:
+            type: integer
+            example: 21
+            description: Filter orders by how many SIM cards were ordered.
+          cost.amount:
+            description: The total monetary amount of the order.
+            type: string
+            example: '2.53'
+          cost.currency:
+            description: Filter by ISO 4217 currency string.
+            type: string
+            example: USD
+          address.id:
+            type: string
+            example: '1293384261075731499'
+            description: Uniquely identifies the address for the order.
+          address.street_address:
+            type: string
+            example: 600 Congress Avenue
+            description: Returns entries with matching name of the street where the address is located.
+          address.extended_address:
+            type: string
+            example: 14th Floor
+            description: Returns entries with matching name of the supplemental field for address information.
+          address.locality:
+            type: string
+            example: Austin
+            description: Filter by the name of the city where the address is located.
+          address.administrative_area:
+            type: string
+            example: TX
+            description: Filter by state or province where the address is located.
+          address.country_code:
+            type: string
+            example: US
+            description: Filter by the mobile operator two-character (ISO 3166-1 alpha-2) origin country code.
+          address.postal_code:
+            type: string
+            example: '78701'
+            description: Filter by postal code for the address.
+    wireless_PageConsolidated:
+      description: 'Consolidated pagination parameter (deepObject style). Originally: page[number], page[size]'
+      explode: true
+      in: query
+      name: page
+      schema:
+        properties:
+          number:
+            default: 1
+            description: The page number to load.
+            minimum: 1
+            type: integer
+          size:
+            default: 20
+            description: The size of the page.
+            maximum: 250
+            minimum: 1
+            type: integer
+        type: object
   securitySchemes:
     BearerAuth:
       type: http

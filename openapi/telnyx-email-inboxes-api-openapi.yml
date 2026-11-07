@@ -1401,96 +1401,95 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    RequiredInboxActionRecipientInput:
-      description: One recipient or a non-empty recipient array. Each recipient may be an email string or an object with `email` and optional `name`.
-      oneOf:
-      - $ref: '#/components/schemas/InboxActionEmailAddressInput'
-      - type: array
-        minItems: 1
-        items:
-          $ref: '#/components/schemas/InboxActionEmailAddressInput'
-    InboundThreadListResponse:
+    InboxFilters:
       type: object
       properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/InboundThread'
-        meta:
-          $ref: '#/components/schemas/email_PaginationMeta'
+        record_type:
+          type: string
+          enum:
+          - email_inbox_filters
+        allowlist:
+          $ref: '#/components/schemas/InboxFilterEntryList'
+        blocklist:
+          $ref: '#/components/schemas/InboxFilterEntryList'
       required:
-      - data
-      - meta
-    AttachmentResponse:
+      - record_type
+      - allowlist
+      - blocklist
+    ReplaceInboxFiltersRequest:
       type: object
-      description: EDR-aligned attachment metadata. The base64 `content` is never returned.
+      description: 'The complete filter configuration. An omitted list is replaced with an
+
+        empty list. Unknown keys are ignored by the controller.
+
+        '
       properties:
-        url:
-          type: string
-          format: uri
-          nullable: true
-          description: Telnyx-hosted public URL for the attachment content.
-        sha256:
-          type: string
-          nullable: true
-          description: SHA-256 hex digest of the attachment content.
-        size_bytes:
+        allowlist:
+          $ref: '#/components/schemas/InboxFilterEntryList'
+        blocklist:
+          $ref: '#/components/schemas/InboxFilterEntryList'
+    email_PaginationMeta:
+      type: object
+      properties:
+        page_size:
           type: integer
-          nullable: true
-          description: Attachment size in bytes.
-        filename:
+          minimum: 1
+          maximum: 100
+        page_cursor:
           type: string
-        content_type:
-          type: string
-        disposition:
-          type: string
-          default: attachment
-          description: MIME disposition (e.g. `attachment` or `inline`). Runtime passes through the stored value without enforcing an enum.
-        content_id:
-          type: string
-          nullable: true
-          description: MIME Content-ID for inline references.
+          description: Cursor for the next page, when more results are available.
       required:
-      - url
-      - sha256
-      - size_bytes
-      - filename
-      - content_type
-      - disposition
-      - content_id
-    ReputationSuspendedError:
-      type: object
-      description: Non-standard error envelope returned when the sending domain's reputation band is 'poor'. Uses string code `reputation_suspended` instead of a numeric code.
-      required:
-      - errors
-      properties:
-        errors:
-          type: array
-          minItems: 1
-          maxItems: 1
-          items:
-            type: object
-            required:
-            - code
-            - title
-            - detail
-            properties:
-              code:
-                type: string
-                enum:
-                - reputation_suspended
-              title:
-                type: string
-                example: Sending Suspended
-              detail:
-                type: string
-    InboxFiltersResponse:
+      - page_size
+    InboundMessageResponse:
       type: object
       properties:
         data:
-          $ref: '#/components/schemas/InboxFilters'
+          $ref: '#/components/schemas/InboundMessage'
       required:
       - data
+    EmailInbox:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        record_type:
+          type: string
+          enum:
+          - email_inbox
+        address:
+          type: string
+          format: email
+        status:
+          type: string
+          enum:
+          - active
+          - paused
+        domain_id:
+          type: string
+          format: uuid
+        domain:
+          type: string
+          description: Domain name used by the inbox address.
+        settings:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - record_type
+      - address
+      - status
+      - domain_id
+      - domain
+      - settings
+      - created_at
+      - updated_at
     InboundThread:
       type: object
       properties:
@@ -1551,142 +1550,69 @@ components:
       - created_at
       - updated_at
       - labels
-    InboundMessage:
+    InboxFilterEntryList:
+      type: array
+      maxItems: 500
+      items:
+        $ref: '#/components/schemas/InboxFilterEntry'
+    EmailAddress:
+      type: object
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+      required:
+      - email
+    InboundThreadDetail:
       allOf:
-      - $ref: '#/components/schemas/ThreadMessage'
+      - $ref: '#/components/schemas/InboundThread'
       - type: object
         properties:
-          direction:
-            type: string
-            enum:
-            - inbound
-          status:
-            type: string
-            enum:
-            - received
-    InboxFilters:
-      type: object
-      properties:
-        record_type:
-          type: string
-          enum:
-          - email_inbox_filters
-        allowlist:
-          $ref: '#/components/schemas/InboxFilterEntryList'
-        blocklist:
-          $ref: '#/components/schemas/InboxFilterEntryList'
-      required:
-      - record_type
-      - allowlist
-      - blocklist
-    EmailInboxResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/EmailInbox'
-      required:
-      - data
-    DailySendLimitError:
-      type: object
-      description: Error envelope returned when the account's daily recipient quota is exhausted before message creation.
-      required:
-      - errors
-      properties:
-        errors:
-          type: array
-          minItems: 1
-          maxItems: 1
-          items:
-            type: object
-            required:
-            - code
-            - title
-            - detail
-            properties:
-              code:
-                type: string
-                enum:
-                - '10011'
-              title:
-                type: string
-                example: Too Many Requests
-              detail:
-                type: string
-                example: Daily send limit of 1000 recipients exceeded. The limit resets at midnight UTC.
-    LabelMutationRequest:
-      type: object
-      description: Labels to add or remove. Both operations are idempotent set operations, so a retried request converges instead of failing.
-      properties:
-        labels:
-          type: array
-          description: One or more labels. Each label is a freeform, case-sensitive string of at most 255 characters; a message or thread may carry at most 50 labels. The `telnyx:` prefix is a reserved system namespace and is rejected on customer writes.
-          items:
-            type: string
-            minLength: 1
-            maxLength: 255
-          minItems: 1
-          maxItems: 50
-      required:
-      - labels
-    ForwardEmailInboxMessageRequest:
-      type: object
-      properties:
-        to:
-          $ref: '#/components/schemas/RequiredInboxActionRecipientInput'
-        cc:
-          $ref: '#/components/schemas/InboxActionRecipientInput'
-        bcc:
-          $ref: '#/components/schemas/InboxActionRecipientInput'
-        text:
-          type: string
-          description: Optional plain-text note prepended to the generated forwarded-message block. Blank values are treated as omitted.
-        html:
-          type: string
-          description: Optional HTML note prepended to the generated forwarded-message block. Blank values are treated as omitted.
-      required:
-      - to
-    InboundMessageResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/InboundMessage'
-      required:
-      - data
-    email_PaginationMeta:
-      type: object
-      properties:
-        page_size:
-          type: integer
-          minimum: 1
-          maximum: 100
-        page_cursor:
-          type: string
-          description: Cursor for the next page, when more results are available.
-      required:
-      - page_size
-    InboxActionRecipientInput:
-      description: One recipient or a recipient array. Each recipient may be an email string or an object with `email` and optional `name`.
+          messages:
+            type: array
+            items:
+              $ref: '#/components/schemas/ThreadMessage'
+        required:
+        - messages
+    EmailEventType:
+      type: string
+      description: Bare stored event names returned by message history. In addition to the normal send and delivery lifecycle, polling can expose suppression, scan, and quarantine lifecycle rows. Sharp canonical names gw_reject, injection_timeout, and expired distinguish gateway rejection, ambiguous injection timeout, and MTA expiration. The failed and bounced names remain valid for system/admin failures and hard bounces respectively. Existing stored rows retain their original names.
+      enum:
+      - queued
+      - deferred
+      - scheduled
+      - cancelled
+      - sandbox
+      - sending
+      - sent
+      - failed
+      - delivered
+      - bounced
+      - complained
+      - suppressed
+      - rejected
+      - opened
+      - clicked
+      - unsubscribed
+      - daily_limit_exceeded
+      - scan_deferred
+      - quarantined
+      - quarantine_released
+      - quarantine_release_dispatched
+      - quarantine_rejected
+      - quarantine_expired
+      - gw_reject
+      - injection_timeout
+      - expired
+    RequiredInboxActionRecipientInput:
+      description: One recipient or a non-empty recipient array. Each recipient may be an email string or an object with `email` and optional `name`.
       oneOf:
       - $ref: '#/components/schemas/InboxActionEmailAddressInput'
       - type: array
+        minItems: 1
         items:
           $ref: '#/components/schemas/InboxActionEmailAddressInput'
-    InboxActionEmailAddressInput:
-      description: Email address accepted by inbox message actions, as a string or an object with `email` and optional `name`.
-      oneOf:
-      - type: string
-        minLength: 3
-        pattern: ^[^\s@]+@[^\s@]+\.[^\s@]+$
-      - type: object
-        properties:
-          email:
-            type: string
-            minLength: 3
-            pattern: ^[^\s@]+@[^\s@]+\.[^\s@]+$
-          name:
-            type: string
-        required:
-        - email
     ReplyEmailInboxMessageRequest:
       type: object
       description: At least one of `text` or `html` must contain a non-whitespace body. Recipients are derived from the source message; caller-supplied `to`, `cc`, or `bcc` values are ignored.
@@ -1706,6 +1632,27 @@ components:
         - text
       - required:
         - html
+    InboxFilterEntry:
+      type: string
+      description: 'An exact sender address (`user@example.com`) or domain wildcard
+
+        (`@example.com`). Values are trimmed and normalized to lowercase.
+
+        '
+      example: '@example.com'
+    InboundMessage:
+      allOf:
+      - $ref: '#/components/schemas/ThreadMessage'
+      - type: object
+        properties:
+          direction:
+            type: string
+            enum:
+            - inbound
+          status:
+            type: string
+            enum:
+            - received
     ErrorObject:
       type: object
       properties:
@@ -1748,168 +1695,6 @@ components:
       - code
       - title
       - detail
-    EmailEventType:
-      type: string
-      description: Bare stored event names returned by message history. In addition to the normal send and delivery lifecycle, polling can expose suppression, scan, and quarantine lifecycle rows. Sharp canonical names gw_reject, injection_timeout, and expired distinguish gateway rejection, ambiguous injection timeout, and MTA expiration. The failed and bounced names remain valid for system/admin failures and hard bounces respectively. Existing stored rows retain their original names.
-      enum:
-      - queued
-      - deferred
-      - scheduled
-      - cancelled
-      - sandbox
-      - sending
-      - sent
-      - failed
-      - delivered
-      - bounced
-      - complained
-      - suppressed
-      - rejected
-      - opened
-      - clicked
-      - unsubscribed
-      - daily_limit_exceeded
-      - scan_deferred
-      - quarantined
-      - quarantine_released
-      - quarantine_release_dispatched
-      - quarantine_rejected
-      - quarantine_expired
-      - gw_reject
-      - injection_timeout
-      - expired
-    InboxFilterEntry:
-      type: string
-      description: 'An exact sender address (`user@example.com`) or domain wildcard
-
-        (`@example.com`). Values are trimmed and normalized to lowercase.
-
-        '
-      example: '@example.com'
-    EmailInboxListResponse:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/EmailInbox'
-        meta:
-          $ref: '#/components/schemas/EmailInboxPaginationMeta'
-      required:
-      - data
-      - meta
-    email_ErrorResponse:
-      type: object
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/ErrorObject'
-        suppressed:
-          type: array
-          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
-          items:
-            $ref: '#/components/schemas/SuppressedRecipient'
-      required:
-      - errors
-    UpdateInboundMessageRequest:
-      type: object
-      properties:
-        read_at:
-          description: Set to `true` for server time, an ISO 8601 timestamp for an explicit read time, or `null` to mark unread.
-          oneOf:
-          - type: boolean
-            enum:
-            - true
-          - type: string
-            format: date-time
-          - type: string
-            nullable: true
-            enum:
-            - null
-      required:
-      - read_at
-    EmbeddedMessageEvent:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/EmailEventType'
-        occurred_at:
-          type: string
-          format: date-time
-        payload:
-          type: object
-          additionalProperties: true
-      required:
-      - type
-      - occurred_at
-      description: An event embedded in a message response. The dedicated per-message events endpoint additionally returns event_type and canonical_event_type.
-    MutateInboxFiltersRequest:
-      type: object
-      properties:
-        type:
-          type: string
-          enum:
-          - allowlist
-          - blocklist
-          description: The list to change.
-        entries:
-          $ref: '#/components/schemas/InboxFilterEntryList'
-      required:
-      - type
-      - entries
-    ReplaceInboxFiltersRequest:
-      type: object
-      description: 'The complete filter configuration. An omitted list is replaced with an
-
-        empty list. Unknown keys are ignored by the controller.
-
-        '
-      properties:
-        allowlist:
-          $ref: '#/components/schemas/InboxFilterEntryList'
-        blocklist:
-          $ref: '#/components/schemas/InboxFilterEntryList'
-    DomainGraduationLimitExceededError:
-      type: object
-      description: Error envelope returned when a newly sending custom domain on shared egress would exceed its current daily graduation ceiling. The send is rejected before message creation.
-      required:
-      - errors
-      properties:
-        errors:
-          type: array
-          minItems: 1
-          maxItems: 1
-          items:
-            type: object
-            required:
-            - code
-            - title
-            - detail
-            properties:
-              code:
-                type: string
-                enum:
-                - domain_graduation_limit_exceeded
-              title:
-                type: string
-                example: Too Many Requests
-              detail:
-                type: string
-                example: Daily send limit of 250 recipients for this sender domain exceeded. The limit resets at midnight UTC.
-              meta:
-                type: object
-                description: Bounded retry guidance. Each field is omitted when unknown.
-                additionalProperties: false
-                properties:
-                  retry_after_seconds:
-                    type: integer
-                    minimum: 1
-                    description: Seconds until the next UTC-midnight reset.
-                  remaining_today:
-                    type: integer
-                    minimum: 0
-                    description: Recipient headroom remaining for the sender-domain identity before this rejected request.
     EmailMessage:
       type: object
       properties:
@@ -2017,6 +1802,272 @@ components:
       - attachments
       - events
       - created_at
+    InboundEmailAddress:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+      required:
+      - email
+    DailySendLimitError:
+      type: object
+      description: Error envelope returned when the account's daily recipient quota is exhausted before message creation.
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: object
+            required:
+            - code
+            - title
+            - detail
+            properties:
+              code:
+                type: string
+                enum:
+                - '10011'
+              title:
+                type: string
+                example: Too Many Requests
+              detail:
+                type: string
+                example: Daily send limit of 1000 recipients exceeded. The limit resets at midnight UTC.
+    MutateInboxFiltersRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - allowlist
+          - blocklist
+          description: The list to change.
+        entries:
+          $ref: '#/components/schemas/InboxFilterEntryList'
+      required:
+      - type
+      - entries
+    EmailMessageResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailMessage'
+        suppressed:
+          type: array
+          description: Recipients removed by suppression checks when at least one recipient remains and the message is accepted.
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
+      required:
+      - data
+    EmailInboxResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailInbox'
+      required:
+      - data
+    CreateEmailInboxRequest:
+      type: object
+      description: Both fields are optional. Omitting `username` generates one; omitting `domain_id` uses the account's shared inbound subdomain. Omitting both creates an instant inbox with a generated username.
+      properties:
+        username:
+          type: string
+          description: Inbox local part. Trimmed and lowercased before validation; the normalized value must be 1-64 characters, start and end with a letter or digit, and contain only letters, digits, dots, hyphens, and underscores. Generated when omitted.
+        domain_id:
+          type: string
+          format: uuid
+          description: Account-owned, inbound-enabled domain UUID. The account's shared inbound subdomain is allocated when omitted.
+    EmailMessageStatus:
+      type: string
+      description: Current status of an email message. Lifecycle statuses (queued, scheduled, etc.) are set on creation. Delivery statuses (delivered, bounced, etc.) are updated by delivery event consumers.
+      enum:
+      - queued
+      - scheduled
+      - cancelled
+      - sandbox
+      - sending
+      - sent
+      - failed
+      - deferred
+      - delivered
+      - bounced
+      - complained
+      - rejected
+      - opened
+      - clicked
+      - unsubscribed
+    EmbeddedMessageEvent:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/EmailEventType'
+        occurred_at:
+          type: string
+          format: date-time
+        payload:
+          type: object
+          additionalProperties: true
+      required:
+      - type
+      - occurred_at
+      description: An event embedded in a message response. The dedicated per-message events endpoint additionally returns event_type and canonical_event_type.
+    UpdateInboundMessageRequest:
+      type: object
+      properties:
+        read_at:
+          description: Set to `true` for server time, an ISO 8601 timestamp for an explicit read time, or `null` to mark unread.
+          oneOf:
+          - type: boolean
+            enum:
+            - true
+          - type: string
+            format: date-time
+          - type: string
+            nullable: true
+            enum:
+            - null
+      required:
+      - read_at
+    InboundMessageListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/InboundMessage'
+        meta:
+          $ref: '#/components/schemas/email_PaginationMeta'
+      required:
+      - data
+      - meta
+    EmailInboxListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailInbox'
+        meta:
+          $ref: '#/components/schemas/EmailInboxPaginationMeta'
+      required:
+      - data
+      - meta
+    ForwardEmailInboxMessageRequest:
+      type: object
+      properties:
+        to:
+          $ref: '#/components/schemas/RequiredInboxActionRecipientInput'
+        cc:
+          $ref: '#/components/schemas/InboxActionRecipientInput'
+        bcc:
+          $ref: '#/components/schemas/InboxActionRecipientInput'
+        text:
+          type: string
+          description: Optional plain-text note prepended to the generated forwarded-message block. Blank values are treated as omitted.
+        html:
+          type: string
+          description: Optional HTML note prepended to the generated forwarded-message block. Blank values are treated as omitted.
+      required:
+      - to
+    AttachmentResponse:
+      type: object
+      description: EDR-aligned attachment metadata. The base64 `content` is never returned.
+      properties:
+        url:
+          type: string
+          format: uri
+          nullable: true
+          description: Telnyx-hosted public URL for the attachment content.
+        sha256:
+          type: string
+          nullable: true
+          description: SHA-256 hex digest of the attachment content.
+        size_bytes:
+          type: integer
+          nullable: true
+          description: Attachment size in bytes.
+        filename:
+          type: string
+        content_type:
+          type: string
+        disposition:
+          type: string
+          default: attachment
+          description: MIME disposition (e.g. `attachment` or `inline`). Runtime passes through the stored value without enforcing an enum.
+        content_id:
+          type: string
+          nullable: true
+          description: MIME Content-ID for inline references.
+      required:
+      - url
+      - sha256
+      - size_bytes
+      - filename
+      - content_type
+      - disposition
+      - content_id
+    email_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorObject'
+        suppressed:
+          type: array
+          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
+      required:
+      - errors
+    InboxActionEmailAddressInput:
+      description: Email address accepted by inbox message actions, as a string or an object with `email` and optional `name`.
+      oneOf:
+      - type: string
+        minLength: 3
+        pattern: ^[^\s@]+@[^\s@]+\.[^\s@]+$
+      - type: object
+        properties:
+          email:
+            type: string
+            minLength: 3
+            pattern: ^[^\s@]+@[^\s@]+\.[^\s@]+$
+          name:
+            type: string
+        required:
+        - email
+    ReputationSuspendedError:
+      type: object
+      description: Non-standard error envelope returned when the sending domain's reputation band is 'poor'. Uses string code `reputation_suspended` instead of a numeric code.
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: object
+            required:
+            - code
+            - title
+            - detail
+            properties:
+              code:
+                type: string
+                enum:
+                - reputation_suspended
+              title:
+                type: string
+                example: Sending Suspended
+              detail:
+                type: string
     SuppressedRecipient:
       type: object
       properties:
@@ -2038,22 +2089,61 @@ components:
       - reason
       - scope
       - override_allowed
-    InboundThreadDetail:
-      allOf:
-      - $ref: '#/components/schemas/InboundThread'
-      - type: object
-        properties:
-          messages:
-            type: array
-            items:
-              $ref: '#/components/schemas/ThreadMessage'
-        required:
-        - messages
-    InboxFilterEntryList:
-      type: array
-      maxItems: 500
-      items:
-        $ref: '#/components/schemas/InboxFilterEntry'
+    LabelMutationRequest:
+      type: object
+      description: Labels to add or remove. Both operations are idempotent set operations, so a retried request converges instead of failing.
+      properties:
+        labels:
+          type: array
+          description: One or more labels. Each label is a freeform, case-sensitive string of at most 255 characters; a message or thread may carry at most 50 labels. The `telnyx:` prefix is a reserved system namespace and is rejected on customer writes.
+          items:
+            type: string
+            minLength: 1
+            maxLength: 255
+          minItems: 1
+          maxItems: 50
+      required:
+      - labels
+    DomainGraduationLimitExceededError:
+      type: object
+      description: Error envelope returned when a newly sending custom domain on shared egress would exceed its current daily graduation ceiling. The send is rejected before message creation.
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: object
+            required:
+            - code
+            - title
+            - detail
+            properties:
+              code:
+                type: string
+                enum:
+                - domain_graduation_limit_exceeded
+              title:
+                type: string
+                example: Too Many Requests
+              detail:
+                type: string
+                example: Daily send limit of 250 recipients for this sender domain exceeded. The limit resets at midnight UTC.
+              meta:
+                type: object
+                description: Bounded retry guidance. Each field is omitted when unknown.
+                additionalProperties: false
+                properties:
+                  retry_after_seconds:
+                    type: integer
+                    minimum: 1
+                    description: Seconds until the next UTC-midnight reset.
+                  remaining_today:
+                    type: integer
+                    minimum: 0
+                    description: Recipient headroom remaining for the sender-domain identity before this rejected request.
     EmailInboxPaginationMeta:
       type: object
       properties:
@@ -2066,6 +2156,18 @@ components:
           description: Cursor for the next inbox page, when more results are available.
       required:
       - page_size
+    InboundThreadListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/InboundThread'
+        meta:
+          $ref: '#/components/schemas/email_PaginationMeta'
+      required:
+      - data
+      - meta
     ThreadMessage:
       type: object
       properties:
@@ -2210,266 +2312,21 @@ components:
       - sent_at
       - created_at
       - updated_at
-    EmailMessageResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/EmailMessage'
-        suppressed:
-          type: array
-          description: Recipients removed by suppression checks when at least one recipient remains and the message is accepted.
-          items:
-            $ref: '#/components/schemas/SuppressedRecipient'
-      required:
-      - data
-    InboundMessageListResponse:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/InboundMessage'
-        meta:
-          $ref: '#/components/schemas/email_PaginationMeta'
-      required:
-      - data
-      - meta
-    CreateEmailInboxRequest:
-      type: object
-      description: Both fields are optional. Omitting `username` generates one; omitting `domain_id` uses the account's shared inbound subdomain. Omitting both creates an instant inbox with a generated username.
-      properties:
-        username:
-          type: string
-          description: Inbox local part. Trimmed and lowercased before validation; the normalized value must be 1-64 characters, start and end with a letter or digit, and contain only letters, digits, dots, hyphens, and underscores. Generated when omitted.
-        domain_id:
-          type: string
-          format: uuid
-          description: Account-owned, inbound-enabled domain UUID. The account's shared inbound subdomain is allocated when omitted.
-    EmailInbox:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        record_type:
-          type: string
-          enum:
-          - email_inbox
-        address:
-          type: string
-          format: email
-        status:
-          type: string
-          enum:
-          - active
-          - paused
-        domain_id:
-          type: string
-          format: uuid
-        domain:
-          type: string
-          description: Domain name used by the inbox address.
-        settings:
-          type: object
-          additionalProperties: true
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-      required:
-      - id
-      - record_type
-      - address
-      - status
-      - domain_id
-      - domain
-      - settings
-      - created_at
-      - updated_at
-    InboundEmailAddress:
-      type: object
-      properties:
-        email:
-          type: string
-          format: email
-        name:
-          type: string
-      required:
-      - email
-    EmailAddress:
-      type: object
-      properties:
-        email:
-          type: string
-        name:
-          type: string
-      required:
-      - email
-    EmailMessageStatus:
-      type: string
-      description: Current status of an email message. Lifecycle statuses (queued, scheduled, etc.) are set on creation. Delivery statuses (delivered, bounced, etc.) are updated by delivery event consumers.
-      enum:
-      - queued
-      - scheduled
-      - cancelled
-      - sandbox
-      - sending
-      - sent
-      - failed
-      - deferred
-      - delivered
-      - bounced
-      - complained
-      - rejected
-      - opened
-      - clicked
-      - unsubscribed
-  responses:
-    email_ForbiddenResponse:
-      description: Forbidden (10007), such as domain not verified, suspended, degraded, or missing DKIM.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/email_ErrorResponse'
-          example:
-            errors:
-            - code: '10007'
-              title: Forbidden
-              detail: Domain is not verified. Complete DNS setup before sending email.
-    LabelServiceUnavailableResponse:
-      description: Inbound label storage is temporarily unavailable.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/email_ErrorResponse'
-          example:
-            errors:
-            - code: '10016'
-              title: Service Unavailable
-              detail: Inbox labels are temporarily unavailable. Please try again later.
-    email_UnauthorizedResponse:
-      description: Not authorized (10006).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/email_ErrorResponse'
-          example:
-            errors:
-            - code: '10006'
-              title: Not authorized
-              detail: Invalid API key
-              meta:
-                url: https://developers.telnyx.com/docs/overview/errors/10006
-    InboundThreadLabelResponse:
-      description: The thread identity and its current label set.
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              data:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    format: uuid
-                  record_type:
-                    type: string
-                    enum:
-                    - email_thread
-                  inbox_id:
-                    type: string
-                    format: uuid
-                  labels:
-                    type: array
-                    items:
-                      type: string
-                      maxLength: 255
-                    maxItems: 50
-                required:
-                - id
-                - record_type
-                - labels
-            required:
-            - data
-          example:
-            data:
-              id: 33333333-3333-3333-3333-333333333333
-              record_type: email_thread
-              inbox_id: 11111111-1111-1111-1111-111111111111
-              labels:
-              - needs_review
-    InboundMessageLabelResponse:
-      description: The updated message, including its current label set.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/InboundMessageResponse'
-          example:
-            data:
-              id: 55555555-5555-5555-5555-555555555555
-              record_type: email_message
-              direction: inbound
-              status: received
-              inbox_id: 11111111-1111-1111-1111-111111111111
-              thread_id: 33333333-3333-3333-3333-333333333333
-              message_id: <message@example.com>
-              in_reply_to: <earlier@example.com>
-              references:
-              - <earlier@example.com>
-              from:
-                email: alice@example.com
-                name: Alice
-              to:
-              - email: agent@inbox.example.test
-              cc: []
-              bcc: []
-              reply_to: []
-              subject: Project update
-              text_body_url: null
-              html_body_url: null
-              reply_text: Thanks, I will send it today.
-              has_quoted_text: true
-              headers: {}
-              inline_files: []
-              attachments: []
-              labels:
-              - spam
-              - urgent
-              read_at: null
-              received_at: '2026-07-15T12:30:00Z'
-              sent_at: null
-              created_at: '2026-07-15T12:30:00Z'
-              updated_at: '2026-07-15T12:30:00Z'
+    InboxActionRecipientInput:
+      description: One recipient or a recipient array. Each recipient may be an email string or an object with `email` and optional `name`.
+      oneOf:
+      - $ref: '#/components/schemas/InboxActionEmailAddressInput'
+      - type: array
+        items:
+          $ref: '#/components/schemas/InboxActionEmailAddressInput'
     InboxFiltersResponse:
-      description: The inbox's current sender allowlist and blocklist.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/InboxFiltersResponse'
-          example:
-            data:
-              record_type: email_inbox_filters
-              allowlist:
-              - trusted@example.com
-              - '@partner.example'
-              blocklist:
-              - '@spam.example'
-    ValidationErrorResponse:
-      description: Validation Failed (10015) or changeset validation error.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/email_ErrorResponse'
-          example:
-            errors:
-            - code: '10015'
-              title: Validation Failed
-              detail: subject can't be blank
-              source:
-                pointer: /data/attributes/subject
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/InboxFilters'
+      required:
+      - data
+  responses:
     email_BadRequestResponse:
       description: Bad Request / Validation Failed (10015).
       content:
@@ -2481,17 +2338,6 @@ components:
             - code: '10015'
               title: Bad Request
               detail: email is required
-    email_ServiceUnavailableResponse:
-      description: Service unavailable (10016), including an unavailable upstream dependency or unavailable Edge idempotency protection for a keyed request.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/email_ErrorResponse'
-          example:
-            errors:
-            - code: '10016'
-              title: Service Unavailable
-              detail: The email domain service is temporarily unavailable. Please try again later.
     email_NotFoundResponse:
       description: Resource not found (10001).
       content:
@@ -2544,15 +2390,161 @@ components:
                 - code: reputation_suspended
                   title: Sending Suspended
                   detail: Sender domain reputation is too low. Sending has been suspended. Please contact support to resolve deliverability issues.
+    email_ServiceUnavailableResponse:
+      description: Service unavailable (10016), including an unavailable upstream dependency or unavailable Edge idempotency protection for a keyed request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10016'
+              title: Service Unavailable
+              detail: The email domain service is temporarily unavailable. Please try again later.
+    email_ForbiddenResponse:
+      description: Forbidden (10007), such as domain not verified, suspended, degraded, or missing DKIM.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10007'
+              title: Forbidden
+              detail: Domain is not verified. Complete DNS setup before sending email.
+    LabelServiceUnavailableResponse:
+      description: Inbound label storage is temporarily unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10016'
+              title: Service Unavailable
+              detail: Inbox labels are temporarily unavailable. Please try again later.
+    InboundThreadLabelResponse:
+      description: The thread identity and its current label set.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  record_type:
+                    type: string
+                    enum:
+                    - email_thread
+                  inbox_id:
+                    type: string
+                    format: uuid
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                      maxLength: 255
+                    maxItems: 50
+                required:
+                - id
+                - record_type
+                - labels
+            required:
+            - data
+          example:
+            data:
+              id: 33333333-3333-3333-3333-333333333333
+              record_type: email_thread
+              inbox_id: 11111111-1111-1111-1111-111111111111
+              labels:
+              - needs_review
+    ValidationErrorResponse:
+      description: Validation Failed (10015) or changeset validation error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10015'
+              title: Validation Failed
+              detail: subject can't be blank
+              source:
+                pointer: /data/attributes/subject
+    email_UnauthorizedResponse:
+      description: Not authorized (10006).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10006'
+              title: Not authorized
+              detail: Invalid API key
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10006
+    InboxFiltersResponse:
+      description: The inbox's current sender allowlist and blocklist.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InboxFiltersResponse'
+          example:
+            data:
+              record_type: email_inbox_filters
+              allowlist:
+              - trusted@example.com
+              - '@partner.example'
+              blocklist:
+              - '@spam.example'
+    InboundMessageLabelResponse:
+      description: The updated message, including its current label set.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InboundMessageResponse'
+          example:
+            data:
+              id: 55555555-5555-5555-5555-555555555555
+              record_type: email_message
+              direction: inbound
+              status: received
+              inbox_id: 11111111-1111-1111-1111-111111111111
+              thread_id: 33333333-3333-3333-3333-333333333333
+              message_id: <message@example.com>
+              in_reply_to: <earlier@example.com>
+              references:
+              - <earlier@example.com>
+              from:
+                email: alice@example.com
+                name: Alice
+              to:
+              - email: agent@inbox.example.test
+              cc: []
+              bcc: []
+              reply_to: []
+              subject: Project update
+              text_body_url: null
+              html_body_url: null
+              reply_text: Thanks, I will send it today.
+              has_quoted_text: true
+              headers: {}
+              inline_files: []
+              attachments: []
+              labels:
+              - spam
+              - urgent
+              read_at: null
+              received_at: '2026-07-15T12:30:00Z'
+              sent_at: null
+              created_at: '2026-07-15T12:30:00Z'
+              updated_at: '2026-07-15T12:30:00Z'
   parameters:
-    ThreadIdPathParam:
-      name: thread_id
-      in: path
-      required: true
-      description: Thread UUID.
-      schema:
-        type: string
-        format: uuid
     InboxIdPathParam:
       name: inbox_id
       in: path
@@ -2566,6 +2558,14 @@ components:
       in: path
       required: true
       description: Inbound message UUID.
+      schema:
+        type: string
+        format: uuid
+    ThreadIdPathParam:
+      name: thread_id
+      in: path
+      required: true
+      description: Thread UUID.
       schema:
         type: string
         format: uuid

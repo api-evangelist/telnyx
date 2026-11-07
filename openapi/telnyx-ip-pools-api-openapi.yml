@@ -495,6 +495,49 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
 components:
   schemas:
+    IpPoolListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/IpPool'
+      required:
+      - data
+    DedicatedIpBilling:
+      type: object
+      description: Monthly recurring charge (MRC) state for the IP's current allocation.
+      properties:
+        status:
+          type: string
+          enum:
+          - not_started
+          - pending
+          - in_progress
+          - active
+          - stopping
+          - stopped
+          - stop_failed
+          - failed
+          description: '`not_started`: no charge recorded for the current allocation. `pending`: the charge is queued. `in_progress`: the charge is being created. `active`: the MRC is active. `stopping`: release requested; the MRC stop is being processed. `stopped`: the MRC has stopped. `stop_failed`: the MRC stop failed and the charge remains. `failed`: the charge could not be created.'
+        charged:
+          type: boolean
+          description: True when `status` is `active`, `stopping`, or `stop_failed`. An IP carries mail only after its charge has been created.
+    IpPoolCreateRequest:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          description: 'Pool name: 1-64 characters of lowercase letters, digits, `.`, `_`, and `-`, starting and ending with a letter or digit. Must be unique within the account and must not start with `dip_`.'
+        is_default:
+          type: boolean
+          description: Make this the account's default pool, which carries mail for sending domains without a domain-scoped pool. An account can have one default pool. Defaults to `false`.
+        domain_id:
+          type: string
+          format: uuid
+          description: Scope the pool to one of the account's email domains; the pool then carries that domain's mail. Scope at most one pool to each domain.
     DedicatedIpProvisioning:
       type: object
       description: Read-only status of the Telnyx-managed PTR record. No customer action is required to complete it.
@@ -536,207 +579,6 @@ components:
             forward_confirmed:
               type: boolean
           description: Informational progress flags for the Telnyx-managed PTR. They do not gate `start_warmup`; use `dns_status` to check whether the IP can carry mail.
-    DedicatedIpWarmup:
-      type: object
-      description: Warmup ramp state for a dedicated IP.
-      properties:
-        started_at:
-          type: string
-          format: date-time
-          nullable: true
-          description: When `start_warmup` was called. Null before warm-up starts and after release.
-        progress:
-          type: integer
-          description: 'Ramp progress (0-100): the share of the 28 send-day schedule completed. Only UTC days on which the IP sent mail count. Set to 100 when the ramp completes, automatically or through `complete_warmup`. On an `active` IP this value is informational and can keep an earlier value after a suspension is lifted.'
-          minimum: 0
-          maximum: 100
-        daily_cap:
-          type: integer
-          nullable: true
-          minimum: 1
-          description: Daily cap of the current ramp stage. Null until the scheduler arms the first stage, and cleared when the ramp completes, automatically or through `complete_warmup`. On an `active` IP this value is informational and can keep an earlier stage cap after a suspension is lifted; it does not limit sending.
-        paused:
-          type: boolean
-          description: True while the ramp is paused.
-        paused_at:
-          type: string
-          format: date-time
-          nullable: true
-          description: When the ramp was paused. Null when not paused.
-        today:
-          type: object
-          nullable: true
-          description: Today's warmup allowance report card (current UTC day). Null outside the warmup window (before start_warmup, after release/suspension). `active` IPs report the ramp-complete allowance, except as described for `cap`.
-          properties:
-            day:
-              type: string
-              format: date
-              description: The UTC day this snapshot describes (warmup caps reset at UTC midnight).
-            cap:
-              type: integer
-              nullable: true
-              description: 'The day''s allowance cap. Null when the ramp has not opened yet (day 0: the scheduler has not armed a stage cap) — distinct from a spent day, which reports the cap with remaining 0. `active` IPs report `100000000`, the ramp-complete cap; `complete_warmup` applies it to the current day immediately. A day''s allowance created before the IP became `active` can keep its stored `cap` and `remaining` until the next first-attempt send refreshes them.'
-            granted:
-              type: integer
-              description: First-attempt sends released from warmup hold so far today. Delivery retries never lease allowance and are not counted.
-            remaining:
-              type: integer
-              nullable: true
-              description: Headroom left today. A queued send held by the daily cap is explained by remaining == 0; null mirrors cap (ramp not open yet). On an `active` IP whose `cap` is below `100000000`, remaining == 0 is a stored allowance and does not block the next eligible first-attempt send.
-    IpPoolAddIpRequest:
-      type: object
-      required:
-      - dedicated_ip_id
-      properties:
-        dedicated_ip_id:
-          type: string
-          format: uuid
-          description: The dedicated IP to add. It must belong to the account, must not be released, and must not already be in a pool.
-        weight:
-          type: integer
-          description: Relative routing weight for this IP in the pool. Positive integer; defaults to 100.
-          minimum: 1
-    DedicatedIpBilling:
-      type: object
-      description: Monthly recurring charge (MRC) state for the IP's current allocation.
-      properties:
-        status:
-          type: string
-          enum:
-          - not_started
-          - pending
-          - in_progress
-          - active
-          - stopping
-          - stopped
-          - stop_failed
-          - failed
-          description: '`not_started`: no charge recorded for the current allocation. `pending`: the charge is queued. `in_progress`: the charge is being created. `active`: the MRC is active. `stopping`: release requested; the MRC stop is being processed. `stopped`: the MRC has stopped. `stop_failed`: the MRC stop failed and the charge remains. `failed`: the charge could not be created.'
-        charged:
-          type: boolean
-          description: True when `status` is `active`, `stopping`, or `stop_failed`. An IP carries mail only after its charge has been created.
-    PoolMembershipResponse:
-      type: object
-      properties:
-        data:
-          type: object
-          properties:
-            pool_id:
-              type: string
-              format: uuid
-            dedicated_ip_id:
-              type: string
-              format: uuid
-            weight:
-              type: integer
-              minimum: 1
-            created_at:
-              type: string
-              format: date-time
-      required:
-      - data
-    IpPoolShowResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/IpPool'
-      required:
-      - data
-    IpPoolListResponse:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/IpPool'
-      required:
-      - data
-    IpPoolUpdateRequest:
-      type: object
-      properties:
-        name:
-          type: string
-          description: 'Pool name: 1-64 characters of lowercase letters, digits, `.`, `_`, and `-`, starting and ending with a letter or digit. Must be unique within the account and must not start with `dip_`.'
-        is_default:
-          type: boolean
-          description: Set or clear the account default flag. An account can have one default pool.
-        domain_id:
-          type: string
-          format: uuid
-          nullable: true
-          description: Scope the pool to one of the account's email domains, or `null` to remove the scope.
-    IpPool:
-      type: object
-      description: An account-scoped pool of dedicated IPs. Mail uses a pool only when the pool is scoped to the sending domain (`domain_id`) or is the account default (`is_default`).
-      properties:
-        id:
-          type: string
-          format: uuid
-        record_type:
-          type: string
-          enum:
-          - ip_pool
-        name:
-          type: string
-          description: Pool name, unique within the account.
-        is_default:
-          type: boolean
-          description: Whether this is the account's default pool. The default pool carries mail for sending domains that have no domain-scoped pool. At most one per account.
-        domain_id:
-          type: string
-          format: uuid
-          nullable: true
-          description: Email domain this pool is scoped to. The pool carries that domain's mail. Null when the pool is not domain-scoped.
-        ips:
-          type: array
-          items:
-            $ref: '#/components/schemas/IpPoolMemberIp'
-          description: Member IPs with their routing weights. Populated by Retrieve an IP pool; list, create, and update responses return an empty array.
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-    ErrorEnvelope:
-      type: object
-      description: Telnyx v2 error envelope.
-      properties:
-        errors:
-          type: array
-          items:
-            type: object
-            properties:
-              code:
-                type: string
-              title:
-                type: string
-              detail:
-                type: string
-              source:
-                type: object
-                properties:
-                  pointer:
-                    type: string
-                  parameter:
-                    type: string
-      required:
-      - errors
-    IpPoolCreateRequest:
-      type: object
-      required:
-      - name
-      properties:
-        name:
-          type: string
-          description: 'Pool name: 1-64 characters of lowercase letters, digits, `.`, `_`, and `-`, starting and ending with a letter or digit. Must be unique within the account and must not start with `dip_`.'
-        is_default:
-          type: boolean
-          description: Make this the account's default pool, which carries mail for sending domains without a domain-scoped pool. An account can have one default pool. Defaults to `false`.
-        domain_id:
-          type: string
-          format: uuid
-          description: Scope the pool to one of the account's email domains; the pool then carries that domain's mail. Scope at most one pool to each domain.
     IpPoolMemberIp:
       description: A dedicated IP as a member of a pool, with its routing weight in this pool. Weight is a positive integer (default 100).
       allOf:
@@ -826,6 +668,164 @@ components:
         updated_at:
           type: string
           format: date-time
+    IpPoolAddIpRequest:
+      type: object
+      required:
+      - dedicated_ip_id
+      properties:
+        dedicated_ip_id:
+          type: string
+          format: uuid
+          description: The dedicated IP to add. It must belong to the account, must not be released, and must not already be in a pool.
+        weight:
+          type: integer
+          description: Relative routing weight for this IP in the pool. Positive integer; defaults to 100.
+          minimum: 1
+    IpPoolShowResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/IpPool'
+      required:
+      - data
+    DedicatedIpWarmup:
+      type: object
+      description: Warmup ramp state for a dedicated IP.
+      properties:
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When `start_warmup` was called. Null before warm-up starts and after release.
+        progress:
+          type: integer
+          description: 'Ramp progress (0-100): the share of the 28 send-day schedule completed. Only UTC days on which the IP sent mail count. Set to 100 when the ramp completes, automatically or through `complete_warmup`. On an `active` IP this value is informational and can keep an earlier value after a suspension is lifted.'
+          minimum: 0
+          maximum: 100
+        daily_cap:
+          type: integer
+          nullable: true
+          minimum: 1
+          description: Daily cap of the current ramp stage. Null until the scheduler arms the first stage, and cleared when the ramp completes, automatically or through `complete_warmup`. On an `active` IP this value is informational and can keep an earlier stage cap after a suspension is lifted; it does not limit sending.
+        paused:
+          type: boolean
+          description: True while the ramp is paused.
+        paused_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the ramp was paused. Null when not paused.
+        today:
+          type: object
+          nullable: true
+          description: Today's warmup allowance report card (current UTC day). Null outside the warmup window (before start_warmup, after release/suspension). `active` IPs report the ramp-complete allowance, except as described for `cap`.
+          properties:
+            day:
+              type: string
+              format: date
+              description: The UTC day this snapshot describes (warmup caps reset at UTC midnight).
+            cap:
+              type: integer
+              nullable: true
+              description: 'The day''s allowance cap. Null when the ramp has not opened yet (day 0: the scheduler has not armed a stage cap) — distinct from a spent day, which reports the cap with remaining 0. `active` IPs report `100000000`, the ramp-complete cap; `complete_warmup` applies it to the current day immediately. A day''s allowance created before the IP became `active` can keep its stored `cap` and `remaining` until the next first-attempt send refreshes them.'
+            granted:
+              type: integer
+              description: First-attempt sends released from warmup hold so far today. Delivery retries never lease allowance and are not counted.
+            remaining:
+              type: integer
+              nullable: true
+              description: Headroom left today. A queued send held by the daily cap is explained by remaining == 0; null mirrors cap (ramp not open yet). On an `active` IP whose `cap` is below `100000000`, remaining == 0 is a stored allowance and does not block the next eligible first-attempt send.
+    IpPool:
+      type: object
+      description: An account-scoped pool of dedicated IPs. Mail uses a pool only when the pool is scoped to the sending domain (`domain_id`) or is the account default (`is_default`).
+      properties:
+        id:
+          type: string
+          format: uuid
+        record_type:
+          type: string
+          enum:
+          - ip_pool
+        name:
+          type: string
+          description: Pool name, unique within the account.
+        is_default:
+          type: boolean
+          description: Whether this is the account's default pool. The default pool carries mail for sending domains that have no domain-scoped pool. At most one per account.
+        domain_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Email domain this pool is scoped to. The pool carries that domain's mail. Null when the pool is not domain-scoped.
+        ips:
+          type: array
+          items:
+            $ref: '#/components/schemas/IpPoolMemberIp'
+          description: Member IPs with their routing weights. Populated by Retrieve an IP pool; list, create, and update responses return an empty array.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ErrorEnvelope:
+      type: object
+      description: Telnyx v2 error envelope.
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              title:
+                type: string
+              detail:
+                type: string
+              source:
+                type: object
+                properties:
+                  pointer:
+                    type: string
+                  parameter:
+                    type: string
+      required:
+      - errors
+    PoolMembershipResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            pool_id:
+              type: string
+              format: uuid
+            dedicated_ip_id:
+              type: string
+              format: uuid
+            weight:
+              type: integer
+              minimum: 1
+            created_at:
+              type: string
+              format: date-time
+      required:
+      - data
+    IpPoolUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: 'Pool name: 1-64 characters of lowercase letters, digits, `.`, `_`, and `-`, starting and ending with a letter or digit. Must be unique within the account and must not start with `dip_`.'
+        is_default:
+          type: boolean
+          description: Set or clear the account default flag. An account can have one default pool.
+        domain_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Scope the pool to one of the account's email domains, or `null` to remove the scope.
   securitySchemes:
     BearerAuth:
       type: http

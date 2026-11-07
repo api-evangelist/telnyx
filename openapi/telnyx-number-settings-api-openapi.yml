@@ -272,114 +272,133 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
-  responses:
-    phone-numbers_messaging_GenericErrorResponse:
-      description: Unexpected error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/messaging_Errors'
-          example:
-            errors:
-            - code: '10007'
-              title: Unexpected error
-              detail: An unexpected error occured.
-    messaging_GenericErrorResponse_0b38e7044b:
-      description: Unexpected error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/messaging_Errors_0b38e7044b'
-          example:
-            errors:
-            - code: string
-              title: string
-              detail: string
-              source:
-                pointer: /data/attributes/phone_number
-                parameter: string
-    BulkMessagingSettingsUpdatePhoneNumbersResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/BulkMessagingSettingsUpdatePhoneNumbers'
-            title: Retrieve bulk update messaging settings Response
-            type: object
-      description: Successful response with details about messaging bulk update phone numbers.
-    ListPhoneNumbersWithMessagingSettingsResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/PhoneNumberWithMessagingSettings'
-                type: array
-              meta:
-                $ref: '#/components/schemas/messaging_PaginationMeta'
-            title: List Messaging Settings Response
-            type: object
-      description: Successful response with a list of phone numbers with messaging settings.
-    messaging_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/messaging_Errors'
-      description: Unexpected error
-    PhoneNumberWithMessagingSettingsResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/PhoneNumberWithMessagingSettings'
-            title: Retrieve Messaging Settings Response
-            type: object
-      description: Successful response with details about a phone number including messaging settings.
-  parameters:
-    PageConsolidated:
-      name: page
-      in: query
-      style: deepObject
-      explode: true
-      description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
-      schema:
-        type: object
-        properties:
-          number:
-            type: integer
-            minimum: 1
-            default: 1
-            description: The page number to load
-          size:
-            type: integer
-            minimum: 1
-            maximum: 250
-            default: 20
-            description: The size of the page
   schemas:
-    messaging_PaginationMeta_0b38e7044b:
+    BulkMessagingSettingsUpdatePhoneNumbersRequest:
       type: object
       required:
-      - total_pages
-      - total_results
-      - page_size
-      - page_number
+      - messaging_profile_id
+      - numbers
       properties:
-        total_pages:
+        messaging_profile_id:
+          type: string
+          description: 'Configure the messaging profile these phone numbers are assigned to:
+
+
+            * Set this field to `""` to unassign each number from their respective messaging profile
+
+            * Set this field to a quoted UUID of a messaging profile to assign these numbers to that messaging profile'
+        numbers:
+          type: array
+          items:
+            type: string
+            x-format: +E.164
+          description: The list of phone numbers to update.
+        assign_only:
+          type: boolean
+          description: If true, only assign numbers to the profile without changing other settings.
+          default: false
+      example:
+        messaging_profile_id: 00000000-0000-0000-0000-000000000000
+        numbers:
+        - '+18880000000'
+        - '+18880000001'
+        - '+18880000002'
+    messaging_Errors_0b38e7044b:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/messaging_Error_0b38e7044b'
+    NumberHealthMetrics:
+      type: object
+      required:
+      - message_count
+      - inbound_outbound_ratio
+      - success_ratio
+      - spam_ratio
+      description: 'High level health metrics about the number and it''s messaging sending patterns.
+
+        '
+      properties:
+        message_count:
           type: integer
-          example: 3
-        total_results:
-          type: integer
-          example: 55
-        page_number:
-          type: integer
-          example: 2
-        page_size:
-          type: integer
-          example: 25
+          description: The number of messages analyzed for the health metrics.
+        inbound_outbound_ratio:
+          type: number
+          format: float
+          description: The ratio of messages received to the number of messages sent.
+        success_ratio:
+          type: number
+          format: float
+          description: The ratio of messages sucessfully delivered to the number of messages attempted.
+        spam_ratio:
+          type: number
+          format: float
+          description: The ratio of messages blocked for spam to the number of messages attempted.
+      example:
+        message_count: 10
+        inbound_outbound_ratio: 1
+        success_ratio: 2
+        spam_ratio: 10
+    UpdatePhoneNumberMessagingSettingsRequest:
+      type: object
+      properties:
+        messaging_profile_id:
+          type: string
+          description: 'Configure the messaging profile this phone number is assigned to:
+
+
+            * Omit this field or set its value to `null` to keep the current value.
+
+            * Set this field to `""` to unassign the number from its messaging profile
+
+            * Set this field to a quoted UUID of a messaging profile to assign this number to that messaging profile'
+        messaging_product:
+          type: string
+          description: 'Configure the messaging product for this number:
+
+
+            * Omit this field or set its value to `null` to keep the current value.
+
+            * Set this field to a quoted product ID to set this phone number to that product'
+          example: P2P
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags to set on this phone number.
+      example:
+        messaging_profile_id: dd50eba1-a0c0-4563-9925-b25e842a7cb6
+        messaging_product: P2P
+    MessagingFeatureSet:
+      type:
+      - object
+      - 'null'
+      required:
+      - domestic_two_way
+      - international_inbound
+      - international_outbound
+      description: 'The set of features available for a specific messaging use case (SMS or MMS). Features
+
+        can vary depending on the characteristics the phone number, as well as its current
+
+        product configuration.
+
+        '
+      properties:
+        domestic_two_way:
+          type: boolean
+          description: Send messages to and receive messages from numbers in the same country.
+        international_inbound:
+          type: boolean
+          description: Receive messages from numbers in other countries.
+        international_outbound:
+          type: boolean
+          description: Send messages to numbers in other countries.
+      example:
+        domestic_two_way: true
+        international_inbound: false
+        international_outbound: true
     BulkMessagingSettingsUpdatePhoneNumbers:
       type: object
       properties:
@@ -422,36 +441,6 @@ components:
         - '+18880000002'
         pending: []
         failed: []
-    messaging_Errors_0b38e7044b:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/messaging_Error_0b38e7044b'
-    messaging_Error:
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: string
-          x-format: integer
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-              format: json-pointer
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
     messaging_Errors:
       properties:
         errors:
@@ -482,126 +471,30 @@ components:
               type: string
         meta:
           type: object
-    UpdatePhoneNumberMessagingSettingsRequest:
-      type: object
-      properties:
-        messaging_profile_id:
-          type: string
-          description: 'Configure the messaging profile this phone number is assigned to:
-
-
-            * Omit this field or set its value to `null` to keep the current value.
-
-            * Set this field to `""` to unassign the number from its messaging profile
-
-            * Set this field to a quoted UUID of a messaging profile to assign this number to that messaging profile'
-        messaging_product:
-          type: string
-          description: 'Configure the messaging product for this number:
-
-
-            * Omit this field or set its value to `null` to keep the current value.
-
-            * Set this field to a quoted product ID to set this phone number to that product'
-          example: P2P
-        tags:
-          type: array
-          items:
-            type: string
-          description: Tags to set on this phone number.
-      example:
-        messaging_profile_id: dd50eba1-a0c0-4563-9925-b25e842a7cb6
-        messaging_product: P2P
-    BulkMessagingSettingsUpdatePhoneNumbersRequest:
-      type: object
+    messaging_Error:
       required:
-      - messaging_profile_id
-      - numbers
+      - code
+      - title
       properties:
-        messaging_profile_id:
+        code:
           type: string
-          description: 'Configure the messaging profile these phone numbers are assigned to:
-
-
-            * Set this field to `""` to unassign each number from their respective messaging profile
-
-            * Set this field to a quoted UUID of a messaging profile to assign these numbers to that messaging profile'
-        numbers:
-          type: array
-          items:
-            type: string
-            x-format: +E.164
-          description: The list of phone numbers to update.
-        assign_only:
-          type: boolean
-          description: If true, only assign numbers to the profile without changing other settings.
-          default: false
-      example:
-        messaging_profile_id: 00000000-0000-0000-0000-000000000000
-        numbers:
-        - '+18880000000'
-        - '+18880000001'
-        - '+18880000002'
-    MessagingFeatureSet:
-      type:
-      - object
-      - 'null'
-      required:
-      - domestic_two_way
-      - international_inbound
-      - international_outbound
-      description: 'The set of features available for a specific messaging use case (SMS or MMS). Features
-
-        can vary depending on the characteristics the phone number, as well as its current
-
-        product configuration.
-
-        '
-      properties:
-        domestic_two_way:
-          type: boolean
-          description: Send messages to and receive messages from numbers in the same country.
-        international_inbound:
-          type: boolean
-          description: Receive messages from numbers in other countries.
-        international_outbound:
-          type: boolean
-          description: Send messages to numbers in other countries.
-      example:
-        domestic_two_way: true
-        international_inbound: false
-        international_outbound: true
-    NumberHealthMetrics:
-      type: object
-      required:
-      - message_count
-      - inbound_outbound_ratio
-      - success_ratio
-      - spam_ratio
-      description: 'High level health metrics about the number and it''s messaging sending patterns.
-
-        '
-      properties:
-        message_count:
-          type: integer
-          description: The number of messages analyzed for the health metrics.
-        inbound_outbound_ratio:
-          type: number
-          format: float
-          description: The ratio of messages received to the number of messages sent.
-        success_ratio:
-          type: number
-          format: float
-          description: The ratio of messages sucessfully delivered to the number of messages attempted.
-        spam_ratio:
-          type: number
-          format: float
-          description: The ratio of messages blocked for spam to the number of messages attempted.
-      example:
-        message_count: 10
-        inbound_outbound_ratio: 1
-        success_ratio: 2
-        spam_ratio: 10
+          x-format: integer
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
     PhoneNumberWithMessagingSettings:
       type: object
       example:
@@ -711,6 +604,26 @@ components:
           items:
             type: string
           description: Tags associated with this phone number.
+    messaging_PaginationMeta_0b38e7044b:
+      type: object
+      required:
+      - total_pages
+      - total_results
+      - page_size
+      - page_number
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 55
+        page_number:
+          type: integer
+          example: 2
+        page_size:
+          type: integer
+          example: 25
     messaging_PaginationMeta:
       properties:
         page_number:
@@ -731,6 +644,93 @@ components:
       - page_size
       - page_number
       type: object
+  parameters:
+    PageConsolidated:
+      name: page
+      in: query
+      style: deepObject
+      explode: true
+      description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
+      schema:
+        type: object
+        properties:
+          number:
+            type: integer
+            minimum: 1
+            default: 1
+            description: The page number to load
+          size:
+            type: integer
+            minimum: 1
+            maximum: 250
+            default: 20
+            description: The size of the page
+  responses:
+    messaging_GenericErrorResponse_0b38e7044b:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors_0b38e7044b'
+          example:
+            errors:
+            - code: string
+              title: string
+              detail: string
+              source:
+                pointer: /data/attributes/phone_number
+                parameter: string
+    phone-numbers_messaging_GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors'
+          example:
+            errors:
+            - code: '10007'
+              title: Unexpected error
+              detail: An unexpected error occured.
+    messaging_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors'
+      description: Unexpected error
+    ListPhoneNumbersWithMessagingSettingsResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/PhoneNumberWithMessagingSettings'
+                type: array
+              meta:
+                $ref: '#/components/schemas/messaging_PaginationMeta'
+            title: List Messaging Settings Response
+            type: object
+      description: Successful response with a list of phone numbers with messaging settings.
+    PhoneNumberWithMessagingSettingsResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/PhoneNumberWithMessagingSettings'
+            title: Retrieve Messaging Settings Response
+            type: object
+      description: Successful response with details about a phone number including messaging settings.
+    BulkMessagingSettingsUpdatePhoneNumbersResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/BulkMessagingSettingsUpdatePhoneNumbers'
+            title: Retrieve bulk update messaging settings Response
+            type: object
+      description: Successful response with details about messaging bulk update phone numbers.
   securitySchemes:
     BearerAuth:
       type: http

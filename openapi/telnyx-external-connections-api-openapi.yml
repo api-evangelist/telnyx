@@ -827,23 +827,168 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   parameters:
-    phone_number_id:
-      name: phone_number_id
-      description: A phone number's ID via the Telnyx API
+    FilterCivicAddressesConsolidated:
+      name: filter
+      in: query
+      style: deepObject
+      explode: true
+      description: Filter parameter for civic addresses (deepObject style). Supports filtering by country.
+      schema:
+        type: object
+        properties:
+          country:
+            type: array
+            example:
+            - US
+            - CA
+            - MX
+            - BR
+            items:
+              type: string
+              description: The ISO 3166-1 alpha-2 country code (2 characters)
+            description: The country (or countries) to filter addresses by.
+    ticket_id:
+      name: ticket_id
+      description: Identifies an Upload request
       in: path
       required: true
       schema:
+        format: uuid
         type: string
-        example: '1234567889'
-    external-voice-integrations_id:
-      name: id
-      description: Identifies the resource.
-      in: path
-      required: true
+        example: 7b6a6449-b055-45a6-81f6-f6f0dffa4cc6
+    FilterLogMessagesConsolidated:
+      name: filter
+      in: query
+      style: deepObject
+      explode: true
+      description: Filter parameter for log messages (deepObject style). Supports filtering by external_connection_id and telephone_number with eq/contains operations.
       schema:
-        type: string
-        example: '1293384261075731499'
-        x-format: int64
+        type: object
+        properties:
+          external_connection_id:
+            type: string
+            example: 67ea7693-9cd5-4a68-8c76-abb3aa5bf5d2
+            description: The external connection ID to filter by or "null" to filter for logs without an external connection ID
+          telephone_number:
+            type: object
+            properties:
+              eq:
+                type: string
+                example: '+1234567890'
+                description: The phone number to filter log messages for or "null" to filter for logs without a phone number
+                x-format: E164
+              contains:
+                type: string
+                example: '+123'
+                description: The partial phone number to filter log messages for. Requires 3-15 digits.
+            description: Telephone number filter operations for log messages. Use 'eq' for exact matches or 'contains' for partial matches.
+    external-voice-integrations_PageConsolidated:
+      name: page
+      in: query
+      style: deepObject
+      explode: true
+      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
+      schema:
+        type: object
+        properties:
+          size:
+            type: integer
+            minimum: 1
+            maximum: 250
+            default: 250
+            description: The size of the page
+          number:
+            type: integer
+            minimum: 1
+            default: 1
+            description: The page number to load
+    FilterPhoneNumbersConsolidated:
+      name: filter
+      in: query
+      style: deepObject
+      explode: true
+      required: false
+      description: Filter parameter for phone numbers (deepObject style). Supports filtering by phone_number, civic_address_id, and location_id with eq/contains operations.
+      schema:
+        type: object
+        properties:
+          phone_number:
+            type: object
+            properties:
+              eq:
+                type: string
+                example: '+19705555098'
+                description: The phone number to filter by (exact match)
+              contains:
+                type: string
+                example: '+1970'
+                description: The phone number to filter by (partial match)
+          civic_address_id:
+            type: object
+            properties:
+              eq:
+                type: string
+                example: '19990261512338516954'
+                description: The civic address ID to filter by
+          location_id:
+            type: object
+            properties:
+              eq:
+                type: string
+                example: '19995665508264022121'
+                description: The location ID to filter by
+    FilterUploadsConsolidated:
+      name: filter
+      in: query
+      style: deepObject
+      explode: true
+      required: false
+      description: Filter parameter for uploads (deepObject style). Supports filtering by status, civic_address_id, location_id, and phone_number with eq/contains operations.
+      schema:
+        type: object
+        properties:
+          status:
+            type: object
+            properties:
+              eq:
+                type: array
+                items:
+                  type: string
+                  enum:
+                  - pending_upload
+                  - pending
+                  - in_progress
+                  - success
+                  - error
+                example:
+                - pending_upload
+                - pending
+                description: The status of the upload to filter by
+          civic_address_id:
+            type: object
+            properties:
+              eq:
+                type: string
+                example: '19990261512338516954'
+                description: The civic address ID to filter by
+          location_id:
+            type: object
+            properties:
+              eq:
+                type: string
+                example: '19995665508264022121'
+                description: The location ID to filter by
+          phone_number:
+            type: object
+            properties:
+              eq:
+                type: string
+                example: '+19705555098'
+                description: The phone number to filter by (exact match)
+              contains:
+                type: string
+                example: '+1970'
+                description: The phone number to filter by (partial match)
     FilterReleasesConsolidated:
       name: filter
       in: query
@@ -899,6 +1044,24 @@ components:
                 example: '+123'
                 description: The partial phone number to filter by. Requires 3-15 digits.
             description: Phone number filter operations. Use 'eq' for exact matches or 'contains' for partial matches.
+    release_id:
+      name: release_id
+      description: Identifies a Release request
+      in: path
+      required: true
+      schema:
+        format: uuid
+        type: string
+        example: 7b6a6449-b055-45a6-81f6-f6f0dffa4cc6
+    address_id:
+      name: address_id
+      description: Identifies a civic address or a location.
+      in: path
+      required: true
+      schema:
+        format: uuid
+        type: string
+        example: 318fb664-d341-44d2-8405-e6bfb9ced6d9
     FilterConnectionsConsolidated:
       name: filter
       in: query
@@ -941,187 +1104,39 @@ components:
                 example: '+15555555555'
                 description: If present, connections associated with the given phone_number will be returned. A full match is necessary with a e164 format.
             description: 'Phone number filter for connections. Note: Despite the ''contains'' name, this requires a full E164 match per the original specification.'
-    external-voice-integrations_PageConsolidated:
-      name: page
-      in: query
-      style: deepObject
-      explode: true
-      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
-      schema:
-        type: object
-        properties:
-          size:
-            type: integer
-            minimum: 1
-            maximum: 250
-            default: 250
-            description: The size of the page
-          number:
-            type: integer
-            minimum: 1
-            default: 1
-            description: The page number to load
-    FilterUploadsConsolidated:
-      name: filter
-      in: query
-      style: deepObject
-      explode: true
-      required: false
-      description: Filter parameter for uploads (deepObject style). Supports filtering by status, civic_address_id, location_id, and phone_number with eq/contains operations.
-      schema:
-        type: object
-        properties:
-          status:
-            type: object
-            properties:
-              eq:
-                type: array
-                items:
-                  type: string
-                  enum:
-                  - pending_upload
-                  - pending
-                  - in_progress
-                  - success
-                  - error
-                example:
-                - pending_upload
-                - pending
-                description: The status of the upload to filter by
-          civic_address_id:
-            type: object
-            properties:
-              eq:
-                type: string
-                example: '19990261512338516954'
-                description: The civic address ID to filter by
-          location_id:
-            type: object
-            properties:
-              eq:
-                type: string
-                example: '19995665508264022121'
-                description: The location ID to filter by
-          phone_number:
-            type: object
-            properties:
-              eq:
-                type: string
-                example: '+19705555098'
-                description: The phone number to filter by (exact match)
-              contains:
-                type: string
-                example: '+1970'
-                description: The phone number to filter by (partial match)
-    FilterCivicAddressesConsolidated:
-      name: filter
-      in: query
-      style: deepObject
-      explode: true
-      description: Filter parameter for civic addresses (deepObject style). Supports filtering by country.
-      schema:
-        type: object
-        properties:
-          country:
-            type: array
-            example:
-            - US
-            - CA
-            - MX
-            - BR
-            items:
-              type: string
-              description: The ISO 3166-1 alpha-2 country code (2 characters)
-            description: The country (or countries) to filter addresses by.
-    address_id:
-      name: address_id
-      description: Identifies a civic address or a location.
+    phone_number_id:
+      name: phone_number_id
+      description: A phone number's ID via the Telnyx API
       in: path
       required: true
       schema:
-        format: uuid
         type: string
-        example: 318fb664-d341-44d2-8405-e6bfb9ced6d9
-    ticket_id:
-      name: ticket_id
-      description: Identifies an Upload request
+        example: '1234567889'
+    external-voice-integrations_id:
+      name: id
+      description: Identifies the resource.
       in: path
       required: true
       schema:
-        format: uuid
         type: string
-        example: 7b6a6449-b055-45a6-81f6-f6f0dffa4cc6
-    release_id:
-      name: release_id
-      description: Identifies a Release request
-      in: path
-      required: true
-      schema:
-        format: uuid
-        type: string
-        example: 7b6a6449-b055-45a6-81f6-f6f0dffa4cc6
-    FilterPhoneNumbersConsolidated:
-      name: filter
-      in: query
-      style: deepObject
-      explode: true
-      required: false
-      description: Filter parameter for phone numbers (deepObject style). Supports filtering by phone_number, civic_address_id, and location_id with eq/contains operations.
-      schema:
-        type: object
-        properties:
-          phone_number:
-            type: object
-            properties:
-              eq:
-                type: string
-                example: '+19705555098'
-                description: The phone number to filter by (exact match)
-              contains:
-                type: string
-                example: '+1970'
-                description: The phone number to filter by (partial match)
-          civic_address_id:
-            type: object
-            properties:
-              eq:
-                type: string
-                example: '19990261512338516954'
-                description: The civic address ID to filter by
-          location_id:
-            type: object
-            properties:
-              eq:
-                type: string
-                example: '19995665508264022121'
-                description: The location ID to filter by
-    FilterLogMessagesConsolidated:
-      name: filter
-      in: query
-      style: deepObject
-      explode: true
-      description: Filter parameter for log messages (deepObject style). Supports filtering by external_connection_id and telephone_number with eq/contains operations.
-      schema:
-        type: object
-        properties:
-          external_connection_id:
-            type: string
-            example: 67ea7693-9cd5-4a68-8c76-abb3aa5bf5d2
-            description: The external connection ID to filter by or "null" to filter for logs without an external connection ID
-          telephone_number:
-            type: object
-            properties:
-              eq:
-                type: string
-                example: '+1234567890'
-                description: The phone number to filter log messages for or "null" to filter for logs without a phone number
-                x-format: E164
-              contains:
-                type: string
-                example: '+123'
-                description: The partial phone number to filter log messages for. Requires 3-15 digits.
-            description: Telephone number filter operations for log messages. Use 'eq' for exact matches or 'contains' for partial matches.
+        example: '1293384261075731499'
+        x-format: int64
   schemas:
+    Location:
+      type: object
+      title: Location
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        additional_info:
+          type: string
+          example: 14th Floor
+        description:
+          type: string
+          example: Austin Office
+        is_default:
+          type: boolean
+          description: Represents whether the location is the default or not.
     TnReleaseEntry:
       type: object
       title: TnReleaseEntry
@@ -1132,92 +1147,56 @@ components:
         number_id:
           type: string
           description: Phone number ID from the Telnyx API.
-    Release:
-      type: object
-      title: Phone Number Release
-      properties:
-        ticket_id:
-          $ref: '#/components/schemas/UUID'
-        tenant_id:
-          type: string
-          format: uuid
-          example: ea175aba-f47c-4702-9400-efaa42688048
-        status:
-          type: string
-          enum:
-          - pending_upload
-          - pending
-          - in_progress
-          - complete
-          - failed
-          - expired
-          - unknown
-          description: Represents the status of the release on Microsoft Teams.
-          example: pending
-          default: pending_upload
-        error_message:
-          type: string
-          description: A message set if there is an error with the upload process.
-        telephone_numbers:
-          type: array
-          items:
-            $ref: '#/components/schemas/TnReleaseEntry'
-        created_at:
-          type: string
-          description: ISO 8601 formatted date indicating when the resource was created.
-          example: '2018-02-02T22:25:27.521Z'
-    external-voice-integrations_OutboundVoiceProfileId:
-      title: Outbound Voice Profile ID
-      type: string
-      description: Identifies the associated outbound voice profile.
-      example: '1293384261075731499'
-      x-format: int64
-    CredentialActive:
-      title: Credential Active
-      description: If the credential associated with this service is active.
-      type: boolean
-      default: false
-      example: true
-    ConnectionActive:
-      title: Connection Active
-      type: boolean
-      description: Specifies whether the connection can be used.
-      default: true
-      example: false
-    external-voice-integrations_ErrorResponse:
-      type: object
-      properties:
-        errors:
-          type: array
-          items:
-            type: object
-            properties:
-              code:
-                type: string
-              detail:
-                type: string
-              meta:
-                type: object
-                properties:
-                  url:
-                    type: string
-                    format: uri
-              title:
-                type: string
-              source:
-                type: object
-                properties:
-                  pointer:
-                    type: string
-    ExternalSipConnection:
+    ExternalSipConnectionZoomOnly:
       title: External SIP Connection
       type: string
       description: The service that will be consuming this connection.
       enum:
       - zoom
-      - operator_connect
       default: zoom
       example: zoom
+    CreateExternalConnectionUploadRequest:
+      type: object
+      title: Create Upload Request
+      required:
+      - number_ids
+      properties:
+        number_ids:
+          type: array
+          items:
+            type: string
+            description: Phone number ID from the Telnyx API.
+          minItems: 1
+        usage:
+          type: string
+          enum:
+          - calling_user_assignment
+          - first_party_app_assignment
+          description: 'The use case of the upload request. NOTE: `calling_user_assignment` is not supported for toll free numbers.'
+        additional_usages:
+          type: array
+          items:
+            type: string
+            enum:
+            - calling_user_assignment
+            - first_party_app_assignment
+            description: Additional use cases of the upload request. If not provided, all supported usages will be used.
+        location_id:
+          type: string
+          format: uuid
+          description: Identifies the location to assign all phone numbers to.
+        civic_address_id:
+          type: string
+          format: uuid
+          description: Identifies the civic address to assign all phone numbers to.
+      example:
+        number_ids:
+        - '3920457616934164700'
+        - '3920457616934164701'
+        - '3920457616934164702'
+        - '3920457616934164703'
+        usage: first_party_app_assignment
+        location_id: 67ea7693-9cd5-4a68-8c76-abb3aa5bf5d2
     UpdateExternalConnectionRequest:
       type: object
       title: Update External Connection Request
@@ -1280,134 +1259,65 @@ components:
         active: false
         outbound:
           outbound_voice_profile_id: '1911630617284445511'
-    CreateExternalConnectionUploadRequest:
+    Release:
       type: object
-      title: Create Upload Request
-      required:
-      - number_ids
+      title: Phone Number Release
       properties:
-        number_ids:
-          type: array
-          items:
-            type: string
-            description: Phone number ID from the Telnyx API.
-          minItems: 1
-        usage:
+        ticket_id:
+          $ref: '#/components/schemas/UUID'
+        tenant_id:
+          type: string
+          format: uuid
+          example: ea175aba-f47c-4702-9400-efaa42688048
+        status:
           type: string
           enum:
-          - calling_user_assignment
-          - first_party_app_assignment
-          description: 'The use case of the upload request. NOTE: `calling_user_assignment` is not supported for toll free numbers.'
-        additional_usages:
+          - pending_upload
+          - pending
+          - in_progress
+          - complete
+          - failed
+          - expired
+          - unknown
+          description: Represents the status of the release on Microsoft Teams.
+          example: pending
+          default: pending_upload
+        error_message:
+          type: string
+          description: A message set if there is an error with the upload process.
+        telephone_numbers:
           type: array
           items:
-            type: string
-            enum:
-            - calling_user_assignment
-            - first_party_app_assignment
-            description: Additional use cases of the upload request. If not provided, all supported usages will be used.
-        location_id:
+            $ref: '#/components/schemas/TnReleaseEntry'
+        created_at:
           type: string
-          format: uuid
-          description: Identifies the location to assign all phone numbers to.
-        civic_address_id:
-          type: string
-          format: uuid
-          description: Identifies the civic address to assign all phone numbers to.
-      example:
-        number_ids:
-        - '3920457616934164700'
-        - '3920457616934164701'
-        - '3920457616934164702'
-        - '3920457616934164703'
-        usage: first_party_app_assignment
-        location_id: 67ea7693-9cd5-4a68-8c76-abb3aa5bf5d2
-    external-voice-integrations_PaginationMeta:
-      title: Pagination Meta
+          description: ISO 8601 formatted date indicating when the resource was created.
+          example: '2018-02-02T22:25:27.521Z'
+    external-voice-integrations_ErrorResponse:
       type: object
       properties:
-        total_pages:
-          type: integer
-          example: 3
-        total_results:
-          type: integer
-          example: 55
-        page_number:
-          type: integer
-          example: 2
-        page_size:
-          type: integer
-          example: 25
-    CreateExternalConnectionRequest:
-      type: object
-      title: Create External Connection Request
-      required:
-      - external_sip_connection
-      - outbound
-      properties:
-        active:
-          $ref: '#/components/schemas/ConnectionActive'
-        external_sip_connection:
-          $ref: '#/components/schemas/ExternalSipConnectionZoomOnly'
-        tags:
+        errors:
           type: array
           items:
-            type: string
-          description: Tags associated with the connection.
-          example:
-          - tag1
-          - tag2
-        webhook_event_url:
-          type: string
-          format: uri
-          description: The URL where webhooks related to this connection will be sent. Must include a scheme, such as 'https'.
-          example: https://example.com
-        webhook_event_failover_url:
-          type:
-          - string
-          - 'null'
-          format: uri
-          description: The failover URL where webhooks related to this connection will be sent if sending to the primary URL fails. Must include a scheme, such as 'https'.
-          example: https://failover.example.com
-          default: ''
-        webhook_timeout_secs:
-          type:
-          - integer
-          - 'null'
-          minimum: 0
-          maximum: 30
-          description: Specifies how many seconds to wait before timing out a webhook.
-          example: 25
-          default: null
-        inbound:
-          type: object
-          properties:
-            outbound_voice_profile_id:
-              type: string
-              description: The ID of the outbound voice profile to use for inbound calls.
-              example: 12345678-1234-1234-1234-123456789012
-            channel_limit:
-              type: integer
-              description: When set, this will limit the number of concurrent inbound calls to phone numbers associated with this connection.
-              default: null
-              example: 10
-          required:
-          - outbound_voice_profile_id
-        outbound:
-          type: object
-          properties:
-            channel_limit:
-              type: integer
-              description: When set, this will limit the number of concurrent outbound calls to phone numbers associated with this connection.
-              default: null
-              example: 10
-            outbound_voice_profile_id:
-              $ref: '#/components/schemas/external-voice-integrations_OutboundVoiceProfileId'
-      example:
-        external_sip_connection: zoom
-        active: false
-        outbound:
-          outbound_voice_profile_id: '1911630617284445511'
+            type: object
+            properties:
+              code:
+                type: string
+              detail:
+                type: string
+              meta:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+              title:
+                type: string
+              source:
+                type: object
+                properties:
+                  pointer:
+                    type: string
     CivicAddress:
       type: object
       title: Civic Address
@@ -1485,167 +1395,12 @@ components:
         state_or_province: TX
         street_name: Congress Street
         street_suffix: ''
-    LocationResponse:
-      type: object
-      properties:
-        data:
-          type: object
-          properties:
-            location_id:
-              type: string
-              format: uuid
-            static_emergency_address_id:
-              type: string
-              format: uuid
-            accepted_address_suggestions:
-              type: boolean
-    LogMessage:
-      required:
-      - code
-      - title
-      type: object
-      properties:
-        code:
-          type: string
-          example: '10015'
-          x-format: int64
-        title:
-          type: string
-          example: Invalid attribute
-        detail:
-          type: string
-          example: The value provided for the attribute is not valid. Check the value used and try again.
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-              format: json-pointer
-              example: /attribute
-        meta:
-          type: object
-          properties:
-            telephone_number:
-              type: string
-              description: The telephone number the log message is associated with, if any.
-              example: '+12345678'
-            external_connection_id:
-              type: string
-              example: '1293384261075731499'
-              description: The external connection the log message is associated with, if any.
-              x-format: int64
-            ticket_id:
-              type: string
-              format: uuid
-              example: 542c3bca-d247-42bc-8fe7-e01d16ecd761
-              description: The ticket ID for an operation that generated the log message, if any.
-    UpdateExternalConnectionPhoneNumberRequest:
-      type: object
-      title: Update External Connection Phone Number Request
-      properties:
-        location_id:
-          type: string
-          format: uuid
-          description: Identifies the location to assign the phone number to.
-    TnUploadEntry:
-      type: object
-      title: TnUploadEntry
-      properties:
-        number_id:
-          $ref: '#/components/schemas/UUID'
-        phone_number:
-          type: string
-          description: Phone number in E164 format.
-        status:
-          type: string
-          enum:
-          - pending_upload
-          - pending
-          - in_progress
-          - success
-          - error
-          description: Represents the status of the phone number entry upload on Microsoft Teams.
-          example: error
-          default: pending_upload
-        error_code:
-          type: string
-          enum:
-          - internal_error
-          - unable_to_retrieve_default_location
-          - unknown_country_code
-          - unable_to_retrieve_location
-          - unable_to_retrieve_partner_info
-          - unable_to_match_geography_entry
-          description: A code returned by Microsoft Teams if there is an error with the phone number entry upload.
-          example: internal_error
-        error_message:
-          type: string
-          description: A message returned by Microsoft Teams if there is an error with the upload process.
-        civic_address_id:
-          type: string
-          format: uuid
-          description: Identifies the civic address assigned to the phone number entry.
-        location_id:
-          type: string
-          format: uuid
-          description: Identifies the location assigned to the phone number entry.
-        internal_status:
-          type: string
-          enum:
-          - pending_assignment
-          - in_progress
-          - all_internal_jobs_completed
-          - release_requested
-          - release_completed
-          - error
-          description: Represents the status of the phone number entry upload on Telnyx.
-          example: error
-          default: pending_assignment
-    Upload:
-      type: object
-      title: Upload
-      properties:
-        ticket_id:
-          $ref: '#/components/schemas/UUID'
-        tenant_id:
-          type: string
-          format: uuid
-          example: ea175aba-f47c-4702-9400-efaa42688048
-        location_id:
-          type: string
-          format: uuid
-          example: c37e5036-1e87-42e6-86a2-b3e8dd39a2ad
-        status:
-          type: string
-          enum:
-          - pending_upload
-          - pending
-          - in_progress
-          - partial_success
-          - success
-          - error
-          description: Represents the status of the upload on Microsoft Teams.
-          example: error
-          default: pending_upload
-        available_usages:
-          type: array
-          items:
-            type: string
-            enum:
-            - calling_user_assignment
-            - first_party_app_assignment
-            description: Available usages for the numbers in the upload on Microsoft Teams.
-        error_code:
-          type: string
-          description: A code returned by Microsoft Teams if there is an error with the upload process.
-        error_message:
-          type: string
-          description: A message set if there is an error with the upload process.
-        tn_upload_entries:
-          type: array
-          items:
-            $ref: '#/components/schemas/TnUploadEntry'
+    external-voice-integrations_IntId:
+      title: Int ID
+      type: string
+      description: Uniquely identifies the resource.
+      example: '1293384261075731499'
+      x-format: int64
     ExternalConnection:
       type: object
       title: External Connection
@@ -1736,14 +1491,216 @@ components:
         updated_at: '2022-06-29T19:39:47Z'
         outbound:
           outbound_voice_profile_id: '1911630617284445511'
-    ExternalSipConnectionZoomOnly:
+    LocationResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            location_id:
+              type: string
+              format: uuid
+            static_emergency_address_id:
+              type: string
+              format: uuid
+            accepted_address_suggestions:
+              type: boolean
+    UpdateExternalConnectionPhoneNumberRequest:
+      type: object
+      title: Update External Connection Phone Number Request
+      properties:
+        location_id:
+          type: string
+          format: uuid
+          description: Identifies the location to assign the phone number to.
+    UUID:
+      title: UUID
+      type: string
+      format: uuid
+      description: Uniquely identifies the resource.
+      example: 542c3bca-d247-42bc-8fe7-e01d16ecd761
+    external-voice-integrations_PaginationMeta:
+      title: Pagination Meta
+      type: object
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 55
+        page_number:
+          type: integer
+          example: 2
+        page_size:
+          type: integer
+          example: 25
+    Upload:
+      type: object
+      title: Upload
+      properties:
+        ticket_id:
+          $ref: '#/components/schemas/UUID'
+        tenant_id:
+          type: string
+          format: uuid
+          example: ea175aba-f47c-4702-9400-efaa42688048
+        location_id:
+          type: string
+          format: uuid
+          example: c37e5036-1e87-42e6-86a2-b3e8dd39a2ad
+        status:
+          type: string
+          enum:
+          - pending_upload
+          - pending
+          - in_progress
+          - partial_success
+          - success
+          - error
+          description: Represents the status of the upload on Microsoft Teams.
+          example: error
+          default: pending_upload
+        available_usages:
+          type: array
+          items:
+            type: string
+            enum:
+            - calling_user_assignment
+            - first_party_app_assignment
+            description: Available usages for the numbers in the upload on Microsoft Teams.
+        error_code:
+          type: string
+          description: A code returned by Microsoft Teams if there is an error with the upload process.
+        error_message:
+          type: string
+          description: A message set if there is an error with the upload process.
+        tn_upload_entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/TnUploadEntry'
+    ExternalSipConnection:
       title: External SIP Connection
       type: string
       description: The service that will be consuming this connection.
       enum:
       - zoom
+      - operator_connect
       default: zoom
       example: zoom
+    CredentialActive:
+      title: Credential Active
+      description: If the credential associated with this service is active.
+      type: boolean
+      default: false
+      example: true
+    ConnectionActive:
+      title: Connection Active
+      type: boolean
+      description: Specifies whether the connection can be used.
+      default: true
+      example: false
+    external-voice-integrations_OutboundVoiceProfileId:
+      title: Outbound Voice Profile ID
+      type: string
+      description: Identifies the associated outbound voice profile.
+      example: '1293384261075731499'
+      x-format: int64
+    LogMessage:
+      required:
+      - code
+      - title
+      type: object
+      properties:
+        code:
+          type: string
+          example: '10015'
+          x-format: int64
+        title:
+          type: string
+          example: Invalid attribute
+        detail:
+          type: string
+          example: The value provided for the attribute is not valid. Check the value used and try again.
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+              example: /attribute
+        meta:
+          type: object
+          properties:
+            telephone_number:
+              type: string
+              description: The telephone number the log message is associated with, if any.
+              example: '+12345678'
+            external_connection_id:
+              type: string
+              example: '1293384261075731499'
+              description: The external connection the log message is associated with, if any.
+              x-format: int64
+            ticket_id:
+              type: string
+              format: uuid
+              example: 542c3bca-d247-42bc-8fe7-e01d16ecd761
+              description: The ticket ID for an operation that generated the log message, if any.
+    TnUploadEntry:
+      type: object
+      title: TnUploadEntry
+      properties:
+        number_id:
+          $ref: '#/components/schemas/UUID'
+        phone_number:
+          type: string
+          description: Phone number in E164 format.
+        status:
+          type: string
+          enum:
+          - pending_upload
+          - pending
+          - in_progress
+          - success
+          - error
+          description: Represents the status of the phone number entry upload on Microsoft Teams.
+          example: error
+          default: pending_upload
+        error_code:
+          type: string
+          enum:
+          - internal_error
+          - unable_to_retrieve_default_location
+          - unknown_country_code
+          - unable_to_retrieve_location
+          - unable_to_retrieve_partner_info
+          - unable_to_match_geography_entry
+          description: A code returned by Microsoft Teams if there is an error with the phone number entry upload.
+          example: internal_error
+        error_message:
+          type: string
+          description: A message returned by Microsoft Teams if there is an error with the upload process.
+        civic_address_id:
+          type: string
+          format: uuid
+          description: Identifies the civic address assigned to the phone number entry.
+        location_id:
+          type: string
+          format: uuid
+          description: Identifies the location assigned to the phone number entry.
+        internal_status:
+          type: string
+          enum:
+          - pending_assignment
+          - in_progress
+          - all_internal_jobs_completed
+          - release_requested
+          - release_completed
+          - error
+          description: Represents the status of the phone number entry upload on Telnyx.
+          example: error
+          default: pending_assignment
     ExternalConnectionPhoneNumber:
       type: object
       title: Phone number details with relation to an external connection
@@ -1778,33 +1735,76 @@ components:
             - OutboundCalling
             - UserAssignment
             description: The capabilities that are available for this phone number on Microsoft Teams.
-    external-voice-integrations_IntId:
-      title: Int ID
-      type: string
-      description: Uniquely identifies the resource.
-      example: '1293384261075731499'
-      x-format: int64
-    Location:
+    CreateExternalConnectionRequest:
       type: object
-      title: Location
+      title: Create External Connection Request
+      required:
+      - external_sip_connection
+      - outbound
       properties:
-        id:
-          $ref: '#/components/schemas/UUID'
-        additional_info:
+        active:
+          $ref: '#/components/schemas/ConnectionActive'
+        external_sip_connection:
+          $ref: '#/components/schemas/ExternalSipConnectionZoomOnly'
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags associated with the connection.
+          example:
+          - tag1
+          - tag2
+        webhook_event_url:
           type: string
-          example: 14th Floor
-        description:
-          type: string
-          example: Austin Office
-        is_default:
-          type: boolean
-          description: Represents whether the location is the default or not.
-    UUID:
-      title: UUID
-      type: string
-      format: uuid
-      description: Uniquely identifies the resource.
-      example: 542c3bca-d247-42bc-8fe7-e01d16ecd761
+          format: uri
+          description: The URL where webhooks related to this connection will be sent. Must include a scheme, such as 'https'.
+          example: https://example.com
+        webhook_event_failover_url:
+          type:
+          - string
+          - 'null'
+          format: uri
+          description: The failover URL where webhooks related to this connection will be sent if sending to the primary URL fails. Must include a scheme, such as 'https'.
+          example: https://failover.example.com
+          default: ''
+        webhook_timeout_secs:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 30
+          description: Specifies how many seconds to wait before timing out a webhook.
+          example: 25
+          default: null
+        inbound:
+          type: object
+          properties:
+            outbound_voice_profile_id:
+              type: string
+              description: The ID of the outbound voice profile to use for inbound calls.
+              example: 12345678-1234-1234-1234-123456789012
+            channel_limit:
+              type: integer
+              description: When set, this will limit the number of concurrent inbound calls to phone numbers associated with this connection.
+              default: null
+              example: 10
+          required:
+          - outbound_voice_profile_id
+        outbound:
+          type: object
+          properties:
+            channel_limit:
+              type: integer
+              description: When set, this will limit the number of concurrent outbound calls to phone numbers associated with this connection.
+              default: null
+              example: 10
+            outbound_voice_profile_id:
+              $ref: '#/components/schemas/external-voice-integrations_OutboundVoiceProfileId'
+      example:
+        external_sip_connection: zoom
+        active: false
+        outbound:
+          outbound_voice_profile_id: '1911630617284445511'
     ErrorResponse:
       properties:
         errors:
@@ -1831,50 +1831,6 @@ components:
           type: array
       type: object
   responses:
-    GetReleaseResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/Release'
-            title: Get Release Response
-            type: object
-      description: Successful response
-    GetCivicAddressResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/CivicAddress'
-            title: Get Civic Address Response
-            type: object
-      description: Successful response
-    ListUploadsResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/Upload'
-                type: array
-              meta:
-                $ref: '#/components/schemas/external-voice-integrations_PaginationMeta'
-            title: List Uploads Response
-            type: object
-      description: Successful response
-    GetUploadResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/Upload'
-            title: Get Upload Response
-            type: object
-      description: Successful response
     ListLogMessagesResponse:
       content:
         application/json:
@@ -1889,32 +1845,14 @@ components:
             title: List Log Messages Response
             type: object
       description: Successful response
-    ListExternalConnectionPhoneNumbersResponse:
+    GetExternalConnectionPhoneNumberResponse:
       content:
         application/json:
           schema:
             properties:
               data:
-                items:
-                  $ref: '#/components/schemas/ExternalConnectionPhoneNumber'
-                type: array
-              meta:
-                $ref: '#/components/schemas/external-voice-integrations_PaginationMeta'
-            title: List External Connection Phone Numbers Response
-            type: object
-      description: Successful response
-    GetAllExternalConnectionResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/ExternalConnection'
-                type: array
-              meta:
-                $ref: '#/components/schemas/external-voice-integrations_PaginationMeta'
-            title: Get All External Connections Response
+                $ref: '#/components/schemas/ExternalConnectionPhoneNumber'
+            title: Get External Connection Phone Number Response
             type: object
       description: Successful response
     ExternalConnectionResponse:
@@ -1927,14 +1865,40 @@ components:
             title: External Connection Response
             type: object
       description: Successful response
-    GetExternalConnectionPhoneNumberResponse:
+    GetLogMessageResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              log_messages:
+                items:
+                  $ref: '#/components/schemas/LogMessage'
+                maxItems: 1
+                minItems: 1
+                type: array
+            title: Get Log Message Response
+            type: object
+      description: Successful response
+    GetAllCivicAddressesResponse:
       content:
         application/json:
           schema:
             properties:
               data:
-                $ref: '#/components/schemas/ExternalConnectionPhoneNumber'
-            title: Get External Connection Phone Number Response
+                items:
+                  $ref: '#/components/schemas/CivicAddress'
+                type: array
+            title: Get All Civic Addresses Response
+            type: object
+      description: Successful response
+    GetCivicAddressResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/CivicAddress'
+            title: Get Civic Address Response
             type: object
       description: Successful response
     ListReleasesResponse:
@@ -1951,18 +1915,38 @@ components:
             title: List Releases Response
             type: object
       description: Successful response
-    GetLogMessageResponse:
+    GetAllExternalConnectionResponse:
       content:
         application/json:
           schema:
             properties:
-              log_messages:
+              data:
                 items:
-                  $ref: '#/components/schemas/LogMessage'
-                maxItems: 1
-                minItems: 1
+                  $ref: '#/components/schemas/ExternalConnection'
                 type: array
-            title: Get Log Message Response
+              meta:
+                $ref: '#/components/schemas/external-voice-integrations_PaginationMeta'
+            title: Get All External Connections Response
+            type: object
+      description: Successful response
+    GetReleaseResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/Release'
+            title: Get Release Response
+            type: object
+      description: Successful response
+    GetUploadResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/Upload'
+            title: Get Upload Response
             type: object
       description: Successful response
     GetUploadsStatusResponse:
@@ -1982,16 +1966,32 @@ components:
             title: Get Uploads Status Response
             type: object
       description: Successful response
-    GetAllCivicAddressesResponse:
+    ListExternalConnectionPhoneNumbersResponse:
       content:
         application/json:
           schema:
             properties:
               data:
                 items:
-                  $ref: '#/components/schemas/CivicAddress'
+                  $ref: '#/components/schemas/ExternalConnectionPhoneNumber'
                 type: array
-            title: Get All Civic Addresses Response
+              meta:
+                $ref: '#/components/schemas/external-voice-integrations_PaginationMeta'
+            title: List External Connection Phone Numbers Response
+            type: object
+      description: Successful response
+    ListUploadsResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/Upload'
+                type: array
+              meta:
+                $ref: '#/components/schemas/external-voice-integrations_PaginationMeta'
+            title: List Uploads Response
             type: object
       description: Successful response
   securitySchemes:

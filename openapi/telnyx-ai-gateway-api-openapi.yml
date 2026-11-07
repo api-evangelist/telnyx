@@ -1318,8 +1318,36 @@ paths:
       - AI Gateway
 components:
   responses:
-    GatewayError404:
-      description: Absent or foreign-account resource (indistinguishable).
+    GatewayError409:
+      description: Membership, idempotency or snapshot conflict.
+      headers:
+        X-Request-ID:
+          schema:
+            type: string
+            format: uuid
+          description: Server-generated correlation ID.
+        Cache-Control:
+          schema:
+            const: no-store
+          description: All API responses; application cache is server-side only.
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 1
+          description: Seconds; retrying inference is not idempotent.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ai-gateway-resources_Error'
+          example:
+            errors:
+            - code: idempotency_conflict
+              title: Request could not be completed
+              detail: Check the request and the documented handling for this error.
+              meta:
+                request_id: 11111111-1111-4111-8111-111111111111
+    GatewayError403:
+      description: Blocked/expired, exhausted budget or disallowed model; scope identifies exhausted level.
       headers:
         X-Request-ID:
           schema:
@@ -1336,7 +1364,109 @@ components:
             $ref: '#/components/schemas/ai-gateway-resources_Error'
           example:
             errors:
-            - code: not_found
+            - code: unauthorized
+              title: Request could not be completed
+              detail: Check the request and the documented handling for this error.
+              meta:
+                request_id: 11111111-1111-4111-8111-111111111111
+    ai-gateway-spend_GatewayError400:
+      description: 'Invalid fields, unsupported protocol options, bad page/date range (invalid_request); a well-formed token key limit of 0 or above its maximum (limit_out_of_range). prompt_blocked / response_blocked: the group guardrail policy blocked the prompt or the generated response. invalid_metadata: an authenticated inference request''s x-ltg-metadata header is not a valid RequestMetadata object; the response never echoes the header.'
+      headers:
+        X-Request-ID:
+          schema:
+            type: string
+            format: uuid
+          description: Server-generated correlation ID.
+        Cache-Control:
+          schema:
+            const: no-store
+          description: All API responses; application cache is server-side only.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ai-gateway-spend_Error'
+          example:
+            errors:
+            - code: invalid_request
+              title: Request could not be completed
+              detail: Check the request and the documented handling for this error.
+              meta:
+                request_id: 11111111-1111-4111-8111-111111111111
+    GatewayError40911:
+      description: Expired or invalidated export cursor (cursor_expired). Restart from start_time within the retained window and deduplicate records by id. Waiting and retrying the same cursor cannot recover; this response has no Retry-After header.
+      headers:
+        X-Request-ID:
+          schema:
+            type: string
+            format: uuid
+          description: Server-generated correlation ID.
+        Cache-Control:
+          schema:
+            const: no-store
+          description: All API responses; application cache is server-side only.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ai-gateway_Error'
+          example:
+            errors:
+            - code: cursor_expired
+              title: Request could not be completed
+              detail: Restart from start_time within the retained window and deduplicate records by id.
+              meta:
+                request_id: 11111111-1111-4111-8111-111111111111
+    GatewayError504:
+      description: 'upstream_timeout: as 502 upstream_error, but the last admitted attempt timed out waiting for the provider (connect, read or write timeout, the attempt deadline, or x-ltg-request-timeout) before its first event. Retrying is not idempotent.'
+      headers:
+        X-Request-ID:
+          schema:
+            type: string
+            format: uuid
+          description: Server-generated correlation ID.
+        Cache-Control:
+          schema:
+            const: no-store
+          description: All API responses; application cache is server-side only.
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 1
+          description: Seconds; retrying inference is not idempotent.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ai-gateway-resources_Error'
+          example:
+            errors:
+            - code: invalid_request
+              title: Request could not be completed
+              detail: Check the request and the documented handling for this error.
+              meta:
+                request_id: 11111111-1111-4111-8111-111111111111
+    GatewayError429:
+      description: Rate limited.
+      headers:
+        X-Request-ID:
+          schema:
+            type: string
+            format: uuid
+          description: Server-generated correlation ID.
+        Cache-Control:
+          schema:
+            const: no-store
+          description: All API responses; application cache is server-side only.
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 1
+          description: Seconds; retrying inference is not idempotent.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ai-gateway-resources_Error'
+          example:
+            errors:
+            - code: rate_limit_exceeded
               title: Request could not be completed
               detail: Check the request and the documented handling for this error.
               meta:
@@ -1369,8 +1499,8 @@ components:
               detail: The usage report could not be completed.
               meta:
                 request_id: 11111111-1111-4111-8111-111111111111
-    GatewayError428:
-      description: If-Match required.
+    GatewayError401:
+      description: Wrong/missing credential for this plane.
       headers:
         X-Request-ID:
           schema:
@@ -1381,43 +1511,19 @@ components:
           schema:
             const: no-store
           description: All API responses; application cache is server-side only.
+        WWW-Authenticate:
+          schema:
+            type: string
+          description: Bearer challenge for this plane; no provider/master credential disclosure.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ai-gateway-resources_Error'
           example:
             errors:
-            - code: precondition_required
+            - code: unauthorized
               title: Request could not be completed
               detail: Check the request and the documented handling for this error.
-              meta:
-                request_id: 11111111-1111-4111-8111-111111111111
-    ai-gateway-spend_GatewayError409:
-      description: The snapshot is missing, invalid, expired or does not match the account, range, filters or page size. Correct the parameters to match a valid snapshot, or restart at page[number]=1 without page[snapshot] to obtain a new snapshot.
-      headers:
-        X-Request-ID:
-          schema:
-            type: string
-            format: uuid
-          description: Server-generated correlation ID.
-        Cache-Control:
-          schema:
-            const: no-store
-          description: All API responses; application cache is server-side only.
-        Retry-After:
-          schema:
-            type: integer
-            minimum: 1
-          description: Advisory delay in seconds. Waiting does not repair a missing, invalid, expired or mismatched snapshot. Correct the parameters to match a valid snapshot, or restart at page[number]=1 without page[snapshot]; do not replay an unchanged invalid snapshot request.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ai-gateway-spend_Error'
-          example:
-            errors:
-            - code: conflict
-              title: Snapshot conflict
-              detail: Correct the parameters to match a valid snapshot, or restart at page[number]=1 without page[snapshot].
               meta:
                 request_id: 11111111-1111-4111-8111-111111111111
     ai-gateway-spend_GatewayError503:
@@ -1448,8 +1554,8 @@ components:
               detail: The report is unavailable or exceeds 10,000 matching requests. Narrow the date range or resource filters if the capacity limit is exceeded.
               meta:
                 request_id: 11111111-1111-4111-8111-111111111111
-    GatewayError429:
-      description: Rate limited.
+    GatewayError400:
+      description: Invalid fields or values (invalid_request), or token-key budget/rate limits outside their supported range (limit_out_of_range).
       headers:
         X-Request-ID:
           schema:
@@ -1460,24 +1566,19 @@ components:
           schema:
             const: no-store
           description: All API responses; application cache is server-side only.
-        Retry-After:
-          schema:
-            type: integer
-            minimum: 1
-          description: Seconds; retrying inference is not idempotent.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ai-gateway-resources_Error'
           example:
             errors:
-            - code: rate_limit_exceeded
+            - code: invalid_request
               title: Request could not be completed
               detail: Check the request and the documented handling for this error.
               meta:
                 request_id: 11111111-1111-4111-8111-111111111111
-    GatewayError503:
-      description: Enforcement/secret/managed route unavailable; fail closed.
+    GatewayError412:
+      description: ETag mismatch.
       headers:
         X-Request-ID:
           schema:
@@ -1488,69 +1589,13 @@ components:
           schema:
             const: no-store
           description: All API responses; application cache is server-side only.
-        Retry-After:
-          schema:
-            type: integer
-            minimum: 1
-          description: Seconds; retrying inference is not idempotent.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ai-gateway-resources_Error'
           example:
             errors:
-            - code: enforcement_unavailable
-              title: Request could not be completed
-              detail: Check the request and the documented handling for this error.
-              meta:
-                request_id: 11111111-1111-4111-8111-111111111111
-    GatewayError40911:
-      description: Expired or invalidated export cursor (cursor_expired). Restart from start_time within the retained window and deduplicate records by id. Waiting and retrying the same cursor cannot recover; this response has no Retry-After header.
-      headers:
-        X-Request-ID:
-          schema:
-            type: string
-            format: uuid
-          description: Server-generated correlation ID.
-        Cache-Control:
-          schema:
-            const: no-store
-          description: All API responses; application cache is server-side only.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ai-gateway_Error'
-          example:
-            errors:
-            - code: cursor_expired
-              title: Request could not be completed
-              detail: Restart from start_time within the retained window and deduplicate records by id.
-              meta:
-                request_id: 11111111-1111-4111-8111-111111111111
-    GatewayError409:
-      description: Membership, idempotency or snapshot conflict.
-      headers:
-        X-Request-ID:
-          schema:
-            type: string
-            format: uuid
-          description: Server-generated correlation ID.
-        Cache-Control:
-          schema:
-            const: no-store
-          description: All API responses; application cache is server-side only.
-        Retry-After:
-          schema:
-            type: integer
-            minimum: 1
-          description: Seconds; retrying inference is not idempotent.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ai-gateway-resources_Error'
-          example:
-            errors:
-            - code: idempotency_conflict
+            - code: precondition_failed
               title: Request could not be completed
               detail: Check the request and the documented handling for this error.
               meta:
@@ -1583,8 +1628,8 @@ components:
               detail: Check the request and the documented handling for this error.
               meta:
                 request_id: 11111111-1111-4111-8111-111111111111
-    ai-gateway_GatewayError400:
-      description: 'Invalid fields, unsupported protocol options, bad page/date range (invalid_request); a well-formed token key limit of 0 or above its maximum (limit_out_of_range). prompt_blocked / response_blocked: the group guardrail policy blocked the prompt or the generated response. invalid_metadata: an authenticated inference request''s x-ltg-metadata header is not a valid RequestMetadata object; the response never echoes the header.'
+    GatewayError428:
+      description: If-Match required.
       headers:
         X-Request-ID:
           schema:
@@ -1595,46 +1640,19 @@ components:
           schema:
             const: no-store
           description: All API responses; application cache is server-side only.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ai-gateway_Error'
-          example:
-            errors:
-            - code: invalid_request
-              title: Request could not be completed
-              detail: Check the request and the documented handling for this error.
-              meta:
-                request_id: 11111111-1111-4111-8111-111111111111
-    GatewayError401:
-      description: Wrong/missing credential for this plane.
-      headers:
-        X-Request-ID:
-          schema:
-            type: string
-            format: uuid
-          description: Server-generated correlation ID.
-        Cache-Control:
-          schema:
-            const: no-store
-          description: All API responses; application cache is server-side only.
-        WWW-Authenticate:
-          schema:
-            type: string
-          description: Bearer challenge for this plane; no provider/master credential disclosure.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ai-gateway-resources_Error'
           example:
             errors:
-            - code: unauthorized
+            - code: precondition_required
               title: Request could not be completed
               detail: Check the request and the documented handling for this error.
               meta:
                 request_id: 11111111-1111-4111-8111-111111111111
-    GatewayError504:
-      description: 'upstream_timeout: as 502 upstream_error, but the last admitted attempt timed out waiting for the provider (connect, read or write timeout, the attempt deadline, or x-ltg-request-timeout) before its first event. Retrying is not idempotent.'
+    GatewayError404:
+      description: Absent or foreign-account resource (indistinguishable).
       headers:
         X-Request-ID:
           schema:
@@ -1645,41 +1663,13 @@ components:
           schema:
             const: no-store
           description: All API responses; application cache is server-side only.
-        Retry-After:
-          schema:
-            type: integer
-            minimum: 1
-          description: Seconds; retrying inference is not idempotent.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ai-gateway-resources_Error'
           example:
             errors:
-            - code: invalid_request
-              title: Request could not be completed
-              detail: Check the request and the documented handling for this error.
-              meta:
-                request_id: 11111111-1111-4111-8111-111111111111
-    ai-gateway-spend_GatewayError400:
-      description: 'Invalid fields, unsupported protocol options, bad page/date range (invalid_request); a well-formed token key limit of 0 or above its maximum (limit_out_of_range). prompt_blocked / response_blocked: the group guardrail policy blocked the prompt or the generated response. invalid_metadata: an authenticated inference request''s x-ltg-metadata header is not a valid RequestMetadata object; the response never echoes the header.'
-      headers:
-        X-Request-ID:
-          schema:
-            type: string
-            format: uuid
-          description: Server-generated correlation ID.
-        Cache-Control:
-          schema:
-            const: no-store
-          description: All API responses; application cache is server-side only.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ai-gateway-spend_Error'
-          example:
-            errors:
-            - code: invalid_request
+            - code: not_found
               title: Request could not be completed
               detail: Check the request and the documented handling for this error.
               meta:
@@ -1712,8 +1702,8 @@ components:
               detail: The usage export page could not be completed.
               meta:
                 request_id: 11111111-1111-4111-8111-111111111111
-    GatewayError412:
-      description: ETag mismatch.
+    GatewayError503:
+      description: Enforcement/secret/managed route unavailable; fail closed.
       headers:
         X-Request-ID:
           schema:
@@ -1724,19 +1714,24 @@ components:
           schema:
             const: no-store
           description: All API responses; application cache is server-side only.
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 1
+          description: Seconds; retrying inference is not idempotent.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ai-gateway-resources_Error'
           example:
             errors:
-            - code: precondition_failed
+            - code: enforcement_unavailable
               title: Request could not be completed
               detail: Check the request and the documented handling for this error.
               meta:
                 request_id: 11111111-1111-4111-8111-111111111111
-    GatewayError403:
-      description: Blocked/expired, exhausted budget or disallowed model; scope identifies exhausted level.
+    ai-gateway_GatewayError400:
+      description: 'Invalid fields, unsupported protocol options, bad page/date range (invalid_request); a well-formed token key limit of 0 or above its maximum (limit_out_of_range). prompt_blocked / response_blocked: the group guardrail policy blocked the prompt or the generated response. invalid_metadata: an authenticated inference request''s x-ltg-metadata header is not a valid RequestMetadata object; the response never echoes the header.'
       headers:
         X-Request-ID:
           schema:
@@ -1750,30 +1745,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ai-gateway-resources_Error'
-          example:
-            errors:
-            - code: unauthorized
-              title: Request could not be completed
-              detail: Check the request and the documented handling for this error.
-              meta:
-                request_id: 11111111-1111-4111-8111-111111111111
-    GatewayError400:
-      description: Invalid fields or values (invalid_request), or token-key budget/rate limits outside their supported range (limit_out_of_range).
-      headers:
-        X-Request-ID:
-          schema:
-            type: string
-            format: uuid
-          description: Server-generated correlation ID.
-        Cache-Control:
-          schema:
-            const: no-store
-          description: All API responses; application cache is server-side only.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ai-gateway-resources_Error'
+            $ref: '#/components/schemas/ai-gateway_Error'
           example:
             errors:
             - code: invalid_request
@@ -1781,7 +1753,185 @@ components:
               detail: Check the request and the documented handling for this error.
               meta:
                 request_id: 11111111-1111-4111-8111-111111111111
+    ai-gateway-spend_GatewayError409:
+      description: The snapshot is missing, invalid, expired or does not match the account, range, filters or page size. Correct the parameters to match a valid snapshot, or restart at page[number]=1 without page[snapshot] to obtain a new snapshot.
+      headers:
+        X-Request-ID:
+          schema:
+            type: string
+            format: uuid
+          description: Server-generated correlation ID.
+        Cache-Control:
+          schema:
+            const: no-store
+          description: All API responses; application cache is server-side only.
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 1
+          description: Advisory delay in seconds. Waiting does not repair a missing, invalid, expired or mismatched snapshot. Correct the parameters to match a valid snapshot, or restart at page[number]=1 without page[snapshot]; do not replay an unchanged invalid snapshot request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ai-gateway-spend_Error'
+          example:
+            errors:
+            - code: conflict
+              title: Snapshot conflict
+              detail: Correct the parameters to match a valid snapshot, or restart at page[number]=1 without page[snapshot].
+              meta:
+                request_id: 11111111-1111-4111-8111-111111111111
   schemas:
+    Money:
+      type: number
+      minimum: 0
+      maximum: 1000000000
+      multipleOf: 1.0e-06
+      description: USD, decimal precision at most 6 places; parse exactly to integer micro-USD, never binary float accounting.
+    UsageMetrics:
+      type: object
+      additionalProperties: false
+      properties:
+        requests:
+          type: integer
+          minimum: 0
+        input_tokens:
+          type: integer
+          minimum: 0
+        output_tokens:
+          type: integer
+          minimum: 0
+        unknown_requests:
+          type: integer
+          minimum: 0
+        cache_hits:
+          type: integer
+          minimum: 0
+        succeeded_requests:
+          type: integer
+          minimum: 0
+        failed_requests:
+          type: integer
+          minimum: 0
+        partial_requests:
+          type: integer
+          minimum: 0
+        spend:
+          $ref: '#/components/schemas/Money'
+        reserved_spend:
+          $ref: '#/components/schemas/Money'
+      required:
+      - requests
+      - input_tokens
+      - output_tokens
+      - unknown_requests
+      - cache_hits
+      - succeeded_requests
+      - failed_requests
+      - partial_requests
+      - spend
+      - reserved_spend
+    ai-gateway-resources_Scope:
+      type: string
+      enum:
+      - token_group
+      - token_user
+      - token_key
+      - end_user
+    BudgetDuration:
+      type:
+      - string
+      - 'null'
+      enum:
+      - 1d
+      - 7d
+      - 30d
+      - null
+    UsageExportGuardrailEvaluation:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          pattern: ^grd_[0-9a-f-]{36}$
+        type:
+          const: guardrail.evaluation
+        schema_version:
+          const: 1
+        request_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        token_group_id:
+          type: string
+          format: uuid
+        token_user_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        token_key_id:
+          type: string
+          format: uuid
+        end_user_id:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 256
+            pattern: ^[^\u0000-\u001f\u007f]+$
+          - type: 'null'
+        model:
+          type: string
+          minLength: 1
+          maxLength: 256
+          pattern: ^[^\u0000-\u001f\u007f]+$
+        stage:
+          type: string
+          enum:
+          - prompt
+          - response
+        outcome:
+          type: string
+          enum:
+          - evaluated
+          - flagged
+          - blocked
+          - unevaluated
+        findings:
+          type: array
+          items:
+            $ref: '#/components/schemas/GuardrailFinding'
+        evaluation_input_tokens:
+          anyOf:
+          - type: integer
+            minimum: 0
+          - type: 'null'
+        evaluation_output_tokens:
+          anyOf:
+          - type: integer
+            minimum: 0
+          - type: 'null'
+        metadata:
+          $ref: '#/components/schemas/RequestMetadata'
+      required:
+      - id
+      - type
+      - schema_version
+      - request_id
+      - created_at
+      - token_group_id
+      - token_user_id
+      - token_key_id
+      - end_user_id
+      - model
+      - stage
+      - outcome
+      - findings
+      - evaluation_input_tokens
+      - evaluation_output_tokens
+      - metadata
     TokenGroupPatch:
       type: object
       additionalProperties: false
@@ -1939,125 +2089,19 @@ components:
         blocked:
           type: boolean
       minProperties: 1
-    ai-gateway-spend_Error:
+    SpendEvent:
       type: object
       additionalProperties: false
       properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/ErrorItem'
-          minItems: 1
-      required:
-      - errors
-    ai-gateway-resources_PageMeta:
-      type: object
-      additionalProperties: false
-      properties:
-        page_number:
-          type: integer
-          minimum: 1
-        page_size:
-          type: integer
-          minimum: 1
-          maximum: 100
-        has_more:
-          type: boolean
-        snapshot:
+        id:
           type: string
-          minLength: 1
-          maxLength: 256
-          pattern: ^[^\u0000-\u001f\u007f]+$
-      required:
-      - page_number
-      - page_size
-      - has_more
-      - snapshot
-    SpendSummaryRow:
-      type: object
-      additionalProperties: false
-      properties:
-        dimension_id:
-          anyOf:
-          - type: string
-            minLength: 1
-            maxLength: 256
-            pattern: ^[^\u0000-\u001f\u007f]+$
-          - type: 'null'
-        name:
-          anyOf:
-          - type: string
-            minLength: 1
-            maxLength: 256
-            pattern: ^[^\u0000-\u001f\u007f]+$
-          - type: 'null'
-        token_group_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-        token_user_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-        token_key_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-        end_user_id:
-          anyOf:
-          - type: string
-            minLength: 1
-            maxLength: 256
-            pattern: ^[^\u0000-\u001f\u007f]+$
-          - type: 'null'
-        spend:
-          $ref: '#/components/schemas/Money'
-        requests:
-          type: integer
-          minimum: 0
-        input_tokens:
-          type: integer
-          minimum: 0
-        output_tokens:
-          type: integer
-          minimum: 0
-        unknown_requests:
-          type: integer
-          minimum: 0
-        reserved_spend:
-          $ref: '#/components/schemas/Money'
-        metadata_key:
+          format: uuid
+        request_id:
           type: string
-          pattern: ^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$
-          description: 'Present only for group_by=metadata:<key>: the tag key. dimension_id is then the tag value in text form (booleans as true/false, integers in decimal), or null for requests without the key; name is null.'
-      required:
-      - dimension_id
-      - name
-      - spend
-      - requests
-      - input_tokens
-      - output_tokens
-      - unknown_requests
-      - reserved_spend
-    TokenKeyCreate:
-      type: object
-      additionalProperties: false
-      properties:
-        max_parallel_requests:
-          anyOf:
-          - type: integer
-            minimum: 1
-            maximum: 1000
-            description: Optional maximum concurrent reserved/dispatched cache misses across replicas. Null means no concurrency cap. Cache hits do not consume slots; unknown usage retains its budget hold without a slot.
-          - type: 'null'
-        name:
+          format: uuid
+        created_at:
           type: string
-          minLength: 1
-          maxLength: 256
-          pattern: ^[^\u0000-\u001f\u007f]+$
+          format: date-time
         token_group_id:
           type: string
           format: uuid
@@ -2066,65 +2110,108 @@ components:
           - type: string
             format: uuid
           - type: 'null'
-        max_budget:
-          anyOf:
-          - $ref: '#/components/schemas/Money'
-            minimum: 1.0e-06
-            maximum: 1000
-          - type: 'null'
-          description: 'Omitted or null defaults to the maximum (1000 USD) (on a blocked key, null is kept until the key is unblocked); a value below the minimum (0.000001 USD) or above the maximum is rejected with 400 limit_out_of_range; a malformed value (negative, wrong type or precision) is 400 invalid_request. Block the key (blocked: true) to deny it; blocking is always accepted. The default budget is lifetime unless budget_duration is set. Budgets and spend are an enforcement guard computed at one flat placeholder rate for every Telnyx-hosted model (rate_version telnyx-reference-v1: 5 USD per million input and 15 USD per million output tokens), not the customer''s bill; Telnyx Inference usage is billed separately at the model''s actual price.'
-        budget_duration:
-          $ref: '#/components/schemas/BudgetDuration'
-        tpm_limit:
-          anyOf:
-          - type: integer
-            minimum: 1
-            maximum: 10000000
-          - type: 'null'
-          description: 'Omitted or null defaults to the maximum (10000000) (on a blocked key, null is kept until the key is unblocked); a value below the minimum (1) or above the maximum is rejected with 400 limit_out_of_range; a malformed value (negative, wrong type or precision) is 400 invalid_request. Block the key (blocked: true) to deny it; blocking is always accepted.'
-        rpm_limit:
-          anyOf:
-          - type: integer
-            minimum: 1
-            maximum: 6000
-          - type: 'null'
-          description: 'Omitted or null defaults to the maximum (6000) (on a blocked key, null is kept until the key is unblocked); a value below the minimum (1) or above the maximum is rejected with 400 limit_out_of_range; a malformed value (negative, wrong type or precision) is 400 invalid_request. Block the key (blocked: true) to deny it; blocking is always accepted.'
-        allowed_models:
-          anyOf:
-          - type: array
-            items:
-              type: string
-              minLength: 1
-              maxLength: 256
-              pattern: ^[^\u0000-\u001f\u007f]+$
-            uniqueItems: true
-            maxItems: 1000
-          - type: 'null'
-        expires_at:
+        token_key_id:
+          type: string
+          format: uuid
+        end_user_id:
           anyOf:
           - type: string
-            format: date-time
+            minLength: 1
+            maxLength: 256
+            pattern: ^[^\u0000-\u001f\u007f]+$
           - type: 'null'
-        blocked:
+        model:
+          type: string
+          minLength: 1
+          maxLength: 256
+          pattern: ^[^\u0000-\u001f\u007f]+$
+          description: Public alias that served (the last attempt); rate_version, biller and provider_key_id follow it.
+        requested_model:
+          type: string
+          minLength: 1
+          maxLength: 256
+          pattern: ^[^\u0000-\u001f\u007f]+$
+          description: Public alias the caller requested; differs from model only when a group fallback served.
+        attempts:
+          type: integer
+          minimum: 0
+          description: Provider attempts begun for the request (fallbacks included); 0 for a cache hit. Token and cost totals sum every attempt.
+        input_tokens:
+          anyOf:
+          - type: integer
+            minimum: 0
+          - type: 'null'
+        output_tokens:
+          anyOf:
+          - type: integer
+            minimum: 0
+          - type: 'null'
+        cost:
+          anyOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+        status:
+          type: string
+          enum:
+          - succeeded
+          - failed
+          - partial
+          - unknown
+        cache_hit:
           type: boolean
-        required_end_user_id:
-          type: boolean
-          default: false
-          description: Require a nonempty caller-asserted end-user ID; not proof of identity.
+        usage_status:
+          type: string
+          enum:
+          - known
+          - unknown
+          - reconciled
+        biller:
+          type: string
+          enum:
+          - telnyx
+          - provider
+          - none
+        configuration_version:
+          type: integer
+          minimum: 1
+        rate_version:
+          type: string
+          minLength: 1
+          maxLength: 256
+          pattern: ^[^\u0000-\u001f\u007f]+$
+        provider_key_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        reservation_micro_usd:
+          type: integer
+          minimum: 0
+        metadata:
+          $ref: '#/components/schemas/RequestMetadata'
       required:
-      - name
+      - id
+      - request_id
+      - created_at
       - token_group_id
-    ai-gateway_Error:
-      type: object
-      additionalProperties: false
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/ErrorItem'
-          minItems: 1
-      required:
-      - errors
+      - token_user_id
+      - token_key_id
+      - end_user_id
+      - model
+      - requested_model
+      - attempts
+      - input_tokens
+      - output_tokens
+      - cost
+      - status
+      - cache_hit
+      - usage_status
+      - biller
+      - configuration_version
+      - rate_version
+      - provider_key_id
+      - reservation_micro_usd
+      - metadata
     TokenGroup:
       type: object
       additionalProperties: false
@@ -2331,140 +2418,316 @@ components:
       - reserved_spend
       - budget_started_at
       - resets_at
-    GuardrailFinding:
+    TokenKeyCreate:
       type: object
       additionalProperties: false
       properties:
-        detector:
-          type: string
-          enum:
-          - secrets
-          - dlp
-          - safety
-        code:
+        max_parallel_requests:
+          anyOf:
+          - type: integer
+            minimum: 1
+            maximum: 1000
+            description: Optional maximum concurrent reserved/dispatched cache misses across replicas. Null means no concurrency cap. Cache hits do not consume slots; unknown usage retains its budget hold without a slot.
+          - type: 'null'
+        name:
           type: string
           minLength: 1
           maxLength: 256
           pattern: ^[^\u0000-\u001f\u007f]+$
-        count:
-          type: integer
-          minimum: 0
-        action:
+        token_group_id:
           type: string
-          enum:
-          - flag
-          - block
-      required:
-      - detector
-      - code
-      - count
-      - action
-    UsageExportRecord:
-      oneOf:
-      - $ref: '#/components/schemas/UsageExportInferenceRequest'
-      - $ref: '#/components/schemas/UsageExportGuardrailEvaluation'
-      discriminator:
-        propertyName: type
-        mapping:
-          inference.request: '#/components/schemas/UsageExportInferenceRequest'
-          guardrail.evaluation: '#/components/schemas/UsageExportGuardrailEvaluation'
-    ai-gateway-spend_PageMeta:
-      type: object
-      additionalProperties: false
-      properties:
-        page_number:
-          type: integer
-          minimum: 1
-        page_size:
-          type: integer
-          minimum: 1
-          maximum: 100
-        has_more:
-          type: boolean
-        snapshot:
-          type: string
-          minLength: 1
-          maxLength: 256
-          pattern: ^[^\u0000-\u001f\u007f]+$
-      required:
-      - page_number
-      - page_size
-      - has_more
-      - snapshot
-    ErrorItem:
-      type: object
-      additionalProperties: false
-      properties:
-        code:
-          type: string
-          enum:
-          - invalid_request
-          - invalid_token_key
-          - unauthorized
-          - token_key_blocked
-          - resource_blocked
-          - budget_exceeded
-          - end_user_budget_exceeded
-          - model_not_in_catalog
-          - rate_limit_exceeded
-          - concurrency_limit_exceeded
-          - not_found
-          - conflict
-          - idempotency_conflict
-          - precondition_failed
-          - precondition_required
-          - enforcement_unavailable
-          - upstream_error
-          - upstream_timeout
-          - limit_out_of_range
-          - prompt_blocked
-          - response_blocked
-          - invalid_metadata
-          - cursor_expired
-        title:
-          type: string
-        detail:
-          type: string
-        meta:
-          type: object
-          additionalProperties: false
-          properties:
-            scope:
-              $ref: '#/components/schemas/ai-gateway-resources_Scope'
-            resets_at:
-              anyOf:
-              - type: string
-                format: date-time
-              - type: 'null'
-            request_id:
+          format: uuid
+        token_user_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        max_budget:
+          anyOf:
+          - $ref: '#/components/schemas/Money'
+            minimum: 1.0e-06
+            maximum: 1000
+          - type: 'null'
+          description: 'Omitted or null defaults to the maximum (1000 USD) (on a blocked key, null is kept until the key is unblocked); a value below the minimum (0.000001 USD) or above the maximum is rejected with 400 limit_out_of_range; a malformed value (negative, wrong type or precision) is 400 invalid_request. Block the key (blocked: true) to deny it; blocking is always accepted. The default budget is lifetime unless budget_duration is set. Budgets and spend are an enforcement guard computed at one flat placeholder rate for every Telnyx-hosted model (rate_version telnyx-reference-v1: 5 USD per million input and 15 USD per million output tokens), not the customer''s bill; Telnyx Inference usage is billed separately at the model''s actual price.'
+        budget_duration:
+          $ref: '#/components/schemas/BudgetDuration'
+        tpm_limit:
+          anyOf:
+          - type: integer
+            minimum: 1
+            maximum: 10000000
+          - type: 'null'
+          description: 'Omitted or null defaults to the maximum (10000000) (on a blocked key, null is kept until the key is unblocked); a value below the minimum (1) or above the maximum is rejected with 400 limit_out_of_range; a malformed value (negative, wrong type or precision) is 400 invalid_request. Block the key (blocked: true) to deny it; blocking is always accepted.'
+        rpm_limit:
+          anyOf:
+          - type: integer
+            minimum: 1
+            maximum: 6000
+          - type: 'null'
+          description: 'Omitted or null defaults to the maximum (6000) (on a blocked key, null is kept until the key is unblocked); a value below the minimum (1) or above the maximum is rejected with 400 limit_out_of_range; a malformed value (negative, wrong type or precision) is 400 invalid_request. Block the key (blocked: true) to deny it; blocking is always accepted.'
+        allowed_models:
+          anyOf:
+          - type: array
+            items:
               type: string
-              format: uuid
-          required:
-          - request_id
+              minLength: 1
+              maxLength: 256
+              pattern: ^[^\u0000-\u001f\u007f]+$
+            uniqueItems: true
+            maxItems: 1000
+          - type: 'null'
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        blocked:
+          type: boolean
+        required_end_user_id:
+          type: boolean
+          default: false
+          description: Require a nonempty caller-asserted end-user ID; not proof of identity.
       required:
-      - code
-      - title
-      - detail
-      - meta
-    SpendGroupBy:
-      anyOf:
-      - $ref: '#/components/schemas/ai-gateway-spend_Scope'
-      - type: string
-        pattern: ^metadata:[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$
-        description: Group by one request tag key. Keys starting with ltg_, telnyx_, litellm_ or cf_ (any case) are rejected.
-    TokenKeyList:
+      - name
+      - token_group_id
+    TokenKeyCreated:
       type: object
       additionalProperties: false
       properties:
-        data:
+        record_type:
+          const: token_key
+        id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          minimum: 1
+        max_parallel_requests:
+          anyOf:
+          - type: integer
+            minimum: 1
+            maximum: 1000
+            description: Optional maximum concurrent reserved/dispatched cache misses across replicas. Null means no concurrency cap. Cache hits do not consume slots; unknown usage retains its budget hold without a slot.
+          - type: 'null'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 256
+          pattern: ^[^\u0000-\u001f\u007f]+$
+        token_group_id:
+          type: string
+          format: uuid
+        token_user_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        max_budget:
+          anyOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+          description: Stored key limit; set to the maximum when the key was written without one (on a blocked key, null is kept until the key is unblocked).
+        budget_duration:
+          $ref: '#/components/schemas/BudgetDuration'
+        tpm_limit:
+          anyOf:
+          - type: integer
+            minimum: 0
+          - type: 'null'
+          description: Stored key limit; set to the maximum when the key was written without one (on a blocked key, null is kept until the key is unblocked).
+        rpm_limit:
+          anyOf:
+          - type: integer
+            minimum: 0
+          - type: 'null'
+          description: Stored key limit; set to the maximum when the key was written without one (on a blocked key, null is kept until the key is unblocked).
+        allowed_models:
+          anyOf:
+          - type: array
+            items:
+              type: string
+              minLength: 1
+              maxLength: 256
+              pattern: ^[^\u0000-\u001f\u007f]+$
+            uniqueItems: true
+            maxItems: 1000
+          - type: 'null'
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        blocked:
+          type: boolean
+        required_end_user_id:
+          type: boolean
+          default: false
+          description: Require a nonempty caller-asserted end-user ID; not proof of identity.
+        spend:
+          $ref: '#/components/schemas/Money'
+        reserved_spend:
+          $ref: '#/components/schemas/Money'
+        budget_started_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        resets_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        provisioning:
+          type: string
+          enum:
+          - ready
+          - pending
+          - unavailable
+          - inactive
+          - unsupported
+          - unknown
+          description: 'Provisioning state of the key''s current policy. `pending`: retry readiness with bounded backoff (treat `unknown` the same). `inactive` and `unsupported` are terminal until the key, group, user or catalog changes. `unavailable` means provisioning is stuck and is retried slowly; surface it. Absent while the gateway runs in compatibility mode.'
+        token:
+          type: string
+          pattern: ^ltg_sk_[A-Za-z0-9_-]+$
+          readOnly: true
+      required:
+      - record_type
+      - id
+      - created_at
+      - updated_at
+      - version
+      - name
+      - token_group_id
+      - token_user_id
+      - max_budget
+      - budget_duration
+      - tpm_limit
+      - rpm_limit
+      - allowed_models
+      - expires_at
+      - blocked
+      - required_end_user_id
+      - spend
+      - reserved_spend
+      - budget_started_at
+      - resets_at
+      - token
+    ai-gateway_Error:
+      type: object
+      additionalProperties: false
+      properties:
+        errors:
           type: array
           items:
-            $ref: '#/components/schemas/TokenKey'
-        meta:
-          $ref: '#/components/schemas/ai-gateway-resources_PageMeta'
+            $ref: '#/components/schemas/ErrorItem'
+          minItems: 1
       required:
-      - data
-      - meta
+      - errors
+    GuardrailEvent:
+      type: object
+      additionalProperties: false
+      properties:
+        record_type:
+          const: guardrail_event
+        id:
+          type: string
+          format: uuid
+        request_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        token_group_id:
+          type: string
+          format: uuid
+        token_user_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        token_key_id:
+          type: string
+          format: uuid
+        end_user_id:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 256
+            pattern: ^[^\u0000-\u001f\u007f]+$
+          - type: 'null'
+        model:
+          type: string
+          minLength: 1
+          maxLength: 256
+          pattern: ^[^\u0000-\u001f\u007f]+$
+        stage:
+          type: string
+          enum:
+          - prompt
+          - response
+        outcome:
+          type: string
+          enum:
+          - evaluated
+          - flagged
+          - blocked
+          - unevaluated
+        findings:
+          type: array
+          items:
+            $ref: '#/components/schemas/GuardrailFinding'
+        evaluation_input_tokens:
+          anyOf:
+          - type: integer
+            minimum: 0
+          - type: 'null'
+        evaluation_output_tokens:
+          anyOf:
+          - type: integer
+            minimum: 0
+          - type: 'null'
+        metadata:
+          $ref: '#/components/schemas/RequestMetadata'
+      required:
+      - record_type
+      - id
+      - request_id
+      - created_at
+      - token_group_id
+      - token_user_id
+      - token_key_id
+      - end_user_id
+      - model
+      - stage
+      - outcome
+      - findings
+      - evaluation_input_tokens
+      - evaluation_output_tokens
+      - metadata
+    RequestMetadata:
+      type: object
+      description: 'Customer request tags from the x-ltg-metadata header: up to 5 entries. Keys are case-sensitive; keys starting with ltg_, telnyx_, litellm_ or cf_ (any case) are reserved. Values are strings (1-256 characters, no control or format characters), integers within +/-9007199254740991, or booleans; floats, null, objects and arrays are rejected. Values that look like credentials are rejected. Tags are attribution only: never forwarded upstream, never part of the response cache key, never used for budgets or routing. An untagged request reports {}.'
+      maxProperties: 5
+      propertyNames:
+        pattern: ^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$
+      additionalProperties:
+        anyOf:
+        - type: string
+          minLength: 1
+          maxLength: 256
+          pattern: ^[^\u0000-\u001f\u007f-\u009f]+$
+        - type: integer
+          minimum: -9007199254740991
+          maximum: 9007199254740991
+        - type: boolean
     GatewayUsage:
       type: object
       additionalProperties: false
@@ -2633,104 +2896,14 @@ components:
       required:
       - data
       - meta
-    UsageExportGuardrailEvaluation:
+    TokenKeyCreatedResponse:
       type: object
       additionalProperties: false
       properties:
-        id:
-          type: string
-          pattern: ^grd_[0-9a-f-]{36}$
-        type:
-          const: guardrail.evaluation
-        schema_version:
-          const: 1
-        request_id:
-          type: string
-          format: uuid
-        created_at:
-          type: string
-          format: date-time
-        token_group_id:
-          type: string
-          format: uuid
-        token_user_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-        token_key_id:
-          type: string
-          format: uuid
-        end_user_id:
-          anyOf:
-          - type: string
-            minLength: 1
-            maxLength: 256
-            pattern: ^[^\u0000-\u001f\u007f]+$
-          - type: 'null'
-        model:
-          type: string
-          minLength: 1
-          maxLength: 256
-          pattern: ^[^\u0000-\u001f\u007f]+$
-        stage:
-          type: string
-          enum:
-          - prompt
-          - response
-        outcome:
-          type: string
-          enum:
-          - evaluated
-          - flagged
-          - blocked
-          - unevaluated
-        findings:
-          type: array
-          items:
-            $ref: '#/components/schemas/GuardrailFinding'
-        evaluation_input_tokens:
-          anyOf:
-          - type: integer
-            minimum: 0
-          - type: 'null'
-        evaluation_output_tokens:
-          anyOf:
-          - type: integer
-            minimum: 0
-          - type: 'null'
-        metadata:
-          $ref: '#/components/schemas/RequestMetadata'
+        data:
+          $ref: '#/components/schemas/TokenKeyCreated'
       required:
-      - id
-      - type
-      - schema_version
-      - request_id
-      - created_at
-      - token_group_id
-      - token_user_id
-      - token_key_id
-      - end_user_id
-      - model
-      - stage
-      - outcome
-      - findings
-      - evaluation_input_tokens
-      - evaluation_output_tokens
-      - metadata
-    Money:
-      type: number
-      minimum: 0
-      maximum: 1000000000
-      multipleOf: 1.0e-06
-      description: USD, decimal precision at most 6 places; parse exactly to integer micro-USD, never binary float accounting.
-    ai-gateway-spend_Scope:
-      type: string
-      enum:
-      - token_group
-      - token_user
-      - token_key
-      - end_user
+      - data
     TokenGroupResponse:
       type: object
       additionalProperties: false
@@ -2739,422 +2912,6 @@ components:
           $ref: '#/components/schemas/TokenGroup'
       required:
       - data
-    ai-gateway-resources_Scope:
-      type: string
-      enum:
-      - token_group
-      - token_user
-      - token_key
-      - end_user
-    GuardrailEvent:
-      type: object
-      additionalProperties: false
-      properties:
-        record_type:
-          const: guardrail_event
-        id:
-          type: string
-          format: uuid
-        request_id:
-          type: string
-          format: uuid
-        created_at:
-          type: string
-          format: date-time
-        token_group_id:
-          type: string
-          format: uuid
-        token_user_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-        token_key_id:
-          type: string
-          format: uuid
-        end_user_id:
-          anyOf:
-          - type: string
-            minLength: 1
-            maxLength: 256
-            pattern: ^[^\u0000-\u001f\u007f]+$
-          - type: 'null'
-        model:
-          type: string
-          minLength: 1
-          maxLength: 256
-          pattern: ^[^\u0000-\u001f\u007f]+$
-        stage:
-          type: string
-          enum:
-          - prompt
-          - response
-        outcome:
-          type: string
-          enum:
-          - evaluated
-          - flagged
-          - blocked
-          - unevaluated
-        findings:
-          type: array
-          items:
-            $ref: '#/components/schemas/GuardrailFinding'
-        evaluation_input_tokens:
-          anyOf:
-          - type: integer
-            minimum: 0
-          - type: 'null'
-        evaluation_output_tokens:
-          anyOf:
-          - type: integer
-            minimum: 0
-          - type: 'null'
-        metadata:
-          $ref: '#/components/schemas/RequestMetadata'
-      required:
-      - record_type
-      - id
-      - request_id
-      - created_at
-      - token_group_id
-      - token_user_id
-      - token_key_id
-      - end_user_id
-      - model
-      - stage
-      - outcome
-      - findings
-      - evaluation_input_tokens
-      - evaluation_output_tokens
-      - metadata
-    TokenGroupCreate:
-      type: object
-      additionalProperties: false
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 256
-          pattern: ^[^\u0000-\u001f\u007f]+$
-        max_budget:
-          anyOf:
-          - $ref: '#/components/schemas/Money'
-          - type: 'null'
-        budget_duration:
-          $ref: '#/components/schemas/BudgetDuration'
-        tpm_limit:
-          anyOf:
-          - type: integer
-            minimum: 0
-          - type: 'null'
-        rpm_limit:
-          anyOf:
-          - type: integer
-            minimum: 0
-          - type: 'null'
-        allowed_models:
-          type: array
-          items:
-            type: string
-            minLength: 1
-            maxLength: 256
-            pattern: ^[^\u0000-\u001f\u007f]+$
-          uniqueItems: true
-          maxItems: 1000
-        max_parallel_requests:
-          anyOf:
-          - type: integer
-            minimum: 1
-            maximum: 1000
-            description: Optional maximum concurrent reserved/dispatched cache misses across replicas. Null means no concurrency cap. Cache hits do not consume slots; unknown usage retains its budget hold without a slot.
-          - type: 'null'
-        cache_ttl:
-          anyOf:
-          - type: integer
-            minimum: 1
-            maximum: 86400
-          - type: 'null'
-        provider_key_ids:
-          type: array
-          items:
-            type: string
-            format: uuid
-          uniqueItems: true
-          maxItems: 1000
-        guardrails:
-          anyOf:
-          - type: object
-            additionalProperties: false
-            properties:
-              secrets:
-                type: object
-                additionalProperties: false
-                properties:
-                  prompt:
-                    type: string
-                    enum:
-                    - ignore
-                    - flag
-                    - block
-                  response:
-                    type: string
-                    enum:
-                    - ignore
-                    - flag
-                    - block
-              dlp:
-                type: object
-                additionalProperties: false
-                properties:
-                  profiles:
-                    type: array
-                    items:
-                      type: string
-                      enum:
-                      - financial
-                      - government_id
-                      - contact
-                    uniqueItems: true
-                  prompt:
-                    type: string
-                    enum:
-                    - ignore
-                    - flag
-                    - block
-                  response:
-                    type: string
-                    enum:
-                    - ignore
-                    - flag
-                    - block
-              streaming:
-                type: string
-                enum:
-                - buffered
-                - passthrough
-            description: Per-group guardrail policy. Missing actions default to ignore. profiles may be listed with both dlp actions ignore (staged, inactive) but a non-ignore dlp action requires at least one profile. streaming defaults to buffered when any response action is block and passthrough otherwise; passthrough with a response block is 400. Findings are codes and counts only; content is never stored. The stored form is echoed back canonicalised (all actions explicit, profiles sorted); {} is stored as an all-ignore policy, null disables.
-          - type: 'null'
-        fallbacks:
-          anyOf:
-          - type: object
-            maxProperties: 1000
-            additionalProperties:
-              type: array
-              items:
-                type: string
-                minLength: 1
-                maxLength: 256
-                pattern: ^[^\u0000-\u001f\u007f]+$
-              minItems: 1
-              maxItems: 3
-              uniqueItems: true
-            description: 'Per-group model fallbacks: primary alias -> ordered list of 1..3 other aliases. Every key and listed alias must be in allowed_models (a PATCH removing a referenced alias is 400); a chain never lists its own key; wildcards are rejected. Chains are one level deep (a step''s own chain is not expanded). Fallback is attempted only for managed routes, only before the first provider event is forwarded, and only to steps the key may use; each attempt is reserved and recorded. {} and null both disable fallbacks.'
-          - type: 'null'
-        retries:
-          anyOf:
-          - type: object
-            additionalProperties: false
-            properties:
-              max_attempts:
-                type: integer
-                minimum: 1
-                maximum: 5
-              retry_delay_ms:
-                type: integer
-                minimum: 0
-                maximum: 5000
-                default: 250
-              backoff:
-                type: string
-                enum:
-                - constant
-                - linear
-                - exponential
-                default: exponential
-              request_timeout_ms:
-                anyOf:
-                - type: integer
-                  minimum: 1000
-                  maximum: 60000
-                - type: 'null'
-            required:
-            - max_attempts
-            description: 'Per-group same-route retries. max_attempts counts the first try of each step (the primary and each fallback) and is the ceiling for the x-ltg-max-attempts request header. A step is retried only when its attempt definitely did no provider work (connection failure before dispatch, or 429/529) before the first provider event; an uncertain failure (timeout, 408/500/502/503/504) moves to the next fallback step instead. max_attempts x (1 + the longest fallback chain) must not exceed 8, else 400. The n-th retry waits retry_delay_ms (constant), retry_delay_ms*n (linear) or retry_delay_ms*2^(n-1) (exponential), at most 5 s and never past the request deadline, then jittered uniformly down to half that value so concurrent retries spread out; a provider Retry-After of at most 5 s is honoured and a longer one moves to the next step. request_timeout_ms applies to streaming requests only: it bounds each attempt''s time to its first provider event and never applies after it. Non-stream requests keep the per-attempt hop and idle bounds (their headers arrive only with the finished completion). retry_delay_ms and backoff are floors for the request knobs. Each planned attempt is reserved (at most 8 per request); unused reservation is released at settlement. Managed routes only. The stored form is echoed back with defaults filled in; null disables retries.'
-          - type: 'null'
-        blocked:
-          type: boolean
-      required:
-      - name
-      - allowed_models
-    SpendSummary:
-      type: object
-      additionalProperties: false
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/SpendSummaryRow'
-        meta:
-          type: object
-          additionalProperties: false
-          properties:
-            page_number:
-              type: integer
-              minimum: 1
-            page_size:
-              type: integer
-              minimum: 1
-              maximum: 100
-            has_more:
-              type: boolean
-            snapshot:
-              type: string
-              minLength: 1
-              maxLength: 256
-              pattern: ^[^\u0000-\u001f\u007f]+$
-            start_date:
-              type: string
-              format: date
-            end_date:
-              type: string
-              format: date
-            group_by:
-              $ref: '#/components/schemas/SpendGroupBy'
-          required:
-          - page_number
-          - page_size
-          - has_more
-          - snapshot
-          - start_date
-          - end_date
-          - group_by
-      required:
-      - data
-      - meta
-    SpendEvent:
-      type: object
-      additionalProperties: false
-      properties:
-        id:
-          type: string
-          format: uuid
-        request_id:
-          type: string
-          format: uuid
-        created_at:
-          type: string
-          format: date-time
-        token_group_id:
-          type: string
-          format: uuid
-        token_user_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-        token_key_id:
-          type: string
-          format: uuid
-        end_user_id:
-          anyOf:
-          - type: string
-            minLength: 1
-            maxLength: 256
-            pattern: ^[^\u0000-\u001f\u007f]+$
-          - type: 'null'
-        model:
-          type: string
-          minLength: 1
-          maxLength: 256
-          pattern: ^[^\u0000-\u001f\u007f]+$
-          description: Public alias that served (the last attempt); rate_version, biller and provider_key_id follow it.
-        requested_model:
-          type: string
-          minLength: 1
-          maxLength: 256
-          pattern: ^[^\u0000-\u001f\u007f]+$
-          description: Public alias the caller requested; differs from model only when a group fallback served.
-        attempts:
-          type: integer
-          minimum: 0
-          description: Provider attempts begun for the request (fallbacks included); 0 for a cache hit. Token and cost totals sum every attempt.
-        input_tokens:
-          anyOf:
-          - type: integer
-            minimum: 0
-          - type: 'null'
-        output_tokens:
-          anyOf:
-          - type: integer
-            minimum: 0
-          - type: 'null'
-        cost:
-          anyOf:
-          - $ref: '#/components/schemas/Money'
-          - type: 'null'
-        status:
-          type: string
-          enum:
-          - succeeded
-          - failed
-          - partial
-          - unknown
-        cache_hit:
-          type: boolean
-        usage_status:
-          type: string
-          enum:
-          - known
-          - unknown
-          - reconciled
-        biller:
-          type: string
-          enum:
-          - telnyx
-          - provider
-          - none
-        configuration_version:
-          type: integer
-          minimum: 1
-        rate_version:
-          type: string
-          minLength: 1
-          maxLength: 256
-          pattern: ^[^\u0000-\u001f\u007f]+$
-        provider_key_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-        reservation_micro_usd:
-          type: integer
-          minimum: 0
-        metadata:
-          $ref: '#/components/schemas/RequestMetadata'
-      required:
-      - id
-      - request_id
-      - created_at
-      - token_group_id
-      - token_user_id
-      - token_key_id
-      - end_user_id
-      - model
-      - requested_model
-      - attempts
-      - input_tokens
-      - output_tokens
-      - cost
-      - status
-      - cache_hit
-      - usage_status
-      - biller
-      - configuration_version
-      - rate_version
-      - provider_key_id
-      - reservation_micro_usd
-      - metadata
     TokenGroupList:
       type: object
       additionalProperties: false
@@ -3168,71 +2925,48 @@ components:
       required:
       - data
       - meta
-    TokenKeyPatch:
+    SpendSummaryRow:
       type: object
       additionalProperties: false
       properties:
-        max_parallel_requests:
-          anyOf:
-          - type: integer
-            minimum: 1
-            maximum: 1000
-            description: Optional maximum concurrent reserved/dispatched cache misses across replicas. Null means no concurrency cap. Cache hits do not consume slots; unknown usage retains its budget hold without a slot.
-          - type: 'null'
-        name:
-          type: string
-          minLength: 1
-          maxLength: 256
-          pattern: ^[^\u0000-\u001f\u007f]+$
-        max_budget:
-          anyOf:
-          - $ref: '#/components/schemas/Money'
-            minimum: 1.0e-06
-            maximum: 1000
-          - type: 'null'
-          description: 'Omitted or null defaults to the maximum (1000 USD) (on a blocked key, null is kept until the key is unblocked); a value below the minimum (0.000001 USD) or above the maximum is rejected with 400 limit_out_of_range; a malformed value (negative, wrong type or precision) is 400 invalid_request. Block the key (blocked: true) to deny it; blocking is always accepted. The default budget is lifetime unless budget_duration is set. Budgets and spend are an enforcement guard computed at one flat placeholder rate for every Telnyx-hosted model (rate_version telnyx-reference-v1: 5 USD per million input and 15 USD per million output tokens), not the customer''s bill; Telnyx Inference usage is billed separately at the model''s actual price.'
-        budget_duration:
-          $ref: '#/components/schemas/BudgetDuration'
-        tpm_limit:
-          anyOf:
-          - type: integer
-            minimum: 1
-            maximum: 10000000
-          - type: 'null'
-          description: 'Omitted or null defaults to the maximum (10000000) (on a blocked key, null is kept until the key is unblocked); a value below the minimum (1) or above the maximum is rejected with 400 limit_out_of_range; a malformed value (negative, wrong type or precision) is 400 invalid_request. Block the key (blocked: true) to deny it; blocking is always accepted.'
-        rpm_limit:
-          anyOf:
-          - type: integer
-            minimum: 1
-            maximum: 6000
-          - type: 'null'
-          description: 'Omitted or null defaults to the maximum (6000) (on a blocked key, null is kept until the key is unblocked); a value below the minimum (1) or above the maximum is rejected with 400 limit_out_of_range; a malformed value (negative, wrong type or precision) is 400 invalid_request. Block the key (blocked: true) to deny it; blocking is always accepted.'
-        allowed_models:
-          anyOf:
-          - type: array
-            items:
-              type: string
-              minLength: 1
-              maxLength: 256
-              pattern: ^[^\u0000-\u001f\u007f]+$
-            uniqueItems: true
-            maxItems: 1000
-          - type: 'null'
-        expires_at:
+        dimension_id:
           anyOf:
           - type: string
-            format: date-time
+            minLength: 1
+            maxLength: 256
+            pattern: ^[^\u0000-\u001f\u007f]+$
           - type: 'null'
-        blocked:
-          type: boolean
-        required_end_user_id:
-          type: boolean
-          description: Require a nonempty caller-asserted end-user ID; not proof of identity. Omission preserves the current requirement.
-      minProperties: 1
-    UsageMetrics:
-      type: object
-      additionalProperties: false
-      properties:
+        name:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 256
+            pattern: ^[^\u0000-\u001f\u007f]+$
+          - type: 'null'
+        token_group_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        token_user_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        token_key_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        end_user_id:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 256
+            pattern: ^[^\u0000-\u001f\u007f]+$
+          - type: 'null'
+        spend:
+          $ref: '#/components/schemas/Money'
         requests:
           type: integer
           minimum: 0
@@ -3245,346 +2979,28 @@ components:
         unknown_requests:
           type: integer
           minimum: 0
-        cache_hits:
-          type: integer
-          minimum: 0
-        succeeded_requests:
-          type: integer
-          minimum: 0
-        failed_requests:
-          type: integer
-          minimum: 0
-        partial_requests:
-          type: integer
-          minimum: 0
-        spend:
-          $ref: '#/components/schemas/Money'
         reserved_spend:
           $ref: '#/components/schemas/Money'
+        metadata_key:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$
+          description: 'Present only for group_by=metadata:<key>: the tag key. dimension_id is then the tag value in text form (booleans as true/false, integers in decimal), or null for requests without the key; name is null.'
       required:
+      - dimension_id
+      - name
+      - spend
       - requests
       - input_tokens
       - output_tokens
       - unknown_requests
-      - cache_hits
-      - succeeded_requests
-      - failed_requests
-      - partial_requests
-      - spend
       - reserved_spend
-    TokenKeyResponse:
-      type: object
-      additionalProperties: false
-      properties:
-        data:
-          $ref: '#/components/schemas/TokenKey'
-      required:
-      - data
-    BudgetDuration:
-      type:
-      - string
-      - 'null'
+    ai-gateway-spend_Scope:
+      type: string
       enum:
-      - 1d
-      - 7d
-      - 30d
-      - null
-    TokenKey:
-      type: object
-      additionalProperties: false
-      properties:
-        record_type:
-          const: token_key
-        id:
-          type: string
-          format: uuid
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-        version:
-          type: integer
-          minimum: 1
-        max_parallel_requests:
-          anyOf:
-          - type: integer
-            minimum: 1
-            maximum: 1000
-            description: Optional maximum concurrent reserved/dispatched cache misses across replicas. Null means no concurrency cap. Cache hits do not consume slots; unknown usage retains its budget hold without a slot.
-          - type: 'null'
-        name:
-          type: string
-          minLength: 1
-          maxLength: 256
-          pattern: ^[^\u0000-\u001f\u007f]+$
-        token_group_id:
-          type: string
-          format: uuid
-        token_user_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-        max_budget:
-          anyOf:
-          - $ref: '#/components/schemas/Money'
-          - type: 'null'
-          description: Stored key limit; set to the maximum when the key was written without one (on a blocked key, null is kept until the key is unblocked).
-        budget_duration:
-          $ref: '#/components/schemas/BudgetDuration'
-        tpm_limit:
-          anyOf:
-          - type: integer
-            minimum: 0
-          - type: 'null'
-          description: Stored key limit; set to the maximum when the key was written without one (on a blocked key, null is kept until the key is unblocked).
-        rpm_limit:
-          anyOf:
-          - type: integer
-            minimum: 0
-          - type: 'null'
-          description: Stored key limit; set to the maximum when the key was written without one (on a blocked key, null is kept until the key is unblocked).
-        allowed_models:
-          anyOf:
-          - type: array
-            items:
-              type: string
-              minLength: 1
-              maxLength: 256
-              pattern: ^[^\u0000-\u001f\u007f]+$
-            uniqueItems: true
-            maxItems: 1000
-          - type: 'null'
-        expires_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-        blocked:
-          type: boolean
-        required_end_user_id:
-          type: boolean
-          default: false
-          description: Require a nonempty caller-asserted end-user ID; not proof of identity.
-        spend:
-          $ref: '#/components/schemas/Money'
-        reserved_spend:
-          $ref: '#/components/schemas/Money'
-        budget_started_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-        resets_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-        provisioning:
-          type: string
-          enum:
-          - ready
-          - pending
-          - unavailable
-          - inactive
-          - unsupported
-          - unknown
-          description: 'Provisioning state of the key''s current policy. `pending`: retry readiness with bounded backoff (treat `unknown` the same). `inactive` and `unsupported` are terminal until the key, group, user or catalog changes. `unavailable` means provisioning is stuck and is retried slowly; surface it. Absent while the gateway runs in compatibility mode.'
-      required:
-      - record_type
-      - id
-      - created_at
-      - updated_at
-      - version
-      - name
-      - token_group_id
-      - token_user_id
-      - max_budget
-      - budget_duration
-      - tpm_limit
-      - rpm_limit
-      - allowed_models
-      - expires_at
-      - blocked
-      - required_end_user_id
-      - spend
-      - reserved_spend
-      - budget_started_at
-      - resets_at
-    SpendEvents:
-      type: object
-      additionalProperties: false
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/SpendEvent'
-        meta:
-          $ref: '#/components/schemas/ai-gateway-spend_PageMeta'
-      required:
-      - data
-      - meta
-    TokenKeyCreated:
-      type: object
-      additionalProperties: false
-      properties:
-        record_type:
-          const: token_key
-        id:
-          type: string
-          format: uuid
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-        version:
-          type: integer
-          minimum: 1
-        max_parallel_requests:
-          anyOf:
-          - type: integer
-            minimum: 1
-            maximum: 1000
-            description: Optional maximum concurrent reserved/dispatched cache misses across replicas. Null means no concurrency cap. Cache hits do not consume slots; unknown usage retains its budget hold without a slot.
-          - type: 'null'
-        name:
-          type: string
-          minLength: 1
-          maxLength: 256
-          pattern: ^[^\u0000-\u001f\u007f]+$
-        token_group_id:
-          type: string
-          format: uuid
-        token_user_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-        max_budget:
-          anyOf:
-          - $ref: '#/components/schemas/Money'
-          - type: 'null'
-          description: Stored key limit; set to the maximum when the key was written without one (on a blocked key, null is kept until the key is unblocked).
-        budget_duration:
-          $ref: '#/components/schemas/BudgetDuration'
-        tpm_limit:
-          anyOf:
-          - type: integer
-            minimum: 0
-          - type: 'null'
-          description: Stored key limit; set to the maximum when the key was written without one (on a blocked key, null is kept until the key is unblocked).
-        rpm_limit:
-          anyOf:
-          - type: integer
-            minimum: 0
-          - type: 'null'
-          description: Stored key limit; set to the maximum when the key was written without one (on a blocked key, null is kept until the key is unblocked).
-        allowed_models:
-          anyOf:
-          - type: array
-            items:
-              type: string
-              minLength: 1
-              maxLength: 256
-              pattern: ^[^\u0000-\u001f\u007f]+$
-            uniqueItems: true
-            maxItems: 1000
-          - type: 'null'
-        expires_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-        blocked:
-          type: boolean
-        required_end_user_id:
-          type: boolean
-          default: false
-          description: Require a nonempty caller-asserted end-user ID; not proof of identity.
-        spend:
-          $ref: '#/components/schemas/Money'
-        reserved_spend:
-          $ref: '#/components/schemas/Money'
-        budget_started_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-        resets_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-        provisioning:
-          type: string
-          enum:
-          - ready
-          - pending
-          - unavailable
-          - inactive
-          - unsupported
-          - unknown
-          description: 'Provisioning state of the key''s current policy. `pending`: retry readiness with bounded backoff (treat `unknown` the same). `inactive` and `unsupported` are terminal until the key, group, user or catalog changes. `unavailable` means provisioning is stuck and is retried slowly; surface it. Absent while the gateway runs in compatibility mode.'
-        token:
-          type: string
-          pattern: ^ltg_sk_[A-Za-z0-9_-]+$
-          readOnly: true
-      required:
-      - record_type
-      - id
-      - created_at
-      - updated_at
-      - version
-      - name
-      - token_group_id
-      - token_user_id
-      - max_budget
-      - budget_duration
-      - tpm_limit
-      - rpm_limit
-      - allowed_models
-      - expires_at
-      - blocked
-      - required_end_user_id
-      - spend
-      - reserved_spend
-      - budget_started_at
-      - resets_at
-      - token
-    UsageExportPage:
-      type: object
-      additionalProperties: false
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/UsageExportRecord'
-          maxItems: 1000
-        meta:
-          type: object
-          additionalProperties: false
-          properties:
-            next_cursor:
-              type: string
-              minLength: 1
-              maxLength: 512
-              pattern: ^[A-Za-z0-9_-]+$
-            has_more:
-              type: boolean
-            horizon_lag_seconds:
-              type: integer
-              minimum: 0
-          required:
-          - next_cursor
-          - has_more
-          - horizon_lag_seconds
-      required:
-      - data
-      - meta
+      - token_group
+      - token_user
+      - token_key
+      - end_user
     UsageExportInferenceRequest:
       type: object
       additionalProperties: false
@@ -3782,30 +3198,129 @@ components:
       - configuration_version
       - rate_version
       - metadata
-    TokenKeyCreatedResponse:
+    TokenKeyPatch:
       type: object
       additionalProperties: false
       properties:
-        data:
-          $ref: '#/components/schemas/TokenKeyCreated'
-      required:
-      - data
-    RequestMetadata:
-      type: object
-      description: 'Customer request tags from the x-ltg-metadata header: up to 5 entries. Keys are case-sensitive; keys starting with ltg_, telnyx_, litellm_ or cf_ (any case) are reserved. Values are strings (1-256 characters, no control or format characters), integers within +/-9007199254740991, or booleans; floats, null, objects and arrays are rejected. Values that look like credentials are rejected. Tags are attribution only: never forwarded upstream, never part of the response cache key, never used for budgets or routing. An untagged request reports {}.'
-      maxProperties: 5
-      propertyNames:
-        pattern: ^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$
-      additionalProperties:
-        anyOf:
-        - type: string
+        max_parallel_requests:
+          anyOf:
+          - type: integer
+            minimum: 1
+            maximum: 1000
+            description: Optional maximum concurrent reserved/dispatched cache misses across replicas. Null means no concurrency cap. Cache hits do not consume slots; unknown usage retains its budget hold without a slot.
+          - type: 'null'
+        name:
+          type: string
           minLength: 1
           maxLength: 256
-          pattern: ^[^\u0000-\u001f\u007f-\u009f]+$
-        - type: integer
-          minimum: -9007199254740991
-          maximum: 9007199254740991
-        - type: boolean
+          pattern: ^[^\u0000-\u001f\u007f]+$
+        max_budget:
+          anyOf:
+          - $ref: '#/components/schemas/Money'
+            minimum: 1.0e-06
+            maximum: 1000
+          - type: 'null'
+          description: 'Omitted or null defaults to the maximum (1000 USD) (on a blocked key, null is kept until the key is unblocked); a value below the minimum (0.000001 USD) or above the maximum is rejected with 400 limit_out_of_range; a malformed value (negative, wrong type or precision) is 400 invalid_request. Block the key (blocked: true) to deny it; blocking is always accepted. The default budget is lifetime unless budget_duration is set. Budgets and spend are an enforcement guard computed at one flat placeholder rate for every Telnyx-hosted model (rate_version telnyx-reference-v1: 5 USD per million input and 15 USD per million output tokens), not the customer''s bill; Telnyx Inference usage is billed separately at the model''s actual price.'
+        budget_duration:
+          $ref: '#/components/schemas/BudgetDuration'
+        tpm_limit:
+          anyOf:
+          - type: integer
+            minimum: 1
+            maximum: 10000000
+          - type: 'null'
+          description: 'Omitted or null defaults to the maximum (10000000) (on a blocked key, null is kept until the key is unblocked); a value below the minimum (1) or above the maximum is rejected with 400 limit_out_of_range; a malformed value (negative, wrong type or precision) is 400 invalid_request. Block the key (blocked: true) to deny it; blocking is always accepted.'
+        rpm_limit:
+          anyOf:
+          - type: integer
+            minimum: 1
+            maximum: 6000
+          - type: 'null'
+          description: 'Omitted or null defaults to the maximum (6000) (on a blocked key, null is kept until the key is unblocked); a value below the minimum (1) or above the maximum is rejected with 400 limit_out_of_range; a malformed value (negative, wrong type or precision) is 400 invalid_request. Block the key (blocked: true) to deny it; blocking is always accepted.'
+        allowed_models:
+          anyOf:
+          - type: array
+            items:
+              type: string
+              minLength: 1
+              maxLength: 256
+              pattern: ^[^\u0000-\u001f\u007f]+$
+            uniqueItems: true
+            maxItems: 1000
+          - type: 'null'
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        blocked:
+          type: boolean
+        required_end_user_id:
+          type: boolean
+          description: Require a nonempty caller-asserted end-user ID; not proof of identity. Omission preserves the current requirement.
+      minProperties: 1
+    GuardrailFinding:
+      type: object
+      additionalProperties: false
+      properties:
+        detector:
+          type: string
+          enum:
+          - secrets
+          - dlp
+          - safety
+        code:
+          type: string
+          minLength: 1
+          maxLength: 256
+          pattern: ^[^\u0000-\u001f\u007f]+$
+        count:
+          type: integer
+          minimum: 0
+        action:
+          type: string
+          enum:
+          - flag
+          - block
+      required:
+      - detector
+      - code
+      - count
+      - action
+    ai-gateway-spend_Error:
+      type: object
+      additionalProperties: false
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorItem'
+          minItems: 1
+      required:
+      - errors
+    ai-gateway-spend_PageMeta:
+      type: object
+      additionalProperties: false
+      properties:
+        page_number:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        has_more:
+          type: boolean
+        snapshot:
+          type: string
+          minLength: 1
+          maxLength: 256
+          pattern: ^[^\u0000-\u001f\u007f]+$
+      required:
+      - page_number
+      - page_size
+      - has_more
+      - snapshot
     ai-gateway-resources_Error:
       type: object
       additionalProperties: false
@@ -3817,16 +3332,492 @@ components:
           minItems: 1
       required:
       - errors
+    TokenKey:
+      type: object
+      additionalProperties: false
+      properties:
+        record_type:
+          const: token_key
+        id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          minimum: 1
+        max_parallel_requests:
+          anyOf:
+          - type: integer
+            minimum: 1
+            maximum: 1000
+            description: Optional maximum concurrent reserved/dispatched cache misses across replicas. Null means no concurrency cap. Cache hits do not consume slots; unknown usage retains its budget hold without a slot.
+          - type: 'null'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 256
+          pattern: ^[^\u0000-\u001f\u007f]+$
+        token_group_id:
+          type: string
+          format: uuid
+        token_user_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        max_budget:
+          anyOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+          description: Stored key limit; set to the maximum when the key was written without one (on a blocked key, null is kept until the key is unblocked).
+        budget_duration:
+          $ref: '#/components/schemas/BudgetDuration'
+        tpm_limit:
+          anyOf:
+          - type: integer
+            minimum: 0
+          - type: 'null'
+          description: Stored key limit; set to the maximum when the key was written without one (on a blocked key, null is kept until the key is unblocked).
+        rpm_limit:
+          anyOf:
+          - type: integer
+            minimum: 0
+          - type: 'null'
+          description: Stored key limit; set to the maximum when the key was written without one (on a blocked key, null is kept until the key is unblocked).
+        allowed_models:
+          anyOf:
+          - type: array
+            items:
+              type: string
+              minLength: 1
+              maxLength: 256
+              pattern: ^[^\u0000-\u001f\u007f]+$
+            uniqueItems: true
+            maxItems: 1000
+          - type: 'null'
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        blocked:
+          type: boolean
+        required_end_user_id:
+          type: boolean
+          default: false
+          description: Require a nonempty caller-asserted end-user ID; not proof of identity.
+        spend:
+          $ref: '#/components/schemas/Money'
+        reserved_spend:
+          $ref: '#/components/schemas/Money'
+        budget_started_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        resets_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        provisioning:
+          type: string
+          enum:
+          - ready
+          - pending
+          - unavailable
+          - inactive
+          - unsupported
+          - unknown
+          description: 'Provisioning state of the key''s current policy. `pending`: retry readiness with bounded backoff (treat `unknown` the same). `inactive` and `unsupported` are terminal until the key, group, user or catalog changes. `unavailable` means provisioning is stuck and is retried slowly; surface it. Absent while the gateway runs in compatibility mode.'
+      required:
+      - record_type
+      - id
+      - created_at
+      - updated_at
+      - version
+      - name
+      - token_group_id
+      - token_user_id
+      - max_budget
+      - budget_duration
+      - tpm_limit
+      - rpm_limit
+      - allowed_models
+      - expires_at
+      - blocked
+      - required_end_user_id
+      - spend
+      - reserved_spend
+      - budget_started_at
+      - resets_at
+    UsageExportPage:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsageExportRecord'
+          maxItems: 1000
+        meta:
+          type: object
+          additionalProperties: false
+          properties:
+            next_cursor:
+              type: string
+              minLength: 1
+              maxLength: 512
+              pattern: ^[A-Za-z0-9_-]+$
+            has_more:
+              type: boolean
+            horizon_lag_seconds:
+              type: integer
+              minimum: 0
+          required:
+          - next_cursor
+          - has_more
+          - horizon_lag_seconds
+      required:
+      - data
+      - meta
+    ErrorItem:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          enum:
+          - invalid_request
+          - invalid_token_key
+          - unauthorized
+          - token_key_blocked
+          - resource_blocked
+          - budget_exceeded
+          - end_user_budget_exceeded
+          - model_not_in_catalog
+          - rate_limit_exceeded
+          - concurrency_limit_exceeded
+          - not_found
+          - conflict
+          - idempotency_conflict
+          - precondition_failed
+          - precondition_required
+          - enforcement_unavailable
+          - upstream_error
+          - upstream_timeout
+          - limit_out_of_range
+          - prompt_blocked
+          - response_blocked
+          - invalid_metadata
+          - cursor_expired
+        title:
+          type: string
+        detail:
+          type: string
+        meta:
+          type: object
+          additionalProperties: false
+          properties:
+            scope:
+              $ref: '#/components/schemas/ai-gateway-resources_Scope'
+            resets_at:
+              anyOf:
+              - type: string
+                format: date-time
+              - type: 'null'
+            request_id:
+              type: string
+              format: uuid
+          required:
+          - request_id
+      required:
+      - code
+      - title
+      - detail
+      - meta
+    ai-gateway-resources_PageMeta:
+      type: object
+      additionalProperties: false
+      properties:
+        page_number:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        has_more:
+          type: boolean
+        snapshot:
+          type: string
+          minLength: 1
+          maxLength: 256
+          pattern: ^[^\u0000-\u001f\u007f]+$
+      required:
+      - page_number
+      - page_size
+      - has_more
+      - snapshot
+    TokenKeyList:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TokenKey'
+        meta:
+          $ref: '#/components/schemas/ai-gateway-resources_PageMeta'
+      required:
+      - data
+      - meta
+    SpendSummary:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpendSummaryRow'
+        meta:
+          type: object
+          additionalProperties: false
+          properties:
+            page_number:
+              type: integer
+              minimum: 1
+            page_size:
+              type: integer
+              minimum: 1
+              maximum: 100
+            has_more:
+              type: boolean
+            snapshot:
+              type: string
+              minLength: 1
+              maxLength: 256
+              pattern: ^[^\u0000-\u001f\u007f]+$
+            start_date:
+              type: string
+              format: date
+            end_date:
+              type: string
+              format: date
+            group_by:
+              $ref: '#/components/schemas/SpendGroupBy'
+          required:
+          - page_number
+          - page_size
+          - has_more
+          - snapshot
+          - start_date
+          - end_date
+          - group_by
+      required:
+      - data
+      - meta
+    SpendGroupBy:
+      anyOf:
+      - $ref: '#/components/schemas/ai-gateway-spend_Scope'
+      - type: string
+        pattern: ^metadata:[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$
+        description: Group by one request tag key. Keys starting with ltg_, telnyx_, litellm_ or cf_ (any case) are rejected.
+    SpendEvents:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpendEvent'
+        meta:
+          $ref: '#/components/schemas/ai-gateway-spend_PageMeta'
+      required:
+      - data
+      - meta
+    TokenKeyResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/TokenKey'
+      required:
+      - data
+    TokenGroupCreate:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 256
+          pattern: ^[^\u0000-\u001f\u007f]+$
+        max_budget:
+          anyOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+        budget_duration:
+          $ref: '#/components/schemas/BudgetDuration'
+        tpm_limit:
+          anyOf:
+          - type: integer
+            minimum: 0
+          - type: 'null'
+        rpm_limit:
+          anyOf:
+          - type: integer
+            minimum: 0
+          - type: 'null'
+        allowed_models:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 256
+            pattern: ^[^\u0000-\u001f\u007f]+$
+          uniqueItems: true
+          maxItems: 1000
+        max_parallel_requests:
+          anyOf:
+          - type: integer
+            minimum: 1
+            maximum: 1000
+            description: Optional maximum concurrent reserved/dispatched cache misses across replicas. Null means no concurrency cap. Cache hits do not consume slots; unknown usage retains its budget hold without a slot.
+          - type: 'null'
+        cache_ttl:
+          anyOf:
+          - type: integer
+            minimum: 1
+            maximum: 86400
+          - type: 'null'
+        provider_key_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          uniqueItems: true
+          maxItems: 1000
+        guardrails:
+          anyOf:
+          - type: object
+            additionalProperties: false
+            properties:
+              secrets:
+                type: object
+                additionalProperties: false
+                properties:
+                  prompt:
+                    type: string
+                    enum:
+                    - ignore
+                    - flag
+                    - block
+                  response:
+                    type: string
+                    enum:
+                    - ignore
+                    - flag
+                    - block
+              dlp:
+                type: object
+                additionalProperties: false
+                properties:
+                  profiles:
+                    type: array
+                    items:
+                      type: string
+                      enum:
+                      - financial
+                      - government_id
+                      - contact
+                    uniqueItems: true
+                  prompt:
+                    type: string
+                    enum:
+                    - ignore
+                    - flag
+                    - block
+                  response:
+                    type: string
+                    enum:
+                    - ignore
+                    - flag
+                    - block
+              streaming:
+                type: string
+                enum:
+                - buffered
+                - passthrough
+            description: Per-group guardrail policy. Missing actions default to ignore. profiles may be listed with both dlp actions ignore (staged, inactive) but a non-ignore dlp action requires at least one profile. streaming defaults to buffered when any response action is block and passthrough otherwise; passthrough with a response block is 400. Findings are codes and counts only; content is never stored. The stored form is echoed back canonicalised (all actions explicit, profiles sorted); {} is stored as an all-ignore policy, null disables.
+          - type: 'null'
+        fallbacks:
+          anyOf:
+          - type: object
+            maxProperties: 1000
+            additionalProperties:
+              type: array
+              items:
+                type: string
+                minLength: 1
+                maxLength: 256
+                pattern: ^[^\u0000-\u001f\u007f]+$
+              minItems: 1
+              maxItems: 3
+              uniqueItems: true
+            description: 'Per-group model fallbacks: primary alias -> ordered list of 1..3 other aliases. Every key and listed alias must be in allowed_models (a PATCH removing a referenced alias is 400); a chain never lists its own key; wildcards are rejected. Chains are one level deep (a step''s own chain is not expanded). Fallback is attempted only for managed routes, only before the first provider event is forwarded, and only to steps the key may use; each attempt is reserved and recorded. {} and null both disable fallbacks.'
+          - type: 'null'
+        retries:
+          anyOf:
+          - type: object
+            additionalProperties: false
+            properties:
+              max_attempts:
+                type: integer
+                minimum: 1
+                maximum: 5
+              retry_delay_ms:
+                type: integer
+                minimum: 0
+                maximum: 5000
+                default: 250
+              backoff:
+                type: string
+                enum:
+                - constant
+                - linear
+                - exponential
+                default: exponential
+              request_timeout_ms:
+                anyOf:
+                - type: integer
+                  minimum: 1000
+                  maximum: 60000
+                - type: 'null'
+            required:
+            - max_attempts
+            description: 'Per-group same-route retries. max_attempts counts the first try of each step (the primary and each fallback) and is the ceiling for the x-ltg-max-attempts request header. A step is retried only when its attempt definitely did no provider work (connection failure before dispatch, or 429/529) before the first provider event; an uncertain failure (timeout, 408/500/502/503/504) moves to the next fallback step instead. max_attempts x (1 + the longest fallback chain) must not exceed 8, else 400. The n-th retry waits retry_delay_ms (constant), retry_delay_ms*n (linear) or retry_delay_ms*2^(n-1) (exponential), at most 5 s and never past the request deadline, then jittered uniformly down to half that value so concurrent retries spread out; a provider Retry-After of at most 5 s is honoured and a longer one moves to the next step. request_timeout_ms applies to streaming requests only: it bounds each attempt''s time to its first provider event and never applies after it. Non-stream requests keep the per-attempt hop and idle bounds (their headers arrive only with the finished completion). retry_delay_ms and backoff are floors for the request knobs. Each planned attempt is reserved (at most 8 per request); unused reservation is released at settlement. Managed routes only. The stored form is echoed back with defaults filled in; null disables retries.'
+          - type: 'null'
+        blocked:
+          type: boolean
+      required:
+      - name
+      - allowed_models
+    UsageExportRecord:
+      oneOf:
+      - $ref: '#/components/schemas/UsageExportInferenceRequest'
+      - $ref: '#/components/schemas/UsageExportGuardrailEvaluation'
+      discriminator:
+        propertyName: type
+        mapping:
+          inference.request: '#/components/schemas/UsageExportInferenceRequest'
+          guardrail.evaluation: '#/components/schemas/UsageExportGuardrailEvaluation'
   parameters:
-    ai-gateway-spend_PageNumber:
-      name: page[number]
-      in: query
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        default: 1
-      description: ''
     IfMatch:
       name: If-Match
       in: header
@@ -3847,7 +3838,7 @@ components:
         maxLength: 256
         pattern: ^[^\u0000-\u001f\u007f]+$
       description: Required after page 1; account/filter-bound 15-minute stable snapshot; expired/mismatch 409.
-    ai-gateway-resources_PageNumber:
+    ai-gateway-spend_PageNumber:
       name: page[number]
       in: query
       required: false
@@ -3857,6 +3848,16 @@ components:
         default: 1
       description: ''
     ai-gateway-resources_PageSize:
+      name: page[size]
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      description: ''
+    ai-gateway-spend_PageSize:
       name: page[size]
       in: query
       required: false
@@ -3876,15 +3877,14 @@ components:
         maxLength: 128
         pattern: ^[A-Za-z0-9_-]+$
       description: 24h, scoped by account+method+path. Same key/body returns same outcome; changed body 409; in-progress 409 with Retry-After. Token-create replay returns 200 metadata WITHOUT secret.
-    ai-gateway-spend_PageSize:
-      name: page[size]
+    ai-gateway-resources_PageNumber:
+      name: page[number]
       in: query
       required: false
       schema:
         type: integer
         minimum: 1
-        maximum: 100
-        default: 20
+        default: 1
       description: ''
   securitySchemes:
     BearerAuth:

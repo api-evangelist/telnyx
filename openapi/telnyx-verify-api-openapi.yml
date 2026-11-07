@@ -584,20 +584,6 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    VerifyProfileFlashcallResponse:
-      title: VerifyProfileFlashcallResponse
-      type: object
-      properties:
-        app_name:
-          example: Example Secure App
-          description: The name that identifies the application requesting 2fa in the verification message.
-          type: string
-          pattern: ^[A-Za-z0-9 -]{1,30}$
-        default_verification_timeout_secs:
-          example: 300
-          description: For every request that is initiated via this Verify profile, this sets the number of seconds before a verification request code expires. Once the verification request expires, the user cannot use the code to verify their identity.
-          type: integer
-          default: 300
     UpdateVerifyProfileSettingsWhatsAppRequest:
       title: UpdateVerifyProfileSettingsWhatsAppRequest
       type: object
@@ -638,37 +624,6 @@ components:
           - 'null'
           description: Customer pre-approved authentication template ID registered on Meta
           default: null
-    VerifyVerificationCodeRequestById:
-      title: VerifyVerificationCodeRequestById
-      type: object
-      properties:
-        code:
-          example: '17686'
-          type: string
-          description: This is the code the user submits for verification.
-        status:
-          enum:
-          - accepted
-          - rejected
-          type: string
-          example: accepted
-          description: Identifies if the verification code has been accepted or rejected. Only permitted if custom_code was used for the verification.
-    VerifyVerificationCodeRequestByPhoneNumber:
-      title: VerifyVerificationCodeRequestByPhoneNumber
-      required:
-      - code
-      - verify_profile_id
-      type: object
-      properties:
-        code:
-          example: '17686'
-          type: string
-          description: This is the code the user submits for verification.
-        verify_profile_id:
-          example: 12ade33a-21c0-473b-b055-b3c836e1c292
-          type: string
-          format: uuid
-          description: The identifier of the associated Verify profile.
     CreateVerifyProfileSettingsRequest:
       title: CreateVerifyProfileSettingsRequest
       type: object
@@ -693,17 +648,105 @@ components:
           description: For every request that is initiated via this Verify profile, this sets the number of seconds before a verification request code expires. Once the verification request expires, the user cannot use the code to verify their identity.
           type: integer
           default: 300
-    ListVerifyProfileMessageTemplateResponse:
-      title: ListVerifyProfileMessageTemplateResponse
-      description: A list of Verify profile message templates
-      required:
-      - data
+    CreateVerifyProfileSMSRequest:
+      title: CreateVerifyProfileSMSRequest
+      type: object
+      properties:
+        messaging_template_id:
+          example: 0abb5b4f-459f-445a-bfcd-488998b7572d
+          format: uuid
+          type: string
+          description: The message template identifier selected from /verify_profiles/templates
+        app_name:
+          example: Example Secure App
+          description: The name that identifies the application requesting 2fa in the verification message.
+          type: string
+          pattern: ^[A-Za-z0-9 -]{1,30}$
+        alpha_sender:
+          description: The alphanumeric sender ID to use when sending to destinations that require an alphanumeric sender ID.
+          type:
+          - string
+          - 'null'
+          pattern: ^[A-Za-z0-9 ]{1,11}$
+          default: Telnyx
+        code_length:
+          example: 6
+          type: integer
+          description: The length of the verify code to generate.
+          default: 5
+        whitelisted_destinations:
+          description: Enabled country destinations to send verification codes. The elements in the list must be valid ISO 3166-1 alpha-2 country codes. If set to `["*"]`, all destinations will be allowed. **Conditionally required:** this field must be provided when your organization is configured to require explicit whitelisted destinations; otherwise it is optional.
+          example:
+          - US
+          - CA
+          type: array
+          items:
+            description: ISO 3166-1 alpha-2 country code
+            type: string
+            pattern: ^[A-Z]{2}$
+        default_verification_timeout_secs:
+          example: 300
+          description: For every request that is initiated via this Verify profile, this sets the number of seconds before a verification request code expires. Once the verification request expires, the user cannot use the code to verify their identity.
+          type: integer
+          default: 300
+    VerificationType:
+      title: VerificationType
+      enum:
+      - sms
+      - call
+      - flashcall
+      - whatsapp
+      type: string
+      example: sms
+      description: The possible types of verification.
+    VerifyProfileResponseDataWrapper:
+      title: VerifyProfileResponseDataWrapper
       type: object
       properties:
         data:
-          type: array
-          items:
-            $ref: '#/components/schemas/VerifyProfileMessageTemplateResponse'
+          type: object
+          $ref: '#/components/schemas/VerifyProfileResponse'
+          additionalProperties: true
+    VerifyVerificationCodeRequestById:
+      title: VerifyVerificationCodeRequestById
+      type: object
+      properties:
+        code:
+          example: '17686'
+          type: string
+          description: This is the code the user submits for verification.
+        status:
+          enum:
+          - accepted
+          - rejected
+          type: string
+          example: accepted
+          description: Identifies if the verification code has been accepted or rejected. Only permitted if custom_code was used for the verification.
+    VerifyProfileFlashcallResponse:
+      title: VerifyProfileFlashcallResponse
+      type: object
+      properties:
+        app_name:
+          example: Example Secure App
+          description: The name that identifies the application requesting 2fa in the verification message.
+          type: string
+          pattern: ^[A-Za-z0-9 -]{1,30}$
+        default_verification_timeout_secs:
+          example: 300
+          description: For every request that is initiated via this Verify profile, this sets the number of seconds before a verification request code expires. Once the verification request expires, the user cannot use the code to verify their identity.
+          type: integer
+          default: 300
+    UpdateMessageTemplateRequest:
+      title: UpdateMessageTemplateRequest
+      description: The request body when updating a message template.
+      required:
+      - text
+      type: object
+      properties:
+        text:
+          example: 'Your {{app_name}} verification code is: {{code}}.'
+          type: string
+          description: The text content of the message template.
     CreateVerificationRequest:
       title: CreateVerificationRequest
       description: The request body when creating a verification.
@@ -725,40 +768,75 @@ components:
           type: integer
           example: 300
           description: The number of seconds the verification code is valid for.
-    VerifyVerificationCodeResponse:
-      title: VerifyVerificationCodeResponse
+    CreateVerificationRequestSMS:
+      title: CreateVerificationRequestSMS
+      description: The request body when creating a verification.
+      required:
+      - phone_number
+      - verify_profile_id
+      type: object
+      properties:
+        phone_number:
+          example: '+13035551234'
+          type: string
+          description: +E164 formatted phone number.
+        verify_profile_id:
+          example: 12ade33a-21c0-473b-b055-b3c836e1c292
+          type: string
+          format: uuid
+          description: The identifier of the associated Verify profile.
+        custom_code:
+          example: '43612'
+          type:
+          - string
+          - 'null'
+          description: Send a self-generated numeric code to the end-user
+          default: null
+        timeout_secs:
+          type: integer
+          example: 300
+          description: The number of seconds the verification code is valid for.
+    ListVerifyProfilesResponse:
+      title: ListVerifyProfilesResponse
+      description: A paginated list of Verify profiles
       required:
       - data
+      - meta
       type: object
       properties:
         data:
-          required:
-          - phone_number
-          - response_code
-          type: object
-          properties:
-            phone_number:
-              example: '+13035551234'
-              type: string
-              description: +E164 formatted phone number.
-            response_code:
-              enum:
-              - accepted
-              - rejected
-              type: string
-              example: accepted
-              description: Identifies if the verification code has been accepted or rejected.
-    UpdateMessageTemplateRequest:
-      title: UpdateMessageTemplateRequest
-      description: The request body when updating a message template.
-      required:
-      - text
-      type: object
+          type: array
+          items:
+            $ref: '#/components/schemas/VerifyProfileResponse'
+        meta:
+          $ref: '#/components/schemas/verify_Meta'
+    Errors:
       properties:
-        text:
-          example: 'Your {{app_name}} verification code is: {{code}}.'
-          type: string
-          description: The text content of the message template.
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    verify_Meta:
+      type: object
+      required:
+      - total_pages
+      - total_results
+      - page_size
+      - page_number
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 55
+        page_number:
+          type: integer
+          example: 2
+        page_size:
+          type: integer
+          example: 25
     VerifyProfileResponse:
       title: VerifyProfileResponse
       type: object
@@ -813,53 +891,17 @@ components:
           type: object
           $ref: '#/components/schemas/VerifyProfileWhatsAppResponse'
           additionalProperties: true
-    UpdateVerifyProfileCallRequest:
-      title: UpdateVerifyProfileCallRequest
-      type: object
-      properties:
-        messaging_template_id:
-          example: 0abb5b4f-459f-445a-bfcd-488998b7572d
-          format: uuid
-          type: string
-          description: The message template identifier selected from /verify_profiles/templates
-        app_name:
-          example: Example Secure App
-          description: The name that identifies the application requesting 2fa in the verification message.
-          type: string
-          pattern: ^[A-Za-z0-9 -]{1,30}$
-        code_length:
-          example: 6
-          type: integer
-          description: The length of the verify code to generate.
-          default: 5
-        whitelisted_destinations:
-          description: Enabled country destinations to send verification codes. The elements in the list must be valid ISO 3166-1 alpha-2 country codes. If set to `["*"]`, all destinations will be allowed. **Conditionally required:** this field must be provided when your organization is configured to require explicit whitelisted destinations; otherwise it is optional.
-          example:
-          - US
-          - CA
-          type: array
-          items:
-            description: ISO 3166-1 alpha-2 country code
-            type: string
-            pattern: ^[A-Z]{2}$
-        default_verification_timeout_secs:
-          example: 300
-          description: For every request that is initiated via this Verify profile, this sets the number of seconds before a verification request code expires. Once the verification request expires, the user cannot use the code to verify their identity.
-          type: integer
-          default: 300
-    ListVerificationsResponse:
-      title: ListVerificationsResponse
+    CreateMessageTemplateRequest:
+      title: CreateMessageTemplateRequest
+      description: The request body when creating a message template.
       required:
-      - data
-      - meta
+      - text
       type: object
       properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/Verification'
-        meta:
-          $ref: '#/components/schemas/verify_Meta'
+        text:
+          example: 'Your {{app_name}} verification code is: {{code}}.'
+          type: string
+          description: The text content of the message template.
     CreateVerifyProfileSettingsWhatsAppRequest:
       title: CreateVerifyProfileSettingsWhatsAppRequest
       type: object
@@ -900,6 +942,29 @@ components:
           - 'null'
           description: Customer pre-approved authentication template ID registered on Meta
           default: null
+    VerifyVerificationCodeResponse:
+      title: VerifyVerificationCodeResponse
+      required:
+      - data
+      type: object
+      properties:
+        data:
+          required:
+          - phone_number
+          - response_code
+          type: object
+          properties:
+            phone_number:
+              example: '+13035551234'
+              type: string
+              description: +E164 formatted phone number.
+            response_code:
+              enum:
+              - accepted
+              - rejected
+              type: string
+              example: accepted
+              description: Identifies if the verification code has been accepted or rejected.
     VerificationProfileRecordType:
       title: VerificationProfileRecordType
       enum:
@@ -907,25 +972,16 @@ components:
       type: string
       example: verification_profile
       description: The possible verification profile record types.
-    CreateMessageTemplateRequest:
-      title: CreateMessageTemplateRequest
-      description: The request body when creating a message template.
+    RetrieveVerificationResponse:
+      title: RetrieveVerificationResponse
       required:
-      - text
-      type: object
-      properties:
-        text:
-          example: 'Your {{app_name}} verification code is: {{code}}.'
-          type: string
-          description: The text content of the message template.
-    MessageTemplateResponseDataWrapper:
-      title: MessageTemplateResponseDataWrapper
+      - data
       type: object
       properties:
         data:
-          $ref: '#/components/schemas/VerifyProfileMessageTemplateResponse'
-    CreateVerificationRequestSMS:
-      title: CreateVerificationRequestSMS
+          $ref: '#/components/schemas/Verification'
+    CreateVerificationRequestCall:
+      title: CreateVerificationRequestCall
       description: The request body when creating a verification.
       required:
       - phone_number
@@ -952,47 +1008,13 @@ components:
           type: integer
           example: 300
           description: The number of seconds the verification code is valid for.
-    UpdateVerifyProfileSMSRequest:
-      title: UpdateVerifyProfileSMSRequest
-      type: object
-      properties:
-        messaging_template_id:
-          example: 0abb5b4f-459f-445a-bfcd-488998b7572d
-          format: uuid
-          type: string
-          description: The message template identifier selected from /verify_profiles/templates
-        app_name:
-          example: Example Secure App
-          description: The name that identifies the application requesting 2fa in the verification message.
-          type: string
-          pattern: ^[A-Za-z0-9 -]{1,30}$
-        alpha_sender:
-          description: The alphanumeric sender ID to use when sending to destinations that require an alphanumeric sender ID.
+        extension:
+          example: 1www2WABCDw9
           type:
           - string
           - 'null'
-          pattern: ^[A-Za-z0-9 ]{1,11}$
-          default: Telnyx
-        code_length:
-          example: 6
-          type: integer
-          description: The length of the verify code to generate.
-          default: 5
-        whitelisted_destinations:
-          description: Enabled country destinations to send verification codes. The elements in the list must be valid ISO 3166-1 alpha-2 country codes. If set to `["*"]`, all destinations will be allowed. **Conditionally required:** this field must be provided when your organization is configured to require explicit whitelisted destinations; otherwise it is optional.
-          example:
-          - US
-          - CA
-          type: array
-          items:
-            description: ISO 3166-1 alpha-2 country code
-            type: string
-            pattern: ^[A-Z]{2}$
-        default_verification_timeout_secs:
-          example: 300
-          description: For every request that is initiated via this Verify profile, this sets the number of seconds before a verification request code expires. Once the verification request expires, the user cannot use the code to verify their identity.
-          type: integer
-          default: 300
+          description: 'Optional extension to dial after call is answered using DTMF digits. Valid digits are 0-9, A-D, *, and #. Pauses can be added using w (0.5s) and W (1s).'
+          default: null
     VerifyProfileCallResponse:
       title: VerifyProfileCallResponse
       type: object
@@ -1027,13 +1049,163 @@ components:
           description: For every request that is initiated via this Verify profile, this sets the number of seconds before a verification request code expires. Once the verification request expires, the user cannot use the code to verify their identity.
           type: integer
           default: 300
-    VerificationRecordType:
-      title: VerificationRecordType
+    ListVerifyProfileMessageTemplateResponse:
+      title: ListVerifyProfileMessageTemplateResponse
+      description: A list of Verify profile message templates
+      required:
+      - data
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/VerifyProfileMessageTemplateResponse'
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
+    Verification:
+      title: Verification
+      type: object
+      properties:
+        id:
+          example: 12ade33a-21c0-473b-b055-b3c836e1c292
+          format: uuid
+          type: string
+        type:
+          $ref: '#/components/schemas/VerificationType'
+        record_type:
+          $ref: '#/components/schemas/VerificationRecordType'
+        phone_number:
+          example: '+13035551234'
+          type: string
+          description: +E164 formatted phone number.
+        verify_profile_id:
+          example: 12ade33a-21c0-473b-b055-b3c836e1c292
+          type: string
+          format: uuid
+          description: The identifier of the associated Verify profile.
+        custom_code:
+          example: '43612'
+          type:
+          - string
+          - 'null'
+          description: Send a self-generated numeric code to the end-user
+          default: null
+        timeout_secs:
+          example: 300
+          type: integer
+          description: 'This is the number of seconds before the code of the request is expired. Once this request has expired, the code will no longer verify the user. Note: this will override the `default_verification_timeout_secs` on the Verify profile.'
+        status:
+          $ref: '#/components/schemas/VerificationStatus'
+        created_at:
+          example: '2020-09-14T17:03:32.965812'
+          type: string
+        updated_at:
+          example: '2020-09-14T17:03:32.965812'
+          type: string
+    ListVerificationsResponse:
+      title: ListVerificationsResponse
+      required:
+      - data
+      - meta
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Verification'
+        meta:
+          $ref: '#/components/schemas/verify_Meta'
+    VerificationStatus:
+      title: VerificationStatus
       enum:
-      - verification
+      - pending
+      - accepted
+      - invalid
+      - expired
+      - error
       type: string
-      example: verification
-      description: The possible verification record types.
+      example: accepted
+      description: The possible statuses of the verification request.
+    VerifyVerificationCodeRequestByPhoneNumber:
+      title: VerifyVerificationCodeRequestByPhoneNumber
+      required:
+      - code
+      - verify_profile_id
+      type: object
+      properties:
+        code:
+          example: '17686'
+          type: string
+          description: This is the code the user submits for verification.
+        verify_profile_id:
+          example: 12ade33a-21c0-473b-b055-b3c836e1c292
+          type: string
+          format: uuid
+          description: The identifier of the associated Verify profile.
+    CreateVerifyProfileCallRequest:
+      title: CreateVerifyProfileCallRequest
+      type: object
+      properties:
+        messaging_template_id:
+          example: 0abb5b4f-459f-445a-bfcd-488998b7572d
+          format: uuid
+          type: string
+          description: The message template identifier selected from /verify_profiles/templates
+        app_name:
+          example: Example Secure App
+          description: The name that identifies the application requesting 2fa in the verification message.
+          type: string
+          pattern: ^[A-Za-z0-9 -]{1,30}$
+        code_length:
+          example: 6
+          type: integer
+          description: The length of the verify code to generate.
+          default: 5
+        whitelisted_destinations:
+          description: Enabled country destinations to send verification codes. The elements in the list must be valid ISO 3166-1 alpha-2 country codes. If set to `["*"]`, all destinations will be allowed. **Conditionally required:** this field must be provided when your organization is configured to require explicit whitelisted destinations; otherwise it is optional.
+          example:
+          - US
+          - CA
+          type: array
+          items:
+            description: ISO 3166-1 alpha-2 country code
+            type: string
+            pattern: ^[A-Z]{2}$
+        default_verification_timeout_secs:
+          example: 300
+          description: For every request that is initiated via this Verify profile, this sets the number of seconds before a verification request code expires. Once the verification request expires, the user cannot use the code to verify their identity.
+          type: integer
+          default: 300
+    MessageTemplateResponseDataWrapper:
+      title: MessageTemplateResponseDataWrapper
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/VerifyProfileMessageTemplateResponse'
     VerifyProfileWhatsAppResponse:
       title: VerifyProfileWhatsAppResponse
       type: object
@@ -1089,6 +1261,13 @@ components:
           - 'null'
           description: Customer pre-approved authentication template ID registered on Meta
           default: null
+    VerificationRecordType:
+      title: VerificationRecordType
+      enum:
+      - verification
+      type: string
+      example: verification
+      description: The possible verification record types.
     VerifyProfileMessageTemplateResponse:
       title: VerifyProfileResponse
       type: object
@@ -1100,268 +1279,6 @@ components:
         text:
           example: 'Your {{app_name}} verification code is: {{code}}.'
           type: string
-    Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/billing-group_Error'
-      type: object
-    CreateVerifyProfileCallRequest:
-      title: CreateVerifyProfileCallRequest
-      type: object
-      properties:
-        messaging_template_id:
-          example: 0abb5b4f-459f-445a-bfcd-488998b7572d
-          format: uuid
-          type: string
-          description: The message template identifier selected from /verify_profiles/templates
-        app_name:
-          example: Example Secure App
-          description: The name that identifies the application requesting 2fa in the verification message.
-          type: string
-          pattern: ^[A-Za-z0-9 -]{1,30}$
-        code_length:
-          example: 6
-          type: integer
-          description: The length of the verify code to generate.
-          default: 5
-        whitelisted_destinations:
-          description: Enabled country destinations to send verification codes. The elements in the list must be valid ISO 3166-1 alpha-2 country codes. If set to `["*"]`, all destinations will be allowed. **Conditionally required:** this field must be provided when your organization is configured to require explicit whitelisted destinations; otherwise it is optional.
-          example:
-          - US
-          - CA
-          type: array
-          items:
-            description: ISO 3166-1 alpha-2 country code
-            type: string
-            pattern: ^[A-Z]{2}$
-        default_verification_timeout_secs:
-          example: 300
-          description: For every request that is initiated via this Verify profile, this sets the number of seconds before a verification request code expires. Once the verification request expires, the user cannot use the code to verify their identity.
-          type: integer
-          default: 300
-    VerifyProfileResponseDataWrapper:
-      title: VerifyProfileResponseDataWrapper
-      type: object
-      properties:
-        data:
-          type: object
-          $ref: '#/components/schemas/VerifyProfileResponse'
-          additionalProperties: true
-    VerificationStatus:
-      title: VerificationStatus
-      enum:
-      - pending
-      - accepted
-      - invalid
-      - expired
-      - error
-      type: string
-      example: accepted
-      description: The possible statuses of the verification request.
-    CreateVerificationRequestCall:
-      title: CreateVerificationRequestCall
-      description: The request body when creating a verification.
-      required:
-      - phone_number
-      - verify_profile_id
-      type: object
-      properties:
-        phone_number:
-          example: '+13035551234'
-          type: string
-          description: +E164 formatted phone number.
-        verify_profile_id:
-          example: 12ade33a-21c0-473b-b055-b3c836e1c292
-          type: string
-          format: uuid
-          description: The identifier of the associated Verify profile.
-        custom_code:
-          example: '43612'
-          type:
-          - string
-          - 'null'
-          description: Send a self-generated numeric code to the end-user
-          default: null
-        timeout_secs:
-          type: integer
-          example: 300
-          description: The number of seconds the verification code is valid for.
-        extension:
-          example: 1www2WABCDw9
-          type:
-          - string
-          - 'null'
-          description: 'Optional extension to dial after call is answered using DTMF digits. Valid digits are 0-9, A-D, *, and #. Pauses can be added using w (0.5s) and W (1s).'
-          default: null
-    billing-group_Error:
-      type: object
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: integer
-          format: int32
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-          properties: {}
-          additionalProperties: true
-    VerificationType:
-      title: VerificationType
-      enum:
-      - sms
-      - call
-      - flashcall
-      - whatsapp
-      type: string
-      example: sms
-      description: The possible types of verification.
-    CreateVerificationResponse:
-      title: CreateVerifyVerificationResponse
-      required:
-      - data
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/Verification'
-    Verification:
-      title: Verification
-      type: object
-      properties:
-        id:
-          example: 12ade33a-21c0-473b-b055-b3c836e1c292
-          format: uuid
-          type: string
-        type:
-          $ref: '#/components/schemas/VerificationType'
-        record_type:
-          $ref: '#/components/schemas/VerificationRecordType'
-        phone_number:
-          example: '+13035551234'
-          type: string
-          description: +E164 formatted phone number.
-        verify_profile_id:
-          example: 12ade33a-21c0-473b-b055-b3c836e1c292
-          type: string
-          format: uuid
-          description: The identifier of the associated Verify profile.
-        custom_code:
-          example: '43612'
-          type:
-          - string
-          - 'null'
-          description: Send a self-generated numeric code to the end-user
-          default: null
-        timeout_secs:
-          example: 300
-          type: integer
-          description: 'This is the number of seconds before the code of the request is expired. Once this request has expired, the code will no longer verify the user. Note: this will override the `default_verification_timeout_secs` on the Verify profile.'
-        status:
-          $ref: '#/components/schemas/VerificationStatus'
-        created_at:
-          example: '2020-09-14T17:03:32.965812'
-          type: string
-        updated_at:
-          example: '2020-09-14T17:03:32.965812'
-          type: string
-    CreateVerifyProfileSMSRequest:
-      title: CreateVerifyProfileSMSRequest
-      type: object
-      properties:
-        messaging_template_id:
-          example: 0abb5b4f-459f-445a-bfcd-488998b7572d
-          format: uuid
-          type: string
-          description: The message template identifier selected from /verify_profiles/templates
-        app_name:
-          example: Example Secure App
-          description: The name that identifies the application requesting 2fa in the verification message.
-          type: string
-          pattern: ^[A-Za-z0-9 -]{1,30}$
-        alpha_sender:
-          description: The alphanumeric sender ID to use when sending to destinations that require an alphanumeric sender ID.
-          type:
-          - string
-          - 'null'
-          pattern: ^[A-Za-z0-9 ]{1,11}$
-          default: Telnyx
-        code_length:
-          example: 6
-          type: integer
-          description: The length of the verify code to generate.
-          default: 5
-        whitelisted_destinations:
-          description: Enabled country destinations to send verification codes. The elements in the list must be valid ISO 3166-1 alpha-2 country codes. If set to `["*"]`, all destinations will be allowed. **Conditionally required:** this field must be provided when your organization is configured to require explicit whitelisted destinations; otherwise it is optional.
-          example:
-          - US
-          - CA
-          type: array
-          items:
-            description: ISO 3166-1 alpha-2 country code
-            type: string
-            pattern: ^[A-Z]{2}$
-        default_verification_timeout_secs:
-          example: 300
-          description: For every request that is initiated via this Verify profile, this sets the number of seconds before a verification request code expires. Once the verification request expires, the user cannot use the code to verify their identity.
-          type: integer
-          default: 300
-    RetrieveVerificationResponse:
-      title: RetrieveVerificationResponse
-      required:
-      - data
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/Verification'
-    verify_Meta:
-      type: object
-      required:
-      - total_pages
-      - total_results
-      - page_size
-      - page_number
-      properties:
-        total_pages:
-          type: integer
-          example: 3
-        total_results:
-          type: integer
-          example: 55
-        page_number:
-          type: integer
-          example: 2
-        page_size:
-          type: integer
-          example: 25
-    ListVerifyProfilesResponse:
-      title: ListVerifyProfilesResponse
-      description: A paginated list of Verify profiles
-      required:
-      - data
-      - meta
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/VerifyProfileResponse'
-        meta:
-          $ref: '#/components/schemas/verify_Meta'
     VerifyProfileSMSResponse:
       title: VerifyProfileSMSResponse
       type: object
@@ -1383,6 +1300,89 @@ components:
           - 'null'
           pattern: ^[A-Za-z0-9 ]{1,11}$
           default: Telnyx
+        code_length:
+          example: 6
+          type: integer
+          description: The length of the verify code to generate.
+          default: 5
+        whitelisted_destinations:
+          description: Enabled country destinations to send verification codes. The elements in the list must be valid ISO 3166-1 alpha-2 country codes. If set to `["*"]`, all destinations will be allowed. **Conditionally required:** this field must be provided when your organization is configured to require explicit whitelisted destinations; otherwise it is optional.
+          example:
+          - US
+          - CA
+          type: array
+          items:
+            description: ISO 3166-1 alpha-2 country code
+            type: string
+            pattern: ^[A-Z]{2}$
+        default_verification_timeout_secs:
+          example: 300
+          description: For every request that is initiated via this Verify profile, this sets the number of seconds before a verification request code expires. Once the verification request expires, the user cannot use the code to verify their identity.
+          type: integer
+          default: 300
+    UpdateVerifyProfileSMSRequest:
+      title: UpdateVerifyProfileSMSRequest
+      type: object
+      properties:
+        messaging_template_id:
+          example: 0abb5b4f-459f-445a-bfcd-488998b7572d
+          format: uuid
+          type: string
+          description: The message template identifier selected from /verify_profiles/templates
+        app_name:
+          example: Example Secure App
+          description: The name that identifies the application requesting 2fa in the verification message.
+          type: string
+          pattern: ^[A-Za-z0-9 -]{1,30}$
+        alpha_sender:
+          description: The alphanumeric sender ID to use when sending to destinations that require an alphanumeric sender ID.
+          type:
+          - string
+          - 'null'
+          pattern: ^[A-Za-z0-9 ]{1,11}$
+          default: Telnyx
+        code_length:
+          example: 6
+          type: integer
+          description: The length of the verify code to generate.
+          default: 5
+        whitelisted_destinations:
+          description: Enabled country destinations to send verification codes. The elements in the list must be valid ISO 3166-1 alpha-2 country codes. If set to `["*"]`, all destinations will be allowed. **Conditionally required:** this field must be provided when your organization is configured to require explicit whitelisted destinations; otherwise it is optional.
+          example:
+          - US
+          - CA
+          type: array
+          items:
+            description: ISO 3166-1 alpha-2 country code
+            type: string
+            pattern: ^[A-Z]{2}$
+        default_verification_timeout_secs:
+          example: 300
+          description: For every request that is initiated via this Verify profile, this sets the number of seconds before a verification request code expires. Once the verification request expires, the user cannot use the code to verify their identity.
+          type: integer
+          default: 300
+    CreateVerificationResponse:
+      title: CreateVerifyVerificationResponse
+      required:
+      - data
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Verification'
+    UpdateVerifyProfileCallRequest:
+      title: UpdateVerifyProfileCallRequest
+      type: object
+      properties:
+        messaging_template_id:
+          example: 0abb5b4f-459f-445a-bfcd-488998b7572d
+          format: uuid
+          type: string
+          description: The message template identifier selected from /verify_profiles/templates
+        app_name:
+          example: Example Secure App
+          description: The name that identifies the application requesting 2fa in the verification message.
+          type: string
+          pattern: ^[A-Za-z0-9 -]{1,30}$
         code_length:
           example: 6
           type: integer
@@ -1471,6 +1471,45 @@ components:
           type: array
       title: UpdateVerifyProfileSettingsWhatsAppRequest
       type: object
+    verify_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/verify_Error'
+          type: array
+      type: object
+    verify_Error:
+      properties:
+        code:
+          example: '10015'
+          type: string
+        detail:
+          example: The value provided for sorting is not valid. Check the value used and try again.
+          type: string
+        meta:
+          properties:
+            url:
+              description: URL with additional information on the error.
+              example: https://developers.telnyx.com/docs/overview/errors/10015
+              type: string
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              example: /sort
+              type: string
+          type: object
+        title:
+          example: Invalid sorting value
+          type: string
+      required:
+      - code
+      - title
+      type: object
     CreateVerifyProfileSettingsWhatsAppRequest_2:
       properties:
         default_verification_timeout_secs:
@@ -1510,38 +1549,6 @@ components:
             type: string
           type: array
       title: CreateVerifyProfileSettingsWhatsAppRequest
-      type: object
-    verify_Error:
-      properties:
-        code:
-          example: '10015'
-          type: string
-        detail:
-          example: The value provided for sorting is not valid. Check the value used and try again.
-          type: string
-        meta:
-          properties:
-            url:
-              description: URL with additional information on the error.
-              example: https://developers.telnyx.com/docs/overview/errors/10015
-              type: string
-          type: object
-        source:
-          properties:
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              example: /sort
-              type: string
-          type: object
-        title:
-          example: Invalid sorting value
-          type: string
-      required:
-      - code
-      - title
       type: object
     VerifyProfileWhatsAppResponse_2:
       properties:
@@ -1597,13 +1604,6 @@ components:
             type: string
           type: array
       title: VerifyProfileWhatsAppResponse
-      type: object
-    verify_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/verify_Error'
-          type: array
       type: object
     Errors_2:
       properties:

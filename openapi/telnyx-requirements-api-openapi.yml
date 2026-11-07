@@ -196,13 +196,6 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   parameters:
-    RequirementVersion:
-      name: version
-      in: query
-      description: Filter by requirement version number. When omitted, returns the currently-active version.
-      required: false
-      schema:
-        type: integer
     SortRequirementsConsolidated:
       name: sort
       in: query
@@ -224,15 +217,6 @@ components:
         example:
         - country_code
         description: Specifies the sort order for results. If you want to sort by a field in ascending order, include it as a sort parameter. If you want to sort in descending order, prepend a `-` in front of the field name.
-    DocReqsRequirementId:
-      name: id
-      in: path
-      description: Uniquely identifies the requirement_type record
-      example: a9dad8d5-fdbd-49d7-aa23-39bb08a5ebaa
-      required: true
-      schema:
-        type: string
-        format: uuid
     documents_PageConsolidated:
       name: page
       in: query
@@ -284,6 +268,22 @@ components:
             - porting
             example: porting
             description: Filters requirements to those applying to a specific action.
+    RequirementVersion:
+      name: version
+      in: query
+      description: Filter by requirement version number. When omitted, returns the currently-active version.
+      required: false
+      schema:
+        type: integer
+    DocReqsRequirementId:
+      name: id
+      in: path
+      description: Uniquely identifies the requirement_type record
+      example: a9dad8d5-fdbd-49d7-aa23-39bb08a5ebaa
+      required: true
+      schema:
+        type: string
+        format: uuid
     FilterRequirementsConsolidated_2:
       name: filter
       in: query
@@ -319,6 +319,32 @@ components:
             example: porting
             description: Filters requirements to those applying to a specific action.
   schemas:
+    CreateRequirementVersionRequest:
+      type: object
+      required:
+      - effective_start_at
+      - requirement_type_ids
+      properties:
+        effective_start_at:
+          description: ISO 8601 formatted date-time indicating when the new version should become active. Must be a future date-time.
+          type: string
+          format: date-time
+          example: '2026-08-01T00:00:00.000Z'
+        requirement_type_ids:
+          description: List of requirement type UUIDs that apply to the new version. Replaces the existing requirement types for the new version.
+          type: array
+          items:
+            type: string
+            format: uuid
+          example:
+          - a38c217a-8019-48f8-bff6-0fdd9939075b
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
     DocReqsRequirement:
       type: object
       properties:
@@ -396,13 +422,6 @@ components:
           format: date-time
           readOnly: true
           description: When this version was superseded. NULL means this is the active or pending version.
-    Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/billing-group_Error'
-      type: object
     PaginationMeta:
       type: object
       properties:
@@ -428,25 +447,36 @@ components:
               $ref: '#/components/schemas/DocReqsRequirement'
             restored:
               $ref: '#/components/schemas/DocReqsRequirement'
-    CreateRequirementVersionRequest:
+    DocReqsRequirementList:
+      type: array
+      items:
+        $ref: '#/components/schemas/DocReqsRequirement'
+    billing-group_Error:
       type: object
       required:
-      - effective_start_at
-      - requirement_type_ids
+      - code
+      - title
       properties:
-        effective_start_at:
-          description: ISO 8601 formatted date-time indicating when the new version should become active. Must be a future date-time.
+        code:
+          type: integer
+          format: int32
+        title:
           type: string
-          format: date-time
-          example: '2026-08-01T00:00:00.000Z'
-        requirement_type_ids:
-          description: List of requirement type UUIDs that apply to the new version. Replaces the existing requirement types for the new version.
-          type: array
-          items:
-            type: string
-            format: uuid
-          example:
-          - a38c217a-8019-48f8-bff6-0fdd9939075b
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
     DocReqsRequirementType:
       type: object
       properties:
@@ -531,36 +561,37 @@ components:
           description: ISO 8601 formatted date-time indicating when the resource was last updated.
           readOnly: true
           example: '2021-04-12T20:20:20.020Z'
-    billing-group_Error:
-      type: object
-      required:
-      - code
-      - title
+    documents_Error:
       properties:
         code:
-          type: integer
-          format: int32
-        title:
           type: string
         detail:
           type: string
-        source:
+        meta:
+          additionalProperties: true
           type: object
+        source:
           properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
             parameter:
               description: Indicates which query parameter caused the error.
               type: string
-        meta:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
           type: object
-          properties: {}
-          additionalProperties: true
-    DocReqsRequirementList:
-      type: array
-      items:
-        $ref: '#/components/schemas/DocReqsRequirement'
+        title:
+          type: string
+      required:
+      - code
+      - title
+      type: object
+    documents_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/documents_Error'
+          type: array
+      type: object
     DocReqsRequirement_2:
       properties:
         action:
@@ -620,36 +651,12 @@ components:
           readOnly: true
           type: string
       type: object
-    documents_Errors:
+    Errors_2:
       properties:
         errors:
-          items:
-            $ref: '#/components/schemas/documents_Error'
           type: array
-      type: object
-    documents_Error:
-      properties:
-        code:
-          type: string
-        detail:
-          type: string
-        meta:
-          additionalProperties: true
-          type: object
-        source:
-          properties:
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-          type: object
-        title:
-          type: string
-      required:
-      - code
-      - title
+          items:
+            $ref: '#/components/schemas/Error'
       type: object
     DocReqsRequirement_3:
       type: object
@@ -731,13 +738,6 @@ components:
           format: date-time
           readOnly: true
           description: When this version was superseded. NULL means this is the active or pending version.
-    Errors_2:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/Error'
-      type: object
     Error:
       required:
       - code
@@ -785,17 +785,6 @@ components:
             - code: '10007'
               title: Unexpected error
               detail: An unexpected error occured.
-    ListRequirementsResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/DocReqsRequirementList'
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful response
     documents_GenericErrorResponse_2:
       content:
         application/json:
@@ -809,6 +798,17 @@ components:
             properties:
               data:
                 $ref: '#/components/schemas/DocReqsRequirement_2'
+            type: object
+      description: Successful response
+    ListRequirementsResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/DocReqsRequirementList'
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
             type: object
       description: Successful response
   securitySchemes:

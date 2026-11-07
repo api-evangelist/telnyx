@@ -247,14 +247,29 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    PronunciationDictPhonemeItem:
+    PronunciationDictItem:
+      description: A single pronunciation dictionary item. Use type 'alias' to replace matched text with a spoken alias, or type 'phoneme' to specify exact pronunciation using IPA notation.
+      oneOf:
+      - $ref: '#/components/schemas/PronunciationDictAliasItem'
+      - $ref: '#/components/schemas/PronunciationDictPhonemeItem'
+      discriminator:
+        propertyName: type
+        mapping:
+          alias: '#/components/schemas/PronunciationDictAliasItem'
+          phoneme: '#/components/schemas/PronunciationDictPhonemeItem'
+    PronunciationDictResponse:
       type: object
-      description: A phoneme pronunciation item. When the `text` value is found in input, it is pronounced using the specified IPA phoneme notation.
+      description: Response containing a single pronunciation dictionary.
+      properties:
+        data:
+          $ref: '#/components/schemas/PronunciationDictData'
+    PronunciationDictAliasItem:
+      type: object
+      description: An alias pronunciation item. When the `text` value is found in input, it is replaced with the `alias` before speech synthesis.
       required:
       - text
       - type
-      - phoneme
-      - alphabet
+      - alias
       additionalProperties: false
       properties:
         text:
@@ -267,30 +282,14 @@ components:
           type: string
           description: The item type.
           enum:
-          - phoneme
-          example: phoneme
-        phoneme:
+          - alias
+          example: alias
+        alias:
           type: string
-          description: The phoneme notation representing the desired pronunciation.
+          description: The replacement text that will be spoken instead.
           minLength: 1
           maxLength: 500
-          example: ˈtɛl.nɪks
-        alphabet:
-          type: string
-          description: The phonetic alphabet used for the phoneme notation.
-          enum:
-          - ipa
-          example: ipa
-    PronunciationDictItem:
-      description: A single pronunciation dictionary item. Use type 'alias' to replace matched text with a spoken alias, or type 'phoneme' to specify exact pronunciation using IPA notation.
-      oneOf:
-      - $ref: '#/components/schemas/PronunciationDictAliasItem'
-      - $ref: '#/components/schemas/PronunciationDictPhonemeItem'
-      discriminator:
-        propertyName: type
-        mapping:
-          alias: '#/components/schemas/PronunciationDictAliasItem'
-          phoneme: '#/components/schemas/PronunciationDictPhonemeItem'
+          example: tel-nicks
     CreatePronunciationDictRequest:
       type: object
       description: Request body for creating a pronunciation dictionary.
@@ -311,12 +310,24 @@ components:
           maxItems: 100
           items:
             $ref: '#/components/schemas/PronunciationDictItem'
-    PronunciationDictResponse:
+    UpdatePronunciationDictRequest:
       type: object
-      description: Response containing a single pronunciation dictionary.
+      description: Request body for updating a pronunciation dictionary. At least one field must be provided.
+      minProperties: 1
       properties:
-        data:
-          $ref: '#/components/schemas/PronunciationDictData'
+        name:
+          type: string
+          description: Updated dictionary name.
+          minLength: 1
+          maxLength: 255
+          example: Updated Brand Names
+        items:
+          type: array
+          description: Updated list of pronunciation items (alias or phoneme type).
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/PronunciationDictItem'
     PronunciationDictData:
       type: object
       description: A pronunciation dictionary record.
@@ -355,14 +366,6 @@ components:
           format: date-time
           description: ISO 8601 timestamp with millisecond precision.
           example: '2026-03-25T12:00:00.000Z'
-    pronunciation-dicts_ErrorResponse:
-      type: object
-      description: Standard Telnyx error response.
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/pronunciation-dicts_ErrorObject'
     PronunciationDictListResponse:
       type: object
       description: Paginated list of pronunciation dictionaries.
@@ -374,44 +377,48 @@ components:
           description: Array of pronunciation dictionary objects.
         meta:
           $ref: '#/components/schemas/pronunciation-dicts_PaginationMeta'
-    pronunciation-dicts_PaginationMeta:
+    pronunciation-dicts_ErrorResponse:
       type: object
-      description: Pagination metadata returned with list responses.
+      description: Standard Telnyx error response.
       properties:
-        page_number:
-          type: integer
-          description: Current page number (1-based).
-          example: 1
-        page_size:
-          type: integer
-          description: Number of results per page.
-          example: 20
-        total_results:
-          type: integer
-          description: Total number of results across all pages.
-          example: 3
-        total_pages:
-          type: integer
-          description: Total number of pages.
-          example: 1
-    UpdatePronunciationDictRequest:
-      type: object
-      description: Request body for updating a pronunciation dictionary. At least one field must be provided.
-      minProperties: 1
-      properties:
-        name:
-          type: string
-          description: Updated dictionary name.
-          minLength: 1
-          maxLength: 255
-          example: Updated Brand Names
-        items:
+        errors:
           type: array
-          description: Updated list of pronunciation items (alias or phoneme type).
-          minItems: 1
-          maxItems: 100
           items:
-            $ref: '#/components/schemas/PronunciationDictItem'
+            $ref: '#/components/schemas/pronunciation-dicts_ErrorObject'
+    PronunciationDictPhonemeItem:
+      type: object
+      description: A phoneme pronunciation item. When the `text` value is found in input, it is pronounced using the specified IPA phoneme notation.
+      required:
+      - text
+      - type
+      - phoneme
+      - alphabet
+      additionalProperties: false
+      properties:
+        text:
+          type: string
+          description: The text to match in the input. Case-insensitive matching is used during synthesis.
+          minLength: 1
+          maxLength: 200
+          example: Telnyx
+        type:
+          type: string
+          description: The item type.
+          enum:
+          - phoneme
+          example: phoneme
+        phoneme:
+          type: string
+          description: The phoneme notation representing the desired pronunciation.
+          minLength: 1
+          maxLength: 500
+          example: ˈtɛl.nɪks
+        alphabet:
+          type: string
+          description: The phonetic alphabet used for the phoneme notation.
+          enum:
+          - ipa
+          example: ipa
     pronunciation-dicts_ErrorObject:
       type: object
       properties:
@@ -435,33 +442,26 @@ components:
               type: string
               description: JSON pointer to the field that caused the error.
               example: /items
-    PronunciationDictAliasItem:
+    pronunciation-dicts_PaginationMeta:
       type: object
-      description: An alias pronunciation item. When the `text` value is found in input, it is replaced with the `alias` before speech synthesis.
-      required:
-      - text
-      - type
-      - alias
-      additionalProperties: false
+      description: Pagination metadata returned with list responses.
       properties:
-        text:
-          type: string
-          description: The text to match in the input. Case-insensitive matching is used during synthesis.
-          minLength: 1
-          maxLength: 200
-          example: Telnyx
-        type:
-          type: string
-          description: The item type.
-          enum:
-          - alias
-          example: alias
-        alias:
-          type: string
-          description: The replacement text that will be spoken instead.
-          minLength: 1
-          maxLength: 500
-          example: tel-nicks
+        page_number:
+          type: integer
+          description: Current page number (1-based).
+          example: 1
+        page_size:
+          type: integer
+          description: Number of results per page.
+          example: 20
+        total_results:
+          type: integer
+          description: Total number of results across all pages.
+          example: 3
+        total_pages:
+          type: integer
+          description: Total number of pages.
+          example: 1
     ErrorObject:
       properties:
         code:

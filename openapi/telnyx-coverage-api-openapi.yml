@@ -92,13 +92,13 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    AvailableService:
-      type: string
-      title: Available service
-      enum:
-      - cloud_vpn
-      - private_wireless_gateway
-      - virtual_cross_connect
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
     PaginationMeta:
       type: object
       properties:
@@ -114,37 +114,6 @@ components:
         page_size:
           type: integer
           example: 25
-    Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/billing-group_Error'
-      type: object
-    netapps_Location_17904fcfbc:
-      type: object
-      title: Location
-      properties:
-        region:
-          type: string
-          description: Identifies the geographical region of location.
-          example: AMER
-        site:
-          type: string
-          description: Site of location.
-          example: ORD
-        pop:
-          type: string
-          description: Point of presence of location.
-          example: CH1
-        code:
-          type: string
-          description: Location code.
-          example: chicago-il
-        name:
-          type: string
-          description: Human readable name of location.
-          example: Chicago IL, US
     billing-group_Error:
       type: object
       required:
@@ -171,6 +140,13 @@ components:
           type: object
           properties: {}
           additionalProperties: true
+    AvailableService:
+      type: string
+      title: Available service
+      enum:
+      - cloud_vpn
+      - private_wireless_gateway
+      - virtual_cross_connect
     NetworkCoverage:
       type: object
       title: NetworkCoverage
@@ -188,29 +164,53 @@ components:
           items:
             oneOf:
             - $ref: '#/components/schemas/AvailableService'
-    netapps_Error:
+    netapps_Location_17904fcfbc:
+      type: object
+      title: Location
       properties:
+        region:
+          type: string
+          description: Identifies the geographical region of location.
+          example: AMER
+        site:
+          type: string
+          description: Site of location.
+          example: ORD
+        pop:
+          type: string
+          description: Point of presence of location.
+          example: CH1
         code:
           type: string
-        detail:
+          description: Location code.
+          example: chicago-il
+        name:
           type: string
-        meta:
-          additionalProperties: true
-          type: object
-        source:
-          properties:
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-          type: object
-        title:
+          description: Human readable name of location.
+          example: Chicago IL, US
+    netapps_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/netapps_Error'
+          type: array
+      type: object
+    NetworkCoverage_2:
+      properties:
+        available_services:
+          description: List of interface types supported in this region.
+          items:
+            oneOf:
+            - $ref: '#/components/schemas/AvailableService'
+          type: array
+        location:
+          $ref: '#/components/schemas/netapps_Location'
+        record_type:
+          description: Identifies the type of the resource.
+          example: network_coverage
+          readOnly: true
           type: string
-      required:
-      - code
-      - title
+      title: NetworkCoverage
       type: object
     netapps_Location:
       properties:
@@ -236,38 +236,30 @@ components:
           type: string
       title: Location
       type: object
-    netapps_Errors:
+    netapps_Error:
       properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/netapps_Error'
-          type: array
-      type: object
-    NetworkCoverage_2:
-      properties:
-        available_services:
-          description: List of interface types supported in this region.
-          items:
-            oneOf:
-            - $ref: '#/components/schemas/AvailableService'
-          type: array
-        location:
-          $ref: '#/components/schemas/netapps_Location'
-        record_type:
-          description: Identifies the type of the resource.
-          example: network_coverage
-          readOnly: true
+        code:
           type: string
-      title: NetworkCoverage
+        detail:
+          type: string
+        meta:
+          additionalProperties: true
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+          type: object
+        title:
+          type: string
+      required:
+      - code
+      - title
       type: object
-    AvailableService_2:
-      type: string
-      title: Available service
-      enum:
-      - cloud_vpn
-      - private_wireless_gateway
-      - tailscale_subnet_router
-      - virtual_cross_connect
     Errors_2:
       properties:
         errors:
@@ -310,6 +302,40 @@ components:
         code: '20207'
         description: The street address provided is invalid.
       type: object
+    AvailableService_2:
+      type: string
+      title: Available service
+      enum:
+      - cloud_vpn
+      - private_wireless_gateway
+      - tailscale_subnet_router
+      - virtual_cross_connect
+  responses:
+    GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    netapps_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/netapps_Errors'
+      description: Unexpected error
+    NetworkCoverageListResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/NetworkCoverage_2'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful response
   parameters:
     PageConsolidated:
       name: page
@@ -331,32 +357,6 @@ components:
             maximum: 250
             default: 20
             description: The size of the page
-  responses:
-    GenericErrorResponse:
-      description: Unexpected error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Errors'
-    NetworkCoverageListResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/NetworkCoverage_2'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful response
-    netapps_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/netapps_Errors'
-      description: Unexpected error
   securitySchemes:
     BearerAuth:
       type: http

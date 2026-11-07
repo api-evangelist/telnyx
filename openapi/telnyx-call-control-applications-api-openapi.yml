@@ -206,166 +206,144 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
-  parameters:
-    call-control_PageConsolidated:
-      name: page
-      in: query
-      style: deepObject
-      explode: true
-      description: 'Consolidated page parameter (deepObject style). Originally: page[after], page[before], page[limit], page[size], page[number]'
-      schema:
-        type: object
-        properties:
-          after:
-            type: string
-            default: 'null'
-            description: Opaque identifier of next page
-          before:
-            type: string
-            default: 'null'
-            description: Opaque identifier of previous page
-          limit:
-            type: integer
-            minimum: 1
-            maximum: 250
-            default: 20
-            description: Limit of records per single page
-          size:
-            type: integer
-            minimum: 1
-            maximum: 250
-            default: 20
-            description: The size of the page
-          number:
-            type: integer
-            minimum: 1
-            default: 1
-            description: The page number to load
-    SortConnection:
-      name: sort
-      in: query
-      required: false
-      description: "Specifies the sort order for results. By default sorting direction is ascending. To have the results sorted in descending order add the <code> -</code> prefix.<br/><br/>\nThat is: <ul>\n  <li>\n    <code>connection_name</code>: sorts the result by the\n    <code>connection_name</code> field in ascending order.\n  </li>\n\n  <li>\n    <code>-connection_name</code>: sorts the result by the\n    <code>connection_name</code> field in descending order.\n  </li>\n</ul> <br/> If not given, results are sorted by <code>created_at</code> in descending order."
-      schema:
-        type: string
-        enum:
-        - created_at
-        - connection_name
-        - active
-        example: connection_name
-        default: created_at
-    call-control_FilterConsolidated:
-      name: filter
-      in: query
-      style: deepObject
-      explode: true
-      description: 'Consolidated filter parameter (deepObject style). Originally: filter[application_name][contains], filter[outbound.outbound_voice_profile_id], filter[leg_id], filter[application_session_id], filter[connection_id], filter[product], filter[failed], filter[from], filter[to], filter[name], filter[type], filter[occurred_at][eq/gt/gte/lt/lte], filter[status]'
-      schema:
-        type: object
-        properties:
-          application_name:
-            type: object
-            description: Application name filters
-            properties:
-              contains:
-                type: string
-                default: 'null'
-                description: If present, applications with <code>application_name</code> containing the given value will be returned. Matching is not case-sensitive. Requires at least three characters.
-            additionalProperties: false
-          outbound.outbound_voice_profile_id:
-            type: string
-            example: '1293384261075731499'
-            description: Identifies the associated outbound voice profile.
-            x-format: int64
-          leg_id:
-            type: string
-            format: uuid
-            description: The unique identifier of an individual call leg.
-          application_session_id:
-            type: string
-            format: uuid
-            description: The unique identifier of the call session. A session may include multiple call leg events.
-          connection_id:
-            type: string
-            description: The unique identifier of the conection.
-          product:
-            type: string
-            enum:
-            - call_control
-            - fax
-            - texml
-            example: texml
-            description: Filter by product.
-          failed:
-            type: boolean
-            example: false
-            description: Delivery failed or not.
-          from:
-            type: string
-            example: '+12025550142'
-            description: Filter by From number.
-          to:
-            type: string
-            example: '+12025550142'
-            description: Filter by To number.
-          name:
-            type: string
-            description: If present, conferences will be filtered to those with a matching `name` attribute. Matching is case-sensitive
-          type:
-            type: string
-            enum:
-            - command
-            - webhook
-            example: webhook
-            description: Event type
-          occurred_at:
-            type: object
-            description: Event occurred_at filters
-            properties:
-              eq:
-                type: string
-                example: '2019-03-29T11:10:00Z'
-                description: 'Event occurred_at: equal'
-              gt:
-                type: string
-                example: '2019-03-29T11:10:00Z'
-                description: 'Event occurred_at: greater than'
-              gte:
-                type: string
-                example: '2019-03-29T11:10:00Z'
-                description: 'Event occurred_at: greater than or equal'
-              lt:
-                type: string
-                example: '2019-03-29T11:10:00Z'
-                description: 'Event occurred_at: lower than'
-              lte:
-                type: string
-                example: '2019-03-29T11:10:00Z'
-                description: 'Event occurred_at: lower than or equal'
-            additionalProperties: false
-          status:
-            type: string
-            enum:
-            - init
-            - in_progress
-            - completed
-            description: If present, conferences will be filtered by status.
   schemas:
-    PaginationMeta:
+    UpdateCallControlApplicationRequest:
       type: object
+      title: Update Call Control Application Request
+      required:
+      - application_name
+      - webhook_event_url
       properties:
-        total_pages:
+        application_name:
+          type: string
+          description: A user-assigned name to help manage the application.
+          example: call-router
+        webhook_event_url:
+          type: string
+          format: url
+          description: The URL where webhooks related to this connection will be sent. Must include a scheme, such as 'https'.
+          example: https://example.com
+        call_cost_in_webhooks:
+          type: boolean
+          description: Specifies if call cost webhooks should be sent for this Call Control Application.
+          default: false
+        active:
+          type: boolean
+          description: Specifies whether the connection can be used.
+          default: true
+        anchorsite_override:
+          type: string
+          description: '<code>Latency</code> directs Telnyx to route media through the site with the lowest round-trip time to the user''s connection. Telnyx calculates this time using ICMP ping messages. This can be disabled by specifying a site to handle all media.
+
+            '
+          enum:
+          - Latency
+          - Chicago, IL
+          - Ashburn, VA
+          - San Jose, CA
+          - London, UK
+          - Chennai, IN
+          - Amsterdam, Netherlands
+          - Toronto, Canada
+          - Sydney, Australia
+          example: Amsterdam, Netherlands
+          default: Latency
+        dtmf_type:
+          type: string
+          description: Sets the type of DTMF digits sent from Telnyx to this Connection. Note that DTMF digits sent to Telnyx will be accepted in all formats.
+          enum:
+          - RFC 2833
+          - Inband
+          - SIP INFO
+          example: Inband
+          default: RFC 2833
+        first_command_timeout:
+          type: boolean
+          description: Specifies whether calls to phone numbers associated with this connection should hangup after timing out.
+          example: true
+          default: false
+        first_command_timeout_secs:
           type: integer
-          example: 3
-        total_results:
-          type: integer
-          example: 55
-        page_number:
-          type: integer
-          example: 2
-        page_size:
-          type: integer
+          description: Specifies how many seconds to wait before timing out a dial command.
+          example: 10
+          default: 30
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags assigned to the Call Control Application.
+          example:
+          - tag1
+          - tag2
+        inbound:
+          $ref: '#/components/schemas/CallControlApplicationInbound'
+        outbound:
+          $ref: '#/components/schemas/CallControlApplicationOutbound'
+        webhook_api_version:
+          type: string
+          description: Determines which webhook format will be used, Telnyx API v1 or v2.
+          enum:
+          - '1'
+          - '2'
+          example: '1'
+          default: '1'
+        webhook_event_failover_url:
+          type:
+          - string
+          - 'null'
+          format: url
+          description: The failover URL where webhooks related to this connection will be sent if sending to the primary URL fails. Must include a scheme, such as 'https'.
+          example: https://failover.example.com
+          default: ''
+        webhook_timeout_secs:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 30
+          description: Specifies how many seconds to wait before timing out a webhook.
           example: 25
+          default: null
+        redact_dtmf_debug_logging:
+          type: boolean
+          description: When enabled, DTMF digits entered by users will be redacted in debug logs to protect PII data entered through IVR interactions.
+          example: true
+          default: false
+      example:
+        application_name: call-router
+        webhook_event_url: https://example.com
+        active: false
+        anchorsite_override: Latency
+        dtmf_type: Inband
+        first_command_timeout: true
+        first_command_timeout_secs: 10
+        inbound:
+          channel_limit: 10
+          shaken_stir_enabled: true
+          sip_subdomain: example
+          sip_subdomain_receive_settings: only_my_connections
+        outbound:
+          channel_limit: 10
+          outbound_voice_profile_id: '1293384261075731499'
+        webhook_api_version: '1'
+        webhook_event_failover_url: https://failover.example.com
+        webhook_timeout_secs: 25
+        call_cost_in_webhooks: true
+        redact_dtmf_debug_logging: true
+    CallControlApplicationOutbound:
+      type: object
+      title: Call Control Application Outbound
+      properties:
+        channel_limit:
+          type: integer
+          description: When set, this will limit the total number of outbound calls to phone numbers associated with this connection.
+          example: 10
+          default: null
+        outbound_voice_profile_id:
+          type: string
+          description: Identifies the associated outbound voice profile.
+          example: '1293384261075731499'
+          x-format: int64
     call-control_Error:
       required:
       - code
@@ -390,20 +368,6 @@ components:
               type: string
         meta:
           type: object
-    CallControlApplicationOutbound:
-      type: object
-      title: Call Control Application Outbound
-      properties:
-        channel_limit:
-          type: integer
-          description: When set, this will limit the total number of outbound calls to phone numbers associated with this connection.
-          example: 10
-          default: null
-        outbound_voice_profile_id:
-          type: string
-          description: Identifies the associated outbound voice profile.
-          example: '1293384261075731499'
-          x-format: int64
     CallControlApplicationInbound:
       type: object
       title: Call Control Application Inbound
@@ -431,6 +395,142 @@ components:
           - from_anyone
           example: only_my_connections
           default: from_anyone
+    PaginationMeta:
+      type: object
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 55
+        page_number:
+          type: integer
+          example: 2
+        page_size:
+          type: integer
+          example: 25
+    call-control_Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/call-control_Error'
+    CreateCallControlApplicationRequest:
+      type: object
+      title: Create Call Control Application Request
+      required:
+      - application_name
+      - webhook_event_url
+      properties:
+        application_name:
+          type: string
+          description: A user-assigned name to help manage the application.
+          example: call-router
+        webhook_event_url:
+          type: string
+          format: url
+          description: The URL where webhooks related to this connection will be sent. Must include a scheme, such as 'https'.
+          example: https://example.com
+        active:
+          type: boolean
+          description: Specifies whether the connection can be used.
+          default: true
+        anchorsite_override:
+          type: string
+          description: '<code>Latency</code> directs Telnyx to route media through the site with the lowest round-trip time to the user''s connection. Telnyx calculates this time using ICMP ping messages. This can be disabled by specifying a site to handle all media.
+
+            '
+          enum:
+          - Latency
+          - Chicago, IL
+          - Ashburn, VA
+          - San Jose, CA
+          - London, UK
+          - Chennai, IN
+          - Amsterdam, Netherlands
+          - Toronto, Canada
+          - Sydney, Australia
+          example: Amsterdam, Netherlands
+          default: Latency
+        dtmf_type:
+          type: string
+          description: Sets the type of DTMF digits sent from Telnyx to this Connection. Note that DTMF digits sent to Telnyx will be accepted in all formats.
+          enum:
+          - RFC 2833
+          - Inband
+          - SIP INFO
+          example: Inband
+          default: RFC 2833
+        first_command_timeout:
+          type: boolean
+          description: Specifies whether calls to phone numbers associated with this connection should hangup after timing out.
+          example: true
+          default: false
+        first_command_timeout_secs:
+          type: integer
+          description: Specifies how many seconds to wait before timing out a dial command.
+          example: 10
+          default: 30
+        inbound:
+          $ref: '#/components/schemas/CallControlApplicationInbound'
+        outbound:
+          $ref: '#/components/schemas/CallControlApplicationOutbound'
+        webhook_api_version:
+          type: string
+          description: Determines which webhook format will be used, Telnyx API v1 or v2.
+          enum:
+          - '1'
+          - '2'
+          example: '1'
+          default: '1'
+        webhook_event_failover_url:
+          type:
+          - string
+          - 'null'
+          format: url
+          description: The failover URL where webhooks related to this connection will be sent if sending to the primary URL fails. Must include a scheme, such as 'https'.
+          example: https://failover.example.com
+          default: ''
+        webhook_timeout_secs:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 30
+          description: Specifies how many seconds to wait before timing out a webhook.
+          example: 25
+          default: null
+        call_cost_in_webhooks:
+          type: boolean
+          description: Specifies if call cost webhooks should be sent for this Call Control Application.
+          default: false
+        redact_dtmf_debug_logging:
+          type: boolean
+          description: When enabled, DTMF digits entered by users will be redacted in debug logs to protect PII data entered through IVR interactions.
+          example: true
+          default: false
+      example:
+        application_name: call-router
+        webhook_event_url: https://example.com
+        active: false
+        anchorsite_override: Latency
+        dtmf_type: Inband
+        first_command_timeout: true
+        first_command_timeout_secs: 10
+        inbound:
+          channel_limit: 10
+          shaken_stir_enabled: true
+          sip_subdomain: example
+          sip_subdomain_receive_settings: only_my_connections
+        outbound:
+          channel_limit: 10
+          outbound_voice_profile_id: '1293384261075731499'
+        webhook_api_version: '1'
+        webhook_event_failover_url: https://failover.example.com
+        webhook_timeout_secs: 25
+        call_cost_in_webhooks: true
+        redact_dtmf_debug_logging: true
     CallControlApplication:
       type: object
       title: Call Control Application
@@ -568,250 +668,6 @@ components:
         webhook_timeout_secs: 25
         call_cost_in_webhooks: false
         redact_dtmf_debug_logging: true
-    call-control_Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/call-control_Error'
-    CreateCallControlApplicationRequest:
-      type: object
-      title: Create Call Control Application Request
-      required:
-      - application_name
-      - webhook_event_url
-      properties:
-        application_name:
-          type: string
-          description: A user-assigned name to help manage the application.
-          example: call-router
-        webhook_event_url:
-          type: string
-          format: url
-          description: The URL where webhooks related to this connection will be sent. Must include a scheme, such as 'https'.
-          example: https://example.com
-        active:
-          type: boolean
-          description: Specifies whether the connection can be used.
-          default: true
-        anchorsite_override:
-          type: string
-          description: '<code>Latency</code> directs Telnyx to route media through the site with the lowest round-trip time to the user''s connection. Telnyx calculates this time using ICMP ping messages. This can be disabled by specifying a site to handle all media.
-
-            '
-          enum:
-          - Latency
-          - Chicago, IL
-          - Ashburn, VA
-          - San Jose, CA
-          - London, UK
-          - Chennai, IN
-          - Amsterdam, Netherlands
-          - Toronto, Canada
-          - Sydney, Australia
-          example: Amsterdam, Netherlands
-          default: Latency
-        dtmf_type:
-          type: string
-          description: Sets the type of DTMF digits sent from Telnyx to this Connection. Note that DTMF digits sent to Telnyx will be accepted in all formats.
-          enum:
-          - RFC 2833
-          - Inband
-          - SIP INFO
-          example: Inband
-          default: RFC 2833
-        first_command_timeout:
-          type: boolean
-          description: Specifies whether calls to phone numbers associated with this connection should hangup after timing out.
-          example: true
-          default: false
-        first_command_timeout_secs:
-          type: integer
-          description: Specifies how many seconds to wait before timing out a dial command.
-          example: 10
-          default: 30
-        inbound:
-          $ref: '#/components/schemas/CallControlApplicationInbound'
-        outbound:
-          $ref: '#/components/schemas/CallControlApplicationOutbound'
-        webhook_api_version:
-          type: string
-          description: Determines which webhook format will be used, Telnyx API v1 or v2.
-          enum:
-          - '1'
-          - '2'
-          example: '1'
-          default: '1'
-        webhook_event_failover_url:
-          type:
-          - string
-          - 'null'
-          format: url
-          description: The failover URL where webhooks related to this connection will be sent if sending to the primary URL fails. Must include a scheme, such as 'https'.
-          example: https://failover.example.com
-          default: ''
-        webhook_timeout_secs:
-          type:
-          - integer
-          - 'null'
-          minimum: 0
-          maximum: 30
-          description: Specifies how many seconds to wait before timing out a webhook.
-          example: 25
-          default: null
-        call_cost_in_webhooks:
-          type: boolean
-          description: Specifies if call cost webhooks should be sent for this Call Control Application.
-          default: false
-        redact_dtmf_debug_logging:
-          type: boolean
-          description: When enabled, DTMF digits entered by users will be redacted in debug logs to protect PII data entered through IVR interactions.
-          example: true
-          default: false
-      example:
-        application_name: call-router
-        webhook_event_url: https://example.com
-        active: false
-        anchorsite_override: Latency
-        dtmf_type: Inband
-        first_command_timeout: true
-        first_command_timeout_secs: 10
-        inbound:
-          channel_limit: 10
-          shaken_stir_enabled: true
-          sip_subdomain: example
-          sip_subdomain_receive_settings: only_my_connections
-        outbound:
-          channel_limit: 10
-          outbound_voice_profile_id: '1293384261075731499'
-        webhook_api_version: '1'
-        webhook_event_failover_url: https://failover.example.com
-        webhook_timeout_secs: 25
-        call_cost_in_webhooks: true
-        redact_dtmf_debug_logging: true
-    UpdateCallControlApplicationRequest:
-      type: object
-      title: Update Call Control Application Request
-      required:
-      - application_name
-      - webhook_event_url
-      properties:
-        application_name:
-          type: string
-          description: A user-assigned name to help manage the application.
-          example: call-router
-        webhook_event_url:
-          type: string
-          format: url
-          description: The URL where webhooks related to this connection will be sent. Must include a scheme, such as 'https'.
-          example: https://example.com
-        call_cost_in_webhooks:
-          type: boolean
-          description: Specifies if call cost webhooks should be sent for this Call Control Application.
-          default: false
-        active:
-          type: boolean
-          description: Specifies whether the connection can be used.
-          default: true
-        anchorsite_override:
-          type: string
-          description: '<code>Latency</code> directs Telnyx to route media through the site with the lowest round-trip time to the user''s connection. Telnyx calculates this time using ICMP ping messages. This can be disabled by specifying a site to handle all media.
-
-            '
-          enum:
-          - Latency
-          - Chicago, IL
-          - Ashburn, VA
-          - San Jose, CA
-          - London, UK
-          - Chennai, IN
-          - Amsterdam, Netherlands
-          - Toronto, Canada
-          - Sydney, Australia
-          example: Amsterdam, Netherlands
-          default: Latency
-        dtmf_type:
-          type: string
-          description: Sets the type of DTMF digits sent from Telnyx to this Connection. Note that DTMF digits sent to Telnyx will be accepted in all formats.
-          enum:
-          - RFC 2833
-          - Inband
-          - SIP INFO
-          example: Inband
-          default: RFC 2833
-        first_command_timeout:
-          type: boolean
-          description: Specifies whether calls to phone numbers associated with this connection should hangup after timing out.
-          example: true
-          default: false
-        first_command_timeout_secs:
-          type: integer
-          description: Specifies how many seconds to wait before timing out a dial command.
-          example: 10
-          default: 30
-        tags:
-          type: array
-          items:
-            type: string
-          description: Tags assigned to the Call Control Application.
-          example:
-          - tag1
-          - tag2
-        inbound:
-          $ref: '#/components/schemas/CallControlApplicationInbound'
-        outbound:
-          $ref: '#/components/schemas/CallControlApplicationOutbound'
-        webhook_api_version:
-          type: string
-          description: Determines which webhook format will be used, Telnyx API v1 or v2.
-          enum:
-          - '1'
-          - '2'
-          example: '1'
-          default: '1'
-        webhook_event_failover_url:
-          type:
-          - string
-          - 'null'
-          format: url
-          description: The failover URL where webhooks related to this connection will be sent if sending to the primary URL fails. Must include a scheme, such as 'https'.
-          example: https://failover.example.com
-          default: ''
-        webhook_timeout_secs:
-          type:
-          - integer
-          - 'null'
-          minimum: 0
-          maximum: 30
-          description: Specifies how many seconds to wait before timing out a webhook.
-          example: 25
-          default: null
-        redact_dtmf_debug_logging:
-          type: boolean
-          description: When enabled, DTMF digits entered by users will be redacted in debug logs to protect PII data entered through IVR interactions.
-          example: true
-          default: false
-      example:
-        application_name: call-router
-        webhook_event_url: https://example.com
-        active: false
-        anchorsite_override: Latency
-        dtmf_type: Inband
-        first_command_timeout: true
-        first_command_timeout_secs: 10
-        inbound:
-          channel_limit: 10
-          shaken_stir_enabled: true
-          sip_subdomain: example
-          sip_subdomain_receive_settings: only_my_connections
-        outbound:
-          channel_limit: 10
-          outbound_voice_profile_id: '1293384261075731499'
-        webhook_api_version: '1'
-        webhook_event_failover_url: https://failover.example.com
-        webhook_timeout_secs: 25
-        call_cost_in_webhooks: true
-        redact_dtmf_debug_logging: true
     CallControlApplicationInbound_2:
       type: object
       title: Call Control Application Inbound
@@ -839,6 +695,150 @@ components:
           - from_anyone
           example: only_my_connections
           default: from_anyone
+  parameters:
+    call-control_PageConsolidated:
+      name: page
+      in: query
+      style: deepObject
+      explode: true
+      description: 'Consolidated page parameter (deepObject style). Originally: page[after], page[before], page[limit], page[size], page[number]'
+      schema:
+        type: object
+        properties:
+          after:
+            type: string
+            default: 'null'
+            description: Opaque identifier of next page
+          before:
+            type: string
+            default: 'null'
+            description: Opaque identifier of previous page
+          limit:
+            type: integer
+            minimum: 1
+            maximum: 250
+            default: 20
+            description: Limit of records per single page
+          size:
+            type: integer
+            minimum: 1
+            maximum: 250
+            default: 20
+            description: The size of the page
+          number:
+            type: integer
+            minimum: 1
+            default: 1
+            description: The page number to load
+    call-control_FilterConsolidated:
+      name: filter
+      in: query
+      style: deepObject
+      explode: true
+      description: 'Consolidated filter parameter (deepObject style). Originally: filter[application_name][contains], filter[outbound.outbound_voice_profile_id], filter[leg_id], filter[application_session_id], filter[connection_id], filter[product], filter[failed], filter[from], filter[to], filter[name], filter[type], filter[occurred_at][eq/gt/gte/lt/lte], filter[status]'
+      schema:
+        type: object
+        properties:
+          application_name:
+            type: object
+            description: Application name filters
+            properties:
+              contains:
+                type: string
+                default: 'null'
+                description: If present, applications with <code>application_name</code> containing the given value will be returned. Matching is not case-sensitive. Requires at least three characters.
+            additionalProperties: false
+          outbound.outbound_voice_profile_id:
+            type: string
+            example: '1293384261075731499'
+            description: Identifies the associated outbound voice profile.
+            x-format: int64
+          leg_id:
+            type: string
+            format: uuid
+            description: The unique identifier of an individual call leg.
+          application_session_id:
+            type: string
+            format: uuid
+            description: The unique identifier of the call session. A session may include multiple call leg events.
+          connection_id:
+            type: string
+            description: The unique identifier of the conection.
+          product:
+            type: string
+            enum:
+            - call_control
+            - fax
+            - texml
+            example: texml
+            description: Filter by product.
+          failed:
+            type: boolean
+            example: false
+            description: Delivery failed or not.
+          from:
+            type: string
+            example: '+12025550142'
+            description: Filter by From number.
+          to:
+            type: string
+            example: '+12025550142'
+            description: Filter by To number.
+          name:
+            type: string
+            description: If present, conferences will be filtered to those with a matching `name` attribute. Matching is case-sensitive
+          type:
+            type: string
+            enum:
+            - command
+            - webhook
+            example: webhook
+            description: Event type
+          occurred_at:
+            type: object
+            description: Event occurred_at filters
+            properties:
+              eq:
+                type: string
+                example: '2019-03-29T11:10:00Z'
+                description: 'Event occurred_at: equal'
+              gt:
+                type: string
+                example: '2019-03-29T11:10:00Z'
+                description: 'Event occurred_at: greater than'
+              gte:
+                type: string
+                example: '2019-03-29T11:10:00Z'
+                description: 'Event occurred_at: greater than or equal'
+              lt:
+                type: string
+                example: '2019-03-29T11:10:00Z'
+                description: 'Event occurred_at: lower than'
+              lte:
+                type: string
+                example: '2019-03-29T11:10:00Z'
+                description: 'Event occurred_at: lower than or equal'
+            additionalProperties: false
+          status:
+            type: string
+            enum:
+            - init
+            - in_progress
+            - completed
+            description: If present, conferences will be filtered by status.
+    SortConnection:
+      name: sort
+      in: query
+      required: false
+      description: "Specifies the sort order for results. By default sorting direction is ascending. To have the results sorted in descending order add the <code> -</code> prefix.<br/><br/>\nThat is: <ul>\n  <li>\n    <code>connection_name</code>: sorts the result by the\n    <code>connection_name</code> field in ascending order.\n  </li>\n\n  <li>\n    <code>-connection_name</code>: sorts the result by the\n    <code>connection_name</code> field in descending order.\n  </li>\n</ul> <br/> If not given, results are sorted by <code>created_at</code> in descending order."
+      schema:
+        type: string
+        enum:
+        - created_at
+        - connection_name
+        - active
+        example: connection_name
+        default: created_at
   responses:
     UnauthorizedResponse:
       description: Unauthorized. Authentication failed - the required authentication headers were either invalid or not included in the request.

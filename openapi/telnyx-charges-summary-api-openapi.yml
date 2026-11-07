@@ -78,12 +78,6 @@ components:
       - amount
       - description
       - event_date
-    SummaryLine:
-      oneOf:
-      - $ref: '#/components/schemas/ComparativeLine'
-      - $ref: '#/components/schemas/SimpleLine'
-      discriminator:
-        propertyName: type
     Summary:
       type: object
       properties:
@@ -121,6 +115,44 @@ components:
       required:
       - lines
       - adjustments
+    SummaryAndTotal:
+      type: object
+      properties:
+        user_id:
+          type: string
+          description: User identifier
+          example: 0db0b4aa-a83d-4d4f-ad9b-3ba7c1ac2ce8
+        start_date:
+          type: string
+          format: date
+          description: Start date of the summary period
+          example: '2025-05-01'
+        end_date:
+          type: string
+          format: date
+          description: End date of the summary period
+          example: '2025-06-01'
+        user_email:
+          type: string
+          format: email
+          description: User email address
+          example: user@example.com
+        currency:
+          type: string
+          description: Currency code
+          example: USD
+        summary:
+          $ref: '#/components/schemas/Summary'
+        total:
+          $ref: '#/components/schemas/TotalSummary'
+      required:
+      - user_id
+      - start_date
+      - end_date
+      - user_email
+      - currency
+      - summary
+      - total
     ComparativeLine:
       type: object
       properties:
@@ -153,6 +185,93 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/charges_Error'
+    MonthlyChargesSummaryResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SummaryAndTotal'
+      required:
+      - data
+    SimpleLine:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - simple
+          example: simple
+        name:
+          type: string
+          description: Service name
+          example: Port Out
+        alias:
+          type: string
+          description: Service alias
+          example: port_out
+        quantity:
+          type: integer
+          description: Number of items
+          example: 100
+        amount:
+          type: string
+          description: Total amount as decimal string
+          example: '15.75'
+      required:
+      - type
+      - name
+      - alias
+      - quantity
+      - amount
+    charges_Error:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+          format: integer
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+    SummaryLine:
+      oneOf:
+      - $ref: '#/components/schemas/ComparativeLine'
+      - $ref: '#/components/schemas/SimpleLine'
+      discriminator:
+        propertyName: type
+    MonthDetail:
+      type: object
+      properties:
+        quantity:
+          type: integer
+          description: Number of items
+          example: 10
+        mrc:
+          type: string
+          description: Monthly recurring charge amount as decimal string
+          example: '25.50'
+        otc:
+          type:
+          - string
+          - 'null'
+          description: One-time charge amount as decimal string
+          example: '5.00'
+      required:
+      - quantity
+      - mrc
     TotalSummary:
       type: object
       properties:
@@ -192,137 +311,7 @@ components:
       - credits
       - ledger_adjustments
       - grand_total
-    MonthDetail:
-      type: object
-      properties:
-        quantity:
-          type: integer
-          description: Number of items
-          example: 10
-        mrc:
-          type: string
-          description: Monthly recurring charge amount as decimal string
-          example: '25.50'
-        otc:
-          type:
-          - string
-          - 'null'
-          description: One-time charge amount as decimal string
-          example: '5.00'
-      required:
-      - quantity
-      - mrc
-    SummaryAndTotal:
-      type: object
-      properties:
-        user_id:
-          type: string
-          description: User identifier
-          example: 0db0b4aa-a83d-4d4f-ad9b-3ba7c1ac2ce8
-        start_date:
-          type: string
-          format: date
-          description: Start date of the summary period
-          example: '2025-05-01'
-        end_date:
-          type: string
-          format: date
-          description: End date of the summary period
-          example: '2025-06-01'
-        user_email:
-          type: string
-          format: email
-          description: User email address
-          example: user@example.com
-        currency:
-          type: string
-          description: Currency code
-          example: USD
-        summary:
-          $ref: '#/components/schemas/Summary'
-        total:
-          $ref: '#/components/schemas/TotalSummary'
-      required:
-      - user_id
-      - start_date
-      - end_date
-      - user_email
-      - currency
-      - summary
-      - total
-    MonthlyChargesSummaryResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/SummaryAndTotal'
-      required:
-      - data
-    charges_Error:
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: string
-          format: integer
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-              format: json-pointer
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-    SimpleLine:
-      type: object
-      properties:
-        type:
-          type: string
-          enum:
-          - simple
-          example: simple
-        name:
-          type: string
-          description: Service name
-          example: Port Out
-        alias:
-          type: string
-          description: Service alias
-          example: port_out
-        quantity:
-          type: integer
-          description: Number of items
-          example: 100
-        amount:
-          type: string
-          description: Total amount as decimal string
-          example: '15.75'
-      required:
-      - type
-      - name
-      - alias
-      - quantity
-      - amount
   responses:
-    charges_GenericErrorResponse:
-      description: Unexpected error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/charges_Errors'
-          example:
-            errors:
-            - code: '10007'
-              title: Unexpected error
-              detail: An unexpected error occured.
     charges_BadRequestErrorResponse:
       description: Invalid request parameters or date range
       content:
@@ -345,12 +334,17 @@ components:
             - code: '10027'
               title: Unprocessable Entity
               detail: The server understood the syntax of the request but was unable to process the instructions.
-    charges_GenericErrorResponse_2:
+    charges_GenericErrorResponse:
+      description: Unexpected error
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/charges_Errors'
-      description: Unexpected error
+          example:
+            errors:
+            - code: '10007'
+              title: Unexpected error
+              detail: An unexpected error occured.
     charges_BadRequestErrorResponse_2:
       content:
         application/json:
@@ -363,6 +357,12 @@ components:
           schema:
             $ref: '#/components/schemas/charges_Errors'
       description: User account not found
+    charges_GenericErrorResponse_2:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/charges_Errors'
+      description: Unexpected error
   securitySchemes:
     BearerAuth:
       type: http

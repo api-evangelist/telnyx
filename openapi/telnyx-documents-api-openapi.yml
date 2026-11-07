@@ -324,134 +324,27 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
-  parameters:
-    FilterDocumentLinksConsolidated:
-      name: filter
-      in: query
-      style: deepObject
-      explode: true
-      required: false
-      description: 'Consolidated filter parameter for document links (deepObject style). Originally: filter[linked_record_type], filter[linked_resource_id]'
-      schema:
-        type: object
-        additionalProperties: false
-        properties:
-          linked_record_type:
-            type: string
-            example: porting_order
-            description: The linked_record_type of the document to filter on.
-          linked_resource_id:
-            type: string
-            format: uuid
-            example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-            description: The linked_resource_id of the document to filter on.
-    FilterDocumentsConsolidated:
-      name: filter
-      in: query
-      style: deepObject
-      explode: true
-      required: false
-      description: 'Consolidated filter parameter for documents (deepObject style). Originally: filter[filename][contains], filter[customer_reference][eq], filter[customer_reference][in][], filter[created_at][gt], filter[created_at][lt]'
-      schema:
-        type: object
-        additionalProperties: false
-        properties:
-          filename:
-            type: object
-            additionalProperties: false
-            properties:
-              contains:
-                type: string
-                example: invoice
-                description: Filter by string matching part of filename.
-          customer_reference:
-            type: object
-            additionalProperties: false
-            properties:
-              eq:
-                type: string
-                example: MY REF 001
-                description: Filter documents by a customer reference.
-              in:
-                type: array
-                items:
-                  type: string
-                example:
-                - MY REF 001
-                - MY REF 002
-                description: Filter documents by a list of customer references.
-          created_at:
-            type: object
-            additionalProperties: false
-            properties:
-              gt:
-                type: string
-                format: date-time
-                example: '2021-04-09T22:25:27.521Z'
-                description: Filter by created at greater than provided value.
-              lt:
-                type: string
-                format: date-time
-                example: '2021-04-09T22:25:27.521Z'
-                description: Filter by created at less than provided value.
-        example:
-          filename:
-            contains: invoice
-          customer_reference:
-            in:
-            - REF001
-            - REF002
-          created_at:
-            gt: '2021-01-01T00:00:00Z'
-    Id:
-      name: id
-      description: Identifies the resource.
-      in: path
-      required: true
-      schema:
-        format: uuid
-        type: string
-        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-    documents_PageConsolidated:
-      name: page
-      in: query
-      style: deepObject
-      explode: true
-      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
-      schema:
-        type: object
-        properties:
-          size:
-            type: integer
-            minimum: 1
-            maximum: 250
-            default: 20
-            description: The size of the page
-          number:
-            type: integer
-            minimum: 1
-            default: 1
-            description: The page number to load
-    SortDocumentsConsolidated:
-      name: sort
-      in: query
-      required: false
-      description: 'Consolidated sort parameter for documents (deepObject style). Originally: sort[]'
-      schema:
-        type: array
-        items:
-          type: string
-          enum:
-          - filename
-          - created_at
-          - updated_at
-          - -filename
-          - -created_at
-          - -updated_at
-        example:
-        - filename
-        description: Specifies the sort order for results. If you want to sort by a field in ascending order, include it as a sort parameter. If you want to sort in descending order, prepend a `-` in front of the field name.
   schemas:
+    CreateDocServiceDocumentRequest:
+      type: object
+      properties:
+        url:
+          description: If the file is already hosted publicly, you can provide a URL and have the documents service fetch it for you.
+          type: string
+          example: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+        file:
+          description: Alternatively, instead of the URL you can provide the Base64 encoded contents of the file you are uploading.
+          type: string
+          format: byte
+          example: ZXhhbXBsZSBvZiBlbmNvZGVkIGNvbnRlbnQ=
+        filename:
+          description: The filename of the document.
+          type: string
+          example: test-document.pdf
+        customer_reference:
+          type: string
+          description: A customer reference string for customer look ups.
+          example: MY REF 001
     documents_Error:
       required:
       - code
@@ -476,21 +369,6 @@ components:
           type: object
           additionalProperties: true
       type: object
-    PaginationMeta:
-      type: object
-      properties:
-        total_pages:
-          type: integer
-          example: 3
-        total_results:
-          type: integer
-          example: 55
-        page_number:
-          type: integer
-          example: 2
-        page_size:
-          type: integer
-          example: 25
     Errors:
       properties:
         errors:
@@ -498,76 +376,6 @@ components:
           items:
             $ref: '#/components/schemas/billing-group_Error'
       type: object
-    DocServiceRecord:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Identifies the resource.
-          readOnly: true
-          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-        record_type:
-          type: string
-          description: Identifies the type of the resource.
-          readOnly: true
-          example: sample_record_type
-        created_at:
-          type: string
-          description: ISO 8601 formatted date-time indicating when the resource was created.
-          readOnly: true
-          example: '2018-02-02T22:25:27.521Z'
-        updated_at:
-          type: string
-          description: ISO 8601 formatted date-time indicating when the resource was updated.
-          readOnly: true
-          example: '2018-02-02T22:25:27.521Z'
-    CreateDocServiceDocumentRequest:
-      type: object
-      properties:
-        url:
-          description: If the file is already hosted publicly, you can provide a URL and have the documents service fetch it for you.
-          type: string
-          example: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
-        file:
-          description: Alternatively, instead of the URL you can provide the Base64 encoded contents of the file you are uploading.
-          type: string
-          format: byte
-          example: ZXhhbXBsZSBvZiBlbmNvZGVkIGNvbnRlbnQ=
-        filename:
-          description: The filename of the document.
-          type: string
-          example: test-document.pdf
-        customer_reference:
-          type: string
-          description: A customer reference string for customer look ups.
-          example: MY REF 001
-    billing-group_Error:
-      type: object
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: integer
-          format: int32
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-          properties: {}
-          additionalProperties: true
     DocServiceDocumentLink:
       allOf:
       - $ref: '#/components/schemas/DocServiceRecord'
@@ -594,17 +402,21 @@ components:
             type: string
             readOnly: true
             example: 132091b4-442b-4a2a-b87f-61e707e46d54
-    CreateMultiPartDocServiceDocumentRequest:
+    PaginationMeta:
       type: object
       properties:
-        file:
-          description: The file you are uploading.
-          type: string
-          format: binary
-        customer_reference:
-          type: string
-          description: Optional reference string for customer tracking.
-          example: MY REF 001
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 55
+        page_number:
+          type: integer
+          example: 2
+        page_size:
+          type: integer
+          example: 25
     DocServiceDocument:
       allOf:
       - $ref: '#/components/schemas/DocServiceRecord'
@@ -667,6 +479,67 @@ components:
             - pending_scan
             - not_scanned
             example: scanned
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
+    CreateMultiPartDocServiceDocumentRequest:
+      type: object
+      properties:
+        file:
+          description: The file you are uploading.
+          type: string
+          format: binary
+        customer_reference:
+          type: string
+          description: Optional reference string for customer tracking.
+          example: MY REF 001
+    DocServiceRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identifies the resource.
+          readOnly: true
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+        record_type:
+          type: string
+          description: Identifies the type of the resource.
+          readOnly: true
+          example: sample_record_type
+        created_at:
+          type: string
+          description: ISO 8601 formatted date-time indicating when the resource was created.
+          readOnly: true
+          example: '2018-02-02T22:25:27.521Z'
+        updated_at:
+          type: string
+          description: ISO 8601 formatted date-time indicating when the resource was updated.
+          readOnly: true
+          example: '2018-02-02T22:25:27.521Z'
     documents_Errors:
       properties:
         errors:
@@ -716,6 +589,133 @@ components:
         code: '20207'
         description: The street address provided is invalid.
       type: object
+  parameters:
+    documents_PageConsolidated:
+      name: page
+      in: query
+      style: deepObject
+      explode: true
+      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
+      schema:
+        type: object
+        properties:
+          size:
+            type: integer
+            minimum: 1
+            maximum: 250
+            default: 20
+            description: The size of the page
+          number:
+            type: integer
+            minimum: 1
+            default: 1
+            description: The page number to load
+    FilterDocumentsConsolidated:
+      name: filter
+      in: query
+      style: deepObject
+      explode: true
+      required: false
+      description: 'Consolidated filter parameter for documents (deepObject style). Originally: filter[filename][contains], filter[customer_reference][eq], filter[customer_reference][in][], filter[created_at][gt], filter[created_at][lt]'
+      schema:
+        type: object
+        additionalProperties: false
+        properties:
+          filename:
+            type: object
+            additionalProperties: false
+            properties:
+              contains:
+                type: string
+                example: invoice
+                description: Filter by string matching part of filename.
+          customer_reference:
+            type: object
+            additionalProperties: false
+            properties:
+              eq:
+                type: string
+                example: MY REF 001
+                description: Filter documents by a customer reference.
+              in:
+                type: array
+                items:
+                  type: string
+                example:
+                - MY REF 001
+                - MY REF 002
+                description: Filter documents by a list of customer references.
+          created_at:
+            type: object
+            additionalProperties: false
+            properties:
+              gt:
+                type: string
+                format: date-time
+                example: '2021-04-09T22:25:27.521Z'
+                description: Filter by created at greater than provided value.
+              lt:
+                type: string
+                format: date-time
+                example: '2021-04-09T22:25:27.521Z'
+                description: Filter by created at less than provided value.
+        example:
+          filename:
+            contains: invoice
+          customer_reference:
+            in:
+            - REF001
+            - REF002
+          created_at:
+            gt: '2021-01-01T00:00:00Z'
+    SortDocumentsConsolidated:
+      name: sort
+      in: query
+      required: false
+      description: 'Consolidated sort parameter for documents (deepObject style). Originally: sort[]'
+      schema:
+        type: array
+        items:
+          type: string
+          enum:
+          - filename
+          - created_at
+          - updated_at
+          - -filename
+          - -created_at
+          - -updated_at
+        example:
+        - filename
+        description: Specifies the sort order for results. If you want to sort by a field in ascending order, include it as a sort parameter. If you want to sort in descending order, prepend a `-` in front of the field name.
+    FilterDocumentLinksConsolidated:
+      name: filter
+      in: query
+      style: deepObject
+      explode: true
+      required: false
+      description: 'Consolidated filter parameter for document links (deepObject style). Originally: filter[linked_record_type], filter[linked_resource_id]'
+      schema:
+        type: object
+        additionalProperties: false
+        properties:
+          linked_record_type:
+            type: string
+            example: porting_order
+            description: The linked_record_type of the document to filter on.
+          linked_resource_id:
+            type: string
+            format: uuid
+            example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+            description: The linked_resource_id of the document to filter on.
+    Id:
+      name: id
+      description: Identifies the resource.
+      in: path
+      required: true
+      schema:
+        format: uuid
+        type: string
+        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
   responses:
     ResourceNotFound:
       description: Resource not found
@@ -723,17 +723,6 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/documents_Error'
-    UnprocessableEntity:
-      description: Unprocessable entity. Check the 'detail' field in response for details.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Errors'
-          example:
-            errors:
-            - code: '10027'
-              title: Unprocessable Entity
-              detail: The server understood the syntax of the request but was unable to process the instructions.
     documents_GenericErrorResponse:
       description: Unexpected error
       content:
@@ -745,14 +734,31 @@ components:
             - code: '10007'
               title: Unexpected error
               detail: An unexpected error occured.
-    ListDocServiceDocumentLinksResponse:
+    UnprocessableEntity:
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          example:
+            errors:
+            - code: '10027'
+              title: Unprocessable Entity
+              detail: The server understood the syntax of the request but was unable to process the instructions.
+    documents_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/documents_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+    ListDocServiceDocumentsResponse:
       content:
         application/json:
           schema:
             properties:
               data:
                 items:
-                  $ref: '#/components/schemas/DocServiceDocumentLink'
+                  $ref: '#/components/schemas/DocServiceDocument'
                 type: array
               meta:
                 $ref: '#/components/schemas/PaginationMeta'
@@ -767,18 +773,6 @@ components:
                 $ref: '#/components/schemas/DocServiceDocument'
             type: object
       description: Successful response
-    documents_GenericErrorResponse_2:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/documents_Errors'
-      description: Unexpected error
-    documents_UnprocessableEntity:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/documents_Errors'
-      description: Unprocessable entity. Check the 'detail' field in response for details.
     DownloadDocServiceDocumentResponse:
       content:
         '*':
@@ -786,14 +780,20 @@ components:
             format: binary
             type: string
       description: Successful response
-    ListDocServiceDocumentsResponse:
+    documents_GenericErrorResponse_2:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/documents_Errors'
+      description: Unexpected error
+    ListDocServiceDocumentLinksResponse:
       content:
         application/json:
           schema:
             properties:
               data:
                 items:
-                  $ref: '#/components/schemas/DocServiceDocument'
+                  $ref: '#/components/schemas/DocServiceDocumentLink'
                 type: array
               meta:
                 $ref: '#/components/schemas/PaginationMeta'

@@ -317,6 +317,69 @@ paths:
           $ref: '#/components/responses/GenericErrorResponse'
 components:
   schemas:
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+      type: object
+    netapps_CursorPaginationMeta:
+      type: object
+      title: CursorPaginationMeta
+      properties:
+        cursors:
+          type: object
+          description: Opaque cursors. Absent keys mean there is no such page.
+          properties:
+            after:
+              type: string
+              description: Pass as `page[after]` to fetch the next page. Absent on the last page.
+            before:
+              type: string
+              description: The cursor of the previous page. Present when the request used `page[after]`.
+        next:
+          type: string
+          description: The path of the next page, with the same query parameters. Absent on the last page.
+          example: /v2/network_routes?filter%5Bnetwork_id%5D=91446ee3-5b1c-4f0e-8d2a-6c7e9b0a1f24&page%5Bafter%5D=MjAyNi0xMC0yMVQxNjowNjowMC4wNDMwNDRa&page%5Blimit%5D=1
+        previous:
+          type: string
+          description: The path of the previous page. Present when the request used `page[after]`.
+    Error:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+          x-format: int64
+        title:
+          type: string
+        detail:
+          type: string
+          description: A human-readable explanation of the error.
+        description:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          additionalProperties: true
+      example:
+        title: Invalid street address
+        source:
+          pointer: /street_address
+        code: '20207'
+        description: The street address provided is invalid.
+      type: object
     Tunnel:
       type: object
       title: Tunnel
@@ -364,13 +427,6 @@ components:
           readOnly: true
           description: ISO 8601 formatted date-time indicating when the resource was created.
           example: '2026-10-21T15:04:05.123456Z'
-    Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/Error'
-      type: object
     TunnelCreate:
       type: object
       title: TunnelCreate
@@ -382,41 +438,6 @@ components:
           minLength: 1
           description: A user specified name for the tunnel.
           example: chicago-dc
-    Error:
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: string
-          x-format: int64
-        title:
-          type: string
-        detail:
-          type: string
-          description: A human-readable explanation of the error.
-        description:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-              format: json-pointer
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-          additionalProperties: true
-      example:
-        title: Invalid street address
-        source:
-          pointer: /street_address
-        code: '20207'
-        description: The street address provided is invalid.
-      type: object
     TunnelConnection:
       type: object
       title: TunnelConnection
@@ -450,34 +471,6 @@ components:
             readOnly: true
             description: The credential that a tunnel process presents with `telnyx-edge tunnel run --token`. Returned only by create and rotate_token. Telnyx stores only a hash of it.
             example: tnl_example-token-shown-once
-    netapps_CursorPaginationMeta:
-      type: object
-      title: CursorPaginationMeta
-      properties:
-        cursors:
-          type: object
-          description: Opaque cursors. Absent keys mean there is no such page.
-          properties:
-            after:
-              type: string
-              description: Pass as `page[after]` to fetch the next page. Absent on the last page.
-            before:
-              type: string
-              description: The cursor of the previous page. Present when the request used `page[after]`.
-        next:
-          type: string
-          description: The path of the next page, with the same query parameters. Absent on the last page.
-          example: /v2/network_routes?filter%5Bnetwork_id%5D=91446ee3-5b1c-4f0e-8d2a-6c7e9b0a1f24&page%5Bafter%5D=MjAyNi0xMC0yMVQxNjowNjowMC4wNDMwNDRa&page%5Blimit%5D=1
-        previous:
-          type: string
-          description: The path of the previous page. Present when the request used `page[after]`.
-  responses:
-    GenericErrorResponse:
-      description: Unexpected error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Errors'
   parameters:
     PageCursorConsolidated:
       name: page
@@ -497,6 +490,13 @@ components:
             maximum: 100
             default: 20
             description: The number of results per page.
+  responses:
+    GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
   securitySchemes:
     BearerAuth:
       type: http

@@ -162,18 +162,6 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    EmailVerificationConfirmRequest:
-      type: object
-      required:
-      - code
-      properties:
-        code:
-          type: string
-          minLength: 6
-          maxLength: 6
-          pattern: ^\d{6}$
-          description: The 6-digit code sent to the authorizer email.
-          example: '482915'
     EnterpriseEmailVerificationConfirmRequest:
       type: object
       required:
@@ -186,6 +174,46 @@ components:
           pattern: ^\d{6}$
           description: The 6-digit code sent to the enterprise account's contact email.
           example: '482915'
+    EmailVerificationStatus:
+      type: object
+      description: Verification state for a DIR's authorizer email.
+      required:
+      - record_type
+      - email_verified
+      - status
+      properties:
+        record_type:
+          type: string
+          enum:
+          - email_verification
+          description: Always `email_verification`.
+          example: email_verification
+          readOnly: true
+        email_verified:
+          type: boolean
+          description: Whether the DIR's authorizer email has been confirmed.
+          example: false
+        status:
+          type: string
+          enum:
+          - sent
+          - verified
+          - unverified
+          description: '`sent` after a code is emailed; `verified` after a successful confirm; `unverified` when no verification is in progress.'
+          example: sent
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the outstanding code stops being accepted. Null when no verification is in progress.
+          example: '2026-07-30T17:15:00Z'
+          readOnly: true
+        sends_remaining_today:
+          type: integer
+          nullable: true
+          description: How many more codes may be requested for this DIR today. Null when the daily cap does not apply.
+          example: 9
+          readOnly: true
     EnterpriseEmailVerificationStatus:
       type: object
       description: Verification state for an enterprise account's contact email.
@@ -225,13 +253,6 @@ components:
           description: How many more codes may be requested for this enterprise account today. Present on a send response; null on a confirm response.
           example: 9
           readOnly: true
-    EnterpriseEmailVerificationStatusWrapped:
-      type: object
-      required:
-      - data
-      properties:
-        data:
-          $ref: '#/components/schemas/EnterpriseEmailVerificationStatus'
     branded-calling_Error:
       type: object
       required:
@@ -289,6 +310,25 @@ components:
               type: string
               example: page[size]
       description: A single entry in the canonical Telnyx error envelope. `code` is the stable Telnyx error catalog id; the human-readable explanation lives at `meta.url`. `detail` is a context-specific message; `source.pointer` (when present) names the offending field of the request.
+    EmailVerificationConfirmRequest:
+      type: object
+      required:
+      - code
+      properties:
+        code:
+          type: string
+          minLength: 6
+          maxLength: 6
+          pattern: ^\d{6}$
+          description: The 6-digit code sent to the authorizer email.
+          example: '482915'
+    EnterpriseEmailVerificationStatusWrapped:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/EnterpriseEmailVerificationStatus'
     branded-calling_Errors:
       type: object
       required:
@@ -300,46 +340,6 @@ components:
             $ref: '#/components/schemas/branded-calling_Error'
           description: List of one or more error entries. Order is not significant.
       description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
-    EmailVerificationStatus:
-      type: object
-      description: Verification state for a DIR's authorizer email.
-      required:
-      - record_type
-      - email_verified
-      - status
-      properties:
-        record_type:
-          type: string
-          enum:
-          - email_verification
-          description: Always `email_verification`.
-          example: email_verification
-          readOnly: true
-        email_verified:
-          type: boolean
-          description: Whether the DIR's authorizer email has been confirmed.
-          example: false
-        status:
-          type: string
-          enum:
-          - sent
-          - verified
-          - unverified
-          description: '`sent` after a code is emailed; `verified` after a successful confirm; `unverified` when no verification is in progress.'
-          example: sent
-        expires_at:
-          type: string
-          format: date-time
-          nullable: true
-          description: When the outstanding code stops being accepted. Null when no verification is in progress.
-          example: '2026-07-30T17:15:00Z'
-          readOnly: true
-        sends_remaining_today:
-          type: integer
-          nullable: true
-          description: How many more codes may be requested for this DIR today. Null when the daily cap does not apply.
-          example: 9
-          readOnly: true
     EmailVerificationStatusWrapped:
       type: object
       required:
