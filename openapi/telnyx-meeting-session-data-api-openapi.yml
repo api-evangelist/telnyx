@@ -173,6 +173,175 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
+  responses:
+    MeetingReadAuthUnavailable:
+      description: Authentication is temporarily unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: auth_unavailable
+              message: authentication service unavailable
+    Forbidden:
+      description: The authenticated credential is not permitted to perform this operation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: forbidden
+              message: credential is not permitted
+    meeting-sessions_InternalServerError:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: internal_error
+              message: internal server error
+    meeting-sessions_Unauthorized:
+      description: 'Unauthorized. On api.telnyx.com, authentication is enforced by the API gateway before the request reaches the Meeting service, so a missing or invalid API key returns the standard Telnyx error envelope (`{"errors": [{"code": "10009", ...}]}`) rather than the single-`error` shape below.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: unauthorized
+              message: invalid or missing credentials
+    TooManyRequests:
+      description: Authentication is temporarily overloaded. Retry after the number of seconds in `Retry-After`.
+      headers:
+        Retry-After:
+          required: true
+          description: Seconds to wait before retrying.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: auth_overloaded
+              message: authentication temporarily overloaded
+    RecordingMediaUnsupportedCapability:
+      description: The session's provider does not support recording-media deletion, or does not match the configured provider.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: unsupported_capability
+              message: provider recording-media deletion is not supported
+    meeting-sessions_BadRequest:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: invalid_request
+              message: request is invalid
+    RecordingMediaInvalidState:
+      description: Provider recording media cannot be deleted while the meeting is in progress.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: invalid_state
+              message: provider recording media cannot be deleted while the meeting is in progress
+    meeting-sessions_NotFound:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: not_found
+              message: meeting session not found
+    RecordingMediaAuthenticationUnavailable:
+      description: The authentication service is unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: auth_unavailable
+              message: authentication service is unavailable
+    RecordingMediaProviderError:
+      description: The provider request failed and the recording-media deletion outcome is unknown.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: provider_error
+              message: recording-media deletion outcome is unknown
+    MeetingRecordingLookupProviderError:
+      description: The provider failed to return recording entries.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: provider_error
+              message: failed to fetch recordings from provider
+    RecordingMediaResourceNotFound:
+      description: The meeting session does not exist or belongs to another account.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: not_found
+              message: meeting session not found
+    RecordingMediaUnsupportedCapability_2:
+      description: Recording-media deletion is not supported for this session.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: unsupported_capability
+              message: provider recording-media deletion is not supported
+    RecordingMediaInvalidState_2:
+      description: Recording media cannot be deleted while the meeting is in progress.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: invalid_state
+              message: provider recording media cannot be deleted while the meeting is in progress
+    RecordingMediaProviderError_2:
+      description: The deletion request failed and the recording-media deletion outcome is unknown.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: provider_error
+              message: recording-media deletion outcome is unknown
   parameters:
     After:
       name: after
@@ -183,6 +352,16 @@ components:
         type: integer
         minimum: 0
         default: 0
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: Maximum number of results to return per page.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 1000
+        default: 100
     WaitSeconds:
       name: wait_seconds
       in: query
@@ -202,16 +381,6 @@ components:
         type: string
         examples:
         - mtgsess_a1b2c3d4-e5f6-7890-abcd-ef1234567890
-    Limit:
-      name: limit
-      in: query
-      required: false
-      description: Maximum number of results to return per page.
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 1000
-        default: 100
   schemas:
     MeetingSessionEvent:
       type: object
@@ -232,6 +401,45 @@ components:
         occurred_at:
           type: string
           format: date-time
+    TranscriptSegment:
+      type: object
+      additionalProperties: false
+      required:
+      - seq
+      - text
+      - confidence
+      - speaker_label
+      - relative_ts
+      - occurred_at
+      properties:
+        seq:
+          type: integer
+        text:
+          type: string
+        confidence:
+          type:
+          - number
+          - 'null'
+          minimum: 0
+          maximum: 1
+        speaker_label:
+          type:
+          - string
+          - 'null'
+        relative_ts:
+          type:
+          - number
+          - 'null'
+        occurred_at:
+          type: string
+          format: date-time
+      example:
+        seq: 1
+        text: Welcome to the project kickoff.
+        confidence: 0.98
+        speaker_label: Speaker 1
+        relative_ts: 12.5
+        occurred_at: '2025-01-15T10:00:12Z'
     TranscriptSegmentListResponse:
       type: object
       additionalProperties: false
@@ -294,45 +502,35 @@ components:
       - error:
           code: internal_error
           message: internal server error
-    TranscriptSegment:
+    MeetingSessionRecording:
       type: object
       additionalProperties: false
       required:
-      - seq
-      - text
-      - confidence
-      - speaker_label
-      - relative_ts
-      - occurred_at
+      - type
+      - url
+      - expires_at
       properties:
-        seq:
-          type: integer
-        text:
+        type:
           type: string
-        confidence:
-          type:
-          - number
-          - 'null'
-          minimum: 0
-          maximum: 1
-        speaker_label:
+        url:
+          type: string
+          format: uri
+          description: Current provider download URL. The API does not guarantee URL lifetime or refresh behavior.
+        expires_at:
           type:
           - string
           - 'null'
-        relative_ts:
-          type:
-          - number
-          - 'null'
-        occurred_at:
-          type: string
-          format: date-time
-      example:
-        seq: 1
-        text: Welcome to the project kickoff.
-        confidence: 0.98
-        speaker_label: Speaker 1
-        relative_ts: 12.5
-        occurred_at: '2025-01-15T10:00:12Z'
+          description: Expiry timestamp when available, or null. Currently returns null.
+    MeetingSessionEventListResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeetingSessionEvent'
     MeetingSessionRecordingMediaDeletionResponse:
       type: object
       additionalProperties: false
@@ -368,35 +566,6 @@ components:
           provider: telnyx
           scope: provider_recording_media
           deletion_status: requested
-    MeetingSessionRecording:
-      type: object
-      additionalProperties: false
-      required:
-      - type
-      - url
-      - expires_at
-      properties:
-        type:
-          type: string
-        url:
-          type: string
-          format: uri
-          description: Current provider download URL. The API does not guarantee URL lifetime or refresh behavior.
-        expires_at:
-          type:
-          - string
-          - 'null'
-          description: Expiry timestamp when available, or null. Currently returns null.
-    MeetingSessionEventListResponse:
-      type: object
-      additionalProperties: false
-      required:
-      - data
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/MeetingSessionEvent'
     MeetingSessionRecordingListResponse:
       type: object
       additionalProperties: false
@@ -407,175 +576,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/MeetingSessionRecording'
-  responses:
-    RecordingMediaInvalidState:
-      description: Provider recording media cannot be deleted while the meeting is in progress.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: invalid_state
-              message: provider recording media cannot be deleted while the meeting is in progress
-    MeetingReadAuthUnavailable:
-      description: Authentication is temporarily unavailable.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: auth_unavailable
-              message: authentication service unavailable
-    meeting-sessions_InternalServerError:
-      description: Internal Server Error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: internal_error
-              message: internal server error
-    RecordingMediaResourceNotFound:
-      description: The meeting session does not exist or belongs to another account.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: not_found
-              message: meeting session not found
-    TooManyRequests:
-      description: Authentication is temporarily overloaded. Retry after the number of seconds in `Retry-After`.
-      headers:
-        Retry-After:
-          required: true
-          description: Seconds to wait before retrying.
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 5
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: auth_overloaded
-              message: authentication temporarily overloaded
-    RecordingMediaAuthenticationUnavailable:
-      description: The authentication service is unavailable.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: auth_unavailable
-              message: authentication service is unavailable
-    RecordingMediaProviderError:
-      description: The provider request failed and the recording-media deletion outcome is unknown.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: provider_error
-              message: recording-media deletion outcome is unknown
-    MeetingRecordingLookupProviderError:
-      description: The provider failed to return recording entries.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: provider_error
-              message: failed to fetch recordings from provider
-    meeting-sessions_NotFound:
-      description: Not Found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: not_found
-              message: meeting session not found
-    meeting-sessions_BadRequest:
-      description: Bad Request
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: invalid_request
-              message: request is invalid
-    RecordingMediaUnsupportedCapability:
-      description: The session's provider does not support recording-media deletion, or does not match the configured provider.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: unsupported_capability
-              message: provider recording-media deletion is not supported
-    meeting-sessions_Unauthorized:
-      description: 'Unauthorized. On api.telnyx.com, authentication is enforced by the API gateway before the request reaches the Meeting service, so a missing or invalid API key returns the standard Telnyx error envelope (`{"errors": [{"code": "10009", ...}]}`) rather than the single-`error` shape below.'
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: unauthorized
-              message: invalid or missing credentials
-    Forbidden:
-      description: The authenticated credential is not permitted to perform this operation.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: forbidden
-              message: credential is not permitted
-    RecordingMediaInvalidState_2:
-      description: Recording media cannot be deleted while the meeting is in progress.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: invalid_state
-              message: provider recording media cannot be deleted while the meeting is in progress
-    RecordingMediaProviderError_2:
-      description: The deletion request failed and the recording-media deletion outcome is unknown.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: provider_error
-              message: recording-media deletion outcome is unknown
-    RecordingMediaUnsupportedCapability_2:
-      description: Recording-media deletion is not supported for this session.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: unsupported_capability
-              message: provider recording-media deletion is not supported
   securitySchemes:
     BearerAuth:
       type: http

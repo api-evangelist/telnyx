@@ -203,17 +203,43 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   responses:
-    email_Unauthorized:
-      description: Missing or invalid gateway auth.
+    BlocksNotFound:
+      description: Resource not found (cross-account lookups and malformed UUIDs also return 404 — no leak).
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorList'
           example:
             errors:
-            - code: '10007'
-              title: Unauthorized
-              detail: Missing authentication
+            - code: '10001'
+              title: Not Found
+              detail: The requested email block was not found
+    ChangesetError:
+      description: Validation error (changeset or internal `Params`). One error object per field, `source.pointer /data/attributes/<field>`.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorList'
+          example:
+            errors:
+            - code: '10015'
+              title: Validation Failed
+              detail: can't be blank
+              source:
+                pointer: /data/attributes/to
+    ValidationErrorQuery:
+      description: Query-param validation error (`source.pointer /<field>`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorList'
+          example:
+            errors:
+            - code: '10015'
+              title: Validation Failed
+              detail: is invalid
+              source:
+                pointer: /filter[reason]
     FrameworkError:
       description: 'Framework-rendered error (e.g. 406 Not Acceptable, 405 Method Not
 
@@ -235,44 +261,32 @@ components:
             - code: '406'
               title: Not Acceptable
               detail: Not Acceptable
-    ChangesetError:
-      description: Validation error (changeset or internal `Params`). One error object per field, `source.pointer /data/attributes/<field>`.
+    email_Unauthorized:
+      description: Missing or invalid gateway auth.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorList'
           example:
             errors:
-            - code: '10015'
-              title: Validation Failed
-              detail: can't be blank
-              source:
-                pointer: /data/attributes/to
-    BlocksNotFound:
-      description: Resource not found (cross-account lookups and malformed UUIDs also return 404 — no leak).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorList'
-          example:
-            errors:
-            - code: '10001'
-              title: Not Found
-              detail: The requested email block was not found
-    ValidationErrorQuery:
-      description: Query-param validation error (`source.pointer /<field>`).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorList'
-          example:
-            errors:
-            - code: '10015'
-              title: Validation Failed
-              detail: is invalid
-              source:
-                pointer: /filter[reason]
+            - code: '10007'
+              title: Unauthorized
+              detail: Missing authentication
   schemas:
+    CreateImportRequest:
+      type: object
+      required:
+      - file
+      properties:
+        file:
+          type: string
+          format: binary
+          description: The CSV file (Plug.Upload). Missing/non-upload → 400.
+        block_ttl_days:
+          type: integer
+          minimum: 1
+          default: 30
+          description: 'TTL for imported `manual_block` rows; other reasons get `expires_at: null`. Invalid/missing → falls back to 30.'
     BlocksErrorObject:
       type: object
       required:
@@ -299,27 +313,15 @@ components:
             pointer:
               type: string
           description: '`/data/attributes/<field>` for changeset/Params; `/<field>` for query-param errors.'
-    EmailBlockImportResponse:
+    ErrorList:
       type: object
       required:
-      - data
+      - errors
       properties:
-        data:
-          $ref: '#/components/schemas/EmailBlockImport'
-    CreateImportRequest:
-      type: object
-      required:
-      - file
-      properties:
-        file:
-          type: string
-          format: binary
-          description: The CSV file (Plug.Upload). Missing/non-upload → 400.
-        block_ttl_days:
-          type: integer
-          minimum: 1
-          default: 30
-          description: 'TTL for imported `manual_block` rows; other reasons get `expires_at: null`. Invalid/missing → falls back to 30.'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/BlocksErrorObject'
     EmailBlockImport:
       type: object
       required:
@@ -402,15 +404,13 @@ components:
         `block_ttl_days`. Nullable fields use the omit-nullable pattern.
 
         '
-    ErrorList:
+    EmailBlockImportResponse:
       type: object
       required:
-      - errors
+      - data
       properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/BlocksErrorObject'
+        data:
+          $ref: '#/components/schemas/EmailBlockImport'
   parameters:
     PathId:
       name: id

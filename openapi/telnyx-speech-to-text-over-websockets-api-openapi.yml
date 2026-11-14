@@ -84,64 +84,24 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    azure_models:
-      type: string
-      enum:
-      - fast
-    speechmatics_models:
-      type: string
-      enum:
-      - speechmatics/standard
-    SttServerEvent:
-      description: Union of all server-to-client WebSocket events for STT streaming.
-      oneOf:
-      - $ref: '#/components/schemas/TranscriptFrame'
-      - $ref: '#/components/schemas/SttErrorFrame'
-      discriminator:
-        propertyName: type
-        mapping:
-          transcript: '#/components/schemas/TranscriptFrame'
-          error: '#/components/schemas/SttErrorFrame'
-    cohere_ar_stt_models:
-      type: string
-      enum:
-      - cohere/ar-stt
-    telnyx_models:
-      type: string
-      enum:
-      - openai/whisper-tiny
-      - openai/whisper-large-v3-turbo
     xai_models:
       type: string
       enum:
       - xai/grok-stt
-    TranscriptFrame:
+    SttErrorFrame:
       type: object
-      description: Server-to-client frame containing a transcription result.
+      description: Server-to-client frame indicating an error during transcription. The connection may be closed shortly after.
       properties:
         type:
           type: string
-          const: transcript
+          const: error
           description: Frame type identifier.
-        transcript:
+        error:
           type: string
-          description: The transcribed text from the audio.
-        is_final:
-          type: boolean
-          description: Whether this is a final transcription result. When `false`, this is an interim result that may be refined.
-        confidence:
-          type:
-          - number
-          - 'null'
-          description: Confidence score of the transcription, ranging from 0 to 1. `cohere/ar-stt` frames return `null` here rather than omitting the field.
+          description: Error message describing what went wrong.
       required:
       - type
-      - transcript
-    deepgram_models:
-      type: string
-      enum:
-      - deepgram/nova-2
-      - deepgram/nova-3
+      - error
     speech-to-text_Error:
       required:
       - code
@@ -166,6 +126,83 @@ components:
               type: string
         meta:
           type: object
+    SttClientEvent:
+      type: string
+      format: binary
+      description: Binary audio data in mp3, wav, linear16, or linear32 format, per `input_format`.
+    parakeet_models:
+      type: string
+      enum:
+      - nvidia/parakeet-v3
+      - omi-health/omi-med-stt-v1
+    humain_models:
+      type: string
+      enum:
+      - humain/realtime
+    speechmatics_models:
+      type: string
+      enum:
+      - speechmatics/standard
+    deepgram_models:
+      type: string
+      enum:
+      - deepgram/nova-2
+      - deepgram/nova-3
+    telnyx_models:
+      type: string
+      enum:
+      - openai/whisper-tiny
+      - openai/whisper-large-v3-turbo
+    soniox_models:
+      type: string
+      enum:
+      - soniox/stt-rt-v4
+    speech-to-text_Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/speech-to-text_Error'
+    SttServerEvent:
+      description: Union of all server-to-client WebSocket events for STT streaming.
+      oneOf:
+      - $ref: '#/components/schemas/TranscriptFrame'
+      - $ref: '#/components/schemas/SttErrorFrame'
+      discriminator:
+        propertyName: type
+        mapping:
+          transcript: '#/components/schemas/TranscriptFrame'
+          error: '#/components/schemas/SttErrorFrame'
+    cohere_ar_stt_models:
+      type: string
+      enum:
+      - cohere/ar-stt
+    reson8_models:
+      type: string
+      enum:
+      - reson8/turns
+    TranscriptFrame:
+      type: object
+      description: Server-to-client frame containing a transcription result.
+      properties:
+        type:
+          type: string
+          const: transcript
+          description: Frame type identifier.
+        transcript:
+          type: string
+          description: The transcribed text from the audio.
+        is_final:
+          type: boolean
+          description: Whether this is a final transcription result. When `false`, this is an interim result that may be refined.
+        confidence:
+          type:
+          - number
+          - 'null'
+          description: Confidence score of the transcription, ranging from 0 to 1. `cohere/ar-stt` frames return `null` here rather than omitting the field.
+      required:
+      - type
+      - transcript
     google_models:
       type: string
       enum:
@@ -177,47 +214,14 @@ components:
       - default
       - medical_conversation
       - medical_dictation
-    reson8_models:
+    azure_models:
       type: string
       enum:
-      - reson8/turns
-    speech-to-text_Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/speech-to-text_Error'
-    SttClientEvent:
-      type: string
+      - fast
+    SttClientEvent_2:
+      description: Binary audio data in mp3 or wav format.
       format: binary
-      description: Binary audio data in mp3, wav, linear16, or linear32 format, per `input_format`.
-    humain_models:
       type: string
-      enum:
-      - humain/realtime
-    parakeet_models:
-      type: string
-      enum:
-      - nvidia/parakeet-v3
-      - omi-health/omi-med-stt-v1
-    SttErrorFrame:
-      type: object
-      description: Server-to-client frame indicating an error during transcription. The connection may be closed shortly after.
-      properties:
-        type:
-          type: string
-          const: error
-          description: Frame type identifier.
-        error:
-          type: string
-          description: Error message describing what went wrong.
-      required:
-      - type
-      - error
-    soniox_models:
-      type: string
-      enum:
-      - soniox/stt-rt-v4
     TranscriptFrame_2:
       description: Server-to-client frame containing a transcription result.
       properties:
@@ -238,42 +242,13 @@ components:
       - type
       - transcript
       type: object
-    SttClientEvent_2:
-      description: Binary audio data in mp3 or wav format.
-      format: binary
-      type: string
     speechmatics_models_2:
       type: string
       description: 'Available Speechmatics models. `speechmatics/linden-1` is a preview, vendor-hosted model that accepts only 16 kHz raw audio: set `input_format` to `linear16` or `linear32` and `sample_rate` to `16000`. `mp3`, `wav`, and other sample rates are not supported for this model.'
       enum:
       - speechmatics/standard
       - speechmatics/linden-1
-  responses:
-    speech-to-text_UnprocessableEntityResponse:
-      description: Unprocessable entity. The request was well-formed but could not be processed due to semantic errors. This includes validation errors, invalid parameter values and business logic violations.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/speech-to-text_Errors'
-          examples:
-            missing_required_parameter:
-              summary: Missing required parameter
-              value:
-                errors:
-                - code: '10004'
-                  title: Missing required parameter
-                  detail: The 'transcription_engine' parameter is required and cannot be blank.
-                  source:
-                    pointer: /transcription_engine
   parameters:
-    language:
-      name: language
-      in: query
-      required: false
-      description: The language spoken in the audio stream. For `cohere/ar-stt`, this must be `ar` or `en` — unlike other engines, Cohere does not auto-detect the language, and rejects unsupported values including `auto`; omitting it defaults to `ar`.
-      schema:
-        type: string
-      example: en-US
     keywords:
       name: keywords
       in: query
@@ -282,14 +257,6 @@ components:
       schema:
         type: string
       example: Telnyx,SIP,WebRTC
-    redact:
-      name: redact
-      in: query
-      required: false
-      description: Enable redaction of sensitive information (e.g., PCI data, SSN) from transcription results. Supported values depend on the transcription engine.
-      schema:
-        type: string
-      example: pci
     sample_rate:
       name: sample_rate
       in: query
@@ -298,27 +265,31 @@ components:
       schema:
         type: integer
       example: 16000
-    input_format:
-      name: input_format
-      in: query
-      required: true
-      description: The format of input audio stream.
-      schema:
-        type: string
-        enum:
-        - mp3
-        - wav
-        - linear16
-        - linear32
-      example: mp3
-    keyterm:
-      name: keyterm
+    language:
+      name: language
       in: query
       required: false
-      description: A key term to boost in the transcription. The engine will be more likely to recognize this term. Can be specified multiple times for multiple terms.
+      description: The language spoken in the audio stream. For `cohere/ar-stt`, this must be `ar` or `en` — unlike other engines, Cohere does not auto-detect the language, and rejects unsupported values including `auto`; omitting it defaults to `ar`.
       schema:
         type: string
-      example: Telnyx
+      example: en-US
+    model:
+      name: model
+      in: query
+      description: The specific model to use within the selected transcription engine.
+      schema:
+        oneOf:
+        - $ref: '#/components/schemas/azure_models'
+        - $ref: '#/components/schemas/deepgram_models'
+        - $ref: '#/components/schemas/google_models'
+        - $ref: '#/components/schemas/telnyx_models'
+        - $ref: '#/components/schemas/xai_models'
+        - $ref: '#/components/schemas/speechmatics_models'
+        - $ref: '#/components/schemas/soniox_models'
+        - $ref: '#/components/schemas/parakeet_models'
+        - $ref: '#/components/schemas/humain_models'
+        - $ref: '#/components/schemas/reson8_models'
+        - $ref: '#/components/schemas/cohere_ar_stt_models'
     transcription_engine:
       name: transcription_engine
       in: query
@@ -347,23 +318,14 @@ components:
       schema:
         type: integer
       example: 500
-    model:
-      name: model
+    redact:
+      name: redact
       in: query
-      description: The specific model to use within the selected transcription engine.
+      required: false
+      description: Enable redaction of sensitive information (e.g., PCI data, SSN) from transcription results. Supported values depend on the transcription engine.
       schema:
-        oneOf:
-        - $ref: '#/components/schemas/azure_models'
-        - $ref: '#/components/schemas/deepgram_models'
-        - $ref: '#/components/schemas/google_models'
-        - $ref: '#/components/schemas/telnyx_models'
-        - $ref: '#/components/schemas/xai_models'
-        - $ref: '#/components/schemas/speechmatics_models'
-        - $ref: '#/components/schemas/soniox_models'
-        - $ref: '#/components/schemas/parakeet_models'
-        - $ref: '#/components/schemas/humain_models'
-        - $ref: '#/components/schemas/reson8_models'
-        - $ref: '#/components/schemas/cohere_ar_stt_models'
+        type: string
+      example: pci
     interim_results:
       name: interim_results
       in: query
@@ -372,6 +334,27 @@ components:
       schema:
         type: boolean
       example: true
+    keyterm:
+      name: keyterm
+      in: query
+      required: false
+      description: A key term to boost in the transcription. The engine will be more likely to recognize this term. Can be specified multiple times for multiple terms.
+      schema:
+        type: string
+      example: Telnyx
+    input_format:
+      name: input_format
+      in: query
+      required: true
+      description: The format of input audio stream.
+      schema:
+        type: string
+        enum:
+        - mp3
+        - wav
+        - linear16
+        - linear32
+      example: mp3
     language_2:
       description: The language spoken in the audio stream.
       example: en-US
@@ -380,17 +363,18 @@ components:
       required: false
       schema:
         type: string
-    input_format_2:
-      description: The format of input audio stream.
-      example: mp3
+    model_2:
+      description: The specific model to use within the selected transcription engine.
       in: query
-      name: input_format
-      required: true
+      name: model
       schema:
-        enum:
-        - mp3
-        - wav
-        type: string
+        oneOf:
+        - $ref: '#/components/schemas/azure_models'
+        - $ref: '#/components/schemas/deepgram_models'
+        - $ref: '#/components/schemas/google_models'
+        - $ref: '#/components/schemas/telnyx_models'
+        - $ref: '#/components/schemas/xai_models'
+        - $ref: '#/components/schemas/speechmatics_models'
     transcription_engine_2:
       description: The transcription engine to use for processing the audio stream.
       example: Telnyx
@@ -414,26 +398,17 @@ components:
       required: false
       schema:
         type: integer
-    model_2:
-      description: The specific model to use within the selected transcription engine.
+    input_format_2:
+      description: The format of input audio stream.
+      example: mp3
       in: query
-      name: model
+      name: input_format
+      required: true
       schema:
-        oneOf:
-        - $ref: '#/components/schemas/azure_models'
-        - $ref: '#/components/schemas/deepgram_models'
-        - $ref: '#/components/schemas/google_models'
-        - $ref: '#/components/schemas/telnyx_models'
-        - $ref: '#/components/schemas/xai_models'
-        - $ref: '#/components/schemas/speechmatics_models'
-    language_3:
-      name: language
-      in: query
-      required: false
-      description: The language spoken in the audio stream. For `cohere/ar-stt`, this must be `ar` or `en` — unlike other engines, Cohere does not auto-detect the language, and rejects unsupported values including `auto`; omitting it defaults to `ar`. For `speechmatics/linden-1`, omitting it defaults to `en`; `auto`, `auto_beta`, `multi`, or a language outside its supported list is rejected when the connection is established. `speechmatics/linden-1` also accepts `en-US`, `en-GB`, `en-AU`, `cmn-Hans`, and `cmn-Hant`, which select the spelling or script variant (`en` alone uses the default spelling).
-      schema:
+        enum:
+        - mp3
+        - wav
         type: string
-      example: en-US
     sample_rate_2:
       name: sample_rate
       in: query
@@ -442,6 +417,14 @@ components:
       schema:
         type: integer
       example: 16000
+    language_3:
+      name: language
+      in: query
+      required: false
+      description: The language spoken in the audio stream. For `cohere/ar-stt`, this must be `ar` or `en` — unlike other engines, Cohere does not auto-detect the language, and rejects unsupported values including `auto`; omitting it defaults to `ar`. For `speechmatics/linden-1`, omitting it defaults to `en`; `auto`, `auto_beta`, `multi`, or a language outside its supported list is rejected when the connection is established. `speechmatics/linden-1` also accepts `en-US`, `en-GB`, `en-AU`, `cmn-Hans`, and `cmn-Hant`, which select the spelling or script variant (`en` alone uses the default spelling).
+      schema:
+        type: string
+      example: en-US
     endpointing_3:
       name: endpointing
       in: query
@@ -450,6 +433,23 @@ components:
       schema:
         type: integer
       example: 500
+  responses:
+    speech-to-text_UnprocessableEntityResponse:
+      description: Unprocessable entity. The request was well-formed but could not be processed due to semantic errors. This includes validation errors, invalid parameter values and business logic violations.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/speech-to-text_Errors'
+          examples:
+            missing_required_parameter:
+              summary: Missing required parameter
+              value:
+                errors:
+                - code: '10004'
+                  title: Missing required parameter
+                  detail: The 'transcription_engine' parameter is required and cannot be blank.
+                  source:
+                    pointer: /transcription_engine
   securitySchemes:
     BearerAuth:
       type: http

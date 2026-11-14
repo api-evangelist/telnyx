@@ -345,78 +345,17 @@ components:
           type: string
           description: A customer reference string for customer look ups.
           example: MY REF 001
-    documents_Error:
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: string
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-          additionalProperties: true
-      type: object
-    Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/billing-group_Error'
-      type: object
-    DocServiceDocumentLink:
-      allOf:
-      - $ref: '#/components/schemas/DocServiceRecord'
-      - type: object
-        properties:
-          record_type:
-            description: Identifies the type of the resource.
-            type: string
-            readOnly: true
-            example: document_link
-          document_id:
-            description: Identifies the associated document.
-            type: string
-            format: uuid
-            readOnly: true
-            example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-          linked_record_type:
-            description: The linked resource's record type.
-            type: string
-            readOnly: true
-            example: porting_order
-          linked_resource_id:
-            description: Identifies the linked resource.
-            type: string
-            readOnly: true
-            example: 132091b4-442b-4a2a-b87f-61e707e46d54
-    PaginationMeta:
+    CreateMultiPartDocServiceDocumentRequest:
       type: object
       properties:
-        total_pages:
-          type: integer
-          example: 3
-        total_results:
-          type: integer
-          example: 55
-        page_number:
-          type: integer
-          example: 2
-        page_size:
-          type: integer
-          example: 25
+        file:
+          description: The file you are uploading.
+          type: string
+          format: binary
+        customer_reference:
+          type: string
+          description: Optional reference string for customer tracking.
+          example: MY REF 001
     DocServiceDocument:
       allOf:
       - $ref: '#/components/schemas/DocServiceRecord'
@@ -505,17 +444,37 @@ components:
           type: object
           properties: {}
           additionalProperties: true
-    CreateMultiPartDocServiceDocumentRequest:
-      type: object
+    documents_Error:
+      required:
+      - code
+      - title
       properties:
-        file:
-          description: The file you are uploading.
+        code:
           type: string
-          format: binary
-        customer_reference:
+        title:
           type: string
-          description: Optional reference string for customer tracking.
-          example: MY REF 001
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          additionalProperties: true
+      type: object
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
     DocServiceRecord:
       type: object
       properties:
@@ -540,6 +499,47 @@ components:
           description: ISO 8601 formatted date-time indicating when the resource was updated.
           readOnly: true
           example: '2018-02-02T22:25:27.521Z'
+    PaginationMeta:
+      type: object
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 55
+        page_number:
+          type: integer
+          example: 2
+        page_size:
+          type: integer
+          example: 25
+    DocServiceDocumentLink:
+      allOf:
+      - $ref: '#/components/schemas/DocServiceRecord'
+      - type: object
+        properties:
+          record_type:
+            description: Identifies the type of the resource.
+            type: string
+            readOnly: true
+            example: document_link
+          document_id:
+            description: Identifies the associated document.
+            type: string
+            format: uuid
+            readOnly: true
+            example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+          linked_record_type:
+            description: The linked resource's record type.
+            type: string
+            readOnly: true
+            example: porting_order
+          linked_resource_id:
+            description: Identifies the linked resource.
+            type: string
+            readOnly: true
+            example: 132091b4-442b-4a2a-b87f-61e707e46d54
     documents_Errors:
       properties:
         errors:
@@ -590,26 +590,35 @@ components:
         description: The street address provided is invalid.
       type: object
   parameters:
-    documents_PageConsolidated:
-      name: page
+    Id:
+      name: id
+      description: Identifies the resource.
+      in: path
+      required: true
+      schema:
+        format: uuid
+        type: string
+        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+    FilterDocumentLinksConsolidated:
+      name: filter
       in: query
       style: deepObject
       explode: true
-      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
+      required: false
+      description: 'Consolidated filter parameter for document links (deepObject style). Originally: filter[linked_record_type], filter[linked_resource_id]'
       schema:
         type: object
+        additionalProperties: false
         properties:
-          size:
-            type: integer
-            minimum: 1
-            maximum: 250
-            default: 20
-            description: The size of the page
-          number:
-            type: integer
-            minimum: 1
-            default: 1
-            description: The page number to load
+          linked_record_type:
+            type: string
+            example: porting_order
+            description: The linked_record_type of the document to filter on.
+          linked_resource_id:
+            type: string
+            format: uuid
+            example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+            description: The linked_resource_id of the document to filter on.
     FilterDocumentsConsolidated:
       name: filter
       in: query
@@ -668,6 +677,26 @@ components:
             - REF002
           created_at:
             gt: '2021-01-01T00:00:00Z'
+    documents_PageConsolidated:
+      name: page
+      in: query
+      style: deepObject
+      explode: true
+      description: 'Consolidated page parameter (deepObject style). Originally: page[size], page[number]'
+      schema:
+        type: object
+        properties:
+          size:
+            type: integer
+            minimum: 1
+            maximum: 250
+            default: 20
+            description: The size of the page
+          number:
+            type: integer
+            minimum: 1
+            default: 1
+            description: The page number to load
     SortDocumentsConsolidated:
       name: sort
       in: query
@@ -687,42 +716,7 @@ components:
         example:
         - filename
         description: Specifies the sort order for results. If you want to sort by a field in ascending order, include it as a sort parameter. If you want to sort in descending order, prepend a `-` in front of the field name.
-    FilterDocumentLinksConsolidated:
-      name: filter
-      in: query
-      style: deepObject
-      explode: true
-      required: false
-      description: 'Consolidated filter parameter for document links (deepObject style). Originally: filter[linked_record_type], filter[linked_resource_id]'
-      schema:
-        type: object
-        additionalProperties: false
-        properties:
-          linked_record_type:
-            type: string
-            example: porting_order
-            description: The linked_record_type of the document to filter on.
-          linked_resource_id:
-            type: string
-            format: uuid
-            example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-            description: The linked_resource_id of the document to filter on.
-    Id:
-      name: id
-      description: Identifies the resource.
-      in: path
-      required: true
-      schema:
-        format: uuid
-        type: string
-        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
   responses:
-    ResourceNotFound:
-      description: Resource not found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/documents_Error'
     documents_GenericErrorResponse:
       description: Unexpected error
       content:
@@ -745,12 +739,28 @@ components:
             - code: '10027'
               title: Unprocessable Entity
               detail: The server understood the syntax of the request but was unable to process the instructions.
-    documents_UnprocessableEntity:
+    ResourceNotFound:
+      description: Resource not found
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/documents_Errors'
-      description: Unprocessable entity. Check the 'detail' field in response for details.
+            $ref: '#/components/schemas/documents_Error'
+    DownloadDocServiceDocumentResponse:
+      content:
+        '*':
+          schema:
+            format: binary
+            type: string
+      description: Successful response
+    DocServiceDocumentResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/DocServiceDocument'
+            type: object
+      description: Successful response
     ListDocServiceDocumentsResponse:
       content:
         application/json:
@@ -764,28 +774,6 @@ components:
                 $ref: '#/components/schemas/PaginationMeta'
             type: object
       description: Successful response
-    DocServiceDocumentResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/DocServiceDocument'
-            type: object
-      description: Successful response
-    DownloadDocServiceDocumentResponse:
-      content:
-        '*':
-          schema:
-            format: binary
-            type: string
-      description: Successful response
-    documents_GenericErrorResponse_2:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/documents_Errors'
-      description: Unexpected error
     ListDocServiceDocumentLinksResponse:
       content:
         application/json:
@@ -799,6 +787,18 @@ components:
                 $ref: '#/components/schemas/PaginationMeta'
             type: object
       description: Successful response
+    documents_GenericErrorResponse_2:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/documents_Errors'
+      description: Unexpected error
+    documents_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/documents_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
     documents_UnprocessableEntity_2:
       description: Unprocessable entity. Check the 'detail' field in response for details.
       content:

@@ -182,113 +182,30 @@ components:
           minLength: 1
           maxLength: 255
       additionalProperties: false
-    ActionRequest:
-      description: 'Discriminated union on type. Variants are strict: unknown fields are rejected with 400. Reusing an idempotency_key with an identical request replays the original resource; with a different request it returns 409 idempotency_conflict.'
-      oneOf:
-      - $ref: '#/components/schemas/NavigateAction'
-      - $ref: '#/components/schemas/ObserveAction'
-      - $ref: '#/components/schemas/ClickAction'
-      - $ref: '#/components/schemas/FillAction'
-      - $ref: '#/components/schemas/SelectAction'
-      - $ref: '#/components/schemas/PressAction'
-      - $ref: '#/components/schemas/ScrollAction'
-      - $ref: '#/components/schemas/ScreenshotAction'
-      - $ref: '#/components/schemas/WaitForAction'
-      - $ref: '#/components/schemas/BatchAction'
-    ClickAction:
+    BatchAction:
       type: object
-      description: Click an element identified by observation_id + ref.
+      description: 'Execute 1-50 sub-actions sequentially. Non-recursive: a batch inside a batch is rejected (400). An empty array is rejected (400). A failed sub-action stops the batch; earlier browser mutations are not rolled back, but partial sub-action results are not returned.'
       required:
       - type
-      - observation_id
-      - ref
+      - actions
       properties:
         type:
-          const: click
-        observation_id:
-          type: string
-          minLength: 1
-        ref:
-          type: string
-          minLength: 1
-        wait:
-          type: string
-          enum:
-          - no_wait
-          - dom_stable
-          - url_change
-          default: dom_stable
-        timeout_ms:
-          type: integer
-          minimum: 100
-          maximum: 15000
-          default: 5000
-        include_observation:
-          type: boolean
-          default: false
-        idempotency_key:
-          type: string
-          minLength: 1
-          maxLength: 255
-      additionalProperties: false
-    ErrorResponse:
-      type: object
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-            message:
-              type: string
-            retryable:
-              type: boolean
-          required:
-          - code
-          - message
-          - retryable
-      required:
-      - error
-    PressAction:
-      type: object
-      description: Press a keyboard key.
-      required:
-      - type
-      - key
-      properties:
-        type:
-          const: press
-        key:
-          type: string
-          enum:
-          - Enter
-          - Tab
-          - Escape
-          - Backspace
-          - ArrowUp
-          - ArrowDown
-          - ArrowLeft
-          - ArrowRight
-          - PageUp
-          - PageDown
-          - Home
-          - End
-        include_observation:
-          type: boolean
-          default: false
-        idempotency_key:
-          type: string
-          minLength: 1
-          maxLength: 255
-      additionalProperties: false
-    ScreenshotAction:
-      type: object
-      description: Capture a screenshot of the current page.
-      required:
-      - type
-      properties:
-        type:
-          const: screenshot
+          const: batch
+        actions:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            oneOf:
+            - $ref: '#/components/schemas/NavigateAction'
+            - $ref: '#/components/schemas/ObserveAction'
+            - $ref: '#/components/schemas/ClickAction'
+            - $ref: '#/components/schemas/FillAction'
+            - $ref: '#/components/schemas/SelectAction'
+            - $ref: '#/components/schemas/PressAction'
+            - $ref: '#/components/schemas/ScrollAction'
+            - $ref: '#/components/schemas/ScreenshotAction'
+            - $ref: '#/components/schemas/WaitForAction'
         include_observation:
           type: boolean
           default: false
@@ -404,30 +321,115 @@ components:
       - created_at
       - started_at
       - completed_at
-    BatchAction:
+    ActionRequest:
+      description: 'Discriminated union on type. Variants are strict: unknown fields are rejected with 400. Reusing an idempotency_key with an identical request replays the original resource; with a different request it returns 409 idempotency_conflict.'
+      oneOf:
+      - $ref: '#/components/schemas/NavigateAction'
+      - $ref: '#/components/schemas/ObserveAction'
+      - $ref: '#/components/schemas/ClickAction'
+      - $ref: '#/components/schemas/FillAction'
+      - $ref: '#/components/schemas/SelectAction'
+      - $ref: '#/components/schemas/PressAction'
+      - $ref: '#/components/schemas/ScrollAction'
+      - $ref: '#/components/schemas/ScreenshotAction'
+      - $ref: '#/components/schemas/WaitForAction'
+      - $ref: '#/components/schemas/BatchAction'
+    FillAction:
       type: object
-      description: 'Execute 1-50 sub-actions sequentially. Non-recursive: a batch inside a batch is rejected (400). An empty array is rejected (400). A failed sub-action stops the batch; earlier browser mutations are not rolled back, but partial sub-action results are not returned.'
+      description: Type text into the element identified by observation_id + ref.
       required:
       - type
-      - actions
+      - observation_id
+      - ref
+      - value
       properties:
         type:
-          const: batch
-        actions:
+          const: fill
+        observation_id:
+          type: string
+          minLength: 1
+        ref:
+          type: string
+          minLength: 1
+        value:
+          type: string
+          maxLength: 4096
+        include_observation:
+          type: boolean
+          default: false
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 255
+      additionalProperties: false
+    GatewayError:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
           type: array
-          minItems: 1
-          maxItems: 50
           items:
-            oneOf:
-            - $ref: '#/components/schemas/NavigateAction'
-            - $ref: '#/components/schemas/ObserveAction'
-            - $ref: '#/components/schemas/ClickAction'
-            - $ref: '#/components/schemas/FillAction'
-            - $ref: '#/components/schemas/SelectAction'
-            - $ref: '#/components/schemas/PressAction'
-            - $ref: '#/components/schemas/ScrollAction'
-            - $ref: '#/components/schemas/ScreenshotAction'
-            - $ref: '#/components/schemas/WaitForAction'
+            type: object
+            required:
+            - code
+            - title
+            properties:
+              code:
+                type: string
+              title:
+                type: string
+              detail:
+                type: string
+              source:
+                type: object
+                properties:
+                  pointer:
+                    type: string
+              meta:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            retryable:
+              type: boolean
+          required:
+          - code
+          - message
+          - retryable
+      required:
+      - error
+    SelectAction:
+      type: object
+      description: Select an option on the element identified by observation_id + ref.
+      required:
+      - type
+      - observation_id
+      - ref
+      - value
+      properties:
+        type:
+          const: select
+        observation_id:
+          type: string
+          minLength: 1
+        ref:
+          type: string
+          minLength: 1
+        value:
+          type: string
+          maxLength: 1024
         include_observation:
           type: boolean
           default: false
@@ -456,6 +458,74 @@ components:
           - dom_stable
           - none
           default: load
+        include_observation:
+          type: boolean
+          default: false
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 255
+      additionalProperties: false
+    ScreenshotAction:
+      type: object
+      description: Capture a screenshot of the current page.
+      required:
+      - type
+      properties:
+        type:
+          const: screenshot
+        include_observation:
+          type: boolean
+          default: false
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 255
+      additionalProperties: false
+    ClickAction:
+      type: object
+      description: Click an element identified by observation_id + ref.
+      required:
+      - type
+      - observation_id
+      - ref
+      properties:
+        type:
+          const: click
+        observation_id:
+          type: string
+          minLength: 1
+        ref:
+          type: string
+          minLength: 1
+        wait:
+          type: string
+          enum:
+          - no_wait
+          - dom_stable
+          - url_change
+          default: dom_stable
+        timeout_ms:
+          type: integer
+          minimum: 100
+          maximum: 15000
+          default: 5000
+        include_observation:
+          type: boolean
+          default: false
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 255
+      additionalProperties: false
+    ObserveAction:
+      type: object
+      description: Capture an observation (DOM snapshot) of the current page.
+      required:
+      - type
+      properties:
+        type:
+          const: observe
         include_observation:
           type: boolean
           default: false
@@ -534,100 +604,30 @@ components:
           minLength: 1
           maxLength: 255
       additionalProperties: false
-    ObserveAction:
+    PressAction:
       type: object
-      description: Capture an observation (DOM snapshot) of the current page.
+      description: Press a keyboard key.
       required:
       - type
+      - key
       properties:
         type:
-          const: observe
-        include_observation:
-          type: boolean
-          default: false
-        idempotency_key:
+          const: press
+        key:
           type: string
-          minLength: 1
-          maxLength: 255
-      additionalProperties: false
-    SelectAction:
-      type: object
-      description: Select an option on the element identified by observation_id + ref.
-      required:
-      - type
-      - observation_id
-      - ref
-      - value
-      properties:
-        type:
-          const: select
-        observation_id:
-          type: string
-          minLength: 1
-        ref:
-          type: string
-          minLength: 1
-        value:
-          type: string
-          maxLength: 1024
-        include_observation:
-          type: boolean
-          default: false
-        idempotency_key:
-          type: string
-          minLength: 1
-          maxLength: 255
-      additionalProperties: false
-    GatewayError:
-      type: object
-      required:
-      - errors
-      properties:
-        errors:
-          type: array
-          items:
-            type: object
-            required:
-            - code
-            - title
-            properties:
-              code:
-                type: string
-              title:
-                type: string
-              detail:
-                type: string
-              source:
-                type: object
-                properties:
-                  pointer:
-                    type: string
-              meta:
-                type: object
-                properties:
-                  url:
-                    type: string
-                    format: uri
-    FillAction:
-      type: object
-      description: Type text into the element identified by observation_id + ref.
-      required:
-      - type
-      - observation_id
-      - ref
-      - value
-      properties:
-        type:
-          const: fill
-        observation_id:
-          type: string
-          minLength: 1
-        ref:
-          type: string
-          minLength: 1
-        value:
-          type: string
-          maxLength: 4096
+          enum:
+          - Enter
+          - Tab
+          - Escape
+          - Backspace
+          - ArrowUp
+          - ArrowDown
+          - ArrowLeft
+          - ArrowRight
+          - PageUp
+          - PageDown
+          - Home
+          - End
         include_observation:
           type: boolean
           default: false
@@ -637,16 +637,16 @@ components:
           maxLength: 255
       additionalProperties: false
   responses:
-    BadRequest:
-      description: Invalid request — validation error or invalid parameters.
+    NotFound:
+      description: Session or artifact not found.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
           example:
             error:
-              code: validation_error
-              message: 'invalid request: policy.allowed_domains must have at least 1 item(s)'
+              code: not_found
+              message: session not found
               retryable: false
     Unauthorized:
       description: Unauthorized — missing or invalid API key.
@@ -663,16 +663,16 @@ components:
                 pointer: /
               meta:
                 url: https://developers.telnyx.com/docs/overview/errors/10009
-    NotFound:
-      description: Session or artifact not found.
+    BadRequest:
+      description: Invalid request — validation error or invalid parameters.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
           example:
             error:
-              code: not_found
-              message: session not found
+              code: validation_error
+              message: 'invalid request: policy.allowed_domains must have at least 1 item(s)'
               retryable: false
   securitySchemes:
     BearerAuth:

@@ -1022,127 +1022,6 @@ paths:
                     pointer: /data/attributes/status
 components:
   schemas:
-    DedicatedIpShowResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/DedicatedIp'
-      required:
-      - data
-    email_Error:
-      type: object
-      required:
-      - code
-      - title
-      - detail
-      properties:
-        code:
-          type: string
-          enum:
-          - '10001'
-          - '10015'
-          - '500'
-          - '10007'
-          - '10008'
-          - '10020'
-          - '40901'
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              type: string
-    DedicatedIpBilling:
-      type: object
-      description: Monthly recurring charge (MRC) state for the IP's current allocation.
-      properties:
-        status:
-          type: string
-          enum:
-          - not_started
-          - pending
-          - in_progress
-          - active
-          - stopping
-          - stopped
-          - stop_failed
-          - failed
-          description: '`not_started`: no charge recorded for the current allocation. `pending`: the charge is queued. `in_progress`: the charge is being created. `active`: the MRC is active. `stopping`: release requested; the MRC stop is being processed. `stopped`: the MRC has stopped. `stop_failed`: the MRC stop failed and the charge remains. `failed`: the charge could not be created.'
-        charged:
-          type: boolean
-          description: True when `status` is `active`, `stopping`, or `stop_failed`. An IP carries mail only after its charge has been created.
-    DedicatedIpDeleteRequest:
-      type: object
-      description: Optional release options. The same fields are accepted as query parameters.
-      properties:
-        force:
-          type: boolean
-          default: false
-          description: 'Set together with `drain: true` to release the last IP in a pool. Either flag alone has no effect.'
-        drain:
-          type: boolean
-          default: false
-          description: 'Set together with `force: true` to release the last IP in a pool. Acknowledges that mail routed to the emptied pool is held until the pool has a sendable IP again.'
-        reason:
-          type: string
-          description: Free-text reason recorded with the release.
-    DedicatedIpProvisioning:
-      type: object
-      description: Read-only status of the Telnyx-managed PTR record. No customer action is required to complete it.
-      properties:
-        dns_status:
-          type: string
-          enum:
-          - not_applicable
-          - pending_ptr
-          - pending_dns
-          - dns_confirmed
-          - dns_lost
-          description: '`dns_confirmed`: the PTR is forward-confirmed and `dns_confirmed_at` is set. `pending_ptr`: the PTR record is not yet in place. `pending_dns`: the PTR record is waiting for forward confirmation. `dns_lost`: a previously confirmed PTR no longer confirms, or the PTR request was abandoned before it ever confirmed (`ptr_request_state` is `abandoned`); the IP carries no mail until DNS is confirmed. `not_applicable`: the IP is released or has no PTR record on file.'
-        ptr_request_state:
-          type: string
-          nullable: true
-          enum:
-          - pending
-          - pr_open
-          - merged
-          - confirmed
-          - failed
-          - abandoned
-          - null
-          description: 'State of the Telnyx PTR change: `pending`, `pr_open`, `merged`, `confirmed`, `failed`, or `abandoned`. Informational.'
-        ptr_request_pr_url:
-          type: string
-          nullable: true
-          description: Reference to the Telnyx PTR change request, when one exists. Informational.
-        checklist:
-          type: object
-          properties:
-            ptr_requested:
-              type: boolean
-            ptr_authored:
-              type: boolean
-            ptr_merged:
-              type: boolean
-            forward_confirmed:
-              type: boolean
-          description: Informational progress flags for the Telnyx-managed PTR. They do not gate `start_warmup`; use `dns_status` to check whether the IP can carry mail.
-    DedicatedIpCapacityErrorResponse:
-      type: object
-      description: 429 envelope with machine-readable capacity or waitlist meta.
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/email_Error'
-        meta:
-          $ref: '#/components/schemas/DedicatedIpCapacityMeta'
-      required:
-      - errors
-      - meta
     DedicatedIpCapacityMeta:
       type: object
       properties:
@@ -1163,6 +1042,53 @@ components:
           description: True when the request was recorded on the waitlist.
       required:
       - retry_after_seconds
+    DedicatedIpWarmup:
+      type: object
+      description: Warmup ramp state for a dedicated IP.
+      properties:
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When `start_warmup` was called. Null before warm-up starts and after release.
+        progress:
+          type: integer
+          description: 'Ramp progress (0-100): the share of the 28 send-day schedule completed. Only UTC days on which the IP sent mail count. Set to 100 when the ramp completes, automatically or through `complete_warmup`. On an `active` IP this value is informational and can keep an earlier value after a suspension is lifted.'
+          minimum: 0
+          maximum: 100
+        daily_cap:
+          type: integer
+          nullable: true
+          minimum: 1
+          description: Daily cap of the current ramp stage. Null until the scheduler arms the first stage, and cleared when the ramp completes, automatically or through `complete_warmup`. On an `active` IP this value is informational and can keep an earlier stage cap after a suspension is lifted; it does not limit sending.
+        paused:
+          type: boolean
+          description: True while the ramp is paused.
+        paused_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the ramp was paused. Null when not paused.
+        today:
+          type: object
+          nullable: true
+          description: Today's warmup allowance report card (current UTC day). Null outside the warmup window (before start_warmup, after release/suspension). `active` IPs report the ramp-complete allowance, except as described for `cap`.
+          properties:
+            day:
+              type: string
+              format: date
+              description: The UTC day this snapshot describes (warmup caps reset at UTC midnight).
+            cap:
+              type: integer
+              nullable: true
+              description: 'The day''s allowance cap. Null when the ramp has not opened yet (day 0: the scheduler has not armed a stage cap) — distinct from a spent day, which reports the cap with remaining 0. `active` IPs report `100000000`, the ramp-complete cap; `complete_warmup` applies it to the current day immediately. A day''s allowance created before the IP became `active` can keep its stored `cap` and `remaining` until the next first-attempt send refreshes them.'
+            granted:
+              type: integer
+              description: First-attempt sends released from warmup hold so far today. Delivery retries never lease allowance and are not counted.
+            remaining:
+              type: integer
+              nullable: true
+              description: Headroom left today. A queued send held by the daily cap is explained by remaining == 0; null mirrors cap (ramp not open yet). On an `active` IP whose `cap` is below `100000000`, remaining == 0 is a stored allowance and does not block the next eligible first-attempt send.
     DedicatedIp:
       type: object
       description: A dedicated sending IP address owned by the account.
@@ -1242,15 +1168,6 @@ components:
         updated_at:
           type: string
           format: date-time
-    DedicatedIpListResponse:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/DedicatedIp'
-      required:
-      - data
     ErrorEnvelope:
       type: object
       description: Telnyx v2 error envelope.
@@ -1275,67 +1192,95 @@ components:
                     type: string
       required:
       - errors
-    DedicatedIpCreateRequest:
+    DedicatedIpDeleteRequest:
       type: object
-      description: Optional purchase selectors. Each supplied field restricts which stock IP is allocated; neither field is written to the IP. Omit the body or a field to apply no restriction for it. Other fields are ignored.
+      description: Optional release options. The same fields are accepted as query parameters.
       properties:
-        region:
-          type: string
-          enum:
-          - ewr-nj1
-          description: 'Allocate an IP in this region. Supported value: `ewr-nj1`. Any other value, including an empty string or `null`, returns `422`.'
-        ip_version:
-          type: string
-          enum:
-          - ipv4
-          description: 'Allocate an IP of this address family. Supported value: `ipv4`. Any other value, including `ipv6` or `null`, returns `422`.'
-    DedicatedIpWarmup:
-      type: object
-      description: Warmup ramp state for a dedicated IP.
-      properties:
-        started_at:
-          type: string
-          format: date-time
-          nullable: true
-          description: When `start_warmup` was called. Null before warm-up starts and after release.
-        progress:
-          type: integer
-          description: 'Ramp progress (0-100): the share of the 28 send-day schedule completed. Only UTC days on which the IP sent mail count. Set to 100 when the ramp completes, automatically or through `complete_warmup`. On an `active` IP this value is informational and can keep an earlier value after a suspension is lifted.'
-          minimum: 0
-          maximum: 100
-        daily_cap:
-          type: integer
-          nullable: true
-          minimum: 1
-          description: Daily cap of the current ramp stage. Null until the scheduler arms the first stage, and cleared when the ramp completes, automatically or through `complete_warmup`. On an `active` IP this value is informational and can keep an earlier stage cap after a suspension is lifted; it does not limit sending.
-        paused:
+        force:
           type: boolean
-          description: True while the ramp is paused.
-        paused_at:
+          default: false
+          description: 'Set together with `drain: true` to release the last IP in a pool. Either flag alone has no effect.'
+        drain:
+          type: boolean
+          default: false
+          description: 'Set together with `force: true` to release the last IP in a pool. Acknowledges that mail routed to the emptied pool is held until the pool has a sendable IP again.'
+        reason:
           type: string
-          format: date-time
-          nullable: true
-          description: When the ramp was paused. Null when not paused.
-        today:
+          description: Free-text reason recorded with the release.
+    DedicatedIpCapacityErrorResponse:
+      type: object
+      description: 429 envelope with machine-readable capacity or waitlist meta.
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/email_Error'
+        meta:
+          $ref: '#/components/schemas/DedicatedIpCapacityMeta'
+      required:
+      - errors
+      - meta
+    DedicatedIpBilling:
+      type: object
+      description: Monthly recurring charge (MRC) state for the IP's current allocation.
+      properties:
+        status:
+          type: string
+          enum:
+          - not_started
+          - pending
+          - in_progress
+          - active
+          - stopping
+          - stopped
+          - stop_failed
+          - failed
+          description: '`not_started`: no charge recorded for the current allocation. `pending`: the charge is queued. `in_progress`: the charge is being created. `active`: the MRC is active. `stopping`: release requested; the MRC stop is being processed. `stopped`: the MRC has stopped. `stop_failed`: the MRC stop failed and the charge remains. `failed`: the charge could not be created.'
+        charged:
+          type: boolean
+          description: True when `status` is `active`, `stopping`, or `stop_failed`. An IP carries mail only after its charge has been created.
+    DedicatedIpListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DedicatedIp'
+      required:
+      - data
+    DedicatedIpShowResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/DedicatedIp'
+      required:
+      - data
+    email_Error:
+      type: object
+      required:
+      - code
+      - title
+      - detail
+      properties:
+        code:
+          type: string
+          enum:
+          - '10001'
+          - '10015'
+          - '500'
+          - '10007'
+          - '10008'
+          - '10020'
+          - '40901'
+        title:
+          type: string
+        detail:
+          type: string
+        source:
           type: object
-          nullable: true
-          description: Today's warmup allowance report card (current UTC day). Null outside the warmup window (before start_warmup, after release/suspension). `active` IPs report the ramp-complete allowance, except as described for `cap`.
           properties:
-            day:
+            pointer:
               type: string
-              format: date
-              description: The UTC day this snapshot describes (warmup caps reset at UTC midnight).
-            cap:
-              type: integer
-              nullable: true
-              description: 'The day''s allowance cap. Null when the ramp has not opened yet (day 0: the scheduler has not armed a stage cap) — distinct from a spent day, which reports the cap with remaining 0. `active` IPs report `100000000`, the ramp-complete cap; `complete_warmup` applies it to the current day immediately. A day''s allowance created before the IP became `active` can keep its stored `cap` and `remaining` until the next first-attempt send refreshes them.'
-            granted:
-              type: integer
-              description: First-attempt sends released from warmup hold so far today. Delivery retries never lease allowance and are not counted.
-            remaining:
-              type: integer
-              nullable: true
-              description: Headroom left today. A queued send held by the daily cap is explained by remaining == 0; null mirrors cap (ramp not open yet). On an `active` IP whose `cap` is below `100000000`, remaining == 0 is a stored allowance and does not block the next eligible first-attempt send.
     DedicatedIpUpdateRequest:
       type: object
       description: 'Applies one change per request. `pool_id` takes precedence over warm-up changes: when it is present, the IP moves to that pool (with `weight`, `force`, and `drain`) and other fields are ignored. Otherwise, use `warmup_paused` or `warmup.paused`; a Boolean `warmup_paused` takes precedence. The PTR hostname is managed by Telnyx and cannot be changed: when neither `pool_id` nor a warm-up field is present, a body that includes `ptr_hostname` (including `null`) returns `422` and the IP is unchanged. A body with none of these fields returns the IP unchanged.'
@@ -1367,6 +1312,61 @@ components:
             paused:
               type: boolean
               description: Pause (`true`) or resume (`false`) the warm-up ramp. Used only when `warmup_paused` is not a Boolean.
+    DedicatedIpCreateRequest:
+      type: object
+      description: Optional purchase selectors. Each supplied field restricts which stock IP is allocated; neither field is written to the IP. Omit the body or a field to apply no restriction for it. Other fields are ignored.
+      properties:
+        region:
+          type: string
+          enum:
+          - ewr-nj1
+          description: 'Allocate an IP in this region. Supported value: `ewr-nj1`. Any other value, including an empty string or `null`, returns `422`.'
+        ip_version:
+          type: string
+          enum:
+          - ipv4
+          description: 'Allocate an IP of this address family. Supported value: `ipv4`. Any other value, including `ipv6` or `null`, returns `422`.'
+    DedicatedIpProvisioning:
+      type: object
+      description: Read-only status of the Telnyx-managed PTR record. No customer action is required to complete it.
+      properties:
+        dns_status:
+          type: string
+          enum:
+          - not_applicable
+          - pending_ptr
+          - pending_dns
+          - dns_confirmed
+          - dns_lost
+          description: '`dns_confirmed`: the PTR is forward-confirmed and `dns_confirmed_at` is set. `pending_ptr`: the PTR record is not yet in place. `pending_dns`: the PTR record is waiting for forward confirmation. `dns_lost`: a previously confirmed PTR no longer confirms, or the PTR request was abandoned before it ever confirmed (`ptr_request_state` is `abandoned`); the IP carries no mail until DNS is confirmed. `not_applicable`: the IP is released or has no PTR record on file.'
+        ptr_request_state:
+          type: string
+          nullable: true
+          enum:
+          - pending
+          - pr_open
+          - merged
+          - confirmed
+          - failed
+          - abandoned
+          - null
+          description: 'State of the Telnyx PTR change: `pending`, `pr_open`, `merged`, `confirmed`, `failed`, or `abandoned`. Informational.'
+        ptr_request_pr_url:
+          type: string
+          nullable: true
+          description: Reference to the Telnyx PTR change request, when one exists. Informational.
+        checklist:
+          type: object
+          properties:
+            ptr_requested:
+              type: boolean
+            ptr_authored:
+              type: boolean
+            ptr_merged:
+              type: boolean
+            forward_confirmed:
+              type: boolean
+          description: Informational progress flags for the Telnyx-managed PTR. They do not gate `start_warmup`; use `dns_status` to check whether the IP can carry mail.
   securitySchemes:
     BearerAuth:
       type: http

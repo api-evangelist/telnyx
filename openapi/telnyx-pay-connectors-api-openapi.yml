@@ -379,6 +379,114 @@ paths:
                     pointer: /config
 components:
   schemas:
+    PayConnectorErrors:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+                description: Telnyx error code.
+              title:
+                type: string
+                description: Error title.
+              detail:
+                type: string
+                description: Error detail.
+              source:
+                type: object
+                properties:
+                  pointer:
+                    type: string
+                    description: Invalid field pointer.
+    UpdateGenericPayConnectorRequest:
+      type: object
+      description: Only type, mode and config are updated; the connector name is selected by the path. Omit config to preserve existing configuration and credentials. If supplied, send the entire replacement config including required credentials.
+      properties:
+        type:
+          type: string
+          enum:
+          - generic
+          description: Generic connector type. Omit to preserve the existing value.
+        mode:
+          type: string
+          enum:
+          - test
+          - live
+          description: Omit to preserve the existing mode. Use an explicit test or live value.
+        config:
+          $ref: '#/components/schemas/GenericPayConnectorConfig'
+    PayConnectorResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PayConnector'
+    PayConnector:
+      type: object
+      description: Organization-owned connector. Examples and config properties here describe generic connectors; listing is not restricted to that type unless filter[type]=generic is supplied. Passwords and bearer tokens are omitted, not masked. Defaults for auth_type and timeout need not appear in stored config.
+      properties:
+        id:
+          type: string
+          description: Connector identifier.
+          format: uuid
+        name:
+          type: string
+          description: Connector name used for retrieval, update, deletion and Pay.
+        record_type:
+          type: string
+          description: Resource type.
+          enum:
+          - pay_connector
+        user_id:
+          type: string
+          description: Creating user; assigned from authentication, not request input.
+        organization_id:
+          type: string
+          description: Owning organization; assigned from authentication, not request input.
+        type:
+          type: string
+          description: Connector type; generic is covered by this reference. Other types may appear in unfiltered lists.
+        mode:
+          type: string
+          enum:
+          - test
+          - live
+          description: Configured mode.
+        config:
+          type: object
+          description: Redacted stored configuration. Generic connector fields are shown here. Unknown config keys are discarded. Password and token are never returned.
+          properties:
+            endpoint_url:
+              type: string
+              description: HTTP or HTTPS processor URL with a host. Use HTTPS to protect payment data in transit.
+              pattern: ^https?://\S+
+              example: https://processor.example.com/pay
+            auth_type:
+              type: string
+              description: Stored processor authentication selection. Omitted if it was not explicitly configured.
+              enum:
+              - none
+              - basic
+              - bearer
+            username:
+              type: string
+              description: Stored username, when supplied. Required to be a nonblank string for basic authentication.
+            timeout:
+              type: integer
+              minimum: 1
+              maximum: 4294967295
+              description: Stored processor HTTP timeout in milliseconds. Omitted when no timeout was configured; the effective runtime default is 10000.
+        created_at:
+          type: string
+          description: Creation time.
+          format: date-time
+        updated_at:
+          type: string
+          description: Last update time.
+          format: date-time
     GenericPayConnectorConfig:
       type: object
       description: Configuration for a generic connector. A config update replaces the complete object, not individual keys. Unknown config keys are discarded. Authentication credentials must be nonblank strings when required by the selected auth_type.
@@ -452,97 +560,6 @@ components:
             const: none
         required:
         - auth_type
-    PayConnector:
-      type: object
-      description: Organization-owned connector. Examples and config properties here describe generic connectors; listing is not restricted to that type unless filter[type]=generic is supplied. Passwords and bearer tokens are omitted, not masked. Defaults for auth_type and timeout need not appear in stored config.
-      properties:
-        id:
-          type: string
-          description: Connector identifier.
-          format: uuid
-        name:
-          type: string
-          description: Connector name used for retrieval, update, deletion and Pay.
-        record_type:
-          type: string
-          description: Resource type.
-          enum:
-          - pay_connector
-        user_id:
-          type: string
-          description: Creating user; assigned from authentication, not request input.
-        organization_id:
-          type: string
-          description: Owning organization; assigned from authentication, not request input.
-        type:
-          type: string
-          description: Connector type; generic is covered by this reference. Other types may appear in unfiltered lists.
-        mode:
-          type: string
-          enum:
-          - test
-          - live
-          description: Configured mode.
-        config:
-          type: object
-          description: Redacted stored configuration. Generic connector fields are shown here. Unknown config keys are discarded. Password and token are never returned.
-          properties:
-            endpoint_url:
-              type: string
-              description: HTTP or HTTPS processor URL with a host. Use HTTPS to protect payment data in transit.
-              pattern: ^https?://\S+
-              example: https://processor.example.com/pay
-            auth_type:
-              type: string
-              description: Stored processor authentication selection. Omitted if it was not explicitly configured.
-              enum:
-              - none
-              - basic
-              - bearer
-            username:
-              type: string
-              description: Stored username, when supplied. Required to be a nonblank string for basic authentication.
-            timeout:
-              type: integer
-              minimum: 1
-              maximum: 4294967295
-              description: Stored processor HTTP timeout in milliseconds. Omitted when no timeout was configured; the effective runtime default is 10000.
-        created_at:
-          type: string
-          description: Creation time.
-          format: date-time
-        updated_at:
-          type: string
-          description: Last update time.
-          format: date-time
-    PayConnectorErrors:
-      type: object
-      properties:
-        errors:
-          type: array
-          items:
-            type: object
-            properties:
-              code:
-                type: string
-                description: Telnyx error code.
-              title:
-                type: string
-                description: Error title.
-              detail:
-                type: string
-                description: Error detail.
-              source:
-                type: object
-                properties:
-                  pointer:
-                    type: string
-                    description: Invalid field pointer.
-    PayConnectorResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/PayConnector'
     CreateGenericPayConnectorRequest:
       type: object
       required:
@@ -595,23 +612,6 @@ components:
               - string
               - 'null'
               description: Cursor for requesting the following page.
-    UpdateGenericPayConnectorRequest:
-      type: object
-      description: Only type, mode and config are updated; the connector name is selected by the path. Omit config to preserve existing configuration and credentials. If supplied, send the entire replacement config including required credentials.
-      properties:
-        type:
-          type: string
-          enum:
-          - generic
-          description: Generic connector type. Omit to preserve the existing value.
-        mode:
-          type: string
-          enum:
-          - test
-          - live
-          description: Omit to preserve the existing mode. Use an explicit test or live value.
-        config:
-          $ref: '#/components/schemas/GenericPayConnectorConfig'
   securitySchemes:
     BearerAuth:
       type: http

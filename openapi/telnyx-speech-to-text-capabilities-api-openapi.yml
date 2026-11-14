@@ -94,24 +94,42 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
+  responses:
+    speech-to-text_UnprocessableEntityResponse:
+      description: Unprocessable entity. The request was well-formed but could not be processed due to semantic errors. This includes validation errors, invalid parameter values and business logic violations.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/speech-to-text_Errors'
+          examples:
+            missing_required_parameter:
+              summary: Missing required parameter
+              value:
+                errors:
+                - code: '10004'
+                  title: Missing required parameter
+                  detail: The 'transcription_engine' parameter is required and cannot be blank.
+                  source:
+                    pointer: /transcription_engine
   schemas:
-    STTProvidersMeta:
+    STTProviderServiceType:
       type: object
+      description: A supported service surface for a given (provider, model), along with the language codes accepted on that surface. Language support can differ per surface — for example, a model may accept a narrower language set for streaming than for file transcription.
       properties:
-        total:
-          type: integer
-          description: Total number of entries returned.
-          example: 12
+        type:
+          $ref: '#/components/schemas/STTServiceType'
+        languages:
+          type: array
+          description: Languages accepted on this service surface, in the provider's native code format. `auto` indicates the provider performs language detection.
+          items:
+            type: string
+          example:
+          - en
+          - es
+          - fr
       required:
-      - total
-    STTServiceType:
-      type: string
-      description: Service surface a model is available on. `ai_assistant` is the STT surface configured via Call Control voice-assistant transcription; it covers both live-streaming and non-streaming/batch models (matching the `TranscriptionConfig.model` enum on `call-control` voice assistants).
-      enum:
-      - streaming
-      - file_based
-      - in_call
-      - ai_assistant
+      - type
+      - languages
     STTProvider:
       type: object
       description: A (provider, model) tuple along with the service surfaces it supports. Each entry in `service_types` describes one surface and the languages accepted on it.
@@ -150,12 +168,6 @@ components:
       required:
       - data
       - meta
-    speech-to-text_Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/speech-to-text_Error'
     speech-to-text_Error:
       required:
       - code
@@ -180,41 +192,29 @@ components:
               type: string
         meta:
           type: object
-    STTProviderServiceType:
+    STTServiceType:
+      type: string
+      description: Service surface a model is available on. `ai_assistant` is the STT surface configured via Call Control voice-assistant transcription; it covers both live-streaming and non-streaming/batch models (matching the `TranscriptionConfig.model` enum on `call-control` voice assistants).
+      enum:
+      - streaming
+      - file_based
+      - in_call
+      - ai_assistant
+    STTProvidersMeta:
       type: object
-      description: A supported service surface for a given (provider, model), along with the language codes accepted on that surface. Language support can differ per surface — for example, a model may accept a narrower language set for streaming than for file transcription.
       properties:
-        type:
-          $ref: '#/components/schemas/STTServiceType'
-        languages:
-          type: array
-          description: Languages accepted on this service surface, in the provider's native code format. `auto` indicates the provider performs language detection.
-          items:
-            type: string
-          example:
-          - en
-          - es
-          - fr
+        total:
+          type: integer
+          description: Total number of entries returned.
+          example: 12
       required:
-      - type
-      - languages
-  responses:
-    speech-to-text_UnprocessableEntityResponse:
-      description: Unprocessable entity. The request was well-formed but could not be processed due to semantic errors. This includes validation errors, invalid parameter values and business logic violations.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/speech-to-text_Errors'
-          examples:
-            missing_required_parameter:
-              summary: Missing required parameter
-              value:
-                errors:
-                - code: '10004'
-                  title: Missing required parameter
-                  detail: The 'transcription_engine' parameter is required and cannot be blank.
-                  source:
-                    pointer: /transcription_engine
+      - total
+    speech-to-text_Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/speech-to-text_Error'
   securitySchemes:
     BearerAuth:
       type: http

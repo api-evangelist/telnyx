@@ -92,28 +92,54 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    Errors:
+    netapps_Location_17904fcfbc:
+      type: object
+      title: Location
       properties:
-        errors:
+        region:
+          type: string
+          description: Identifies the geographical region of location.
+          example: AMER
+        site:
+          type: string
+          description: Site of location.
+          example: ORD
+        pop:
+          type: string
+          description: Point of presence of location.
+          example: CH1
+        code:
+          type: string
+          description: Location code.
+          example: chicago-il
+        name:
+          type: string
+          description: Human readable name of location.
+          example: Chicago IL, US
+    AvailableService:
+      type: string
+      title: Available service
+      enum:
+      - cloud_vpn
+      - private_wireless_gateway
+      - virtual_cross_connect
+    NetworkCoverage:
+      type: object
+      title: NetworkCoverage
+      properties:
+        record_type:
+          type: string
+          description: Identifies the type of the resource.
+          readOnly: true
+          example: network_coverage
+        location:
+          $ref: '#/components/schemas/netapps_Location_17904fcfbc'
+        available_services:
           type: array
+          description: List of interface types supported in this region.
           items:
-            $ref: '#/components/schemas/billing-group_Error'
-      type: object
-    PaginationMeta:
-      type: object
-      properties:
-        total_pages:
-          type: integer
-          example: 3
-        total_results:
-          type: integer
-          example: 55
-        page_number:
-          type: integer
-          example: 2
-        page_size:
-          type: integer
-          example: 25
+            oneOf:
+            - $ref: '#/components/schemas/AvailableService'
     billing-group_Error:
       type: object
       required:
@@ -140,60 +166,51 @@ components:
           type: object
           properties: {}
           additionalProperties: true
-    AvailableService:
-      type: string
-      title: Available service
-      enum:
-      - cloud_vpn
-      - private_wireless_gateway
-      - virtual_cross_connect
-    NetworkCoverage:
-      type: object
-      title: NetworkCoverage
-      properties:
-        record_type:
-          type: string
-          description: Identifies the type of the resource.
-          readOnly: true
-          example: network_coverage
-        location:
-          $ref: '#/components/schemas/netapps_Location_17904fcfbc'
-        available_services:
-          type: array
-          description: List of interface types supported in this region.
-          items:
-            oneOf:
-            - $ref: '#/components/schemas/AvailableService'
-    netapps_Location_17904fcfbc:
-      type: object
-      title: Location
-      properties:
-        region:
-          type: string
-          description: Identifies the geographical region of location.
-          example: AMER
-        site:
-          type: string
-          description: Site of location.
-          example: ORD
-        pop:
-          type: string
-          description: Point of presence of location.
-          example: CH1
-        code:
-          type: string
-          description: Location code.
-          example: chicago-il
-        name:
-          type: string
-          description: Human readable name of location.
-          example: Chicago IL, US
-    netapps_Errors:
+    Errors:
       properties:
         errors:
-          items:
-            $ref: '#/components/schemas/netapps_Error'
           type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    PaginationMeta:
+      type: object
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 55
+        page_number:
+          type: integer
+          example: 2
+        page_size:
+          type: integer
+          example: 25
+    netapps_Error:
+      properties:
+        code:
+          type: string
+        detail:
+          type: string
+        meta:
+          additionalProperties: true
+          type: object
+        source:
+          properties:
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+          type: object
+        title:
+          type: string
+      required:
+      - code
+      - title
       type: object
     NetworkCoverage_2:
       properties:
@@ -211,6 +228,13 @@ components:
           readOnly: true
           type: string
       title: NetworkCoverage
+      type: object
+    netapps_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/netapps_Error'
+          type: array
       type: object
     netapps_Location:
       properties:
@@ -236,30 +260,14 @@ components:
           type: string
       title: Location
       type: object
-    netapps_Error:
-      properties:
-        code:
-          type: string
-        detail:
-          type: string
-        meta:
-          additionalProperties: true
-          type: object
-        source:
-          properties:
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-          type: object
-        title:
-          type: string
-      required:
-      - code
-      - title
-      type: object
+    AvailableService_2:
+      type: string
+      title: Available service
+      enum:
+      - cloud_vpn
+      - private_wireless_gateway
+      - tailscale_subnet_router
+      - virtual_cross_connect
     Errors_2:
       properties:
         errors:
@@ -302,14 +310,6 @@ components:
         code: '20207'
         description: The street address provided is invalid.
       type: object
-    AvailableService_2:
-      type: string
-      title: Available service
-      enum:
-      - cloud_vpn
-      - private_wireless_gateway
-      - tailscale_subnet_router
-      - virtual_cross_connect
   responses:
     GenericErrorResponse:
       description: Unexpected error
@@ -317,12 +317,6 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Errors'
-    netapps_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/netapps_Errors'
-      description: Unexpected error
     NetworkCoverageListResponse:
       content:
         application/json:
@@ -336,6 +330,12 @@ components:
                 $ref: '#/components/schemas/PaginationMeta'
             type: object
       description: Successful response
+    netapps_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/netapps_Errors'
+      description: Unexpected error
   parameters:
     PageConsolidated:
       name: page

@@ -316,14 +316,48 @@ paths:
         default:
           $ref: '#/components/responses/GenericErrorResponse'
 components:
+  parameters:
+    PageCursorConsolidated:
+      name: page
+      in: query
+      style: deepObject
+      explode: true
+      description: 'Consolidated page parameter (deepObject style). Originally: page[after], page[limit]'
+      schema:
+        type: object
+        properties:
+          after:
+            type: string
+            description: The cursor from `meta.cursors.after` of the previous page.
+          limit:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+            description: The number of results per page.
   schemas:
-    Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/Error'
+    TunnelConnection:
       type: object
+      title: TunnelConnection
+      description: A tunnel process connected to the tunnel.
+      properties:
+        hostname:
+          type: string
+          description: 'The name the host reports for itself. Preview: empty until the CLI reports it.'
+          example: dc1-tunnel-a
+        version:
+          type: string
+          description: 'The `telnyx-edge` CLI version of the process. Preview: empty until the CLI reports it.'
+          example: 0.6.0
+        region_code:
+          type: string
+          description: 'The Telnyx region the process is connected to. Preview: empty until the CLI reports it.'
+          example: chicago-il
+        connected_at:
+          type: string
+          format: date-time
+          description: When the process connected.
+          example: '2026-10-21T15:04:05.123456Z'
     netapps_CursorPaginationMeta:
       type: object
       title: CursorPaginationMeta
@@ -345,41 +379,17 @@ components:
         previous:
           type: string
           description: The path of the previous page. Present when the request used `page[after]`.
-    Error:
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: string
-          x-format: int64
-        title:
-          type: string
-        detail:
-          type: string
-          description: A human-readable explanation of the error.
-        description:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-              format: json-pointer
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-          additionalProperties: true
-      example:
-        title: Invalid street address
-        source:
-          pointer: /street_address
-        code: '20207'
-        description: The street address provided is invalid.
-      type: object
+    TunnelWithToken:
+      title: TunnelWithToken
+      allOf:
+      - $ref: '#/components/schemas/Tunnel'
+      - type: object
+        properties:
+          tunnel_token:
+            type: string
+            readOnly: true
+            description: The credential that a tunnel process presents with `telnyx-edge tunnel run --token`. Returned only by create and rotate_token. Telnyx stores only a hash of it.
+            example: tnl_example-token-shown-once
     Tunnel:
       type: object
       title: Tunnel
@@ -427,6 +437,13 @@ components:
           readOnly: true
           description: ISO 8601 formatted date-time indicating when the resource was created.
           example: '2026-10-21T15:04:05.123456Z'
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+      type: object
     TunnelCreate:
       type: object
       title: TunnelCreate
@@ -438,58 +455,41 @@ components:
           minLength: 1
           description: A user specified name for the tunnel.
           example: chicago-dc
-    TunnelConnection:
-      type: object
-      title: TunnelConnection
-      description: A tunnel process connected to the tunnel.
+    Error:
+      required:
+      - code
+      - title
       properties:
-        hostname:
+        code:
           type: string
-          description: 'The name the host reports for itself. Preview: empty until the CLI reports it.'
-          example: dc1-tunnel-a
-        version:
+          x-format: int64
+        title:
           type: string
-          description: 'The `telnyx-edge` CLI version of the process. Preview: empty until the CLI reports it.'
-          example: 0.6.0
-        region_code:
+        detail:
           type: string
-          description: 'The Telnyx region the process is connected to. Preview: empty until the CLI reports it.'
-          example: chicago-il
-        connected_at:
+          description: A human-readable explanation of the error.
+        description:
           type: string
-          format: date-time
-          description: When the process connected.
-          example: '2026-10-21T15:04:05.123456Z'
-    TunnelWithToken:
-      title: TunnelWithToken
-      allOf:
-      - $ref: '#/components/schemas/Tunnel'
-      - type: object
-        properties:
-          tunnel_token:
-            type: string
-            readOnly: true
-            description: The credential that a tunnel process presents with `telnyx-edge tunnel run --token`. Returned only by create and rotate_token. Telnyx stores only a hash of it.
-            example: tnl_example-token-shown-once
-  parameters:
-    PageCursorConsolidated:
-      name: page
-      in: query
-      style: deepObject
-      explode: true
-      description: 'Consolidated page parameter (deepObject style). Originally: page[after], page[limit]'
-      schema:
-        type: object
-        properties:
-          after:
-            type: string
-            description: The cursor from `meta.cursors.after` of the previous page.
-          limit:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
-            description: The number of results per page.
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          additionalProperties: true
+      example:
+        title: Invalid street address
+        source:
+          pointer: /street_address
+        code: '20207'
+        description: The street address provided is invalid.
+      type: object
   responses:
     GenericErrorResponse:
       description: Unexpected error

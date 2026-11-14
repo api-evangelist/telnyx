@@ -400,15 +400,54 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
-  headers:
-    IdempotentReplayed:
-      description: Present with value `true` when Edge replayed a stored successful response for the supplied Idempotency-Key. Omitted for first-time requests and error responses.
-      schema:
-        type: boolean
-        enum:
-        - true
-        example: true
   schemas:
+    edge-compute_Error:
+      type: object
+      properties:
+        code:
+          type: string
+          example: '10005'
+        detail:
+          type: string
+          example: The requested function does not exist or you don't have access to it
+        meta:
+          $ref: '#/components/schemas/ErrorMeta'
+        source:
+          $ref: '#/components/schemas/ErrorSource'
+        title:
+          type: string
+          example: Function not found
+    CreateCloudfsFilesystemRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Filesystem name, unique within your organization. Names are trimmed and lowercased; after normalization they may contain lowercase letters, numbers, `.`, `_`, and `-` only.
+          pattern: ^[a-z0-9._-]+$
+          minLength: 1
+          maxLength: 63
+          example: agent-fs
+        region:
+          type: string
+          description: Region where the filesystem's storage and metadata are provisioned.
+          enum:
+          - us-central-1
+          - us-east-1
+          - us-west-1
+          example: us-east-1
+      required:
+      - name
+      - region
+    CloudfsListCursors:
+      type: object
+      description: Opaque cursors for the adjacent pages. Empty when there are no adjacent pages.
+      properties:
+        after:
+          type: string
+          description: Cursor for the next page; pass it as `page[after]`. Omitted on the last page.
+        before:
+          type: string
+          description: Cursor for the previous page; pass it as `page[before]`. Omitted on the first page.
     CloudfsFilesystemDetail:
       type: object
       description: A CloudFS filesystem as returned by get, update, and delete. `meta_url` omits the credential and there is no `meta_token` field — the token is only returned by create and rotate-meta-token.
@@ -452,60 +491,11 @@ components:
           type: string
           format: date-time
           example: '2026-07-14T21:42:01Z'
-    edge-compute_Error:
+    CloudfsFilesystemResponseWrapper:
       type: object
       properties:
-        code:
-          type: string
-          example: '10005'
-        detail:
-          type: string
-          example: The requested function does not exist or you don't have access to it
-        meta:
-          $ref: '#/components/schemas/ErrorMeta'
-        source:
-          $ref: '#/components/schemas/ErrorSource'
-        title:
-          type: string
-          example: Function not found
-    Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/billing-group_Error'
-      type: object
-    CloudfsListCursors:
-      type: object
-      description: Opaque cursors for the adjacent pages. Empty when there are no adjacent pages.
-      properties:
-        after:
-          type: string
-          description: Cursor for the next page; pass it as `page[after]`. Omitted on the last page.
-        before:
-          type: string
-          description: Cursor for the previous page; pass it as `page[before]`. Omitted on the first page.
-    CreateCloudfsFilesystemRequest:
-      type: object
-      properties:
-        name:
-          type: string
-          description: Filesystem name, unique within your organization. Names are trimmed and lowercased; after normalization they may contain lowercase letters, numbers, `.`, `_`, and `-` only.
-          pattern: ^[a-z0-9._-]+$
-          minLength: 1
-          maxLength: 63
-          example: agent-fs
-        region:
-          type: string
-          description: Region where the filesystem's storage and metadata are provisioned.
-          enum:
-          - us-central-1
-          - us-east-1
-          - us-west-1
-          example: us-east-1
-      required:
-      - name
-      - region
+        data:
+          $ref: '#/components/schemas/CloudfsFilesystem'
     CloudfsFilesystemListItem:
       type: object
       description: A CloudFS filesystem as returned in list results. Connection details (`meta_url`, `meta_token`) are omitted — retrieve the filesystem by ID for its redacted `meta_url`.
@@ -541,66 +531,6 @@ components:
           type: string
           format: date-time
           example: '2026-07-14T21:42:01Z'
-    GenericErrorResponse:
-      type: object
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/edge-compute_Error'
-    UpdateCloudfsFilesystemRequest:
-      type: object
-      properties:
-        name:
-          type: string
-          description: New filesystem name, unique within your organization. Names are trimmed and lowercased; after normalization they may contain lowercase letters, numbers, `.`, `_`, and `-` only.
-          pattern: ^[a-z0-9._-]+$
-          minLength: 1
-          maxLength: 63
-          example: agent-fs
-    CloudfsListMeta:
-      type: object
-      properties:
-        cursors:
-          $ref: '#/components/schemas/CloudfsListCursors'
-        next:
-          type: string
-          description: Relative URL (path and query) of the next page. Omitted when there are no further results.
-        previous:
-          type: string
-          description: Relative URL (path and query) of the previous page. Omitted on the first page.
-    billing-group_Error:
-      type: object
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: integer
-          format: int32
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-          properties: {}
-          additionalProperties: true
-    ErrorMeta:
-      type: object
-      properties:
-        url:
-          type: string
-          example: https://docs.telnyx.com/api/errors/10005
     CloudfsFilesystem:
       type: object
       description: A CloudFS filesystem, including its metadata credential. This shape is returned only by create and rotate-meta-token.
@@ -644,6 +574,41 @@ components:
           type: string
           format: date-time
           example: '2026-07-14T21:42:01Z'
+    ErrorSource:
+      type: object
+      properties:
+        parameter:
+          type: string
+          example: id
+        pointer:
+          type: string
+          example: /id
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
     CloudfsFilesystemStatus:
       type: string
       description: 'Lifecycle status of the filesystem. `ready` means it is fully provisioned and usable. `needs_format` means the storage bucket and metadata database were provisioned but the filesystem has not yet been formatted — run `juicefs format` with the filesystem''s `meta_url` before mounting. `failed` means the last lifecycle action failed — see the filesystem''s `error` message. `deleted` appears only in the delete response: deleted filesystems are excluded from list results and return a `404` on retrieval.'
@@ -655,25 +620,52 @@ components:
       - failed
       - deleted
       example: ready
-    ErrorSource:
+    ErrorMeta:
       type: object
       properties:
-        parameter:
+        url:
           type: string
-          example: id
-        pointer:
-          type: string
-          example: /id
-    CloudfsFilesystemResponseWrapper:
-      type: object
+          example: https://docs.telnyx.com/api/errors/10005
+    Errors:
       properties:
-        data:
-          $ref: '#/components/schemas/CloudfsFilesystem'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
     CloudfsFilesystemDetailResponseWrapper:
       type: object
       properties:
         data:
           $ref: '#/components/schemas/CloudfsFilesystemDetail'
+    GenericErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/edge-compute_Error'
+    CloudfsListMeta:
+      type: object
+      properties:
+        cursors:
+          $ref: '#/components/schemas/CloudfsListCursors'
+        next:
+          type: string
+          description: Relative URL (path and query) of the next page. Omitted when there are no further results.
+        previous:
+          type: string
+          description: Relative URL (path and query) of the previous page. Omitted on the first page.
+    UpdateCloudfsFilesystemRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: New filesystem name, unique within your organization. Names are trimmed and lowercased; after normalization they may contain lowercase letters, numbers, `.`, `_`, and `-` only.
+          pattern: ^[a-z0-9._-]+$
+          minLength: 1
+          maxLength: 63
+          example: agent-fs
     CloudfsFilesystemListResponseWrapper:
       type: object
       properties:
@@ -725,6 +717,14 @@ components:
         code: '20207'
         description: The street address provided is invalid.
       type: object
+  headers:
+    IdempotentReplayed:
+      description: Present with value `true` when Edge replayed a stored successful response for the supplied Idempotency-Key. Omitted for first-time requests and error responses.
+      schema:
+        type: boolean
+        enum:
+        - true
+        example: true
   securitySchemes:
     BearerAuth:
       type: http

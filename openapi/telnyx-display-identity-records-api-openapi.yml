@@ -479,104 +479,6 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    DirUpdateRequest:
-      type: object
-      description: All fields are optional; only those supplied are updated. Same per-field rules as `DirCreateRequest`.
-      properties:
-        display_name:
-          type: string
-          minLength: 1
-          maxLength: 35
-          description: Name shown to call recipients. 1–35 characters, no emoji, not whitespace-only.
-        reselling:
-          type: boolean
-          description: Set to true if your organization places calls on behalf of other enterprises (BPO/reseller). Updating this triggers re-vetting on next submit.
-        authorizer_name:
-          type: string
-          maxLength: 255
-          description: Name of the person at your enterprise authorizing this DIR. Must be a real individual.
-        authorizer_email:
-          type: string
-          format: email
-          description: Contact email of the authorizer. Telnyx may send verification or infringement notices here.
-        logo_url:
-          type: string
-          format: uri
-          maxLength: 128
-          description: Publicly accessible HTTPS URL (max 128 chars) to a 256x256 BMP logo (max 1 MB).
-        call_reasons:
-          type: array
-          items:
-            type: string
-            maxLength: 64
-          minItems: 1
-          maxItems: 10
-          description: 1–10 reasons your business calls customers. Validate phrasing against `POST /call_reasons/validate`.
-        certify_brand_is_accurate:
-          type: boolean
-          description: Certification that the DIR information is accurate. Must be `true` for the DIR to be submitted for vetting.
-          example: true
-        certify_no_shaft_content:
-          type: boolean
-          description: Certification that this DIR is not used for SHAFT content (Sex, Hate, Alcohol, Firearms, Tobacco) where prohibited. Must be `true` for the DIR to be submitted for vetting.
-          example: true
-        certify_ip_ownership:
-          type: boolean
-          description: Certification of ownership of any logos/trademarks shown. Must be `true` for the DIR to be submitted for vetting.
-          example: true
-        documents:
-          type: array
-          items:
-            $ref: '#/components/schemas/Document'
-          maxItems: 20
-          description: 'Additional supporting documents to attach. Append-only: existing documents are never removed or replaced, and an empty or omitted list is a no-op. Each `document_id` may appear at most once on a DIR.'
-        webhook_url:
-          type: string
-          format: uri
-          nullable: true
-          maxLength: 2048
-          description: Optional `https://` URL that receives webhook notifications when this DIR's compliance review completes. Send `null` to clear. Changing only this field on a `verified` DIR does not re-vet it. Maximum 2048 characters.
-          example: https://mapleridge.example.com/webhooks/branded-calling
-        bpo_authorizations:
-          type: array
-          items:
-            $ref: '#/components/schemas/BpoAuthorizationInput'
-          maxItems: 10
-          description: 'Optional. Replace this DIR''s authorized BPO (Business Process Outsourcer) accounts with these, each with its signed Letter of Authorization. The supplied list replaces the current one: a BPO left out has its authorization removed, and a new BPO (or a changed Letter of Authorization) is created `pending` admin review. Send an empty list to clear all authorizations; omit the field to leave them unchanged. Editing this list does not re-vet the DIR. Maximum 10.'
-    Document:
-      type: object
-      required:
-      - document_id
-      - document_type
-      properties:
-        document_id:
-          type: string
-          format: uuid
-          description: Id returned by the Telnyx Documents API after you upload the file (upload via `POST /v2/documents`; see https://developers.telnyx.com/api/documents).
-          example: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
-        document_type:
-          type: string
-          enum:
-          - letter_of_authorization
-          - business_registration
-          - articles_of_incorporation
-          - tax_document
-          - ein_letter
-          - trademark_registration
-          - website_ownership
-          - business_license
-          - professional_license
-          - government_id
-          - utility_bill
-          - bank_statement
-          - other
-          example: business_registration
-          description: Type of supporting document. Pick the closest match to what the file actually contains; `other` triggers manual vetting and may slow approval. The matching short_name reference list is at `GET /v2/dir/document_types`.
-        description:
-          type: string
-          maxLength: 255
-          description: An optional note describing this document, for example what it proves.
-          example: Certificate of incorporation.
     DirStatus:
       type: string
       enum:
@@ -612,23 +514,99 @@ components:
         - `permanently_rejected` - terminal; cannot be resubmitted.
 
         - `delete_requested` - you have requested deletion; the DIR still exists and Telnyx is completing the removal (de-registration and cleanup). A verified DIR keeps serving its branded identity, and keeps billing, until the removal finishes.'
-    RejectionReason:
+    Document:
       type: object
+      required:
+      - document_id
+      - document_type
       properties:
-        code:
+        document_id:
           type: string
-          example: documentation_incomplete
-        title:
+          format: uuid
+          description: Id returned by the Telnyx Documents API after you upload the file (upload via `POST /v2/documents`; see https://developers.telnyx.com/api/documents).
+          example: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
+        document_type:
           type: string
-          example: Documentation incomplete
-        detail:
+          enum:
+          - letter_of_authorization
+          - business_registration
+          - articles_of_incorporation
+          - tax_document
+          - ein_letter
+          - trademark_registration
+          - website_ownership
+          - business_license
+          - professional_license
+          - government_id
+          - utility_bill
+          - bank_statement
+          - other
+          example: business_registration
+          description: Type of supporting document. Pick the closest match to what the file actually contains; `other` triggers manual vetting and may slow approval. The matching short_name reference list is at `GET /v2/dir/document_types`.
+        description:
           type: string
-          example: Provided documents do not establish business identity.
-        message:
+          maxLength: 255
+          description: An optional note describing this document, for example what it proves.
+          example: Certificate of incorporation.
+    DirList:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Dir'
+        meta:
+          $ref: '#/components/schemas/branded-calling_PaginationMeta'
+    branded-calling_PaginationMeta:
+      type: object
+      required:
+      - total_pages
+      - total_results
+      - page_number
+      - page_size
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+          description: Total number of pages available given the current `page_size`.
+        total_results:
+          type: integer
+          example: 42
+          description: Total number of items across all pages (excludes soft-deleted rows).
+        page_number:
+          type: integer
+          example: 1
+          description: 1-based index of this page. Echoes the `page[number]` query parameter (default `1`).
+        page_size:
+          type: integer
+          example: 20
+          description: Number of items returned in this page's `data` array. Capped at 250.
+      description: JSON:API pagination metadata returned with every paginated list response. Page numbering is 1-based. `page_size` reports the number of items actually returned in `data` for this page; the requested size is taken from the `page[size]` query parameter.
+    SignaturePayload:
+      type: object
+      required:
+      - image_base64
+      properties:
+        image_base64:
+          type: string
+          minLength: 1
+          maxLength: 60000
+          description: PNG image, base64-encoded.
+        signer_name:
           type: string
           nullable: true
-          description: Customer-visible free-text comment from the Telnyx vetting team. Only the first entry of `rejection_reasons` carries this; the rest are `null`.
-          example: Please re-upload a clearer scan of the certificate.
+          maxLength: 200
+          description: Optional. When absent the rendered PDF falls back to the enterprise contact's legal name.
+    DirWrapped:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/Dir'
     BpoAuthorization:
       type: object
       description: A single authorization of a BPO (Business Process Outsourcer) account on a DIR.
@@ -682,96 +660,6 @@ components:
           allOf:
           - $ref: '#/components/schemas/SignaturePayload'
           description: Optional. When provided the rendered PDF embeds the signature image, printed name, and signed-at date. When absent the PDF is returned unsigned so the Brand Owner can sign externally and the BPO can upload it via the Documents API.
-    AgentInput:
-      type: object
-      description: Third-party reseller / partner managing the enterprise's phone numbers. Omit when the enterprise works directly with Telnyx.
-      required:
-      - legal_name
-      - street_address
-      - city
-      - administrative_area
-      - postal_code
-      - country
-      - contact_name
-      - contact_title
-      - contact_email
-      - contact_phone
-      properties:
-        legal_name:
-          type: string
-          maxLength: 200
-          description: The legal name of the third-party partner or reseller managing these numbers on your behalf.
-        dba:
-          type: string
-          nullable: true
-          maxLength: 200
-          description: The trade name (Doing Business As) the partner operates under, if different from its legal name. Leave blank if it does not apply.
-        street_address:
-          type: string
-          maxLength: 255
-          description: The street address of the partner, including the building number and street name.
-        extended_address:
-          type: string
-          nullable: true
-          maxLength: 255
-          description: An optional second address line for the partner, such as a suite, unit, or floor. Leave blank if it does not apply.
-        city:
-          type: string
-          maxLength: 120
-          description: The city of the partner's address.
-        administrative_area:
-          type: string
-          maxLength: 120
-          description: The state or province of the partner's address, as its code, for example IL or ON.
-        postal_code:
-          type: string
-          maxLength: 30
-          description: The postal or ZIP code of the partner's address.
-        country:
-          type: string
-          minLength: 2
-          maxLength: 2
-          description: The two-letter country code of the partner's address, for example US.
-          example: US
-        contact_name:
-          type: string
-          maxLength: 200
-          description: The name of a contact person at the partner.
-        contact_title:
-          type: string
-          maxLength: 200
-          description: The job title of the contact person at the partner.
-        contact_email:
-          type: string
-          format: email
-          description: The email address of the contact person at the partner.
-        contact_phone:
-          type: string
-          maxLength: 30
-          description: The phone number of the contact person at the partner, in E.164 format, for example +13125550000.
-          example: '+13125550000'
-    DirDeleteRequestAccepted:
-      type: object
-      required:
-      - data
-      properties:
-        data:
-          type: object
-          required:
-          - id
-          - status
-          properties:
-            id:
-              type: string
-              format: uuid
-              description: Id of the DIR whose deletion was requested.
-              example: 16635d38-75a6-4481-82e8-69af60e05011
-            status:
-              type: string
-              enum:
-              - delete_requested
-              description: 'Always `delete_requested`: the DIR has been queued for removal, not yet removed.'
-              example: delete_requested
     branded-calling_Error:
       type: object
       required:
@@ -829,64 +717,57 @@ components:
               type: string
               example: page[size]
       description: A single entry in the canonical Telnyx error envelope. `code` is the stable Telnyx error catalog id; the human-readable explanation lives at `meta.url`. `detail` is a context-specific message; `source.pointer` (when present) names the offending field of the request.
-    branded-calling_Errors:
+    RejectionReason:
       type: object
-      required:
-      - errors
       properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/branded-calling_Error'
-          description: List of one or more error entries. Order is not significant.
-      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
-    SignaturePayload:
-      type: object
-      required:
-      - image_base64
-      properties:
-        image_base64:
+        code:
           type: string
-          minLength: 1
-          maxLength: 60000
-          description: PNG image, base64-encoded.
-        signer_name:
+          example: documentation_incomplete
+        title:
+          type: string
+          example: Documentation incomplete
+        detail:
+          type: string
+          example: Provided documents do not establish business identity.
+        message:
           type: string
           nullable: true
-          maxLength: 200
-          description: Optional. When absent the rendered PDF falls back to the enterprise contact's legal name.
-    DirWrapped:
+          description: Customer-visible free-text comment from the Telnyx vetting team. Only the first entry of `rejection_reasons` carries this; the rest are `null`.
+          example: Please re-upload a clearer scan of the certificate.
+    DirDeleteRequestAccepted:
       type: object
       required:
       - data
       properties:
         data:
-          $ref: '#/components/schemas/Dir'
-    branded-calling_PaginationMeta:
+          type: object
+          required:
+          - id
+          - status
+          properties:
+            id:
+              type: string
+              format: uuid
+              description: Id of the DIR whose deletion was requested.
+              example: 16635d38-75a6-4481-82e8-69af60e05011
+            status:
+              type: string
+              enum:
+              - delete_requested
+              description: 'Always `delete_requested`: the DIR has been queued for removal, not yet removed.'
+              example: delete_requested
+    CallReason:
       type: object
-      required:
-      - total_pages
-      - total_results
-      - page_number
-      - page_size
       properties:
-        total_pages:
-          type: integer
-          example: 3
-          description: Total number of pages available given the current `page_size`.
-        total_results:
-          type: integer
-          example: 42
-          description: Total number of items across all pages (excludes soft-deleted rows).
-        page_number:
-          type: integer
-          example: 1
-          description: 1-based index of this page. Echoes the `page[number]` query parameter (default `1`).
-        page_size:
-          type: integer
-          example: 20
-          description: Number of items returned in this page's `data` array. Capped at 250.
-      description: JSON:API pagination metadata returned with every paginated list response. Page numbering is 1-based. `page_size` reports the number of items actually returned in `data` for this page; the requested size is taken from the `page[size]` query parameter.
+        reason:
+          type: string
+          maxLength: 64
+          example: Appointment reminders
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-04-26T18:06:51.940749Z'
+          readOnly: true
     DirCreateRequest:
       type: object
       required:
@@ -973,19 +854,6 @@ components:
             $ref: '#/components/schemas/BpoAuthorizationInput'
           maxItems: 10
           description: Optional. Approved BPO (Business Process Outsourcer) accounts on your organization authorized to place branded calls for this DIR, each with the signed Letter of Authorization the Brand Owner granted it. Each authorization starts `pending` and takes effect only after an admin reviews its Letter of Authorization. Omit or send an empty list to authorize no BPO on this DIR. Maximum 10.
-    BpoAuthorizationList:
-      type: object
-      description: Paginated list of a DIR's BPO authorizations.
-      required:
-      - data
-      - meta
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/BpoAuthorization'
-        meta:
-          $ref: '#/components/schemas/branded-calling_PaginationMeta'
     Dir:
       type: object
       properties:
@@ -1090,47 +958,70 @@ components:
           nullable: true
           description: '`https://` URL that receives webhook notifications for this DIR''s compliance-review outcomes. `null` when not subscribed.'
           example: https://acmehealthcare.example.com/webhooks/branded-calling
-    BpoAuthorizationInput:
+    DirUpdateRequest:
       type: object
-      description: 'One authorization to include when creating or updating a DIR: an approved BPO (Business Process Outsourcer) account plus the signed Letter of Authorization the Brand Owner granted it.'
-      required:
-      - bpo_enterprise_id
-      - loa_document_id
+      description: All fields are optional; only those supplied are updated. Same per-field rules as `DirCreateRequest`.
       properties:
-        bpo_enterprise_id:
+        display_name:
           type: string
-          format: uuid
-          description: Enterprise id of an approved BPO (Business Process Outsourcer) account on your organization to authorize for this DIR.
-          example: 4a6192a4-573d-446d-b3ce-aff9117272a6
-        loa_document_id:
+          minLength: 1
+          maxLength: 35
+          description: Name shown to call recipients. 1–35 characters, no emoji, not whitespace-only.
+        reselling:
+          type: boolean
+          description: Set to true if your organization places calls on behalf of other enterprises (BPO/reseller). Updating this triggers re-vetting on next submit.
+        authorizer_name:
           type: string
-          format: uuid
-          description: Id of the signed Letter of Authorization document (uploaded via the Telnyx Documents API) in which the Brand Owner authorizes this BPO.
-          example: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
-    DirList:
-      type: object
-      required:
-      - data
-      - meta
-      properties:
-        data:
+          maxLength: 255
+          description: Name of the person at your enterprise authorizing this DIR. Must be a real individual.
+        authorizer_email:
+          type: string
+          format: email
+          description: Contact email of the authorizer. Telnyx may send verification or infringement notices here.
+        logo_url:
+          type: string
+          format: uri
+          maxLength: 128
+          description: Publicly accessible HTTPS URL (max 128 chars) to a 256x256 BMP logo (max 1 MB).
+        call_reasons:
           type: array
           items:
-            $ref: '#/components/schemas/Dir'
-        meta:
-          $ref: '#/components/schemas/branded-calling_PaginationMeta'
-    CallReason:
-      type: object
-      properties:
-        reason:
+            type: string
+            maxLength: 64
+          minItems: 1
+          maxItems: 10
+          description: 1–10 reasons your business calls customers. Validate phrasing against `POST /call_reasons/validate`.
+        certify_brand_is_accurate:
+          type: boolean
+          description: Certification that the DIR information is accurate. Must be `true` for the DIR to be submitted for vetting.
+          example: true
+        certify_no_shaft_content:
+          type: boolean
+          description: Certification that this DIR is not used for SHAFT content (Sex, Hate, Alcohol, Firearms, Tobacco) where prohibited. Must be `true` for the DIR to be submitted for vetting.
+          example: true
+        certify_ip_ownership:
+          type: boolean
+          description: Certification of ownership of any logos/trademarks shown. Must be `true` for the DIR to be submitted for vetting.
+          example: true
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+          maxItems: 20
+          description: 'Additional supporting documents to attach. Append-only: existing documents are never removed or replaced, and an empty or omitted list is a no-op. Each `document_id` may appear at most once on a DIR.'
+        webhook_url:
           type: string
-          maxLength: 64
-          example: Appointment reminders
-        created_at:
-          type: string
-          format: date-time
-          example: '2026-04-26T18:06:51.940749Z'
-          readOnly: true
+          format: uri
+          nullable: true
+          maxLength: 2048
+          description: Optional `https://` URL that receives webhook notifications when this DIR's compliance review completes. Send `null` to clear. Changing only this field on a `verified` DIR does not re-vet it. Maximum 2048 characters.
+          example: https://mapleridge.example.com/webhooks/branded-calling
+        bpo_authorizations:
+          type: array
+          items:
+            $ref: '#/components/schemas/BpoAuthorizationInput'
+          maxItems: 10
+          description: 'Optional. Replace this DIR''s authorized BPO (Business Process Outsourcer) accounts with these, each with its signed Letter of Authorization. The supplied list replaces the current one: a BPO left out has its authorization removed, and a new BPO (or a changed Letter of Authorization) is created `pending` admin review. Send an empty list to clear all authorizations; omit the field to leave them unchanged. Editing this list does not re-vet the DIR. Maximum 10.'
     BrandLoaRenderRequest:
       type: object
       required:
@@ -1153,6 +1044,115 @@ components:
           allOf:
           - $ref: '#/components/schemas/SignaturePayload'
           description: Optional. When provided the rendered PDF embeds the signature image, printed name, and signed-at date. When absent the PDF is returned unsigned so the customer can sign externally and upload it via the Documents API.
+    BpoAuthorizationInput:
+      type: object
+      description: 'One authorization to include when creating or updating a DIR: an approved BPO (Business Process Outsourcer) account plus the signed Letter of Authorization the Brand Owner granted it.'
+      required:
+      - bpo_enterprise_id
+      - loa_document_id
+      properties:
+        bpo_enterprise_id:
+          type: string
+          format: uuid
+          description: Enterprise id of an approved BPO (Business Process Outsourcer) account on your organization to authorize for this DIR.
+          example: 4a6192a4-573d-446d-b3ce-aff9117272a6
+        loa_document_id:
+          type: string
+          format: uuid
+          description: Id of the signed Letter of Authorization document (uploaded via the Telnyx Documents API) in which the Brand Owner authorizes this BPO.
+          example: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
+    AgentInput:
+      type: object
+      description: Third-party reseller / partner managing the enterprise's phone numbers. Omit when the enterprise works directly with Telnyx.
+      required:
+      - legal_name
+      - street_address
+      - city
+      - administrative_area
+      - postal_code
+      - country
+      - contact_name
+      - contact_title
+      - contact_email
+      - contact_phone
+      properties:
+        legal_name:
+          type: string
+          maxLength: 200
+          description: The legal name of the third-party partner or reseller managing these numbers on your behalf.
+        dba:
+          type: string
+          nullable: true
+          maxLength: 200
+          description: The trade name (Doing Business As) the partner operates under, if different from its legal name. Leave blank if it does not apply.
+        street_address:
+          type: string
+          maxLength: 255
+          description: The street address of the partner, including the building number and street name.
+        extended_address:
+          type: string
+          nullable: true
+          maxLength: 255
+          description: An optional second address line for the partner, such as a suite, unit, or floor. Leave blank if it does not apply.
+        city:
+          type: string
+          maxLength: 120
+          description: The city of the partner's address.
+        administrative_area:
+          type: string
+          maxLength: 120
+          description: The state or province of the partner's address, as its code, for example IL or ON.
+        postal_code:
+          type: string
+          maxLength: 30
+          description: The postal or ZIP code of the partner's address.
+        country:
+          type: string
+          minLength: 2
+          maxLength: 2
+          description: The two-letter country code of the partner's address, for example US.
+          example: US
+        contact_name:
+          type: string
+          maxLength: 200
+          description: The name of a contact person at the partner.
+        contact_title:
+          type: string
+          maxLength: 200
+          description: The job title of the contact person at the partner.
+        contact_email:
+          type: string
+          format: email
+          description: The email address of the contact person at the partner.
+        contact_phone:
+          type: string
+          maxLength: 30
+          description: The phone number of the contact person at the partner, in E.164 format, for example +13125550000.
+          example: '+13125550000'
+    BpoAuthorizationList:
+      type: object
+      description: Paginated list of a DIR's BPO authorizations.
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/BpoAuthorization'
+        meta:
+          $ref: '#/components/schemas/branded-calling_PaginationMeta'
+    branded-calling_Errors:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/branded-calling_Error'
+          description: List of one or more error entries. Order is not significant.
+      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
     Document_2:
       type: object
       required:
@@ -1229,6 +1229,28 @@ components:
           nullable: true
           description: Why the authorization was rejected. `null` unless `status` is `rejected`.
           example: Letter of Authorization is unsigned
+    BrandLoaRenderRequest_2:
+      type: object
+      required:
+      - phone_numbers
+      properties:
+        phone_numbers:
+          type: array
+          minItems: 1
+          maxItems: 15
+          description: Telephone numbers to authorize on the DIR, in `+E164` format (`+` followed by 10-15 digits). Max 15 per request.
+          items:
+            type: string
+            pattern: ^\+[1-9][0-9]{9,14}$
+            example: '+13125550000'
+        agent:
+          allOf:
+          - $ref: '#/components/schemas/AgentInput_2'
+          description: Optional. The third-party reseller / partner managing the enterprise's phone numbers on its behalf; omitted, the LOA marks the Authorized Agent block as N/A. A call center (BPO) adding numbers to a client's DIR puts its own details here. The letter is signed by the DIR enterprise's organization contact (the client, in the BPO case), not by the agent.
+        signature:
+          allOf:
+          - $ref: '#/components/schemas/SignaturePayload'
+          description: Optional. When provided the rendered PDF embeds the signature image, printed name, and signed-at date. When absent the PDF is returned unsigned so the customer can sign externally and upload it via the Documents API.
     AgentInput_2:
       type: object
       description: Third-party reseller / partner managing the enterprise's phone numbers on its behalf, such as a call center (BPO) acting for a client. Omit when the enterprise manages its own numbers.
@@ -1297,68 +1319,6 @@ components:
           maxLength: 30
           description: The phone number of the contact person at the partner, in E.164 format, for example +13125550000.
           example: '+13125550000'
-    BrandLoaRenderRequest_2:
-      type: object
-      required:
-      - phone_numbers
-      properties:
-        phone_numbers:
-          type: array
-          minItems: 1
-          maxItems: 15
-          description: Telephone numbers to authorize on the DIR, in `+E164` format (`+` followed by 10-15 digits). Max 15 per request.
-          items:
-            type: string
-            pattern: ^\+[1-9][0-9]{9,14}$
-            example: '+13125550000'
-        agent:
-          allOf:
-          - $ref: '#/components/schemas/AgentInput_2'
-          description: Optional. The third-party reseller / partner managing the enterprise's phone numbers on its behalf; omitted, the LOA marks the Authorized Agent block as N/A. A call center (BPO) adding numbers to a client's DIR puts its own details here. The letter is signed by the DIR enterprise's organization contact (the client, in the BPO case), not by the agent.
-        signature:
-          allOf:
-          - $ref: '#/components/schemas/SignaturePayload'
-          description: Optional. When provided the rendered PDF embeds the signature image, printed name, and signed-at date. When absent the PDF is returned unsigned so the customer can sign externally and upload it via the Documents API.
-  parameters:
-    BcPageSize:
-      name: page[size]
-      in: query
-      description: Items per page. Maximum 250; values above are clamped to 250.
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 250
-        default: 20
-        example: 20
-    EnterpriseId:
-      name: enterprise_id
-      in: path
-      description: The enterprise id. Lowercase UUID.
-      required: true
-      schema:
-        type: string
-        format: uuid
-        example: 4a6192a4-573d-446d-b3ce-aff9117272a6
-    BcPageNumber:
-      name: page[number]
-      in: query
-      description: 1-based page number. Out-of-range values return an empty page with correct meta.
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        default: 1
-        example: 1
-    DirId:
-      name: dir_id
-      in: path
-      description: The DIR id. Lowercase UUID.
-      required: true
-      schema:
-        type: string
-        format: uuid
-        example: 16635d38-75a6-4481-82e8-69af60e05011
   responses:
     branded-calling_GenericErrorResponse:
       description: An error occurred. The response carries the standard Telnyx error envelope.
@@ -1406,6 +1366,46 @@ components:
                   detail: DIR has 1 active infringement claim(s). Resolve the claim before making this change.
                   meta:
                     url: https://developers.telnyx.com/docs/overview/errors/10021
+  parameters:
+    EnterpriseId:
+      name: enterprise_id
+      in: path
+      description: The enterprise id. Lowercase UUID.
+      required: true
+      schema:
+        type: string
+        format: uuid
+        example: 4a6192a4-573d-446d-b3ce-aff9117272a6
+    BcPageNumber:
+      name: page[number]
+      in: query
+      description: 1-based page number. Out-of-range values return an empty page with correct meta.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+        example: 1
+    DirId:
+      name: dir_id
+      in: path
+      description: The DIR id. Lowercase UUID.
+      required: true
+      schema:
+        type: string
+        format: uuid
+        example: 16635d38-75a6-4481-82e8-69af60e05011
+    BcPageSize:
+      name: page[size]
+      in: query
+      description: Items per page. Maximum 250; values above are clamped to 250.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 250
+        default: 20
+        example: 20
   securitySchemes:
     BearerAuth:
       type: http

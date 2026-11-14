@@ -310,14 +310,26 @@ paths:
         default:
           $ref: '#/components/responses/GenericErrorResponse'
 components:
+  parameters:
+    PageCursorConsolidated:
+      name: page
+      in: query
+      style: deepObject
+      explode: true
+      description: 'Consolidated page parameter (deepObject style). Originally: page[after], page[limit]'
+      schema:
+        type: object
+        properties:
+          after:
+            type: string
+            description: The cursor from `meta.cursors.after` of the previous page.
+          limit:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+            description: The number of results per page.
   schemas:
-    Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/Error'
-      type: object
     netapps_CursorPaginationMeta:
       type: object
       title: CursorPaginationMeta
@@ -339,6 +351,63 @@ components:
         previous:
           type: string
           description: The path of the previous page. Present when the request used `page[after]`.
+    NetworkRoute:
+      type: object
+      title: NetworkRoute
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Identifies the resource.
+          example: e8a2c5d0-3f7b-4a19-b6d2-9c1e0f8a7b53
+        record_type:
+          type: string
+          readOnly: true
+          description: Identifies the type of the resource.
+          example: network_route
+        network_id:
+          type: string
+          format: uuid
+          description: The id of the Network the route belongs to.
+          example: 91446ee3-5b1c-4f0e-8d2a-6c7e9b0a1f24
+        cidr:
+          type: string
+          description: The IPv4 CIDR the route covers.
+          example: 10.20.0.0/16
+        next_hop:
+          $ref: '#/components/schemas/NetworkRouteNextHop'
+        origin:
+          type: string
+          enum:
+          - static
+          - attachment
+          readOnly: true
+          description: '`static` for a route added with `POST /network_routes`, `attachment` for a route that another resource installed and removes.'
+          example: static
+        status:
+          type: string
+          enum:
+          - pending
+          - active
+          - inactive
+          - failed
+          readOnly: true
+          description: '`pending` until Telnyx installs the route on the Network, then `active`. `inactive` while a tunnel next hop has no connected process. `failed` (Preview, not reported yet) when Telnyx could not install the route.'
+          example: active
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: ISO 8601 formatted date-time indicating when the resource was created.
+          example: '2026-10-21T15:04:05.123456Z'
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+      type: object
     NetworkRouteNextHop:
       type: object
       title: NetworkRouteNextHop
@@ -434,75 +503,6 @@ components:
               format: uuid
               description: The id of the tunnel.
               example: 62d438d2-8a51-4c5e-9d0c-1f6b2a7e4c39
-    NetworkRoute:
-      type: object
-      title: NetworkRoute
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-          description: Identifies the resource.
-          example: e8a2c5d0-3f7b-4a19-b6d2-9c1e0f8a7b53
-        record_type:
-          type: string
-          readOnly: true
-          description: Identifies the type of the resource.
-          example: network_route
-        network_id:
-          type: string
-          format: uuid
-          description: The id of the Network the route belongs to.
-          example: 91446ee3-5b1c-4f0e-8d2a-6c7e9b0a1f24
-        cidr:
-          type: string
-          description: The IPv4 CIDR the route covers.
-          example: 10.20.0.0/16
-        next_hop:
-          $ref: '#/components/schemas/NetworkRouteNextHop'
-        origin:
-          type: string
-          enum:
-          - static
-          - attachment
-          readOnly: true
-          description: '`static` for a route added with `POST /network_routes`, `attachment` for a route that another resource installed and removes.'
-          example: static
-        status:
-          type: string
-          enum:
-          - pending
-          - active
-          - inactive
-          - failed
-          readOnly: true
-          description: '`pending` until Telnyx installs the route on the Network, then `active`. `inactive` while a tunnel next hop has no connected process. `failed` (Preview, not reported yet) when Telnyx could not install the route.'
-          example: active
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-          description: ISO 8601 formatted date-time indicating when the resource was created.
-          example: '2026-10-21T15:04:05.123456Z'
-  parameters:
-    PageCursorConsolidated:
-      name: page
-      in: query
-      style: deepObject
-      explode: true
-      description: 'Consolidated page parameter (deepObject style). Originally: page[after], page[limit]'
-      schema:
-        type: object
-        properties:
-          after:
-            type: string
-            description: The cursor from `meta.cursors.after` of the previous page.
-          limit:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
-            description: The number of results per page.
   responses:
     GenericErrorResponse:
       description: Unexpected error

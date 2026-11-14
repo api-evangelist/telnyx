@@ -1169,8 +1169,218 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
+  responses:
+    IdempotencyConflictResponse:
+      description: A request with the same Idempotency-Key is still being processed (10036). Retry later with the same key and request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10036'
+              title: Resource is being processed
+              detail: A request with this Idempotency-Key is already being processed.
+              source:
+                pointer: /header/Idempotency-Key
   schemas:
-    InsightTemplateGroupUpdateReq:
+    SuppressedRecipient:
+      type: object
+      properties:
+        to:
+          type: string
+          format: email
+          description: Suppressed recipient email address.
+        reason:
+          type: string
+          description: Suppression reason returned by the recipient suppression service.
+        scope:
+          type: string
+          description: Scope at which the suppression applies.
+        override_allowed:
+          type: boolean
+          description: Whether an authorized send may override this suppression.
+      required:
+      - to
+      - reason
+      - scope
+      - override_allowed
+    UpdateConversationRequest:
+      properties:
+        metadata:
+          type: object
+          description: Metadata associated with the conversation. Set `ai_disabled` to `true` to stop AI from responding to messages (e.g., when a human agent takes over). Set to `false` to re-enable AI responses.
+          additionalProperties:
+            type: string
+      type: object
+      title: UpdateConversationRequest
+    ConversationInsight:
+      type: object
+      required:
+      - id
+      - status
+      - created_at
+      - conversation_insights
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the conversation insight.
+        status:
+          type: string
+          enum:
+          - pending
+          - in_progress
+          - completed
+          - failed
+          description: Current status of the insight generation for the conversation.
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp of when the object was created.
+        conversation_insights:
+          type: array
+          description: List of insights extracted from the conversation.
+          items:
+            type: object
+            required:
+            - result
+            - insight_id
+            properties:
+              result:
+                type: string
+                description: Insight result from the conversation. If the insight has a JSON schema, this will be stringified JSON object.
+              insight_id:
+                type: string
+                description: Unique identifier for the insight configuration.
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+      example:
+        detail:
+        - loc:
+          - body
+          - name
+          msg: Field required
+          type: missing
+    ConversationInsightListData:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/ConversationInsight'
+          type: array
+          title: Data
+        meta:
+          $ref: '#/components/schemas/Meta'
+      type: object
+      required:
+      - data
+      - meta
+      title: ConversationInsightListData
+    CreateMsgReq:
+      properties:
+        role:
+          type: string
+          title: Role
+        content:
+          type: string
+          title: Content
+          default: ''
+        name:
+          type: string
+          title: Name
+        tool_choice:
+          anyOf:
+          - type: string
+          - type: object
+            title: ToolChoiceObject
+          title: Tool Choice
+        tool_calls:
+          items:
+            type: object
+            additionalProperties: true
+          type: array
+          title: Tool Calls
+        tool_call_id:
+          type: string
+          title: Tool Call Id
+        sent_at:
+          type: string
+          format: date-time
+          title: Sent At
+        metadata:
+          type: object
+          additionalProperties:
+            anyOf:
+            - type: string
+            - type: integer
+            - type: boolean
+            - items:
+                anyOf:
+                - type: string
+                - type: integer
+                - type: boolean
+              type: array
+          title: Metadata
+      type: object
+      required:
+      - role
+      title: CreateMsgReq
+    TemplateType:
+      type: string
+      enum:
+      - custom
+      - default
+      title: TemplateType
+    inference-embedding_ErrorObject:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Telnyx error code. Edge idempotency errors use 10015, 10027, or 10036; idempotency protection outages use 10016; replay-cap 413s surface 10007. Fallback 404/500 responses from the framework may use string status codes ('404', '500') instead.
+          enum:
+          - '10007'
+          - '10015'
+          - '10016'
+          - '10027'
+          - '10036'
+          - '404'
+          - '500'
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              type: string
+      required:
+      - code
+      - title
+    Meta:
+      properties:
+        total_pages:
+          type: integer
+        total_results:
+          type: integer
+        page_number:
+          type: integer
+        page_size:
+          type: integer
+      type: object
+      required:
+      - total_pages
+      - total_results
+      - page_number
+      - page_size
+      title: Meta
+    InsightTemplateGroupCreateReq:
       properties:
         name:
           type: string
@@ -1181,24 +1391,12 @@ components:
         webhook:
           type: string
           title: Webhook
+          default: ''
       type: object
-      title: InsightTemplateGroupUpdateReq
-    inference-embedding_ErrorResponse:
-      type: object
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/inference-embedding_ErrorObject'
       required:
-      - errors
-    TemplateType:
-      type: string
-      enum:
-      - custom
-      - default
-      title: TemplateType
-    InsightTemplateCreateReq:
+      - name
+      title: InsightTemplateGroupCreateReq
+    InsightTemplateUpdateReq:
       properties:
         instructions:
           type: string
@@ -1209,19 +1407,28 @@ components:
         webhook:
           type: string
           title: Webhook
-          default: ''
         json_schema:
           anyOf:
           - type: string
           - type: object
             title: JsonSchemaObject
           title: Json Schema
-          description: If specified, the output will follow the JSON schema.
+      type: object
+      title: InsightTemplateUpdateReq
+    GetInsightTemplateGroupsRespData:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/InsightTemplateGroupResp'
+          type: array
+          title: Data
+        meta:
+          $ref: '#/components/schemas/Meta'
       type: object
       required:
-      - instructions
-      - name
-      title: InsightTemplateCreateReq
+      - data
+      - meta
+      title: GetInsightTemplateGroupsRespData
     InsightTemplateResp:
       properties:
         id:
@@ -1270,6 +1477,152 @@ components:
             type: string
       type: object
       title: CreateConversationRequest
+    InsightTemplateGroupResp:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        name:
+          type: string
+          title: Name
+        description:
+          type: string
+          title: Description
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        insights:
+          items:
+            $ref: '#/components/schemas/InsightTemplateResp'
+          type: array
+          title: Insights
+        webhook:
+          type: string
+          title: Webhook
+          default: ''
+      type: object
+      required:
+      - id
+      - name
+      - created_at
+      title: InsightTemplateGroupResp
+    GetInsightTemplatesRespData:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/InsightTemplateResp'
+          type: array
+          title: Data
+        meta:
+          $ref: '#/components/schemas/Meta'
+      type: object
+      required:
+      - data
+      - meta
+      title: GetInsightTemplatesRespData
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        name:
+          type: string
+          example: ''
+        created_at:
+          type: string
+          description: The datetime the conversation was created.
+          format: date-time
+          example: '2025-04-15T13:07:28.764Z'
+        metadata:
+          type: object
+          description: Metadata associated with the conversation. Telnyx provides several pieces of metadata, but customers can also add their own. The reserved field `ai_disabled` (boolean) can be set to `true` to prevent AI-generated responses on this conversation. When `ai_disabled` is `true`, calls to the chat endpoint will return a 400 error. Set to `false` or remove the field to re-enable AI responses. This is useful when a human agent needs to take over the conversation mid-stream (e.g., a technician stepping in while AI was messaging a resident).
+          additionalProperties:
+            type: string
+          example:
+            telnyx_conversation_channel: sms
+            telnyx_agent_target: '+13128675309'
+            telnyx_end_user_target: '+13128675309'
+            assistant_id: assistant-123
+        last_message_at:
+          type: string
+          description: The datetime of the latest message in the conversation.
+          format: date-time
+          example: '2025-04-15T13:07:28.764Z'
+      required:
+      - id
+      - created_at
+      - metadata
+      - last_message_at
+    InsightTemplateGroupDetailRespData:
+      properties:
+        data:
+          $ref: '#/components/schemas/InsightTemplateGroupResp'
+      type: object
+      required:
+      - data
+      title: InsightTemplateGroupDetailRespData
+    InsightTemplateCreateReq:
+      properties:
+        instructions:
+          type: string
+          title: Instructions
+        name:
+          type: string
+          title: Name
+        webhook:
+          type: string
+          title: Webhook
+          default: ''
+        json_schema:
+          anyOf:
+          - type: string
+          - type: object
+            title: JsonSchemaObject
+          title: Json Schema
+          description: If specified, the output will follow the JSON schema.
+      type: object
+      required:
+      - instructions
+      - name
+      title: InsightTemplateCreateReq
+    ValidationError:
+      title: ValidationError
+      required:
+      - loc
+      - msg
+      - type
+      type: object
+      properties:
+        loc:
+          title: Location
+          type: array
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+    InsightTemplateGroupUpdateReq:
+      properties:
+        name:
+          type: string
+          title: Name
+        description:
+          type: string
+          title: Description
+        webhook:
+          type: string
+          title: Webhook
+      type: object
+      title: InsightTemplateGroupUpdateReq
     ConversationMessage:
       type: object
       required:
@@ -1340,6 +1693,83 @@ components:
               type: array
           type: object
           title: Metadata
+    ConversationInsightAggregateResp:
+      properties:
+        data:
+          items:
+            additionalProperties: true
+            type: object
+            description: An aggregation row. Contains the grouped field values (keyed by the group_by field names) and a `record_count` integer. For example, when grouping by `score`, each row has a `score` value and a `record_count` of conversations with that score. When also splitting by `metadata.assistant_version_id`, each row includes both `score` and `metadata.assistant_version_id` plus their combined `record_count`.
+            properties:
+              record_count:
+                type: integer
+                description: Number of conversation insights that match this combination of grouped field values.
+            required:
+            - record_count
+          type: array
+          title: Data
+          description: Aggregation result rows. Each row contains the grouped field values and a `record_count`.
+      type: object
+      required:
+      - data
+      title: ConversationInsightAggregateResp
+      description: Aggregated conversation insight counts grouped by the specified fields. Each item in `data` contains the grouped field values and a `record_count` indicating how many conversation insights match that combination.
+    inference-embedding_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/inference-embedding_ErrorObject'
+      required:
+      - errors
+    InsightTemplateDetailRespData:
+      properties:
+        data:
+          $ref: '#/components/schemas/InsightTemplateResp'
+      type: object
+      required:
+      - data
+      title: InsightTemplateDetailRespData
+    ConversationMessageListData:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/ConversationMessage'
+          type: array
+          title: Data
+        meta:
+          $ref: '#/components/schemas/Meta'
+      type: object
+      required:
+      - data
+      - meta
+      title: ConversationMessageListData
+    ConversationsListData:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/Conversation'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: ConversationsListData
+    email_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorObject'
+        suppressed:
+          type: array
+          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
+      required:
+      - errors
     ErrorObject:
       type: object
       properties:
@@ -1382,422 +1812,15 @@ components:
       - code
       - title
       - detail
-    Conversation:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
-        name:
-          type: string
-          example: ''
-        created_at:
-          type: string
-          description: The datetime the conversation was created.
-          format: date-time
-          example: '2025-04-15T13:07:28.764Z'
-        metadata:
-          type: object
-          description: Metadata associated with the conversation. Telnyx provides several pieces of metadata, but customers can also add their own. The reserved field `ai_disabled` (boolean) can be set to `true` to prevent AI-generated responses on this conversation. When `ai_disabled` is `true`, calls to the chat endpoint will return a 400 error. Set to `false` or remove the field to re-enable AI responses. This is useful when a human agent needs to take over the conversation mid-stream (e.g., a technician stepping in while AI was messaging a resident).
-          additionalProperties:
-            type: string
-          example:
-            telnyx_conversation_channel: sms
-            telnyx_agent_target: '+13128675309'
-            telnyx_end_user_target: '+13128675309'
-            assistant_id: assistant-123
-        last_message_at:
-          type: string
-          description: The datetime of the latest message in the conversation.
-          format: date-time
-          example: '2025-04-15T13:07:28.764Z'
-      required:
-      - id
-      - created_at
-      - metadata
-      - last_message_at
-    ConversationInsightListData:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/ConversationInsight'
-          type: array
-          title: Data
-        meta:
-          $ref: '#/components/schemas/Meta'
-      type: object
-      required:
-      - data
-      - meta
-      title: ConversationInsightListData
-    ValidationError:
-      title: ValidationError
-      required:
-      - loc
-      - msg
-      - type
-      type: object
-      properties:
-        loc:
-          title: Location
-          type: array
-          items:
-            anyOf:
-            - type: string
-            - type: integer
-        msg:
-          title: Message
-          type: string
-        type:
-          title: Error Type
-          type: string
-    GetInsightTemplatesRespData:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/InsightTemplateResp'
-          type: array
-          title: Data
-        meta:
-          $ref: '#/components/schemas/Meta'
-      type: object
-      required:
-      - data
-      - meta
-      title: GetInsightTemplatesRespData
-    InsightTemplateGroupCreateReq:
-      properties:
-        name:
-          type: string
-          title: Name
-        description:
-          type: string
-          title: Description
-        webhook:
-          type: string
-          title: Webhook
-          default: ''
-      type: object
-      required:
-      - name
-      title: InsightTemplateGroupCreateReq
-    HTTPValidationError:
+    HTTPValidationError_2:
       properties:
         detail:
           items:
             $ref: '#/components/schemas/ValidationError'
-          type: array
           title: Detail
-      type: object
+          type: array
       title: HTTPValidationError
-      example:
-        detail:
-        - loc:
-          - body
-          - name
-          msg: Field required
-          type: missing
-    InsightTemplateDetailRespData:
-      properties:
-        data:
-          $ref: '#/components/schemas/InsightTemplateResp'
       type: object
-      required:
-      - data
-      title: InsightTemplateDetailRespData
-    ConversationInsightAggregateResp:
-      properties:
-        data:
-          items:
-            additionalProperties: true
-            type: object
-            description: An aggregation row. Contains the grouped field values (keyed by the group_by field names) and a `record_count` integer. For example, when grouping by `score`, each row has a `score` value and a `record_count` of conversations with that score. When also splitting by `metadata.assistant_version_id`, each row includes both `score` and `metadata.assistant_version_id` plus their combined `record_count`.
-            properties:
-              record_count:
-                type: integer
-                description: Number of conversation insights that match this combination of grouped field values.
-            required:
-            - record_count
-          type: array
-          title: Data
-          description: Aggregation result rows. Each row contains the grouped field values and a `record_count`.
-      type: object
-      required:
-      - data
-      title: ConversationInsightAggregateResp
-      description: Aggregated conversation insight counts grouped by the specified fields. Each item in `data` contains the grouped field values and a `record_count` indicating how many conversation insights match that combination.
-    InsightTemplateGroupDetailRespData:
-      properties:
-        data:
-          $ref: '#/components/schemas/InsightTemplateGroupResp'
-      type: object
-      required:
-      - data
-      title: InsightTemplateGroupDetailRespData
-    InsightTemplateUpdateReq:
-      properties:
-        instructions:
-          type: string
-          title: Instructions
-        name:
-          type: string
-          title: Name
-        webhook:
-          type: string
-          title: Webhook
-        json_schema:
-          anyOf:
-          - type: string
-          - type: object
-            title: JsonSchemaObject
-          title: Json Schema
-      type: object
-      title: InsightTemplateUpdateReq
-    ConversationInsight:
-      type: object
-      required:
-      - id
-      - status
-      - created_at
-      - conversation_insights
-      properties:
-        id:
-          type: string
-          description: Unique identifier for the conversation insight.
-        status:
-          type: string
-          enum:
-          - pending
-          - in_progress
-          - completed
-          - failed
-          description: Current status of the insight generation for the conversation.
-        created_at:
-          type: string
-          format: date-time
-          description: Timestamp of when the object was created.
-        conversation_insights:
-          type: array
-          description: List of insights extracted from the conversation.
-          items:
-            type: object
-            required:
-            - result
-            - insight_id
-            properties:
-              result:
-                type: string
-                description: Insight result from the conversation. If the insight has a JSON schema, this will be stringified JSON object.
-              insight_id:
-                type: string
-                description: Unique identifier for the insight configuration.
-    inference-embedding_ErrorObject:
-      type: object
-      properties:
-        code:
-          type: string
-          description: Telnyx error code. Edge idempotency errors use 10015, 10027, or 10036; idempotency protection outages use 10016; replay-cap 413s surface 10007. Fallback 404/500 responses from the framework may use string status codes ('404', '500') instead.
-          enum:
-          - '10007'
-          - '10015'
-          - '10016'
-          - '10027'
-          - '10036'
-          - '404'
-          - '500'
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              type: string
-      required:
-      - code
-      - title
-    email_ErrorResponse:
-      type: object
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/ErrorObject'
-        suppressed:
-          type: array
-          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
-          items:
-            $ref: '#/components/schemas/SuppressedRecipient'
-      required:
-      - errors
-    GetInsightTemplateGroupsRespData:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/InsightTemplateGroupResp'
-          type: array
-          title: Data
-        meta:
-          $ref: '#/components/schemas/Meta'
-      type: object
-      required:
-      - data
-      - meta
-      title: GetInsightTemplateGroupsRespData
-    InsightTemplateGroupResp:
-      properties:
-        id:
-          type: string
-          format: uuid
-          title: Id
-        name:
-          type: string
-          title: Name
-        description:
-          type: string
-          title: Description
-        created_at:
-          type: string
-          format: date-time
-          title: Created At
-        insights:
-          items:
-            $ref: '#/components/schemas/InsightTemplateResp'
-          type: array
-          title: Insights
-        webhook:
-          type: string
-          title: Webhook
-          default: ''
-      type: object
-      required:
-      - id
-      - name
-      - created_at
-      title: InsightTemplateGroupResp
-    SuppressedRecipient:
-      type: object
-      properties:
-        to:
-          type: string
-          format: email
-          description: Suppressed recipient email address.
-        reason:
-          type: string
-          description: Suppression reason returned by the recipient suppression service.
-        scope:
-          type: string
-          description: Scope at which the suppression applies.
-        override_allowed:
-          type: boolean
-          description: Whether an authorized send may override this suppression.
-      required:
-      - to
-      - reason
-      - scope
-      - override_allowed
-    ConversationMessageListData:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/ConversationMessage'
-          type: array
-          title: Data
-        meta:
-          $ref: '#/components/schemas/Meta'
-      type: object
-      required:
-      - data
-      - meta
-      title: ConversationMessageListData
-    CreateMsgReq:
-      properties:
-        role:
-          type: string
-          title: Role
-        content:
-          type: string
-          title: Content
-          default: ''
-        name:
-          type: string
-          title: Name
-        tool_choice:
-          anyOf:
-          - type: string
-          - type: object
-            title: ToolChoiceObject
-          title: Tool Choice
-        tool_calls:
-          items:
-            type: object
-            additionalProperties: true
-          type: array
-          title: Tool Calls
-        tool_call_id:
-          type: string
-          title: Tool Call Id
-        sent_at:
-          type: string
-          format: date-time
-          title: Sent At
-        metadata:
-          type: object
-          additionalProperties:
-            anyOf:
-            - type: string
-            - type: integer
-            - type: boolean
-            - items:
-                anyOf:
-                - type: string
-                - type: integer
-                - type: boolean
-              type: array
-          title: Metadata
-      type: object
-      required:
-      - role
-      title: CreateMsgReq
-    ConversationsListData:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/Conversation'
-          type: array
-          title: Data
-      type: object
-      required:
-      - data
-      title: ConversationsListData
-    UpdateConversationRequest:
-      properties:
-        metadata:
-          type: object
-          description: Metadata associated with the conversation. Set `ai_disabled` to `true` to stop AI from responding to messages (e.g., when a human agent takes over). Set to `false` to re-enable AI responses.
-          additionalProperties:
-            type: string
-      type: object
-      title: UpdateConversationRequest
-    Meta:
-      properties:
-        total_pages:
-          type: integer
-        total_results:
-          type: integer
-        page_number:
-          type: integer
-        page_size:
-          type: integer
-      type: object
-      required:
-      - total_pages
-      - total_results
-      - page_number
-      - page_size
-      title: Meta
     ConversationMessage_2:
       properties:
         created_at:
@@ -1854,15 +1877,6 @@ components:
       - role
       - text
       type: object
-    HTTPValidationError_2:
-      properties:
-        detail:
-          items:
-            $ref: '#/components/schemas/ValidationError'
-          title: Detail
-          type: array
-      title: HTTPValidationError
-      type: object
   parameters:
     IdempotencyKey:
       name: Idempotency-Key
@@ -1883,20 +1897,6 @@ components:
         enum:
         - true
         example: true
-  responses:
-    IdempotencyConflictResponse:
-      description: A request with the same Idempotency-Key is still being processed (10036). Retry later with the same key and request.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/email_ErrorResponse'
-          example:
-            errors:
-            - code: '10036'
-              title: Resource is being processed
-              detail: A request with this Idempotency-Key is already being processed.
-              source:
-                pointer: /header/Idempotency-Key
   securitySchemes:
     BearerAuth:
       type: http

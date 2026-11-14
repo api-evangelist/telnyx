@@ -376,6 +376,61 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
+    CreateEmailBlockRequest:
+      type: object
+      required:
+      - to
+      properties:
+        to:
+          type: string
+          description: 'Recipient address (normalized: trim + lower-case).'
+        from:
+          type: string
+          nullable: true
+          description: Sender address (normalized). `null` ⇒ account/domain scope.
+        domain_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: '`null` ⇒ account scope.'
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+      description: '`reason`/`source` are forced to `manual_block`/`manual` (ignored if
+
+        supplied). `scope` is derived. `bounce_category`/`dsn_code`/`meta`/
+
+        `group_id` are not accepted on the public surface.
+
+        '
+    ErrorList:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/BlocksErrorObject'
+    EmailBlockListCursorResponse:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailBlock'
+        meta:
+          $ref: '#/components/schemas/CursorMeta'
+    Status:
+      type: string
+      enum:
+      - active
+      - expired
+      - removed
     EmailBlock:
       type: object
       required:
@@ -446,15 +501,65 @@ components:
         `account_id`, `bounce_category`, `dsn_code`, `meta`.
 
         '
-    ErrorList:
+    BlocksErrorObject:
       type: object
       required:
-      - errors
+      - code
+      - title
+      - detail
       properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/BlocksErrorObject'
+        code:
+          type: string
+          description: 'Error codes: `10001` (Not Found), `10007` (Unauthorized),
+
+            `10015` (Validation Failed), `10019` (Internal — import create
+
+            fallback), `40901` (Conflict), `500` (framework/catch-all).
+
+            '
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              type: string
+          description: '`/data/attributes/<field>` for changeset/Params; `/<field>` for query-param errors.'
+    email_Source:
+      type: string
+      enum:
+      - feedback
+      - manual
+      - import
+      - system
+    CursorMeta:
+      type: object
+      required:
+      - page_size
+      - has_next
+      - has_previous
+      properties:
+        page_size:
+          type: integer
+        next_cursor:
+          type: string
+          description: Omitted when `has_next` is false.
+        previous_cursor:
+          type: string
+          description: Omitted when `has_previous` is false.
+        has_next:
+          type: boolean
+        has_previous:
+          type: boolean
+    EmailBlockResponse:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailBlock'
     EmailBlockEvent:
       type: object
       required:
@@ -498,25 +603,6 @@ components:
         occurred_at:
           type: string
           format: date-time
-    EmailBlockListCursorResponse:
-      type: object
-      required:
-      - data
-      - meta
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/EmailBlock'
-        meta:
-          $ref: '#/components/schemas/CursorMeta'
-    email_Source:
-      type: string
-      enum:
-      - feedback
-      - manual
-      - import
-      - system
     Reason:
       type: string
       enum:
@@ -525,123 +611,6 @@ components:
       - unsubscribe
       - invalid
       - manual_block
-    EmailBlockListOffsetResponse:
-      type: object
-      required:
-      - data
-      - meta
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/EmailBlock'
-        meta:
-          $ref: '#/components/schemas/OffsetMeta'
-    Status:
-      type: string
-      enum:
-      - active
-      - expired
-      - removed
-    EmailBlockResponse:
-      type: object
-      required:
-      - data
-      properties:
-        data:
-          $ref: '#/components/schemas/EmailBlock'
-    EmailBlockEventListResponse:
-      type: object
-      required:
-      - data
-      - meta
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/EmailBlockEvent'
-        meta:
-          $ref: '#/components/schemas/OffsetMeta'
-    CursorMeta:
-      type: object
-      required:
-      - page_size
-      - has_next
-      - has_previous
-      properties:
-        page_size:
-          type: integer
-        next_cursor:
-          type: string
-          description: Omitted when `has_next` is false.
-        previous_cursor:
-          type: string
-          description: Omitted when `has_previous` is false.
-        has_next:
-          type: boolean
-        has_previous:
-          type: boolean
-    CreateEmailBlockRequest:
-      type: object
-      required:
-      - to
-      properties:
-        to:
-          type: string
-          description: 'Recipient address (normalized: trim + lower-case).'
-        from:
-          type: string
-          nullable: true
-          description: Sender address (normalized). `null` ⇒ account/domain scope.
-        domain_id:
-          type: string
-          format: uuid
-          nullable: true
-          description: '`null` ⇒ account scope.'
-        expires_at:
-          type: string
-          format: date-time
-          nullable: true
-      description: '`reason`/`source` are forced to `manual_block`/`manual` (ignored if
-
-        supplied). `scope` is derived. `bounce_category`/`dsn_code`/`meta`/
-
-        `group_id` are not accepted on the public surface.
-
-        '
-    Scope:
-      type: string
-      enum:
-      - account
-      - domain
-      - address
-      description: Derived server-side from `domain_id`/`from`; never trusted from the caller.
-    BlocksErrorObject:
-      type: object
-      required:
-      - code
-      - title
-      - detail
-      properties:
-        code:
-          type: string
-          description: 'Error codes: `10001` (Not Found), `10007` (Unauthorized),
-
-            `10015` (Validation Failed), `10019` (Internal — import create
-
-            fallback), `40901` (Conflict), `500` (framework/catch-all).
-
-            '
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              type: string
-          description: '`/data/attributes/<field>` for changeset/Params; `/<field>` for query-param errors.'
     OffsetMeta:
       type: object
       required:
@@ -658,26 +627,58 @@ components:
           type: integer
         total_results:
           type: integer
+    Scope:
+      type: string
+      enum:
+      - account
+      - domain
+      - address
+      description: Derived server-side from `domain_id`/`from`; never trusted from the caller.
+    EmailBlockEventListResponse:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailBlockEvent'
+        meta:
+          $ref: '#/components/schemas/OffsetMeta'
+    EmailBlockListOffsetResponse:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailBlock'
+        meta:
+          $ref: '#/components/schemas/OffsetMeta'
   parameters:
-    FilterDomainId:
-      name: filter[domain_id]
+    BlocksPageBefore:
+      name: page[before]
       in: query
-      description: Exact-match filter on domain_id (UUID).
+      description: Opaque cursor (see `page[after]`). Mutually exclusive with `page[after]` and `page[number]`.
       schema:
         type: string
-        format: uuid
+    BlocksPageNumber:
+      name: page[number]
+      in: query
+      description: Offset page number (≥1, default 1).
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
     FilterReason:
       name: filter[reason]
       in: query
       description: Exact-match filter on reason.
       schema:
         $ref: '#/components/schemas/Reason'
-    BlocksPageAfter:
-      name: page[after]
-      in: query
-      description: Opaque cursor (`Base.url_encode64` of `{"created_at","id"}`). Cursor mode; mutually exclusive with `page[number]` and `page[before]`.
-      schema:
-        type: string
     BlocksPageSize:
       name: page[size]
       in: query
@@ -687,20 +688,6 @@ components:
         minimum: 1
         maximum: 100
         default: 25
-    BlocksPageNumber:
-      name: page[number]
-      in: query
-      description: Offset page number (≥1, default 1).
-      schema:
-        type: integer
-        minimum: 1
-        default: 1
-    BlocksPageBefore:
-      name: page[before]
-      in: query
-      description: Opaque cursor (see `page[after]`). Mutually exclusive with `page[after]` and `page[number]`.
-      schema:
-        type: string
     FilterCreatedAfter:
       name: filter[created_after]
       in: query
@@ -718,6 +705,20 @@ components:
         enum:
         - created_at
         - -created_at
+    BlocksPageAfter:
+      name: page[after]
+      in: query
+      description: Opaque cursor (`Base.url_encode64` of `{"created_at","id"}`). Cursor mode; mutually exclusive with `page[number]` and `page[before]`.
+      schema:
+        type: string
+    PathId:
+      name: id
+      in: path
+      required: true
+      description: Resource UUID. Malformed UUIDs are treated as not-found (not 400).
+      schema:
+        type: string
+        format: uuid
     FilterCreatedBefore:
       name: filter[created_before]
       in: query
@@ -725,11 +726,10 @@ components:
       schema:
         type: string
         format: date-time
-    PathId:
-      name: id
-      in: path
-      required: true
-      description: Resource UUID. Malformed UUIDs are treated as not-found (not 400).
+    FilterDomainId:
+      name: filter[domain_id]
+      in: query
+      description: Exact-match filter on domain_id (UUID).
       schema:
         type: string
         format: uuid
@@ -771,17 +771,6 @@ components:
               detail: can't be blank
               source:
                 pointer: /data/attributes/to
-    BlocksNotFound:
-      description: Resource not found (cross-account lookups and malformed UUIDs also return 404 — no leak).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorList'
-          example:
-            errors:
-            - code: '10001'
-              title: Not Found
-              detail: The requested email block was not found
     FrameworkError:
       description: 'Framework-rendered error (e.g. 406 Not Acceptable, 405 Method Not
 
@@ -803,6 +792,17 @@ components:
             - code: '406'
               title: Not Acceptable
               detail: Not Acceptable
+    BlocksNotFound:
+      description: Resource not found (cross-account lookups and malformed UUIDs also return 404 — no leak).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorList'
+          example:
+            errors:
+            - code: '10001'
+              title: Not Found
+              detail: The requested email block was not found
   securitySchemes:
     BearerAuth:
       type: http

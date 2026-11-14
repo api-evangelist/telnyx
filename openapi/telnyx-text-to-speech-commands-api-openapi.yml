@@ -266,34 +266,16 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    ErrorFrame:
-      type: object
-      description: Server-to-client frame indicating an error during synthesis. The connection is closed shortly after.
-      properties:
-        type:
-          type: string
-          const: error
-          description: Frame type identifier.
-        error:
-          type: string
-          description: Error message describing what went wrong.
-    text-to-speech_ErrorResponse:
+    text-to-speech_ValidationErrorResponse:
       type: object
       properties:
         errors:
-          type: array
-          items:
-            type: object
-            properties:
-              code:
-                type: string
-                description: Error code.
-              title:
-                type: string
-                description: Error title.
-              detail:
-                type: string
-                description: Detailed error description.
+          type: object
+          description: Validation error details keyed by field name.
+          additionalProperties:
+            type: array
+            items:
+              type: string
     AzureProviderParams:
       type: object
       description: Azure Cognitive Services provider-specific parameters.
@@ -328,6 +310,292 @@ components:
         gender:
           type: string
           description: Voice gender preference.
+    TelnyxProviderParams:
+      type: object
+      description: Telnyx provider-specific parameters. For the `Ultra` model, use `voice_speed`, `volume`, and `emotion`. `Bayan` and `Sukhan` don't use `temperature`, `volume`, or `emotion`, and don't support `voice_speed`. `Sukhan`'s `response_format` is restricted to `mp3` or `pcm` (no `wav`).
+      properties:
+        voice_speed:
+          type: number
+          format: float
+          description: Voice speed multiplier. Telnyx `Ultra` voices accept values from 0.6 to 1.5 — requests outside that range are rejected by the synthesis engine. `KokoroTTS` and `Qwen3TTS` accept the field but do not apply it. `Bayan` and `Sukhan` don't support it.
+          minimum: 0.1
+          maximum: 2
+          default: 1
+        response_format:
+          type: string
+          description: Audio response format.
+          default: mp3
+        sampling_rate:
+          type: integer
+          description: Audio sampling rate in Hz.
+          default: 24000
+        volume:
+          type: number
+          format: float
+          description: Volume level for the Ultra model. Telnyx `Ultra` voices accept values from 0.5 to 2.0 — requests outside that range are rejected by the synthesis engine. `KokoroTTS`, `Qwen3TTS`, `Bayan`, and `Sukhan` voices accept the field but do not apply it.
+          minimum: 0
+          maximum: 2
+          default: 1
+        emotion:
+          type: string
+          description: Emotion control for the Ultra model. Adjusts the emotional tone of the synthesized speech.
+          enum:
+          - neutral
+          - happy
+          - sad
+          - angry
+          - fearful
+          - disgusted
+          - surprised
+    AudioChunkFrame:
+      type: object
+      description: Server-to-client frame containing a base64-encoded audio chunk.
+      properties:
+        type:
+          type: string
+          const: audio_chunk
+          description: Frame type identifier.
+        audio:
+          type:
+          - string
+          - 'null'
+          description: Base64-encoded audio data. May be `null` for providers that use `drop_concatenated_audio` mode (Telnyx, Minimax, Resemble) — in that case only streamed chunks carry audio.
+        text:
+          type:
+          - string
+          - 'null'
+          description: The text segment that this audio chunk corresponds to.
+        isFinal:
+          type: boolean
+          description: Always `false` for audio chunk frames.
+        cached:
+          type: boolean
+          description: Whether this audio was served from cache.
+        timeToFirstAudioFrameMs:
+          type: integer
+          description: Milliseconds from the start-of-speech request to the first audio frame. Only present on the first audio chunk of a synthesis request.
+    ClientTextFrame:
+      type: object
+      description: Client-to-server frame containing text to synthesize.
+      required:
+      - text
+      properties:
+        text:
+          type: string
+          description: Text to convert to speech. Send `" "` (single space) as an initial handshake with optional `voice_settings`. Subsequent messages contain the actual text to synthesize.
+        voice_settings:
+          type: object
+          description: 'Provider-specific voice settings sent with the initial handshake. Contents vary by provider — e.g. `{"speed": 1.2}` for Minimax, `{"voice_speed": 1.5}` for Telnyx.'
+          additionalProperties: true
+        force:
+          type: boolean
+          description: When `true`, stops the current synthesis worker and starts a new one. Used to interrupt speech mid-stream and begin synthesizing new text.
+      examples:
+      - text: ' '
+        voice_settings:
+          voice_speed: 1.2
+      - text: Hello, welcome to Telnyx text to speech.
+      - text: New text after interruption.
+        force: true
+    ResembleProviderParams:
+      type: object
+      description: Resemble AI provider-specific parameters.
+      properties:
+        api_key:
+          type: string
+          description: Custom Resemble API key.
+        precision:
+          type: string
+          description: Synthesis precision.
+        sample_rate:
+          type: string
+          description: Audio sample rate.
+        format:
+          type: string
+          description: Audio output format.
+    text-to-speech_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+                description: Error code.
+              title:
+                type: string
+                description: Error title.
+              detail:
+                type: string
+                description: Detailed error description.
+    TtsServerEvent:
+      description: Union of all server-to-client WebSocket events for TTS streaming.
+      oneOf:
+      - $ref: '#/components/schemas/AudioChunkFrame'
+      - $ref: '#/components/schemas/FinalFrame'
+      - $ref: '#/components/schemas/ErrorFrame'
+      discriminator:
+        propertyName: type
+        mapping:
+          audio_chunk: '#/components/schemas/AudioChunkFrame'
+          final: '#/components/schemas/FinalFrame'
+          error: '#/components/schemas/ErrorFrame'
+    MinimaxProviderParams:
+      type: object
+      description: Minimax provider-specific parameters.
+      properties:
+        speed:
+          type: number
+          format: float
+          description: Speech speed multiplier.
+        vol:
+          type: number
+          format: float
+          description: Volume level.
+        pitch:
+          type: integer
+          description: Pitch adjustment.
+        response_format:
+          type: string
+          description: Audio output format.
+        language_boost:
+          type: string
+          description: Language code to boost pronunciation for.
+    Base64AudioResponse:
+      type: object
+      description: Response when `output_type` is `base64_output`.
+      properties:
+        base64_audio:
+          type: string
+          description: Base64-encoded audio data.
+    ErrorFrame:
+      type: object
+      description: Server-to-client frame indicating an error during synthesis. The connection is closed shortly after.
+      properties:
+        type:
+          type: string
+          const: error
+          description: Frame type identifier.
+        error:
+          type: string
+          description: Error message describing what went wrong.
+    FinalFrame:
+      type: object
+      description: Server-to-client frame indicating synthesis is complete for the current text.
+      properties:
+        type:
+          type: string
+          const: final
+          description: Frame type identifier.
+        audio:
+          type: 'null'
+          description: Always `null` for the final frame.
+        text:
+          type: string
+          description: Empty string.
+        isFinal:
+          type: boolean
+          description: Always `true`.
+          const: true
+        timeToFirstAudioFrameMs:
+          type: integer
+          description: Present if this was the first response frame.
+    Voice:
+      type: object
+      description: A voice available for text-to-speech synthesis.
+      properties:
+        provider:
+          type: string
+          description: The TTS provider.
+        name:
+          type: string
+          description: Voice name.
+        voice_id:
+          type: string
+          description: Voice identifier.
+        language:
+          type: string
+          description: Language code.
+        gender:
+          type: string
+          description: Voice gender.
+        hosted:
+          type: boolean
+          description: Whether this voice runs on Telnyx-hosted infrastructure (`true`) or is provided by a third-party vendor (`false`).
+    XAIProviderParams:
+      type: object
+      description: xAI provider-specific parameters.
+      required:
+      - voice_id
+      properties:
+        voice_id:
+          type: string
+          description: xAI voice identifier.
+          enum:
+          - eve
+          - ara
+          - rex
+          - sal
+          - leo
+        language:
+          type: string
+          description: Language code, or `auto` to detect.
+          default: auto
+        output_format:
+          type: string
+          description: Audio output format.
+          enum:
+          - mp3
+          - wav
+          - pcm
+          - mulaw
+          - alaw
+          default: mp3
+        sample_rate:
+          type: integer
+          description: Audio sample rate in Hz.
+          enum:
+          - 8000
+          - 16000
+          - 22050
+          - 24000
+          - 44100
+          - 48000
+          default: 24000
+    AwsProviderParams:
+      type: object
+      description: AWS Polly provider-specific parameters.
+      properties:
+        language_code:
+          type: string
+          description: Language code (e.g. `en-US`, `es-ES`).
+        text_type:
+          type: string
+          description: Input text type.
+          enum:
+          - text
+          - ssml
+        lexicon_names:
+          type: array
+          items:
+            type: string
+          description: List of lexicon names to apply.
+        output_format:
+          type: string
+          description: Audio output format.
+        sample_rate:
+          type: string
+          description: Audio sample rate.
+    VoicesResponse:
+      type: object
+      description: List of available voices.
+      properties:
+        voices:
+          type: array
+          items:
+            $ref: '#/components/schemas/Voice'
     SonioxProviderParams:
       type: object
       description: Soniox provider-specific parameters. Every voice speaks all supported languages; set `language` to the language of the text.
@@ -377,176 +645,20 @@ components:
           - 24000
           - 44100
           - 48000
-    TelnyxProviderParams:
+    ElevenLabsProviderParams:
       type: object
-      description: Telnyx provider-specific parameters. For the `Ultra` model, use `voice_speed`, `volume`, and `emotion`. `Bayan` and `Sukhan` don't use `temperature`, `volume`, or `emotion`, and don't support `voice_speed`. `Sukhan`'s `response_format` is restricted to `mp3` or `pcm` (no `wav`).
+      description: ElevenLabs provider-specific parameters.
       properties:
-        voice_speed:
-          type: number
-          format: float
-          description: Voice speed multiplier. Telnyx `Ultra` voices accept values from 0.6 to 1.5 — requests outside that range are rejected by the synthesis engine. `KokoroTTS` and `Qwen3TTS` accept the field but do not apply it. `Bayan` and `Sukhan` don't support it.
-          minimum: 0.1
-          maximum: 2
-          default: 1
-        response_format:
+        language_code:
           type: string
-          description: Audio response format.
-          default: mp3
-        sampling_rate:
-          type: integer
-          description: Audio sampling rate in Hz.
-          default: 24000
-        volume:
-          type: number
-          format: float
-          description: Volume level for the Ultra model. Telnyx `Ultra` voices accept values from 0.5 to 2.0 — requests outside that range are rejected by the synthesis engine. `KokoroTTS`, `Qwen3TTS`, `Bayan`, and `Sukhan` voices accept the field but do not apply it.
-          minimum: 0
-          maximum: 2
-          default: 1
-        emotion:
+          description: Language code.
+        api_key:
           type: string
-          description: Emotion control for the Ultra model. Adjusts the emotional tone of the synthesized speech.
-          enum:
-          - neutral
-          - happy
-          - sad
-          - angry
-          - fearful
-          - disgusted
-          - surprised
-    Base64AudioResponse:
-      type: object
-      description: Response when `output_type` is `base64_output`.
-      properties:
-        base64_audio:
-          type: string
-          description: Base64-encoded audio data.
-    MinimaxProviderParams:
-      type: object
-      description: Minimax provider-specific parameters.
-      properties:
-        speed:
-          type: number
-          format: float
-          description: Speech speed multiplier.
-        vol:
-          type: number
-          format: float
-          description: Volume level.
-        pitch:
-          type: integer
-          description: Pitch adjustment.
-        response_format:
-          type: string
-          description: Audio output format.
-        language_boost:
-          type: string
-          description: Language code to boost pronunciation for.
-    TtsServerEvent:
-      description: Union of all server-to-client WebSocket events for TTS streaming.
-      oneOf:
-      - $ref: '#/components/schemas/AudioChunkFrame'
-      - $ref: '#/components/schemas/FinalFrame'
-      - $ref: '#/components/schemas/ErrorFrame'
-      discriminator:
-        propertyName: type
-        mapping:
-          audio_chunk: '#/components/schemas/AudioChunkFrame'
-          final: '#/components/schemas/FinalFrame'
-          error: '#/components/schemas/ErrorFrame'
-    XAIProviderParams:
-      type: object
-      description: xAI provider-specific parameters.
-      required:
-      - voice_id
-      properties:
-        voice_id:
-          type: string
-          description: xAI voice identifier.
-          enum:
-          - eve
-          - ara
-          - rex
-          - sal
-          - leo
-        language:
-          type: string
-          description: Language code, or `auto` to detect.
-          default: auto
-        output_format:
-          type: string
-          description: Audio output format.
-          enum:
-          - mp3
-          - wav
-          - pcm
-          - mulaw
-          - alaw
-          default: mp3
-        sample_rate:
-          type: integer
-          description: Audio sample rate in Hz.
-          enum:
-          - 8000
-          - 16000
-          - 22050
-          - 24000
-          - 44100
-          - 48000
-          default: 24000
-    HumainProviderParams:
-      type: object
-      description: Humain provider-specific parameters. Unlike other providers, Humain has no format/sample-rate negotiation (output is always PCM16 24kHz mono) and no language parameter — language is fixed per voice.
-      required:
-      - voice_id
-      properties:
-        voice_id:
-          type: string
-          description: Humain voice identifier.
-          enum:
-          - sara-en
-          - abdulaziz-en
-          - sara-ar
-          - abdulaziz-ar
-          - nourah-ar
-          - abdullah-ar
-        ttfb_eagerness:
-          type: number
-          format: float
-          description: Time-to-first-byte eagerness, trading synthesis latency for quality.
-          minimum: 0
-          maximum: 1
-    text-to-speech_ValidationErrorResponse:
-      type: object
-      properties:
-        errors:
+          description: Custom ElevenLabs API key. If not provided, the default Telnyx key is used.
+        voice_settings:
           type: object
-          description: Validation error details keyed by field name.
-          additionalProperties:
-            type: array
-            items:
-              type: string
-    FinalFrame:
-      type: object
-      description: Server-to-client frame indicating synthesis is complete for the current text.
-      properties:
-        type:
-          type: string
-          const: final
-          description: Frame type identifier.
-        audio:
-          type: 'null'
-          description: Always `null` for the final frame.
-        text:
-          type: string
-          description: Empty string.
-        isFinal:
-          type: boolean
-          description: Always `true`.
-          const: true
-        timeToFirstAudioFrameMs:
-          type: integer
-          description: Present if this was the first response frame.
+          description: ElevenLabs voice settings (stability, similarity_boost, etc.).
+          additionalProperties: true
     GenerateSpeechRequest:
       type: object
       description: Request body for generating speech from text.
@@ -612,140 +724,28 @@ components:
           $ref: '#/components/schemas/HumainProviderParams'
         soniox:
           $ref: '#/components/schemas/SonioxProviderParams'
-    ClientTextFrame:
+    HumainProviderParams:
       type: object
-      description: Client-to-server frame containing text to synthesize.
+      description: Humain provider-specific parameters. Unlike other providers, Humain has no format/sample-rate negotiation (output is always PCM16 24kHz mono) and no language parameter — language is fixed per voice.
       required:
-      - text
+      - voice_id
       properties:
-        text:
-          type: string
-          description: Text to convert to speech. Send `" "` (single space) as an initial handshake with optional `voice_settings`. Subsequent messages contain the actual text to synthesize.
-        voice_settings:
-          type: object
-          description: 'Provider-specific voice settings sent with the initial handshake. Contents vary by provider — e.g. `{"speed": 1.2}` for Minimax, `{"voice_speed": 1.5}` for Telnyx.'
-          additionalProperties: true
-        force:
-          type: boolean
-          description: When `true`, stops the current synthesis worker and starts a new one. Used to interrupt speech mid-stream and begin synthesizing new text.
-      examples:
-      - text: ' '
-        voice_settings:
-          voice_speed: 1.2
-      - text: Hello, welcome to Telnyx text to speech.
-      - text: New text after interruption.
-        force: true
-    ResembleProviderParams:
-      type: object
-      description: Resemble AI provider-specific parameters.
-      properties:
-        api_key:
-          type: string
-          description: Custom Resemble API key.
-        precision:
-          type: string
-          description: Synthesis precision.
-        sample_rate:
-          type: string
-          description: Audio sample rate.
-        format:
-          type: string
-          description: Audio output format.
-    AudioChunkFrame:
-      type: object
-      description: Server-to-client frame containing a base64-encoded audio chunk.
-      properties:
-        type:
-          type: string
-          const: audio_chunk
-          description: Frame type identifier.
-        audio:
-          type:
-          - string
-          - 'null'
-          description: Base64-encoded audio data. May be `null` for providers that use `drop_concatenated_audio` mode (Telnyx, Minimax, Resemble) — in that case only streamed chunks carry audio.
-        text:
-          type:
-          - string
-          - 'null'
-          description: The text segment that this audio chunk corresponds to.
-        isFinal:
-          type: boolean
-          description: Always `false` for audio chunk frames.
-        cached:
-          type: boolean
-          description: Whether this audio was served from cache.
-        timeToFirstAudioFrameMs:
-          type: integer
-          description: Milliseconds from the start-of-speech request to the first audio frame. Only present on the first audio chunk of a synthesis request.
-    ElevenLabsProviderParams:
-      type: object
-      description: ElevenLabs provider-specific parameters.
-      properties:
-        language_code:
-          type: string
-          description: Language code.
-        api_key:
-          type: string
-          description: Custom ElevenLabs API key. If not provided, the default Telnyx key is used.
-        voice_settings:
-          type: object
-          description: ElevenLabs voice settings (stability, similarity_boost, etc.).
-          additionalProperties: true
-    AwsProviderParams:
-      type: object
-      description: AWS Polly provider-specific parameters.
-      properties:
-        language_code:
-          type: string
-          description: Language code (e.g. `en-US`, `es-ES`).
-        text_type:
-          type: string
-          description: Input text type.
-          enum:
-          - text
-          - ssml
-        lexicon_names:
-          type: array
-          items:
-            type: string
-          description: List of lexicon names to apply.
-        output_format:
-          type: string
-          description: Audio output format.
-        sample_rate:
-          type: string
-          description: Audio sample rate.
-    VoicesResponse:
-      type: object
-      description: List of available voices.
-      properties:
-        voices:
-          type: array
-          items:
-            $ref: '#/components/schemas/Voice'
-    Voice:
-      type: object
-      description: A voice available for text-to-speech synthesis.
-      properties:
-        provider:
-          type: string
-          description: The TTS provider.
-        name:
-          type: string
-          description: Voice name.
         voice_id:
           type: string
-          description: Voice identifier.
-        language:
-          type: string
-          description: Language code.
-        gender:
-          type: string
-          description: Voice gender.
-        hosted:
-          type: boolean
-          description: Whether this voice runs on Telnyx-hosted infrastructure (`true`) or is provided by a third-party vendor (`false`).
+          description: Humain voice identifier.
+          enum:
+          - sara-en
+          - abdulaziz-en
+          - sara-ar
+          - abdulaziz-ar
+          - nourah-ar
+          - abdullah-ar
+        ttfb_eagerness:
+          type: number
+          format: float
+          description: Time-to-first-byte eagerness, trading synthesis latency for quality.
+          minimum: 0
+          maximum: 1
     TelnyxProviderParams_2:
       description: Telnyx provider-specific parameters. Use `voice_speed` and `temperature` for `Natural` and `NaturalHD` models. For the `Ultra` model, use `voice_speed`, `volume`, and `emotion`.
       properties:
@@ -788,15 +788,32 @@ components:
           minimum: 0.0
           type: number
       type: object
-    ValidationErrorResponse:
+    AudioChunkFrame_2:
+      description: Server-to-client frame containing a base64-encoded audio chunk.
       properties:
-        errors:
-          additionalProperties:
-            items:
-              type: string
-            type: array
-          description: Validation error details keyed by field name.
-          type: object
+        audio:
+          description: Base64-encoded audio data. May be `null` for providers that use `drop_concatenated_audio` mode (Telnyx Natural/NaturalHD, Rime, Minimax, MurfAI, Resemble) — in that case only streamed chunks carry audio.
+          type:
+          - string
+          - 'null'
+        cached:
+          description: Whether this audio was served from cache.
+          type: boolean
+        isFinal:
+          description: Always `false` for audio chunk frames.
+          type: boolean
+        text:
+          description: The text segment that this audio chunk corresponds to.
+          type:
+          - string
+          - 'null'
+        timeToFirstAudioFrameMs:
+          description: Milliseconds from the start-of-speech request to the first audio frame. Only present on the first audio chunk of a synthesis request.
+          type: integer
+        type:
+          const: audio_chunk
+          description: Frame type identifier.
+          type: string
       type: object
     RimeProviderParams:
       description: Rime provider-specific parameters.
@@ -811,6 +828,35 @@ components:
           description: Voice speed multiplier.
           format: float
           type: number
+      type: object
+    ValidationErrorResponse:
+      properties:
+        errors:
+          additionalProperties:
+            items:
+              type: string
+            type: array
+          description: Validation error details keyed by field name.
+          type: object
+      type: object
+    Voice_2:
+      description: A voice available for text-to-speech synthesis.
+      properties:
+        gender:
+          description: Voice gender.
+          type: string
+        language:
+          description: Language code.
+          type: string
+        name:
+          description: Voice name.
+          type: string
+        provider:
+          description: The TTS provider.
+          type: string
+        voice_id:
+          description: Voice identifier.
+          type: string
       type: object
     GenerateSpeechRequest_2:
       description: Request body for generating speech from text.
@@ -874,52 +920,6 @@ components:
         xai:
           $ref: '#/components/schemas/XAIProviderParams'
       type: object
-    AudioChunkFrame_2:
-      description: Server-to-client frame containing a base64-encoded audio chunk.
-      properties:
-        audio:
-          description: Base64-encoded audio data. May be `null` for providers that use `drop_concatenated_audio` mode (Telnyx Natural/NaturalHD, Rime, Minimax, MurfAI, Resemble) — in that case only streamed chunks carry audio.
-          type:
-          - string
-          - 'null'
-        cached:
-          description: Whether this audio was served from cache.
-          type: boolean
-        isFinal:
-          description: Always `false` for audio chunk frames.
-          type: boolean
-        text:
-          description: The text segment that this audio chunk corresponds to.
-          type:
-          - string
-          - 'null'
-        timeToFirstAudioFrameMs:
-          description: Milliseconds from the start-of-speech request to the first audio frame. Only present on the first audio chunk of a synthesis request.
-          type: integer
-        type:
-          const: audio_chunk
-          description: Frame type identifier.
-          type: string
-      type: object
-    Voice_2:
-      description: A voice available for text-to-speech synthesis.
-      properties:
-        gender:
-          description: Voice gender.
-          type: string
-        language:
-          description: Language code.
-          type: string
-        name:
-          description: Voice name.
-          type: string
-        provider:
-          description: The TTS provider.
-          type: string
-        voice_id:
-          description: Voice identifier.
-          type: string
-      type: object
     TelnyxProviderParams_3:
       type: object
       description: 'Telnyx provider-specific parameters. For the `Ultra` model, use `voice_speed`, `volume`, and `emotion`. `Bayan` and `Sukhan` don''t use `temperature`, `volume`, or `emotion`. `Bayan` accepts `voice_speed` from 0.5 to 2.0; `Sukhan` doesn''t support it. `Bayan` synthesizes at a native 16 kHz: `sampling_rate` `8000`, `22050`, or `24000` is resampled, needs `response_format: pcm`, and isn''t available with `output_type: audio_id`. `Sukhan`''s `response_format` is restricted to `mp3` or `pcm` (no `wav`).'
@@ -971,6 +971,31 @@ components:
           type: string
           description: Audio output format.
   parameters:
+    audio_format:
+      name: audio_format
+      in: query
+      required: false
+      description: Audio output format override. Supported for Telnyx models. The `Ultra` model outputs PCM at 24kHz s16le or MP3 at 128kbps 24kHz.
+      schema:
+        type: string
+        enum:
+        - pcm
+        - wav
+        - mp3
+    voice:
+      name: voice
+      in: query
+      required: false
+      description: Voice identifier in the format `provider.model_id.voice_id` or `provider.voice_id` (e.g. `Telnyx.Ultra.<voice_id>`, `Telnyx.Bayan.Ahmed`, `Telnyx.Sukhan.urdu-professor`, or `azure.en-US-AvaMultilingualNeural`). When provided, the `provider`, `model_id`, and `voice_id` are extracted automatically. Takes precedence over individual `provider`/`model_id`/`voice_id` parameters.
+      schema:
+        type: string
+    voice_id:
+      name: voice_id
+      in: query
+      required: false
+      description: Voice identifier for the chosen provider.
+      schema:
+        type: string
     model_id:
       name: model_id
       in: query
@@ -985,13 +1010,6 @@ components:
       description: Client-provided socket identifier for tracking. If not provided, one is generated server-side.
       schema:
         type: string
-    voice:
-      name: voice
-      in: query
-      required: false
-      description: Voice identifier in the format `provider.model_id.voice_id` or `provider.voice_id` (e.g. `Telnyx.Ultra.<voice_id>`, `Telnyx.Bayan.Ahmed`, `Telnyx.Sukhan.urdu-professor`, or `azure.en-US-AvaMultilingualNeural`). When provided, the `provider`, `model_id`, and `voice_id` are extracted automatically. Takes precedence over individual `provider`/`model_id`/`voice_id` parameters.
-      schema:
-        type: string
     disable_cache:
       name: disable_cache
       in: query
@@ -1000,17 +1018,6 @@ components:
       schema:
         type: boolean
         default: false
-    audio_format:
-      name: audio_format
-      in: query
-      required: false
-      description: Audio output format override. Supported for Telnyx models. The `Ultra` model outputs PCM at 24kHz s16le or MP3 at 128kbps 24kHz.
-      schema:
-        type: string
-        enum:
-        - pcm
-        - wav
-        - mp3
     provider:
       name: provider
       in: query
@@ -1029,27 +1036,6 @@ components:
         - humain
         - soniox
         default: telnyx
-    voice_id:
-      name: voice_id
-      in: query
-      required: false
-      description: Voice identifier for the chosen provider.
-      schema:
-        type: string
-    model_id_2:
-      description: 'Model identifier for the chosen provider. Examples: `Natural`, `NaturalHD`, `Ultra` (Telnyx); `Polly.Generative` (AWS).'
-      in: query
-      name: model_id
-      required: false
-      schema:
-        type: string
-    voice_2:
-      description: Voice identifier in the format `provider.model_id.voice_id` or `provider.voice_id` (e.g. `telnyx.NaturalHD.Telnyx_Alloy`, `Telnyx.Ultra.<voice_id>`, or `azure.en-US-AvaMultilingualNeural`). When provided, the `provider`, `model_id`, and `voice_id` are extracted automatically. Takes precedence over individual `provider`/`model_id`/`voice_id` parameters.
-      in: query
-      name: voice
-      required: false
-      schema:
-        type: string
     audio_format_2:
       description: Audio output format override. Supported for Telnyx models. `pcm` and `wav` are available for `Natural`/`NaturalHD` models. The `Ultra` model outputs PCM at 24kHz s16le or MP3 at 128kbps 24kHz.
       in: query
@@ -1060,6 +1046,20 @@ components:
         - pcm
         - wav
         - mp3
+        type: string
+    voice_2:
+      description: Voice identifier in the format `provider.model_id.voice_id` or `provider.voice_id` (e.g. `telnyx.NaturalHD.Telnyx_Alloy`, `Telnyx.Ultra.<voice_id>`, or `azure.en-US-AvaMultilingualNeural`). When provided, the `provider`, `model_id`, and `voice_id` are extracted automatically. Takes precedence over individual `provider`/`model_id`/`voice_id` parameters.
+      in: query
+      name: voice
+      required: false
+      schema:
+        type: string
+    model_id_2:
+      description: 'Model identifier for the chosen provider. Examples: `Natural`, `NaturalHD`, `Ultra` (Telnyx); `Polly.Generative` (AWS).'
+      in: query
+      name: model_id
+      required: false
+      schema:
         type: string
     provider_2:
       description: TTS provider. Defaults to `telnyx` if not specified. Ignored when `voice` is provided.
