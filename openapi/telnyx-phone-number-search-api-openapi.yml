@@ -248,35 +248,6 @@ components:
         features:
         - name: sms
         - name: voice
-    RegionInformation:
-      properties:
-        region_type:
-          type: string
-          example: country_code
-          enum:
-          - country_code
-          - rate_center
-          - state
-          - location
-        region_name:
-          type: string
-          example: US
-      example:
-        region_type: country_code
-        region_name: US
-      type: object
-    AvailablePhoneNumbersMetadata:
-      type: object
-      example:
-        total_results: 100
-        best_effort_results: 50
-      properties:
-        total_results:
-          type: integer
-          example: 1
-        best_effort_results:
-          type: integer
-          example: 0
     CostInformation:
       type: object
       properties:
@@ -294,32 +265,33 @@ components:
         upfront_cost: '3.21'
         monthly_cost: '6.54'
         currency: USD
-    billing-group_Error:
-      type: object
-      required:
-      - code
-      - title
+    Feature:
       properties:
-        code:
+        name:
+          type: string
+          example: sms
+      example:
+        name: sms
+      type: object
+    AvailablePhoneNumbersMetadata:
+      type: object
+      example:
+        total_results: 100
+        best_effort_results: 50
+      properties:
+        total_results:
           type: integer
-          format: int32
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-          properties: {}
-          additionalProperties: true
+          example: 1
+        best_effort_results:
+          type: integer
+          example: 0
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
     AvailablePhoneNumberBlock:
       type: object
       properties:
@@ -358,20 +330,55 @@ components:
         features:
         - name: sms
         - name: voice
-    Errors:
+    RegionInformation:
+      properties:
+        region_type:
+          type: string
+          example: country_code
+          enum:
+          - country_code
+          - rate_center
+          - state
+          - location
+        region_name:
+          type: string
+          example: US
+      example:
+        region_type: country_code
+        region_name: US
+      type: object
+    billing-group_Error:
+      type: object
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
+    numbers_Errors:
       properties:
         errors:
-          type: array
           items:
-            $ref: '#/components/schemas/billing-group_Error'
-      type: object
-    Feature:
-      properties:
-        name:
-          type: string
-          example: sms
-      example:
-        name: sms
+            $ref: '#/components/schemas/numbers_Error'
+          type: array
       type: object
     numbers_Error:
       properties:
@@ -401,13 +408,6 @@ components:
         title:
           example: Unexpected error
           type: string
-      type: object
-    numbers_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/numbers_Error'
-          type: array
       type: object
     Errors_2:
       properties:
@@ -479,34 +479,18 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Errors'
-    numbers_BadRequestResponse_73c9788e53:
-      description: Bad request, the request was unacceptable, often due to missing a required parameter.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Errors'
     GenericErrorResponse:
       description: Unexpected error
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Errors'
-    ListAvailablePhoneNumbersResponse:
+    numbers_BadRequestResponse_73c9788e53:
+      description: Bad request, the request was unacceptable, often due to missing a required parameter.
       content:
         application/json:
           schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/AvailablePhoneNumber'
-                type: array
-              meta:
-                $ref: '#/components/schemas/AvailablePhoneNumbersMetadata'
-              metadata:
-                $ref: '#/components/schemas/AvailablePhoneNumbersMetadata'
-            title: List Available Phone Numbers Response
-            type: object
-      description: Successful response with a list of available phone numbers.
+            $ref: '#/components/schemas/Errors'
     numbers_UnauthorizedResponse:
       content:
         application/json:
@@ -522,18 +506,18 @@ components:
           schema:
             $ref: '#/components/schemas/numbers_Errors'
       description: Unauthorized
-    numbers_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/numbers_Errors'
-      description: Unexpected error
     numbers_BadRequestResponse:
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/numbers_Errors'
       description: Bad request, the request was unacceptable, often due to missing a required parameter.
+    numbers_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/numbers_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
     ListAvailablePhoneNumbersBlockResponse:
       content:
         application/json:
@@ -554,12 +538,28 @@ components:
           schema:
             $ref: '#/components/schemas/numbers_Errors'
       description: The requested resource doesn't exist.
-    numbers_UnprocessableEntity:
+    numbers_GenericErrorResponse:
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/numbers_Errors'
-      description: Unprocessable entity. Check the 'detail' field in response for details.
+      description: Unexpected error
+    ListAvailablePhoneNumbersResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/AvailablePhoneNumber'
+                type: array
+              meta:
+                $ref: '#/components/schemas/AvailablePhoneNumbersMetadata'
+              metadata:
+                $ref: '#/components/schemas/AvailablePhoneNumbersMetadata'
+            title: List Available Phone Numbers Response
+            type: object
+      description: Successful response with a list of available phone numbers.
   securitySchemes:
     BearerAuth:
       type: http

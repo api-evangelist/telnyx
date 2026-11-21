@@ -58,44 +58,12 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    SummaryAndTotal:
-      type: object
+    charges_Errors:
       properties:
-        user_id:
-          type: string
-          description: User identifier
-          example: 0db0b4aa-a83d-4d4f-ad9b-3ba7c1ac2ce8
-        start_date:
-          type: string
-          format: date
-          description: Start date of the summary period
-          example: '2025-05-01'
-        end_date:
-          type: string
-          format: date
-          description: End date of the summary period
-          example: '2025-06-01'
-        user_email:
-          type: string
-          format: email
-          description: User email address
-          example: user@example.com
-        currency:
-          type: string
-          description: Currency code
-          example: USD
-        summary:
-          $ref: '#/components/schemas/Summary'
-        total:
-          $ref: '#/components/schemas/TotalSummary'
-      required:
-      - user_id
-      - start_date
-      - end_date
-      - user_email
-      - currency
-      - summary
-      - total
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/charges_Error'
     MonthDetail:
       type: object
       properties:
@@ -116,49 +84,32 @@ components:
       required:
       - quantity
       - mrc
-    charges_Error:
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: string
-          format: integer
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-              format: json-pointer
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-    charges_Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/charges_Error'
-    SummaryLine:
-      oneOf:
-      - $ref: '#/components/schemas/ComparativeLine'
-      - $ref: '#/components/schemas/SimpleLine'
-      discriminator:
-        propertyName: type
-    MonthlyChargesSummaryResponse:
+    ComparativeLine:
       type: object
       properties:
-        data:
-          $ref: '#/components/schemas/SummaryAndTotal'
+        type:
+          type: string
+          enum:
+          - comparative
+          example: comparative
+        name:
+          type: string
+          description: Service name
+          example: Local DIDs
+        alias:
+          type: string
+          description: Service alias
+          example: local
+        new_this_month:
+          $ref: '#/components/schemas/MonthDetail'
+        existing_this_month:
+          $ref: '#/components/schemas/MonthDetail'
       required:
-      - data
+      - type
+      - name
+      - alias
+      - new_this_month
+      - existing_this_month
     AdjustmentLine:
       type: object
       properties:
@@ -179,36 +130,6 @@ components:
       - amount
       - description
       - event_date
-    SimpleLine:
-      type: object
-      properties:
-        type:
-          type: string
-          enum:
-          - simple
-          example: simple
-        name:
-          type: string
-          description: Service name
-          example: Port Out
-        alias:
-          type: string
-          description: Service alias
-          example: port_out
-        quantity:
-          type: integer
-          description: Number of items
-          example: 100
-        amount:
-          type: string
-          description: Total amount as decimal string
-          example: '15.75'
-      required:
-      - type
-      - name
-      - alias
-      - quantity
-      - amount
     TotalSummary:
       type: object
       properties:
@@ -248,32 +169,111 @@ components:
       - credits
       - ledger_adjustments
       - grand_total
-    ComparativeLine:
+    MonthlyChargesSummaryResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SummaryAndTotal'
+      required:
+      - data
+    SummaryLine:
+      oneOf:
+      - $ref: '#/components/schemas/ComparativeLine'
+      - $ref: '#/components/schemas/SimpleLine'
+      discriminator:
+        propertyName: type
+    SummaryAndTotal:
+      type: object
+      properties:
+        user_id:
+          type: string
+          description: User identifier
+          example: 0db0b4aa-a83d-4d4f-ad9b-3ba7c1ac2ce8
+        start_date:
+          type: string
+          format: date
+          description: Start date of the summary period
+          example: '2025-05-01'
+        end_date:
+          type: string
+          format: date
+          description: End date of the summary period
+          example: '2025-06-01'
+        user_email:
+          type: string
+          format: email
+          description: User email address
+          example: user@example.com
+        currency:
+          type: string
+          description: Currency code
+          example: USD
+        summary:
+          $ref: '#/components/schemas/Summary'
+        total:
+          $ref: '#/components/schemas/TotalSummary'
+      required:
+      - user_id
+      - start_date
+      - end_date
+      - user_email
+      - currency
+      - summary
+      - total
+    charges_Error:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+          format: integer
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+    SimpleLine:
       type: object
       properties:
         type:
           type: string
           enum:
-          - comparative
-          example: comparative
+          - simple
+          example: simple
         name:
           type: string
           description: Service name
-          example: Local DIDs
+          example: Port Out
         alias:
           type: string
           description: Service alias
-          example: local
-        new_this_month:
-          $ref: '#/components/schemas/MonthDetail'
-        existing_this_month:
-          $ref: '#/components/schemas/MonthDetail'
+          example: port_out
+        quantity:
+          type: integer
+          description: Number of items
+          example: 100
+        amount:
+          type: string
+          description: Total amount as decimal string
+          example: '15.75'
       required:
       - type
       - name
       - alias
-      - new_this_month
-      - existing_this_month
+      - quantity
+      - amount
     Summary:
       type: object
       properties:
@@ -312,28 +312,6 @@ components:
       - lines
       - adjustments
   responses:
-    charges_GenericErrorResponse:
-      description: Unexpected error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/charges_Errors'
-          example:
-            errors:
-            - code: '10007'
-              title: Unexpected error
-              detail: An unexpected error occured.
-    charges_UnprocessableEntityErrorResponse:
-      description: User account not found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/charges_Errors'
-          example:
-            errors:
-            - code: '10027'
-              title: Unprocessable Entity
-              detail: The server understood the syntax of the request but was unable to process the instructions.
     charges_BadRequestErrorResponse:
       description: Invalid request parameters or date range
       content:
@@ -345,24 +323,46 @@ components:
             - code: '10015'
               title: Bad Request
               detail: The request failed because it was not well-formed.
-    charges_GenericErrorResponse_2:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/charges_Errors'
-      description: Unexpected error
-    charges_UnprocessableEntityErrorResponse_2:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/charges_Errors'
+    charges_UnprocessableEntityErrorResponse:
       description: User account not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/charges_Errors'
+          example:
+            errors:
+            - code: '10027'
+              title: Unprocessable Entity
+              detail: The server understood the syntax of the request but was unable to process the instructions.
+    charges_GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/charges_Errors'
+          example:
+            errors:
+            - code: '10007'
+              title: Unexpected error
+              detail: An unexpected error occured.
     charges_BadRequestErrorResponse_2:
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/charges_Errors'
       description: Invalid request parameters or date range
+    charges_UnprocessableEntityErrorResponse_2:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/charges_Errors'
+      description: User account not found
+    charges_GenericErrorResponse_2:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/charges_Errors'
+      description: Unexpected error
   securitySchemes:
     BearerAuth:
       type: http

@@ -80,13 +80,6 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    PhoneNumberBatchWrapped:
-      type: object
-      required:
-      - data
-      properties:
-        data:
-          $ref: '#/components/schemas/PhoneNumberBatch'
     DirPhoneNumber:
       type: object
       properties:
@@ -141,120 +134,60 @@ components:
           nullable: true
           example: '2026-04-26T18:12:11.123456Z'
           readOnly: true
-    Document:
+    PhoneNumberBatchList:
       type: object
       required:
-      - document_id
-      - document_type
+      - data
+      - meta
       properties:
-        document_id:
-          type: string
-          format: uuid
-          description: Id returned by the Telnyx Documents API after you upload the file (upload via `POST /v2/documents`; see https://developers.telnyx.com/api/documents).
-          example: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
-        document_type:
-          type: string
-          enum:
-          - letter_of_authorization
-          - business_registration
-          - articles_of_incorporation
-          - tax_document
-          - ein_letter
-          - trademark_registration
-          - website_ownership
-          - business_license
-          - professional_license
-          - government_id
-          - utility_bill
-          - bank_statement
-          - other
-          example: business_registration
-          description: Type of supporting document. Pick the closest match to what the file actually contains; `other` triggers manual vetting and may slow approval. The matching short_name reference list is at `GET /v2/dir/document_types`.
-        description:
-          type: string
-          maxLength: 255
-          description: An optional note describing this document, for example what it proves.
-          example: Certificate of incorporation.
-    PhoneNumberStatus:
-      type: string
-      enum:
-      - submitted
-      - in_review
-      - verified
-      - unsuccessful
-      - suspended
-      - expired
-      - permanently_rejected
-      description: 'Phone-number lifecycle status.
-
-        - `submitted` / `in_review` - Telnyx is reviewing the batch this number belongs to.
-
-        - `verified` - approved; the DIR''s display identity will be shown on outbound calls from this number.
-
-        - `unsuccessful` - Telnyx rejected this submission; the customer may re-add to retry.
-
-        - `suspended` - temporarily disabled (e.g. by an active infringement claim on the DIR).
-
-        - `expired` - verification expired; re-add to renew.
-
-        - `permanently_rejected` - terminal; cannot be re-added on this or any other DIR you own.'
-    PhoneNumberBatch:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PhoneNumberBatch'
+        meta:
+          $ref: '#/components/schemas/branded-calling_PaginationMeta'
+    RejectionReason:
       type: object
-      description: A phone-number batch groups all numbers added in a single bulk-add request. Telnyx vets the batch as a unit. The response embeds the full `phone_numbers` array so you can read per-number status without a separate call, plus a batch-level `status` summarising the unit's progress.
       properties:
-        batch_id:
+        code:
           type: string
-          format: uuid
-          example: ba74cfc6-d32b-467a-9b08-86fd154c23f7
-          readOnly: true
-        dir_id:
+          example: documentation_incomplete
+        title:
           type: string
-          format: uuid
-          example: 74e1d8ed-fbdb-45a7-bbb0-a09c1184eb3d
-        dir_display_name:
+          example: Documentation incomplete
+        detail:
           type: string
-          description: The DIR's display name at the time the batch was read.
-          example: Acme Plumbing
-          readOnly: true
-        enterprise_id:
+          example: Provided documents do not establish business identity.
+        message:
           type: string
-          format: uuid
-          example: 5c987b82-2e3b-442a-afbc-0ba3c515f561
-        status:
-          $ref: '#/components/schemas/PhoneNumberStatus'
-          description: Aggregate batch status. Mirrors the values used on individual phone numbers (`submitted`, `in_review`, `verified`, `unsuccessful`, `permanently_rejected`, etc.).
-        total_count:
+          nullable: true
+          description: Customer-visible free-text comment from the Telnyx vetting team. Only the first entry of `rejection_reasons` carries this; the rest are `null`.
+          example: Please re-upload a clearer scan of the certificate.
+    branded-calling_PaginationMeta:
+      type: object
+      required:
+      - total_pages
+      - total_results
+      - page_number
+      - page_size
+      properties:
+        total_pages:
           type: integer
-          description: Number of phone numbers in this batch (length of `phone_numbers`).
+          example: 3
+          description: Total number of pages available given the current `page_size`.
+        total_results:
+          type: integer
+          example: 42
+          description: Total number of items across all pages (excludes soft-deleted rows).
+        page_number:
+          type: integer
           example: 1
-          readOnly: true
-        submitted_at:
-          type: string
-          format: date-time
-          description: When the batch was created (and implicitly submitted for vetting).
-          example: '2026-04-26T18:14:37.065870Z'
-          readOnly: true
-        documents:
-          type: array
-          items:
-            $ref: '#/components/schemas/Document'
-          description: Documents attached to this batch (e.g. a Letter of Authorization). Empty when none were supplied at add time.
-        phone_numbers:
-          type: array
-          items:
-            $ref: '#/components/schemas/DirPhoneNumber'
-          description: All phone numbers in this batch, with per-number status.
-    branded-calling_Errors:
-      type: object
-      required:
-      - errors
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/branded-calling_Error'
-          description: List of one or more error entries. Order is not significant.
-      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
+          description: 1-based index of this page. Echoes the `page[number]` query parameter (default `1`).
+        page_size:
+          type: integer
+          example: 20
+          description: Number of items returned in this page's `data` array. Capped at 250.
+      description: JSON:API pagination metadata returned with every paginated list response. Page numbering is 1-based. `page_size` reports the number of items actually returned in `data` for this page; the requested size is taken from the `page[size]` query parameter.
     branded-calling_Error:
       type: object
       required:
@@ -312,60 +245,127 @@ components:
               type: string
               example: page[size]
       description: A single entry in the canonical Telnyx error envelope. `code` is the stable Telnyx error catalog id; the human-readable explanation lives at `meta.url`. `detail` is a context-specific message; `source.pointer` (when present) names the offending field of the request.
-    PhoneNumberBatchList:
+    PhoneNumberStatus:
+      type: string
+      enum:
+      - submitted
+      - in_review
+      - verified
+      - unsuccessful
+      - suspended
+      - expired
+      - permanently_rejected
+      description: 'Phone-number lifecycle status.
+
+        - `submitted` / `in_review` - Telnyx is reviewing the batch this number belongs to.
+
+        - `verified` - approved; the DIR''s display identity will be shown on outbound calls from this number.
+
+        - `unsuccessful` - Telnyx rejected this submission; the customer may re-add to retry.
+
+        - `suspended` - temporarily disabled (e.g. by an active infringement claim on the DIR).
+
+        - `expired` - verification expired; re-add to renew.
+
+        - `permanently_rejected` - terminal; cannot be re-added on this or any other DIR you own.'
+    Document:
+      type: object
+      required:
+      - document_id
+      - document_type
+      properties:
+        document_id:
+          type: string
+          format: uuid
+          description: Id returned by the Telnyx Documents API after you upload the file (upload via `POST /v2/documents`; see https://developers.telnyx.com/api/documents).
+          example: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
+        document_type:
+          type: string
+          enum:
+          - letter_of_authorization
+          - business_registration
+          - articles_of_incorporation
+          - tax_document
+          - ein_letter
+          - trademark_registration
+          - website_ownership
+          - business_license
+          - professional_license
+          - government_id
+          - utility_bill
+          - bank_statement
+          - other
+          example: business_registration
+          description: Type of supporting document. Pick the closest match to what the file actually contains; `other` triggers manual vetting and may slow approval. The matching short_name reference list is at `GET /v2/dir/document_types`.
+        description:
+          type: string
+          maxLength: 255
+          description: An optional note describing this document, for example what it proves.
+          example: Certificate of incorporation.
+    PhoneNumberBatch:
+      type: object
+      description: A phone-number batch groups all numbers added in a single bulk-add request. Telnyx vets the batch as a unit. The response embeds the full `phone_numbers` array so you can read per-number status without a separate call, plus a batch-level `status` summarising the unit's progress.
+      properties:
+        batch_id:
+          type: string
+          format: uuid
+          example: ba74cfc6-d32b-467a-9b08-86fd154c23f7
+          readOnly: true
+        dir_id:
+          type: string
+          format: uuid
+          example: 74e1d8ed-fbdb-45a7-bbb0-a09c1184eb3d
+        dir_display_name:
+          type: string
+          description: The DIR's display name at the time the batch was read.
+          example: Acme Plumbing
+          readOnly: true
+        enterprise_id:
+          type: string
+          format: uuid
+          example: 5c987b82-2e3b-442a-afbc-0ba3c515f561
+        status:
+          $ref: '#/components/schemas/PhoneNumberStatus'
+          description: Aggregate batch status. Mirrors the values used on individual phone numbers (`submitted`, `in_review`, `verified`, `unsuccessful`, `permanently_rejected`, etc.).
+        total_count:
+          type: integer
+          description: Number of phone numbers in this batch (length of `phone_numbers`).
+          example: 1
+          readOnly: true
+        submitted_at:
+          type: string
+          format: date-time
+          description: When the batch was created (and implicitly submitted for vetting).
+          example: '2026-04-26T18:14:37.065870Z'
+          readOnly: true
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+          description: Documents attached to this batch (e.g. a Letter of Authorization). Empty when none were supplied at add time.
+        phone_numbers:
+          type: array
+          items:
+            $ref: '#/components/schemas/DirPhoneNumber'
+          description: All phone numbers in this batch, with per-number status.
+    branded-calling_Errors:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/branded-calling_Error'
+          description: List of one or more error entries. Order is not significant.
+      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
+    PhoneNumberBatchWrapped:
       type: object
       required:
       - data
-      - meta
       properties:
         data:
-          type: array
-          items:
-            $ref: '#/components/schemas/PhoneNumberBatch'
-        meta:
-          $ref: '#/components/schemas/branded-calling_PaginationMeta'
-    RejectionReason:
-      type: object
-      properties:
-        code:
-          type: string
-          example: documentation_incomplete
-        title:
-          type: string
-          example: Documentation incomplete
-        detail:
-          type: string
-          example: Provided documents do not establish business identity.
-        message:
-          type: string
-          nullable: true
-          description: Customer-visible free-text comment from the Telnyx vetting team. Only the first entry of `rejection_reasons` carries this; the rest are `null`.
-          example: Please re-upload a clearer scan of the certificate.
-    branded-calling_PaginationMeta:
-      type: object
-      required:
-      - total_pages
-      - total_results
-      - page_number
-      - page_size
-      properties:
-        total_pages:
-          type: integer
-          example: 3
-          description: Total number of pages available given the current `page_size`.
-        total_results:
-          type: integer
-          example: 42
-          description: Total number of items across all pages (excludes soft-deleted rows).
-        page_number:
-          type: integer
-          example: 1
-          description: 1-based index of this page. Echoes the `page[number]` query parameter (default `1`).
-        page_size:
-          type: integer
-          example: 20
-          description: Number of items returned in this page's `data` array. Capped at 250.
-      description: JSON:API pagination metadata returned with every paginated list response. Page numbering is 1-based. `page_size` reports the number of items actually returned in `data` for this page; the requested size is taken from the `page[size]` query parameter.
+          $ref: '#/components/schemas/PhoneNumberBatch'
     Document_2:
       type: object
       required:

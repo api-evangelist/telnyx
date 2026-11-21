@@ -303,50 +303,52 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
-  responses:
-    rcs-registration_Unauthorized:
-      description: The request is not authenticated.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/rcs-registration_ErrorResponse'
-    DependencyUnavailable:
-      description: A registration dependency is temporarily unavailable.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/rcs-registration_ErrorResponse'
-    rcs-registration_BadRequest:
-      description: The request or idempotency header is malformed.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/rcs-registration_ErrorResponse'
-    ProviderError:
-      description: The RCS provider rejected or could not complete the request.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/rcs-registration_ErrorResponse'
-    rcs-registration_Conflict:
-      description: The operation is not allowed in the current lifecycle state or the idempotency key was used for a different request.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/rcs-registration_ErrorResponse'
-    rcs-registration_NotFound:
-      description: The resource does not exist, is not owned by the organization, or the provider does not support the requested capability.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/rcs-registration_ErrorResponse'
-    ValidationError:
-      description: The request body or parameters failed validation.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ValidationErrorResponse'
   schemas:
+    AgentSubmissionStatus:
+      type: string
+      enum:
+      - SUBMITTED
+      - APPROVED
+      - REJECTED
+    AgentInteraction:
+      type: object
+      propertyNames:
+        enum:
+        - interaction_type
+        - description
+      properties:
+        interaction_type:
+          $ref: '#/components/schemas/AgentInteractionType'
+        description:
+          type:
+          - string
+          - 'null'
+          minLength: 1
+          maxLength: 2000
+          description: Required when interaction_type is `OTHER`.
+      required:
+      - interaction_type
+      allOf:
+      - if:
+          properties:
+            interaction_type:
+              const: OTHER
+          required:
+          - interaction_type
+        then:
+          properties:
+            description:
+              type: string
+              minLength: 1
+              maxLength: 2000
+          required:
+          - description
+    CarrierApprovalScope:
+      type: string
+      enum:
+      - carrier
+      - hub
+      - bot
     TestDeviceResponse:
       type: object
       additionalProperties: false
@@ -366,11 +368,155 @@ components:
         test_device_id: 44444444-4444-4444-8444-444444444444
         phone_number: '+13125550123'
         invite_status: ACCEPTED
-    AgentUpdateRequest:
+    AgentLaunchRequest:
       type: object
       additionalProperties: false
-      minProperties: 1
       properties:
+        campaign:
+          $ref: '#/components/schemas/AgentLaunchCampaignConfiguration'
+        testing:
+          $ref: '#/components/schemas/AgentTestingConfiguration'
+      required:
+      - campaign
+      - testing
+      example:
+        campaign:
+          company_overview: Acme provides online retail services.
+          agent_overview: The agent sends order confirmations and delivery updates.
+          interactions:
+          - interaction_type: TRANSACTIONAL_UPDATES
+          message_examples:
+          - Your Acme order is confirmed.
+          - Your Acme order has shipped.
+          - Your Acme order was delivered.
+          consent_settings:
+            opt_in_methods:
+            - method_type: WEBSITE
+            call_to_action: Select RCS updates during checkout.
+            call_to_action_url: https://www.example.com/checkout
+            call_to_action_media_url: https://www.example.com/rcs/opt-in.png
+            double_opt_in: false
+            opt_in_message: You are subscribed to Acme order updates.
+            help_response: Contact support@example.com for help.
+            opt_out_response: You will receive no more messages.
+        testing:
+          test_url: https://www.example.com/rcs/test-video
+          additional_information: Demonstrates START, STOP, HELP, and an order-status interaction.
+    AgentOptInMethodType:
+      type: string
+      enum:
+      - SMS
+      - WEBSITE
+      - MOBILE_APP
+      - QR_CODE
+      - SALE_POINT
+      - OTHER
+    CapabilitiesResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        brand_entity:
+          type: boolean
+        brand_verification:
+          type: boolean
+        submission_sections:
+          type: boolean
+        distinct_launch_phase:
+          type: boolean
+        per_carrier_approval:
+          type: boolean
+        templates:
+          type: boolean
+        campaigns:
+          type: boolean
+        vendor_webhooks:
+          type: boolean
+        invite_test_devices:
+          type: boolean
+      required:
+      - brand_entity
+      - brand_verification
+      - submission_sections
+      - distinct_launch_phase
+      - per_carrier_approval
+      - templates
+      - campaigns
+      - vendor_webhooks
+      - invite_test_devices
+    TestDeviceCreateRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        phone_number:
+          type: string
+          maxLength: 16
+          pattern: ^\+[1-9][0-9]{1,14}$
+      required:
+      - phone_number
+      example:
+        phone_number: '+13125550123'
+    AgentConfiguration:
+      type: object
+      additionalProperties: false
+      properties:
+        basics:
+          $ref: '#/components/schemas/AgentBasicsConfiguration'
+        campaign:
+          oneOf:
+          - $ref: '#/components/schemas/AgentCampaignConfiguration'
+          - type: 'null'
+        testing:
+          oneOf:
+          - $ref: '#/components/schemas/AgentTestingConfiguration'
+          - type: 'null'
+      required:
+      - basics
+    AgentOptInMethod:
+      type: object
+      propertyNames:
+        enum:
+        - method_type
+        - description
+      properties:
+        method_type:
+          $ref: '#/components/schemas/AgentOptInMethodType'
+        description:
+          type:
+          - string
+          - 'null'
+          minLength: 1
+          maxLength: 2000
+          description: Required when method_type is `OTHER`.
+      required:
+      - method_type
+      allOf:
+      - if:
+          properties:
+            method_type:
+              const: OTHER
+          required:
+          - method_type
+        then:
+          properties:
+            description:
+              type: string
+              minLength: 1
+              maxLength: 2000
+          required:
+          - description
+    TestDeviceInviteStatus:
+      type: string
+      enum:
+      - PENDING
+      - ACCEPTED
+      - DECLINED
+    AgentCreateRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        brand_id:
+          type: string
+          format: uuid
         display_name:
           type: string
           minLength: 1
@@ -378,22 +524,38 @@ components:
         use_case:
           $ref: '#/components/schemas/AgentUseCase'
         profile_id:
-          type: string
+          type:
+          - string
+          - 'null'
           maxLength: 36
+          description: A Messaging Profile owned by the authenticated organization. When omitted, the agent inherits the brand profile.
         hosting_region:
-          type: string
+          type:
+          - string
+          - 'null'
           maxLength: 32
         configuration:
           $ref: '#/components/schemas/AgentConfiguration'
+      required:
+      - brand_id
+      - display_name
+      - use_case
+      - configuration
       example:
-        display_name: Acme Delivery Updates
-    AgentUseCase:
-      type: string
-      enum:
-      - MULTI_USE
-      - PROMOTIONAL
-      - TRANSACTIONAL
-      - OTP
+        brand_id: 11111111-1111-4111-8111-111111111111
+        display_name: Acme Order Updates
+        use_case: TRANSACTIONAL
+        configuration:
+          basics:
+            description: Order confirmations and delivery updates
+            logo_url: https://www.example.com/rcs/logo.png
+            hero_url: https://www.example.com/rcs/hero.png
+            brand_color: '#123456'
+            privacy_policy_url: https://www.example.com/privacy
+            terms_and_conditions_url: https://www.example.com/terms
+            email:
+              address: support@example.com
+              label: Support
     AgentCampaignConfiguration:
       type: object
       additionalProperties: false
@@ -430,6 +592,177 @@ components:
           maxLength: 2000
       required:
       - company_overview
+    AgentLaunchCampaignConfiguration:
+      allOf:
+      - $ref: '#/components/schemas/AgentCampaignConfiguration'
+      - type: object
+        properties:
+          agent_overview:
+            type: string
+            minLength: 1
+            maxLength: 2000
+          interactions:
+            type: array
+            minItems: 1
+            items:
+              $ref: '#/components/schemas/AgentInteraction'
+          message_examples:
+            type: array
+            minItems: 3
+            items:
+              type: string
+              minLength: 1
+              maxLength: 2000
+          consent_settings:
+            $ref: '#/components/schemas/AgentConsentConfiguration'
+        required:
+        - agent_overview
+        - interactions
+        - message_examples
+        - consent_settings
+    CarrierApprovalStatus:
+      type: string
+      enum:
+      - PENDING
+      - SUBMITTED
+      - APPROVED
+      - REJECTED
+    CarrierApprovalResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        approval_id:
+          type: string
+          format: uuid
+        scope_type:
+          $ref: '#/components/schemas/CarrierApprovalScope'
+        status:
+          $ref: '#/components/schemas/CarrierApprovalStatus'
+        carrier:
+          type:
+          - string
+          - 'null'
+        submitted_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        approved_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        rejected_reason:
+          type:
+          - string
+          - 'null'
+      required:
+      - approval_id
+      - scope_type
+      - status
+      - carrier
+      - submitted_at
+      - approved_at
+      - rejected_reason
+      example:
+        approval_id: 33333333-3333-4333-8333-333333333333
+        scope_type: hub
+        status: SUBMITTED
+        carrier: null
+        submitted_at: '2026-08-10T12:00:00Z'
+        approved_at: null
+        rejected_reason: null
+    AgentWebsiteContact:
+      type: object
+      additionalProperties: false
+      properties:
+        url:
+          $ref: '#/components/schemas/HttpUrl'
+        label:
+          type: string
+          minLength: 1
+          maxLength: 25
+      required:
+      - url
+      - label
+    rcs-registration_ErrorResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+      additionalProperties: true
+      example:
+        detail: The requested RCS resource was not found.
+    AgentState:
+      type: string
+      enum:
+      - CREATED
+      - SUBMITTED
+      - VERIFYING
+      - VERIFIED
+      - LAUNCHING
+      - LAUNCHED
+      - LIVE
+      - REJECTED
+      - FAILED
+    HttpUrl:
+      type: string
+      format: uri
+      minLength: 1
+      pattern: ^[Hh][Tt][Tt][Pp][Ss]?://
+    BillingCategory:
+      type: string
+      enum:
+      - NON_CONVERSATIONAL
+      - CONVERSATIONAL
+    AgentPhoneContact:
+      type: object
+      additionalProperties: false
+      properties:
+        number:
+          type: string
+          maxLength: 16
+          pattern: ^\+[1-9][0-9]{1,14}$
+        label:
+          type: string
+          minLength: 1
+          maxLength: 25
+      required:
+      - number
+      - label
+    AgentUseCase:
+      type: string
+      enum:
+      - MULTI_USE
+      - PROMOTIONAL
+      - TRANSACTIONAL
+      - OTP
+    AgentUpdateRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 40
+        use_case:
+          $ref: '#/components/schemas/AgentUseCase'
+        profile_id:
+          type: string
+          maxLength: 36
+        hosting_region:
+          type: string
+          maxLength: 32
+        configuration:
+          $ref: '#/components/schemas/AgentConfiguration'
+      example:
+        display_name: Acme Delivery Updates
     AgentResponse:
       type: object
       additionalProperties: false
@@ -535,141 +868,36 @@ components:
           campaigns: false
           vendor_webhooks: false
           invite_test_devices: false
-    CarrierApprovalResponse:
+    ValidationErrorResponse:
       type: object
-      additionalProperties: false
       properties:
-        approval_id:
-          type: string
-          format: uuid
-        scope_type:
-          $ref: '#/components/schemas/CarrierApprovalScope'
-        status:
-          $ref: '#/components/schemas/CarrierApprovalStatus'
-        carrier:
-          type:
-          - string
-          - 'null'
-        submitted_at:
-          type:
-          - string
-          - 'null'
-          format: date-time
-        approved_at:
-          type:
-          - string
-          - 'null'
-          format: date-time
-        rejected_reason:
-          type:
-          - string
-          - 'null'
-      required:
-      - approval_id
-      - scope_type
-      - status
-      - carrier
-      - submitted_at
-      - approved_at
-      - rejected_reason
+        detail:
+          type: array
+          items:
+            type: object
+            properties:
+              loc:
+                type: array
+                items:
+                  oneOf:
+                  - type: string
+                  - type: integer
+              msg:
+                type: string
+              type:
+                type: string
+            required:
+            - loc
+            - msg
+            - type
+      additionalProperties: true
       example:
-        approval_id: 33333333-3333-4333-8333-333333333333
-        scope_type: hub
-        status: SUBMITTED
-        carrier: null
-        submitted_at: '2026-08-10T12:00:00Z'
-        approved_at: null
-        rejected_reason: null
-    CapabilitiesResponse:
-      type: object
-      additionalProperties: false
-      properties:
-        brand_entity:
-          type: boolean
-        brand_verification:
-          type: boolean
-        submission_sections:
-          type: boolean
-        distinct_launch_phase:
-          type: boolean
-        per_carrier_approval:
-          type: boolean
-        templates:
-          type: boolean
-        campaigns:
-          type: boolean
-        vendor_webhooks:
-          type: boolean
-        invite_test_devices:
-          type: boolean
-      required:
-      - brand_entity
-      - brand_verification
-      - submission_sections
-      - distinct_launch_phase
-      - per_carrier_approval
-      - templates
-      - campaigns
-      - vendor_webhooks
-      - invite_test_devices
-    BillingCategory:
-      type: string
-      enum:
-      - NON_CONVERSATIONAL
-      - CONVERSATIONAL
-    CarrierApprovalStatus:
-      type: string
-      enum:
-      - PENDING
-      - SUBMITTED
-      - APPROVED
-      - REJECTED
-    AgentCreateRequest:
-      type: object
-      additionalProperties: false
-      properties:
-        brand_id:
-          type: string
-          format: uuid
-        display_name:
-          type: string
-          minLength: 1
-          maxLength: 40
-        use_case:
-          $ref: '#/components/schemas/AgentUseCase'
-        profile_id:
-          type:
-          - string
-          - 'null'
-          maxLength: 36
-          description: A Messaging Profile owned by the authenticated organization. When omitted, the agent inherits the brand profile.
-        hosting_region:
-          type:
-          - string
-          - 'null'
-          maxLength: 32
-        configuration:
-          $ref: '#/components/schemas/AgentConfiguration'
-      required:
-      - brand_id
-      - display_name
-      - use_case
-      - configuration
-      example:
-        brand_id: 11111111-1111-4111-8111-111111111111
-        display_name: Acme Order Updates
-        use_case: TRANSACTIONAL
-        configuration:
-          basics:
-            description: Order confirmations and delivery updates
-            logo_url: https://www.example.com/rcs/logo.png
-            hero_url: https://www.example.com/rcs/hero.png
-            brand_color: '#123456'
-            privacy_policy_url: https://www.example.com/privacy
-            terms_and_conditions_url: https://www.example.com/terms
-            email:
-              address: support@example.com
-              label: Support
+        detail:
+        - loc:
+          - body
+          - display_name
+          msg: Field required
+          type: missing
     AgentEmailContact:
       type: object
       additionalProperties: false
@@ -687,52 +915,27 @@ components:
       required:
       - address
       - label
-    AgentWebsiteContact:
+    AgentTestingConfiguration:
       type: object
       additionalProperties: false
       properties:
-        url:
+        test_url:
           $ref: '#/components/schemas/HttpUrl'
-        label:
-          type: string
+          description: A publicly accessible test video or evidence URL.
+        message_id:
+          type:
+          - string
+          - 'null'
           minLength: 1
-          maxLength: 25
-      required:
-      - url
-      - label
-    AgentOptInMethod:
-      type: object
-      propertyNames:
-        enum:
-        - method_type
-        - description
-      properties:
-        method_type:
-          $ref: '#/components/schemas/AgentOptInMethodType'
-        description:
+          maxLength: 255
+        additional_information:
           type:
           - string
           - 'null'
           minLength: 1
           maxLength: 2000
-          description: Required when method_type is `OTHER`.
       required:
-      - method_type
-      allOf:
-      - if:
-          properties:
-            method_type:
-              const: OTHER
-          required:
-          - method_type
-        then:
-          properties:
-            description:
-              type: string
-              minLength: 1
-              maxLength: 2000
-          required:
-          - description
+      - test_url
     AgentBasicsConfiguration:
       type: object
       additionalProperties: false
@@ -788,76 +991,16 @@ components:
       - brand_color
       - privacy_policy_url
       - terms_and_conditions_url
-    AgentState:
+    AgentInteractionType:
       type: string
       enum:
-      - CREATED
-      - SUBMITTED
-      - VERIFYING
-      - VERIFIED
-      - LAUNCHING
-      - LAUNCHED
-      - LIVE
-      - REJECTED
-      - FAILED
-    TestDeviceInviteStatus:
-      type: string
-      enum:
-      - PENDING
-      - ACCEPTED
-      - DECLINED
-    rcs-registration_ErrorResponse:
-      type: object
-      properties:
-        detail:
-          type: string
-        errors:
-          type: array
-          items:
-            type: object
-            additionalProperties: true
-      additionalProperties: true
-      example:
-        detail: The requested RCS resource was not found.
-    AgentInteraction:
-      type: object
-      propertyNames:
-        enum:
-        - interaction_type
-        - description
-      properties:
-        interaction_type:
-          $ref: '#/components/schemas/AgentInteractionType'
-        description:
-          type:
-          - string
-          - 'null'
-          minLength: 1
-          maxLength: 2000
-          description: Required when interaction_type is `OTHER`.
-      required:
-      - interaction_type
-      allOf:
-      - if:
-          properties:
-            interaction_type:
-              const: OTHER
-          required:
-          - interaction_type
-        then:
-          properties:
-            description:
-              type: string
-              minLength: 1
-              maxLength: 2000
-          required:
-          - description
-    AgentSubmissionStatus:
-      type: string
-      enum:
-      - SUBMITTED
-      - APPROVED
-      - REJECTED
+      - TRANSACTIONAL_UPDATES
+      - CUSTOMER_SUPPORT
+      - LOYALTY_OR_REWARD
+      - MARKETING_OR_PROMOTIONAL
+      - ACCOUNT_ALERTS
+      - TWO_WAY_CONVERSATION
+      - OTHER
     AgentConsentConfiguration:
       type: object
       propertyNames:
@@ -981,193 +1124,17 @@ components:
           - properties:
               double_opt_in_message:
                 type: 'null'
-    TestDeviceCreateRequest:
-      type: object
-      additionalProperties: false
-      properties:
-        phone_number:
-          type: string
-          maxLength: 16
-          pattern: ^\+[1-9][0-9]{1,14}$
-      required:
-      - phone_number
-      example:
-        phone_number: '+13125550123'
-    ValidationErrorResponse:
-      type: object
-      properties:
-        detail:
-          type: array
-          items:
-            type: object
-            properties:
-              loc:
-                type: array
-                items:
-                  oneOf:
-                  - type: string
-                  - type: integer
-              msg:
-                type: string
-              type:
-                type: string
-            required:
-            - loc
-            - msg
-            - type
-      additionalProperties: true
-      example:
-        detail:
-        - loc:
-          - body
-          - display_name
-          msg: Field required
-          type: missing
-    AgentPhoneContact:
-      type: object
-      additionalProperties: false
-      properties:
-        number:
-          type: string
-          maxLength: 16
-          pattern: ^\+[1-9][0-9]{1,14}$
-        label:
-          type: string
-          minLength: 1
-          maxLength: 25
-      required:
-      - number
-      - label
-    AgentLaunchRequest:
-      type: object
-      additionalProperties: false
-      properties:
-        campaign:
-          $ref: '#/components/schemas/AgentLaunchCampaignConfiguration'
-        testing:
-          $ref: '#/components/schemas/AgentTestingConfiguration'
-      required:
-      - campaign
-      - testing
-      example:
-        campaign:
-          company_overview: Acme provides online retail services.
-          agent_overview: The agent sends order confirmations and delivery updates.
-          interactions:
-          - interaction_type: TRANSACTIONAL_UPDATES
-          message_examples:
-          - Your Acme order is confirmed.
-          - Your Acme order has shipped.
-          - Your Acme order was delivered.
-          consent_settings:
-            opt_in_methods:
-            - method_type: WEBSITE
-            call_to_action: Select RCS updates during checkout.
-            call_to_action_url: https://www.example.com/checkout
-            call_to_action_media_url: https://www.example.com/rcs/opt-in.png
-            double_opt_in: false
-            opt_in_message: You are subscribed to Acme order updates.
-            help_response: Contact support@example.com for help.
-            opt_out_response: You will receive no more messages.
-        testing:
-          test_url: https://www.example.com/rcs/test-video
-          additional_information: Demonstrates START, STOP, HELP, and an order-status interaction.
-    CarrierApprovalScope:
-      type: string
-      enum:
-      - carrier
-      - hub
-      - bot
-    AgentOptInMethodType:
-      type: string
-      enum:
-      - SMS
-      - WEBSITE
-      - MOBILE_APP
-      - QR_CODE
-      - SALE_POINT
-      - OTHER
-    AgentInteractionType:
-      type: string
-      enum:
-      - TRANSACTIONAL_UPDATES
-      - CUSTOMER_SUPPORT
-      - LOYALTY_OR_REWARD
-      - MARKETING_OR_PROMOTIONAL
-      - ACCOUNT_ALERTS
-      - TWO_WAY_CONVERSATION
-      - OTHER
-    AgentTestingConfiguration:
-      type: object
-      additionalProperties: false
-      properties:
-        test_url:
-          $ref: '#/components/schemas/HttpUrl'
-          description: A publicly accessible test video or evidence URL.
-        message_id:
-          type:
-          - string
-          - 'null'
-          minLength: 1
-          maxLength: 255
-        additional_information:
-          type:
-          - string
-          - 'null'
-          minLength: 1
-          maxLength: 2000
-      required:
-      - test_url
-    HttpUrl:
-      type: string
-      format: uri
-      minLength: 1
-      pattern: ^[Hh][Tt][Tt][Pp][Ss]?://
-    AgentLaunchCampaignConfiguration:
-      allOf:
-      - $ref: '#/components/schemas/AgentCampaignConfiguration'
-      - type: object
-        properties:
-          agent_overview:
-            type: string
-            minLength: 1
-            maxLength: 2000
-          interactions:
-            type: array
-            minItems: 1
-            items:
-              $ref: '#/components/schemas/AgentInteraction'
-          message_examples:
-            type: array
-            minItems: 3
-            items:
-              type: string
-              minLength: 1
-              maxLength: 2000
-          consent_settings:
-            $ref: '#/components/schemas/AgentConsentConfiguration'
-        required:
-        - agent_overview
-        - interactions
-        - message_examples
-        - consent_settings
-    AgentConfiguration:
-      type: object
-      additionalProperties: false
-      properties:
-        basics:
-          $ref: '#/components/schemas/AgentBasicsConfiguration'
-        campaign:
-          oneOf:
-          - $ref: '#/components/schemas/AgentCampaignConfiguration'
-          - type: 'null'
-        testing:
-          oneOf:
-          - $ref: '#/components/schemas/AgentTestingConfiguration'
-          - type: 'null'
-      required:
-      - basics
   parameters:
+    rcs-registration_IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: A caller-generated key containing letters, numbers, underscores, or hyphens. Reuse the same key and request body when retrying the same logical agent creation.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+        pattern: ^[A-Za-z0-9_-]+$
     TestDeviceId:
       name: test_device_id
       in: path
@@ -1184,16 +1151,49 @@ components:
       schema:
         type: string
         format: uuid
-    rcs-registration_IdempotencyKey:
-      name: Idempotency-Key
-      in: header
-      required: true
-      description: A caller-generated key containing letters, numbers, underscores, or hyphens. Reuse the same key and request body when retrying the same logical agent creation.
-      schema:
-        type: string
-        minLength: 1
-        maxLength: 255
-        pattern: ^[A-Za-z0-9_-]+$
+  responses:
+    DependencyUnavailable:
+      description: A registration dependency is temporarily unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/rcs-registration_ErrorResponse'
+    rcs-registration_BadRequest:
+      description: The request or idempotency header is malformed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/rcs-registration_ErrorResponse'
+    rcs-registration_Conflict:
+      description: The operation is not allowed in the current lifecycle state or the idempotency key was used for a different request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/rcs-registration_ErrorResponse'
+    ValidationError:
+      description: The request body or parameters failed validation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+    ProviderError:
+      description: The RCS provider rejected or could not complete the request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/rcs-registration_ErrorResponse'
+    rcs-registration_Unauthorized:
+      description: The request is not authenticated.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/rcs-registration_ErrorResponse'
+    rcs-registration_NotFound:
+      description: The resource does not exist, is not owned by the organization, or the provider does not support the requested capability.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/rcs-registration_ErrorResponse'
   securitySchemes:
     BearerAuth:
       type: http

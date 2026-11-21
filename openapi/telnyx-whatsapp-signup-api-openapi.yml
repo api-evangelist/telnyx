@@ -174,44 +174,30 @@ paths:
       description: Retrieve the current state and status of a WhatsApp Embedded Signup session.
 components:
   schemas:
-    WhatsappHostedSignup:
-      type: object
+    messaging_Error:
+      required:
+      - code
+      - title
       properties:
-        id:
+        code:
           type: string
-          description: Hosted signup ID
-          example: 0192345a-7b8c-7d9e-0f12-3456789abcde
-        record_type:
+          x-format: integer
+        title:
           type: string
-          enum:
-          - whatsapp_jwt
-          example: whatsapp_jwt
-        app_id:
+        detail:
           type: string
-          description: Meta App ID the hosted signup onboards customers into
-          example: '123456789012345'
-        solution_id:
-          type: string
-          description: Meta Partner Solution ID linked to the app. Returned only when creating a hosted signup.
-          example: '987654321098765'
-        created_at:
-          type: string
-          format: date-time
-          example: '2026-07-08T12:00:00Z'
-        expires_at:
-          type: string
-          format: date-time
-          description: When the onboarding URL stops working
-          example: '2026-07-09T12:00:00Z'
-        jwt:
-          type: string
-          description: Signed token embedded in `url`
-          example: eyJhbGciOiJSUzI1NiIs...
-        url:
-          type: string
-          format: uri
-          description: Hosted onboarding URL to share with the end customer
-          example: https://acct.fyi?token=eyJhbGciOiJSUzI1NiIs...
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
     WhatsappSignupSession:
       type: object
       properties:
@@ -261,28 +247,44 @@ components:
           items:
             type: string
           description: Errors recorded during provisioning
-    WhatsappHostedSignupCreateRequest:
+    WhatsappHostedSignup:
       type: object
-      required:
-      - app_id
       properties:
+        id:
+          type: string
+          description: Hosted signup ID
+          example: 0192345a-7b8c-7d9e-0f12-3456789abcde
+        record_type:
+          type: string
+          enum:
+          - whatsapp_jwt
+          example: whatsapp_jwt
         app_id:
           type: string
-          description: Meta App ID linked to the Telnyx account or its manager account. The app must be enabled.
+          description: Meta App ID the hosted signup onboards customers into
           example: '123456789012345'
+        solution_id:
+          type: string
+          description: Meta Partner Solution ID linked to the app. Returned only when creating a hosted signup.
+          example: '987654321098765'
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-07-08T12:00:00Z'
         expires_at:
           type: string
           format: date-time
-          description: When the onboarding URL expires, in RFC 3339 format. Must be in the future and at most 3 days ahead. Defaults to 24 hours after creation.
+          description: When the onboarding URL stops working
           example: '2026-07-09T12:00:00Z'
-        signup_type:
+        jwt:
           type: string
-          enum:
-          - standard
-          - coexistence
-          default: standard
-          description: Onboarding flow the hosted page launches. Use `coexistence` for a number that remains active in the WhatsApp Business app.
-          example: coexistence
+          description: Signed token embedded in `url`
+          example: eyJhbGciOiJSUzI1NiIs...
+        url:
+          type: string
+          format: uri
+          description: Hosted onboarding URL to share with the end customer
+          example: https://acct.fyi?token=eyJhbGciOiJSUzI1NiIs...
     messaging_Errors:
       properties:
         errors:
@@ -309,45 +311,29 @@ components:
         page_size:
           type: integer
           example: 25
-    messaging_Error:
+    WhatsappHostedSignupCreateRequest:
+      type: object
       required:
-      - code
-      - title
+      - app_id
       properties:
-        code:
+        app_id:
           type: string
-          x-format: integer
-        title:
+          description: Meta App ID linked to the Telnyx account or its manager account. The app must be enabled.
+          example: '123456789012345'
+        expires_at:
           type: string
-        detail:
+          format: date-time
+          description: When the onboarding URL expires, in RFC 3339 format. Must be in the future and at most 3 days ahead. Defaults to 24 hours after creation.
+          example: '2026-07-09T12:00:00Z'
+        signup_type:
           type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-              format: json-pointer
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
+          enum:
+          - standard
+          - coexistence
+          default: standard
+          description: Onboarding flow the hosted page launches. Use `coexistence` for a number that remains active in the WhatsApp Business app.
+          example: coexistence
   responses:
-    management_messaging_GenericErrorResponse:
-      description: Unexpected error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/messaging_Errors'
-          example:
-            errors:
-            - code: string
-              title: string
-              detail: string
-              source:
-                pointer: /data/attributes/phone_number
-                parameter: string
     WhatsappSignupSessionResponse:
       description: Successful response with a WhatsApp signup session
       content:
@@ -415,6 +401,20 @@ components:
               page_size: 20
               total_pages: 1
               total_results: 1
+    management_messaging_GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors'
+          example:
+            errors:
+            - code: string
+              title: string
+              detail: string
+              source:
+                pointer: /data/attributes/phone_number
+                parameter: string
     WhatsappSignupSessionListResponse:
       description: Successful response with a list of WhatsApp signup sessions
       content:
@@ -454,13 +454,6 @@ components:
       schema:
         type: string
       description: Hosted signup ID returned when the hosted signup was created
-    WhatsappSignupSessionId:
-      name: id
-      in: path
-      required: true
-      schema:
-        type: string
-      description: Signup session ID
     PageConsolidated:
       name: page
       in: query
@@ -481,6 +474,13 @@ components:
             maximum: 250
             default: 20
             description: The size of the page
+    WhatsappSignupSessionId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Signup session ID
   securitySchemes:
     BearerAuth:
       type: http

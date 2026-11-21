@@ -3843,6 +3843,58 @@ paths:
                   detail: The test framework service is temporarily unavailable.
 components:
   schemas:
+    TestMetricGenerationProgress:
+      type: object
+      properties:
+        agent_id:
+          type: integer
+        status:
+          type: string
+          enum:
+          - queued
+          - processing
+          - completed
+          - failed
+        current_step:
+          type: string
+        metrics:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              description:
+                type: string
+              agent:
+                type: integer
+              eval_type:
+                type: string
+              scenarios:
+                type: array
+                items:
+                  type: integer
+        error:
+          type:
+          - string
+          - 'null'
+      required:
+      - agent_id
+      - status
+      - current_step
+      - metrics
+      - error
+      example:
+        agent_id: 1259
+        status: completed
+        current_step: Completed
+        metrics:
+        - name: Greeting quality
+          description: Checks whether the assistant greets the caller.
+          agent: 1259
+          eval_type: continuous_qualitative
+          scenarios: []
+        error: null
     TestPersonality:
       type: object
       properties:
@@ -3941,53 +3993,325 @@ components:
         accent: Ukrainian
         interruption_level: high
         end_call_enabled: true
-    UpdateScheduledTestJobRequest:
+    CreateTestAgentRequest:
       type: object
       properties:
+        agent_name:
+          type: string
+          description: Name of the test agent.
+        assistant_id:
+          type: string
+          description: ID of the Telnyx AI assistant under test.
+        description:
+          type: string
+        contact_number:
+          type: string
+        language:
+          type: string
+          description: ISO language code the test agent converses in.
+        llm_model:
+          type: string
+        llm_system_prompt:
+          type: string
+        llm_temperature:
+          type: number
+        llm_max_tokens:
+          type: integer
+        sip_endpoint:
+          type: string
+        inbound:
+          type: boolean
+        outbound_auto_call:
+          type: boolean
+        auto_update_dropoff_nodes:
+          type: boolean
+        auto_update_topic_nodes:
+          type: boolean
+        auto_fetch_calls_enabled:
+          type: boolean
+        auto_sync_prompt_enabled:
+          type: boolean
+      required:
+      - agent_name
+      - assistant_id
+      example:
+        agent_name: Support Bot Under Test
+        assistant_id: e1a2b3c4-d5e6-f7a8-b9c0-d1e2f3a4b5c6
+        description: Evaluates the support assistant against generated callers.
+        language: en
+        llm_model: openai/gpt-oss-120b
+        llm_temperature: 0.7
+        llm_max_tokens: 512
+        inbound: false
+        sip_endpoint: ''
+        outbound_auto_call: false
+        auto_update_dropoff_nodes: false
+        auto_update_topic_nodes: false
+    TestRunResultSummary:
+      type: object
+      properties:
+        id:
+          type: integer
         name:
           type: string
+        agent:
+          type: integer
+        agent_name:
+          type: string
+        agent_inbound:
+          type: boolean
+        status:
+          type: string
+          description: 'Run batch status: running, completed, failed, pending, in_progress, evaluating, in_queue, timeout, cancelled, or scaling_up.'
+        success_rate:
+          type:
+          - number
+          - string
+          description: Share of runs judged successful.
+        run_as_text:
+          type: boolean
+          description: Whether the batch ran as text chat rather than voice calls.
+        is_cronjob:
+          type: boolean
+          description: Whether this batch was started by a scheduled job.
+        runs:
+          type:
+          - array
+          - 'null'
+          description: Run summaries in this batch. Retrieve the batch for detail keyed by run ID.
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              status:
+                type: string
+              scenario:
+                type: integer
+              scenario_name:
+                type: string
+              number:
+                type:
+                - string
+                - 'null'
+              inbound_number:
+                type:
+                - string
+                - 'null'
+        met_expected_outcome_count:
+          type:
+          - integer
+          - string
+        total_expected_outcome_count:
+          type:
+          - integer
+          - string
+        total_runs_count:
+          type:
+          - integer
+          - string
+        completed_runs_count:
+          type:
+          - integer
+          - string
+        success_runs_count:
+          type:
+          - integer
+          - string
+        failed_runs_count:
+          type:
+          - integer
+          - string
+        scenarios:
+          type:
+          - array
+          - 'null'
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+        run_type:
+          type:
+          - string
+          - 'null'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - name
+      - agent
+      - status
+      - created_at
+      - updated_at
+      example:
+        id: 10119
+        name: Refund escalation flow - run
+        agent: 1259
+        agent_name: Support Bot Under Test
+        agent_inbound: false
+        status: completed
+        success_rate: 0.8
+        run_as_text: false
+        is_cronjob: false
+        runs: null
+        met_expected_outcome_count: 4
+        total_expected_outcome_count: 5
+        total_runs_count: 5
+        completed_runs_count: 5
+        success_runs_count: 4
+        failed_runs_count: 1
+        scenarios:
+        - id: 9512
+          name: Refund escalation flow
+        run_type: scheduled
+        created_at: '2026-10-13T18:04:05.123456Z'
+        updated_at: '2026-10-13T18:34:05.123456Z'
+    ImproveScenariosRequest:
+      type: object
+      properties:
+        user_message:
+          type: string
+          description: What the assistant should improve about the selected scenarios.
+        scenarios:
+          type:
+          - array
+          - string
+          items: {}
+          description: Scenario IDs to improve, or the literal string 'all'.
+        agent_id:
+          type:
+          - integer
+          - 'null'
+        session_id:
+          type:
+          - integer
+          - 'null'
+        context:
+          type:
+          - array
+          - 'null'
+          items:
+            type: object
+            properties:
+              role:
+                type: string
+              content:
+                type: string
+              timestamp:
+                type: string
+        apply_changes:
+          type: boolean
+        updated_scenarios:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        num_scenarios:
+          type: integer
+        knowledge_base:
+          type: array
+          items:
+            type: integer
+        agent_resolution_response:
+          type: string
+        scenarios_needing_agent:
+          type: array
+          items:
+            type: integer
+        pending_tool_calls:
+          type:
+          - array
+          - 'null'
+          items:
+            type: object
+            additionalProperties: true
+      required:
+      - user_message
+      - scenarios
+      example:
+        user_message: Make the callers ask about damaged packaging too.
+        scenarios: all
+        agent_id: 1259
+        apply_changes: true
+    GenerateTestMetricsRequest:
+      type: object
+      properties:
+        agent_id:
+          type: integer
+          description: Test agent to suggest metrics for.
+        num_metrics:
+          type: integer
+          description: How many metrics to suggest.
         scenarios:
           type: array
           items:
             type: integer
-        tags:
-          type: array
-          items:
-            type: string
-        agent:
-          type:
-          - integer
-          - 'null'
-        timezone:
-          type: string
-        personalities:
-          type: array
-          items:
-            type: integer
-        execution_mode:
-          type: string
-          description: Execution mode for the test runs, such as voice, text, or sip.
-        frequency:
-          type: integer
-        run_as_text:
-          type: boolean
-        notify_on:
-          type: string
-          enum:
-          - never
-          - success
-          - failure
-          - both
-        is_active:
-          type: boolean
-        crontab_expression:
-          type: string
-          description: Cron expression controlling when the job runs.
+          description: Scenario IDs to base the suggestions on.
+      required:
+      - agent_id
+      - num_metrics
       example:
-        name: Nightly regression - updated
-        notify_on: both
-        is_active: true
-        crontab_expression: 0 4 * * *
+        agent_id: 1259
+        num_metrics: 5
+        scenarios:
+        - 9512
+    AiTestsErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+                description: Telnyx error code.
+              title:
+                type: string
+              detail:
+                type: string
+              source:
+                type: object
+                properties:
+                  pointer:
+                    type: string
+            required:
+            - code
+            - title
+      required:
+      - errors
+    RunScenariosResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Initial status of the run batch.
+        id:
+          type: integer
+          description: ID of the created test-run batch whose results can be polled.
+      required:
+      - id
+      - status
+      example:
+        status: in_queue
+        id: 10119
+    ScenarioGenerationResponse:
+      type: object
+      properties:
+        progress_id:
+          type: string
+          description: Identifier to poll generation progress with.
+      required:
+      - progress_id
+      example:
+        progress_id: b7e4c1a2-3d4f-5a6b-8c9d-0e1f2a3b4c5d
     UpdateAiTestMetricRequest:
       type: object
       properties:
@@ -4030,76 +4354,69 @@ components:
         name: Escalates on refund denial
         prompt: Score the assistant's escalation behaviour between 0.0 and 1.0, considering tone.
         audio_enabled: true
-    ScenarioGenerationProgress:
+    ImproveScenariosProgress:
       type: object
       properties:
-        total_scenarios:
-          type: integer
-        completed_scenarios:
-          type: integer
-        failed_scenarios:
-          type: integer
-        scenarios_list:
-          type: array
-          items:
-            type: object
-            additionalProperties: true
-      example:
-        total_scenarios: 5
-        completed_scenarios: 5
-        failed_scenarios: 0
-        scenarios_list: []
-    TestMetricGenerationProgress:
-      type: object
-      properties:
-        agent_id:
-          type: integer
+        progress_id:
+          type: string
+        session_id:
+          type:
+          - integer
+          - 'null'
+        mode:
+          type: string
         status:
           type: string
-          enum:
-          - queued
-          - processing
-          - completed
-          - failed
-        current_step:
-          type: string
-        metrics:
-          type: array
-          items:
-            type: object
-            properties:
-              name:
-                type: string
-              description:
-                type: string
-              agent:
-                type: integer
-              eval_type:
-                type: string
-              scenarios:
-                type: array
-                items:
-                  type: integer
+        result:
+          type:
+          - object
+          - 'null'
+          properties:
+            success:
+              type: boolean
+            session_id:
+              type: integer
+            message:
+              type: string
+            cancelled:
+              type: boolean
+            needs_clarification:
+              type: boolean
+            clarification_questions:
+              type: array
+              items:
+                type: object
+                properties:
+                  question:
+                    type: string
+            conversation_history:
+              type: array
+              items:
+                type: object
+                properties:
+                  role:
+                    type: string
+                  content:
+                    type: string
+                  timestamp:
+                    type: string
+            updated_scenarios:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
         error:
           type:
           - string
           - 'null'
-      required:
-      - agent_id
-      - status
-      - current_step
-      - metrics
-      - error
       example:
-        agent_id: 1259
+        progress_id: c8f5d2b3-4e5f-6a7b-9c0d-1f2a3b4c5d6e
+        session_id: 417
+        mode: improve
         status: completed
-        current_step: Completed
-        metrics:
-        - name: Greeting quality
-          description: Checks whether the assistant greets the caller.
-          agent: 1259
-          eval_type: continuous_qualitative
-          scenarios: []
+        result:
+          success: true
+          message: Applied changes to 2 scenarios.
         error: null
     TestRunResult:
       type: object
@@ -4246,61 +4563,473 @@ components:
         run_type: scheduled
         created_at: '2026-10-13T18:04:05.123456Z'
         updated_at: '2026-10-13T18:34:05.123456Z'
-    TestAgentListResponse:
+    BulkCreateAiTestMetricRequest:
+      type: array
+      items:
+        $ref: '#/components/schemas/CreateAiTestMetricRequest'
+      example:
+      - name: Greets within 5 seconds
+        description: Returns whether the assistant greeted the caller within five seconds.
+        type: llm_judge
+        eval_type: continuous_qualitative
+        prompt: Score whether the greeting was timely and natural.
+    ScenarioGenerationProgress:
       type: object
       properties:
-        count:
+        total_scenarios:
           type: integer
-        next:
-          type:
-          - string
-          - 'null'
-          format: uri
-          description: Link to the next page of results, or null.
-        previous:
-          type:
-          - string
-          - 'null'
-          format: uri
-          description: Link to the previous page of results, or null.
-        results:
+        completed_scenarios:
+          type: integer
+        failed_scenarios:
+          type: integer
+        scenarios_list:
           type: array
           items:
-            $ref: '#/components/schemas/TestAgent'
-      required:
-      - count
-      - next
-      - previous
-      - results
+            type: object
+            additionalProperties: true
       example:
-        count: 1
-        next: null
-        previous: null
-        results:
-        - id: 1259
-          agent_name: Support Bot Under Test
-          contact_number: '+13125550123'
-          inbound: false
-          description: Evaluates the support assistant against generated callers.
-          language: en
-          assistant_id: e1a2b3c4-d5e6-f7a8-b9c0-d1e2f3a4b5c6
-          chat_assistant_id: ''
-          llm_system_prompt: You are calling a customer support line.
-          llm_model: openai/gpt-oss-120b
-          llm_temperature: 0.7
-          llm_max_tokens: 512
-          outbound_auto_call: false
-          sip_endpoint: ''
-          sip_auth: null
-          knowledge_base_files: []
-          enabled_personalities:
-          - 4567
-          auto_update_dropoff_nodes: false
-          auto_update_topic_nodes: false
-          hallucination_metric_kb_files: []
-          outbound_numbers: []
-          created_at: '2026-10-13T18:04:05.123456Z'
-          updated_at: '2026-10-13T18:04:05.123456Z'
+        total_scenarios: 5
+        completed_scenarios: 5
+        failed_scenarios: 0
+        scenarios_list: []
+    RunScenariosRequest:
+      type: object
+      properties:
+        agent_id:
+          type: integer
+        assistant_id:
+          type: string
+        scenarios:
+          type:
+          - array
+          - string
+          items: {}
+          description: Scenario IDs to run, or the literal string 'all'.
+        tags:
+          type: array
+          items:
+            type: string
+        frequency:
+          type: integer
+        name:
+          type: string
+        outbound_phone_number:
+          type: string
+        personality_ids:
+          type: array
+          items:
+            type: integer
+        test_profile_ids:
+          type: array
+          items:
+            type: integer
+        mode:
+          type: string
+          enum:
+          - same_number
+          - different_numbers
+        agent_number:
+          type: string
+        concurrency_limit:
+          type: integer
+          description: Maximum number of concurrent simulated calls.
+      example:
+        agent_id: 1259
+        scenarios:
+        - 9512
+        tags:
+        - regression
+        mode: same_number
+        concurrency_limit: 3
+    CreateEvaluatorScenarioRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        agent:
+          type:
+          - integer
+          - 'null'
+        personality:
+          type: integer
+          description: ID of the personality the caller simulates.
+        instructions:
+          type: string
+        expected_outcome_prompt:
+          type: string
+        metrics:
+          type: array
+          items:
+            type: integer
+        tags:
+          type: array
+          items:
+            type: string
+        first_message:
+          type: string
+        test_profile:
+          type: integer
+        folder_path:
+          type:
+          - string
+          - 'null'
+      required:
+      - name
+      - personality
+      example:
+        name: Refund escalation flow
+        agent: 1259
+        personality: 4643
+        instructions: Call the support line and demand a refund for a damaged product.
+        expected_outcome_prompt: The assistant explains the refund policy and offers escalation.
+        metrics:
+        - 266881
+        tags:
+        - support
+        first_message: Hi, I want a refund.
+    ScheduledTestJob:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        agent:
+          type: integer
+          description: ID of the test agent the job belongs to.
+        crontab_expression:
+          type: string
+          description: Cron expression controlling when the job runs, in the job's timezone.
+        timezone:
+          type: string
+        scenario_ids:
+          type: array
+          items:
+            type: integer
+          description: Scenario IDs the job executes.
+        scenarios_data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              agent:
+                type: integer
+              name:
+                type: string
+              personality:
+                type:
+                - integer
+                - 'null'
+              personality_name:
+                type: string
+        personality:
+          type:
+          - integer
+          - 'null'
+        personalities:
+          type: array
+          items:
+            type: integer
+        tags:
+          type: array
+          items:
+            type: string
+        frequency:
+          type: integer
+        run_as_text:
+          type: boolean
+          description: Whether the job runs scenarios as text chat rather than voice calls.
+        execution_mode:
+          type: string
+          description: Execution mode for the test runs, such as voice, text, or sip.
+        notify_on:
+          type: string
+          enum:
+          - never
+          - success
+          - failure
+          - both
+          description: When the job sends a notification.
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - name
+      - agent
+      - crontab_expression
+      - is_active
+      - created_at
+      - updated_at
+      example:
+        id: 1188
+        name: Nightly regression
+        agent: 1259
+        crontab_expression: 0 3 * * *
+        timezone: America/Chicago
+        scenario_ids:
+        - 9512
+        scenarios_data:
+        - id: 9512
+          agent: 1259
+          name: Refund escalation flow
+          personality: 4643
+          personality_name: Interruptive (High)
+        personality: null
+        personalities:
+        - 4643
+        tags:
+        - regression
+        frequency: 1
+        run_as_text: false
+        execution_mode: voice
+        notify_on: failure
+        is_active: true
+        created_at: '2026-10-13T18:04:05.123456Z'
+        updated_at: '2026-10-13T18:04:05.123456Z'
+    UpdateTestAgentRequest:
+      type: object
+      properties:
+        agent_name:
+          type: string
+          description: Name of the test agent.
+        assistant_id:
+          type: string
+          description: ID of the Telnyx AI assistant under test.
+        description:
+          type: string
+        contact_number:
+          type: string
+        language:
+          type: string
+          description: ISO language code the test agent converses in.
+        llm_model:
+          type: string
+        llm_system_prompt:
+          type: string
+        llm_temperature:
+          type: number
+        llm_max_tokens:
+          type: integer
+        sip_endpoint:
+          type: string
+        inbound:
+          type: boolean
+        outbound_auto_call:
+          type: boolean
+        auto_update_dropoff_nodes:
+          type: boolean
+        auto_update_topic_nodes:
+          type: boolean
+        auto_fetch_calls_enabled:
+          type: boolean
+        auto_sync_prompt_enabled:
+          type: boolean
+      example:
+        agent_name: Support Bot Under Test - renamed
+        llm_temperature: 0.5
+        llm_max_tokens: 256
+    EvaluatorScenario:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        personality:
+          type:
+          - integer
+          - 'null'
+          description: ID of the test personality the caller simulates.
+        personality_name:
+          type: string
+        phone_number:
+          type: string
+          description: Outbound phone number used to place the simulated call.
+        expected_outcome_prompt:
+          type: string
+          description: What a successful conversation looks like; scored by the expected-outcome metric.
+        instructions:
+          type: string
+          description: What the simulated caller should do during the conversation.
+        scenario_language:
+          type:
+          - string
+          - 'null'
+        scenario_type:
+          type: string
+          description: 'Type of scenario: workflow, red_teaming_voice, or red_teaming_text.'
+        tags:
+          type: array
+          items:
+            type: string
+        agent:
+          type:
+          - integer
+          - 'null'
+          description: ID of the test agent the scenario runs against.
+        inbound_phone_number:
+          type:
+          - integer
+          - 'null'
+        inbound_phone_number_data:
+          type:
+          - string
+          - 'null'
+        metrics:
+          type: array
+          items:
+            type: integer
+          description: Metric IDs applied to the scenario.
+        metric_names:
+          type: array
+          items:
+            type: string
+        first_message:
+          type: string
+          description: First message the simulated caller speaks or sends.
+        tool_ids:
+          type: array
+          items:
+            type: string
+        test_profile:
+          type:
+          - integer
+          - 'null'
+        test_profile_data:
+          type:
+          - object
+          - 'null'
+          properties:
+            id:
+              type: integer
+            project:
+              type:
+              - integer
+              - 'null'
+            agent:
+              type:
+              - integer
+              - 'null'
+            name:
+              type: string
+            information:
+              type:
+              - object
+              - 'null'
+              additionalProperties:
+                type: string
+        dynamic_variable_values:
+          type:
+          - object
+          - 'null'
+          additionalProperties:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        last_updated_by:
+          type:
+          - integer
+          - 'null'
+        folder_path:
+          type:
+          - string
+          - 'null'
+      required:
+      - id
+      - name
+      - agent
+      - created_at
+      - updated_at
+      example:
+        id: 9512
+        name: Refund escalation flow
+        personality: 4643
+        personality_name: Interruptive (High)
+        phone_number: '+13125550188'
+        expected_outcome_prompt: The assistant explains the refund policy and offers escalation.
+        instructions: Call the support line and demand a refund for a damaged product.
+        scenario_language: en
+        scenario_type: workflow
+        tags:
+        - support
+        - regression
+        agent: 1259
+        inbound_phone_number: null
+        inbound_phone_number_data: null
+        metrics:
+        - 266881
+        - 266882
+        metric_names:
+        - Greeting quality
+        - Escalation quality
+        first_message: Hi, I want a refund.
+        tool_ids: []
+        test_profile: null
+        test_profile_data: null
+        dynamic_variable_values: null
+        created_at: '2026-10-13T18:04:05.123456Z'
+        updated_at: '2026-10-13T18:04:05.123456Z'
+        last_updated_by: 1
+        folder_path: null
+    UpdateScheduledTestJobRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        scenarios:
+          type: array
+          items:
+            type: integer
+        tags:
+          type: array
+          items:
+            type: string
+        agent:
+          type:
+          - integer
+          - 'null'
+        timezone:
+          type: string
+        personalities:
+          type: array
+          items:
+            type: integer
+        execution_mode:
+          type: string
+          description: Execution mode for the test runs, such as voice, text, or sip.
+        frequency:
+          type: integer
+        run_as_text:
+          type: boolean
+        notify_on:
+          type: string
+          enum:
+          - never
+          - success
+          - failure
+          - both
+        is_active:
+          type: boolean
+        crontab_expression:
+          type: string
+          description: Cron expression controlling when the job runs.
+      example:
+        name: Nightly regression - updated
+        notify_on: both
+        is_active: true
+        crontab_expression: 0 4 * * *
     TestAgent:
       type: object
       properties:
@@ -4405,73 +5134,171 @@ components:
         outbound_numbers: []
         created_at: '2026-10-13T18:04:05.123456Z'
         updated_at: '2026-10-13T18:04:05.123456Z'
-    ImproveScenariosRequest:
+    TestRunResultListResponse:
       type: object
       properties:
-        user_message:
-          type: string
-          description: What the assistant should improve about the selected scenarios.
-        scenarios:
+        count:
+          type: integer
+        next:
           type:
-          - array
           - string
-          items: {}
-          description: Scenario IDs to improve, or the literal string 'all'.
-        agent_id:
-          type:
-          - integer
           - 'null'
+          format: uri
+        previous:
+          type:
+          - string
+          - 'null'
+          format: uri
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestRunResultSummary'
+      required:
+      - next
+      - previous
+      - results
+      example:
+        count: 1
+        next: null
+        previous: null
+        results:
+        - id: 10119
+          name: Refund escalation flow - run
+          agent: 1259
+          agent_name: Support Bot Under Test
+          agent_inbound: false
+          status: completed
+          success_rate: 0.8
+          run_as_text: false
+          is_cronjob: false
+          runs: null
+          met_expected_outcome_count: 4
+          total_expected_outcome_count: 5
+          total_runs_count: 5
+          completed_runs_count: 5
+          success_runs_count: 4
+          failed_runs_count: 1
+          scenarios:
+          - id: 9512
+            name: Refund escalation flow
+          run_type: scheduled
+          created_at: '2026-10-13T18:04:05.123456Z'
+          updated_at: '2026-10-13T18:34:05.123456Z'
+    EvaluatorScenarioListResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type:
+          - string
+          - 'null'
+          format: uri
+        previous:
+          type:
+          - string
+          - 'null'
+          format: uri
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvaluatorScenario'
+      required:
+      - count
+      - next
+      - previous
+      - results
+      example:
+        count: 1
+        next: null
+        previous: null
+        results:
+        - id: 9512
+          name: Refund escalation flow
+          personality: 4643
+          personality_name: Interruptive (High)
+          phone_number: '+13125550188'
+          expected_outcome_prompt: The assistant explains the refund policy and offers escalation.
+          instructions: Call the support line and demand a refund for a damaged product.
+          scenario_language: en
+          scenario_type: workflow
+          tags:
+          - support
+          - regression
+          agent: 1259
+          inbound_phone_number: null
+          inbound_phone_number_data: null
+          metrics:
+          - 266881
+          - 266882
+          metric_names:
+          - Greeting quality
+          - Escalation quality
+          first_message: Hi, I want a refund.
+          tool_ids: []
+          test_profile: null
+          test_profile_data: null
+          dynamic_variable_values: null
+          created_at: '2026-10-13T18:04:05.123456Z'
+          updated_at: '2026-10-13T18:04:05.123456Z'
+          last_updated_by: 1
+          folder_path: null
+    TestPersonalityListResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/TestPersonality'
+      example:
+      - id: 4643
+        name: Interruptive (High)
+        prompt: Speak very impatiently. Comment on trivial things and rarely let others finish speaking.
+        language: uk
+        accent: Ukrainian
+        interruption_level: high
+        end_call_enabled: true
+    ImproveScenariosResponse:
+      type: object
+      properties:
+        progress_id:
+          type: string
         session_id:
           type:
           - integer
           - 'null'
-        context:
-          type:
-          - array
-          - 'null'
-          items:
-            type: object
-            properties:
-              role:
-                type: string
-              content:
-                type: string
-              timestamp:
-                type: string
-        apply_changes:
-          type: boolean
-        updated_scenarios:
-          type: array
-          items:
-            type: object
-            additionalProperties: true
-        num_scenarios:
-          type: integer
-        knowledge_base:
-          type: array
-          items:
-            type: integer
-        agent_resolution_response:
-          type: string
-        scenarios_needing_agent:
-          type: array
-          items:
-            type: integer
-        pending_tool_calls:
-          type:
-          - array
-          - 'null'
-          items:
-            type: object
-            additionalProperties: true
       required:
-      - user_message
-      - scenarios
+      - progress_id
       example:
-        user_message: Make the callers ask about damaged packaging too.
-        scenarios: all
-        agent_id: 1259
-        apply_changes: true
+        progress_id: c8f5d2b3-4e5f-6a7b-9c0d-1f2a3b4c5d6e
+        session_id: 417
+    ScheduledTestJobListResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/ScheduledTestJob'
+      example:
+      - id: 1188
+        name: Nightly regression
+        agent: 1259
+        crontab_expression: 0 3 * * *
+        timezone: America/Chicago
+        scenario_ids:
+        - 9512
+        scenarios_data:
+        - id: 9512
+          agent: 1259
+          name: Refund escalation flow
+          personality: 4643
+          personality_name: Interruptive (High)
+        personality: null
+        personalities:
+        - 4643
+        tags:
+        - regression
+        frequency: 1
+        run_as_text: false
+        execution_mode: voice
+        notify_on: failure
+        is_active: true
+        created_at: '2026-10-13T18:04:05.123456Z'
+        updated_at: '2026-10-13T18:04:05.123456Z'
     GenerateEvaluatorScenariosRequest:
       type: object
       properties:
@@ -4525,6 +5352,380 @@ components:
         extra_instructions: Focus on angry customers asking about refunds.
         scenario_type: workflow
         generate_expected_outcomes: true
+    AiTestMetricListResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/AiTestMetric'
+      example:
+      - id: 266881
+        slug: ai_interrupting_user
+        project: 16003
+        agent: null
+        agents: []
+        agent_names: []
+        name: AI interrupting user
+        description: Tells if the AI (main agent) interrupted user (testing agent) during the interaction.
+        function_name: get_main_agent_interruption
+        type: custom_code
+        eval_type: numeric
+        enum_values: []
+        audio_enabled: false
+        observability_enabled: true
+        simulation_enabled: true
+        sampling_enabled: false
+        sample_rate: null
+        prompt: ''
+        display_order: 1
+        evaluation_trigger: always
+        trigger_type: llm_judge
+        evaluation_trigger_prompt: ''
+        evaluation_trigger_custom_code: ''
+        priority_assignment_prompt: ''
+        configuration: {}
+        overall_score: 0
+        total_score: 0
+        kb_file_ids: []
+        knowledge_base_files: []
+        metric_cost: 0
+        alert_type: disabled
+        significant_change_alert_status: disabled
+        significant_change_alert_direction: ''
+        window_size: 50
+        std_multiplier: 2
+        ewma_alpha: 0.1
+        add_to_new_agents: true
+        alert_filters: {}
+        uses_llm_judge: false
+        user_defined: false
+    TestAgentListResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type:
+          - string
+          - 'null'
+          format: uri
+          description: Link to the next page of results, or null.
+        previous:
+          type:
+          - string
+          - 'null'
+          format: uri
+          description: Link to the previous page of results, or null.
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestAgent'
+      required:
+      - count
+      - next
+      - previous
+      - results
+      example:
+        count: 1
+        next: null
+        previous: null
+        results:
+        - id: 1259
+          agent_name: Support Bot Under Test
+          contact_number: '+13125550123'
+          inbound: false
+          description: Evaluates the support assistant against generated callers.
+          language: en
+          assistant_id: e1a2b3c4-d5e6-f7a8-b9c0-d1e2f3a4b5c6
+          chat_assistant_id: ''
+          llm_system_prompt: You are calling a customer support line.
+          llm_model: openai/gpt-oss-120b
+          llm_temperature: 0.7
+          llm_max_tokens: 512
+          outbound_auto_call: false
+          sip_endpoint: ''
+          sip_auth: null
+          knowledge_base_files: []
+          enabled_personalities:
+          - 4567
+          auto_update_dropoff_nodes: false
+          auto_update_topic_nodes: false
+          hallucination_metric_kb_files: []
+          outbound_numbers: []
+          created_at: '2026-10-13T18:04:05.123456Z'
+          updated_at: '2026-10-13T18:04:05.123456Z'
+    UpdateEvaluatorScenarioRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        agent:
+          type:
+          - integer
+          - 'null'
+        personality:
+          type: integer
+        instructions:
+          type: string
+        expected_outcome_prompt:
+          type: string
+        metrics:
+          type: array
+          items:
+            type: integer
+        tags:
+          type: array
+          items:
+            type: string
+        tool_ids:
+          type: array
+          items:
+            type: string
+        test_profile:
+          type: integer
+        phone_number:
+          type: integer
+        inbound_phone_number:
+          type: integer
+        folder_path:
+          type:
+          - string
+          - 'null'
+        first_message:
+          type: string
+        scenario_language:
+          type: string
+        max_duration:
+          type:
+          - integer
+          - 'null'
+      example:
+        name: Refund escalation flow - updated
+        instructions: Call the support line, demand a refund, and mention the damaged packaging.
+        metrics:
+        - 266881
+        - 266882
+    CreateScheduledTestJobRequest:
+      type: object
+      properties:
+        crontab_expression:
+          type: string
+          description: Cron expression controlling when the job runs.
+        name:
+          type: string
+        scenarios:
+          type: array
+          items:
+            type: integer
+        tags:
+          type: array
+          items:
+            type: string
+        agent:
+          type: integer
+        timezone:
+          type: string
+        personalities:
+          type: array
+          items:
+            type: integer
+        execution_mode:
+          type: string
+          description: Execution mode for the test runs, such as voice, text, or sip.
+        frequency:
+          type: integer
+        run_as_text:
+          type: boolean
+        notify_on:
+          type: string
+          enum:
+          - never
+          - success
+          - failure
+          - both
+        is_active:
+          type: boolean
+      required:
+      - crontab_expression
+      example:
+        crontab_expression: 0 3 * * *
+        name: Nightly regression
+        agent: 1259
+        scenarios:
+        - 9512
+        timezone: America/Chicago
+        execution_mode: voice
+        notify_on: failure
+    AiTestMetric:
+      type: object
+      properties:
+        id:
+          type: integer
+        slug:
+          type:
+          - string
+          - 'null'
+          description: Stable identifier of a built-in metric.
+        project:
+          type:
+          - integer
+          - 'null'
+        agent:
+          type:
+          - integer
+          - 'null'
+        agents:
+          type: array
+          items:
+            type: integer
+          description: Test agent IDs the metric is attached to.
+        agent_names:
+          type: array
+          items:
+            type: string
+        name:
+          type: string
+        description:
+          type: string
+        function_name:
+          type:
+          - string
+          - 'null'
+          description: Built-in evaluation function used by custom_code metrics.
+        type:
+          type: string
+          description: 'How the metric is evaluated: custom_code or llm_judge.'
+        eval_type:
+          type: string
+          description: 'What the metric scores: numeric, continuous_qualitative, or binary_workflow_adherence.'
+        enum_values:
+          type: array
+          items:
+            type: string
+          description: Allowed values for qualitative enum metrics.
+        audio_enabled:
+          type: boolean
+        observability_enabled:
+          type: boolean
+        simulation_enabled:
+          type: boolean
+        sampling_enabled:
+          type: boolean
+        sample_rate:
+          type:
+          - number
+          - 'null'
+        prompt:
+          type: string
+          description: Judge prompt used by llm_judge metrics.
+        display_order:
+          type: integer
+        evaluation_trigger:
+          type: string
+        trigger_type:
+          type: string
+        evaluation_trigger_prompt:
+          type: string
+        evaluation_trigger_custom_code:
+          type: string
+        priority_assignment_prompt:
+          type: string
+        configuration:
+          type:
+          - object
+          - 'null'
+          additionalProperties: true
+        overall_score:
+          type:
+          - number
+          - string
+        total_score:
+          type:
+          - number
+          - string
+        kb_file_ids:
+          type: array
+          items:
+            type: integer
+        knowledge_base_files:
+          type: array
+          items:
+            type: string
+        metric_cost:
+          type: number
+        alert_type:
+          type: string
+        significant_change_alert_status:
+          type: string
+        significant_change_alert_direction:
+          type: string
+        window_size:
+          type: integer
+          description: Sliding window size the alert status is computed over.
+        std_multiplier:
+          type: number
+          description: Standard-deviation multiplier for significant-change alerts.
+        ewma_alpha:
+          type: number
+          description: Smoothing factor for the alert trend.
+        add_to_new_agents:
+          type:
+          - boolean
+          - 'null'
+          description: Whether the metric is attached to newly created test agents by default.
+        alert_filters:
+          type:
+          - object
+          - 'null'
+          additionalProperties: true
+        uses_llm_judge:
+          type: boolean
+        user_defined:
+          type: boolean
+      required:
+      - id
+      - name
+      - type
+      - eval_type
+      example:
+        id: 266881
+        slug: ai_interrupting_user
+        project: 16003
+        agent: null
+        agents: []
+        agent_names: []
+        name: AI interrupting user
+        description: Tells if the AI (main agent) interrupted user (testing agent) during the interaction.
+        function_name: get_main_agent_interruption
+        type: custom_code
+        eval_type: numeric
+        enum_values: []
+        audio_enabled: false
+        observability_enabled: true
+        simulation_enabled: true
+        sampling_enabled: false
+        sample_rate: null
+        prompt: ''
+        display_order: 1
+        evaluation_trigger: always
+        trigger_type: llm_judge
+        evaluation_trigger_prompt: ''
+        evaluation_trigger_custom_code: ''
+        priority_assignment_prompt: ''
+        configuration: {}
+        overall_score: 0
+        total_score: 0
+        kb_file_ids: []
+        knowledge_base_files: []
+        metric_cost: 0
+        alert_type: disabled
+        significant_change_alert_status: disabled
+        significant_change_alert_direction: ''
+        window_size: 50
+        std_multiplier: 2
+        ewma_alpha: 0.1
+        add_to_new_agents: true
+        alert_filters: {}
+        uses_llm_judge: false
+        user_defined: false
     EvaluatorScenarioDetail:
       type: object
       properties:
@@ -4699,249 +5900,6 @@ components:
         dynamic_variable_values: null
         folder_path: null
         max_duration: null
-    RunScenariosRequest:
-      type: object
-      properties:
-        agent_id:
-          type: integer
-        assistant_id:
-          type: string
-        scenarios:
-          type:
-          - array
-          - string
-          items: {}
-          description: Scenario IDs to run, or the literal string 'all'.
-        tags:
-          type: array
-          items:
-            type: string
-        frequency:
-          type: integer
-        name:
-          type: string
-        outbound_phone_number:
-          type: string
-        personality_ids:
-          type: array
-          items:
-            type: integer
-        test_profile_ids:
-          type: array
-          items:
-            type: integer
-        mode:
-          type: string
-          enum:
-          - same_number
-          - different_numbers
-        agent_number:
-          type: string
-        concurrency_limit:
-          type: integer
-          description: Maximum number of concurrent simulated calls.
-      example:
-        agent_id: 1259
-        scenarios:
-        - 9512
-        tags:
-        - regression
-        mode: same_number
-        concurrency_limit: 3
-    TestRunResultSummary:
-      type: object
-      properties:
-        id:
-          type: integer
-        name:
-          type: string
-        agent:
-          type: integer
-        agent_name:
-          type: string
-        agent_inbound:
-          type: boolean
-        status:
-          type: string
-          description: 'Run batch status: running, completed, failed, pending, in_progress, evaluating, in_queue, timeout, cancelled, or scaling_up.'
-        success_rate:
-          type:
-          - number
-          - string
-          description: Share of runs judged successful.
-        run_as_text:
-          type: boolean
-          description: Whether the batch ran as text chat rather than voice calls.
-        is_cronjob:
-          type: boolean
-          description: Whether this batch was started by a scheduled job.
-        runs:
-          type:
-          - array
-          - 'null'
-          description: Run summaries in this batch. Retrieve the batch for detail keyed by run ID.
-          items:
-            type: object
-            properties:
-              id:
-                type: integer
-              status:
-                type: string
-              scenario:
-                type: integer
-              scenario_name:
-                type: string
-              number:
-                type:
-                - string
-                - 'null'
-              inbound_number:
-                type:
-                - string
-                - 'null'
-        met_expected_outcome_count:
-          type:
-          - integer
-          - string
-        total_expected_outcome_count:
-          type:
-          - integer
-          - string
-        total_runs_count:
-          type:
-          - integer
-          - string
-        completed_runs_count:
-          type:
-          - integer
-          - string
-        success_runs_count:
-          type:
-          - integer
-          - string
-        failed_runs_count:
-          type:
-          - integer
-          - string
-        scenarios:
-          type:
-          - array
-          - 'null'
-          items:
-            type: object
-            properties:
-              id:
-                type: integer
-              name:
-                type: string
-        run_type:
-          type:
-          - string
-          - 'null'
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-      required:
-      - id
-      - name
-      - agent
-      - status
-      - created_at
-      - updated_at
-      example:
-        id: 10119
-        name: Refund escalation flow - run
-        agent: 1259
-        agent_name: Support Bot Under Test
-        agent_inbound: false
-        status: completed
-        success_rate: 0.8
-        run_as_text: false
-        is_cronjob: false
-        runs: null
-        met_expected_outcome_count: 4
-        total_expected_outcome_count: 5
-        total_runs_count: 5
-        completed_runs_count: 5
-        success_runs_count: 4
-        failed_runs_count: 1
-        scenarios:
-        - id: 9512
-          name: Refund escalation flow
-        run_type: scheduled
-        created_at: '2026-10-13T18:04:05.123456Z'
-        updated_at: '2026-10-13T18:34:05.123456Z'
-    GenerateTestMetricsRequest:
-      type: object
-      properties:
-        agent_id:
-          type: integer
-          description: Test agent to suggest metrics for.
-        num_metrics:
-          type: integer
-          description: How many metrics to suggest.
-        scenarios:
-          type: array
-          items:
-            type: integer
-          description: Scenario IDs to base the suggestions on.
-      required:
-      - agent_id
-      - num_metrics
-      example:
-        agent_id: 1259
-        num_metrics: 5
-        scenarios:
-        - 9512
-    CreateEvaluatorScenarioRequest:
-      type: object
-      properties:
-        name:
-          type: string
-        agent:
-          type:
-          - integer
-          - 'null'
-        personality:
-          type: integer
-          description: ID of the personality the caller simulates.
-        instructions:
-          type: string
-        expected_outcome_prompt:
-          type: string
-        metrics:
-          type: array
-          items:
-            type: integer
-        tags:
-          type: array
-          items:
-            type: string
-        first_message:
-          type: string
-        test_profile:
-          type: integer
-        folder_path:
-          type:
-          - string
-          - 'null'
-      required:
-      - name
-      - personality
-      example:
-        name: Refund escalation flow
-        agent: 1259
-        personality: 4643
-        instructions: Call the support line and demand a refund for a damaged product.
-        expected_outcome_prompt: The assistant explains the refund policy and offers escalation.
-        metrics:
-        - 266881
-        tags:
-        - support
-        first_message: Hi, I want a refund.
     CreateAiTestMetricRequest:
       type: object
       properties:
@@ -4995,964 +5953,6 @@ components:
         add_to_new_agents: false
         simulation_enabled: true
         observability_enabled: true
-    AiTestsErrorResponse:
-      type: object
-      properties:
-        errors:
-          type: array
-          items:
-            type: object
-            properties:
-              code:
-                type: string
-                description: Telnyx error code.
-              title:
-                type: string
-              detail:
-                type: string
-              source:
-                type: object
-                properties:
-                  pointer:
-                    type: string
-            required:
-            - code
-            - title
-      required:
-      - errors
-    ScenarioGenerationResponse:
-      type: object
-      properties:
-        progress_id:
-          type: string
-          description: Identifier to poll generation progress with.
-      required:
-      - progress_id
-      example:
-        progress_id: b7e4c1a2-3d4f-5a6b-8c9d-0e1f2a3b4c5d
-    ImproveScenariosProgress:
-      type: object
-      properties:
-        progress_id:
-          type: string
-        session_id:
-          type:
-          - integer
-          - 'null'
-        mode:
-          type: string
-        status:
-          type: string
-        result:
-          type:
-          - object
-          - 'null'
-          properties:
-            success:
-              type: boolean
-            session_id:
-              type: integer
-            message:
-              type: string
-            cancelled:
-              type: boolean
-            needs_clarification:
-              type: boolean
-            clarification_questions:
-              type: array
-              items:
-                type: object
-                properties:
-                  question:
-                    type: string
-            conversation_history:
-              type: array
-              items:
-                type: object
-                properties:
-                  role:
-                    type: string
-                  content:
-                    type: string
-                  timestamp:
-                    type: string
-            updated_scenarios:
-              type: array
-              items:
-                type: object
-                additionalProperties: true
-        error:
-          type:
-          - string
-          - 'null'
-      example:
-        progress_id: c8f5d2b3-4e5f-6a7b-9c0d-1f2a3b4c5d6e
-        session_id: 417
-        mode: improve
-        status: completed
-        result:
-          success: true
-          message: Applied changes to 2 scenarios.
-        error: null
-    TestPersonalityListResponse:
-      type: array
-      items:
-        $ref: '#/components/schemas/TestPersonality'
-      example:
-      - id: 4643
-        name: Interruptive (High)
-        prompt: Speak very impatiently. Comment on trivial things and rarely let others finish speaking.
-        language: uk
-        accent: Ukrainian
-        interruption_level: high
-        end_call_enabled: true
-    AiTestMetric:
-      type: object
-      properties:
-        id:
-          type: integer
-        slug:
-          type:
-          - string
-          - 'null'
-          description: Stable identifier of a built-in metric.
-        project:
-          type:
-          - integer
-          - 'null'
-        agent:
-          type:
-          - integer
-          - 'null'
-        agents:
-          type: array
-          items:
-            type: integer
-          description: Test agent IDs the metric is attached to.
-        agent_names:
-          type: array
-          items:
-            type: string
-        name:
-          type: string
-        description:
-          type: string
-        function_name:
-          type:
-          - string
-          - 'null'
-          description: Built-in evaluation function used by custom_code metrics.
-        type:
-          type: string
-          description: 'How the metric is evaluated: custom_code or llm_judge.'
-        eval_type:
-          type: string
-          description: 'What the metric scores: numeric, continuous_qualitative, or binary_workflow_adherence.'
-        enum_values:
-          type: array
-          items:
-            type: string
-          description: Allowed values for qualitative enum metrics.
-        audio_enabled:
-          type: boolean
-        observability_enabled:
-          type: boolean
-        simulation_enabled:
-          type: boolean
-        sampling_enabled:
-          type: boolean
-        sample_rate:
-          type:
-          - number
-          - 'null'
-        prompt:
-          type: string
-          description: Judge prompt used by llm_judge metrics.
-        display_order:
-          type: integer
-        evaluation_trigger:
-          type: string
-        trigger_type:
-          type: string
-        evaluation_trigger_prompt:
-          type: string
-        evaluation_trigger_custom_code:
-          type: string
-        priority_assignment_prompt:
-          type: string
-        configuration:
-          type:
-          - object
-          - 'null'
-          additionalProperties: true
-        overall_score:
-          type:
-          - number
-          - string
-        total_score:
-          type:
-          - number
-          - string
-        kb_file_ids:
-          type: array
-          items:
-            type: integer
-        knowledge_base_files:
-          type: array
-          items:
-            type: string
-        metric_cost:
-          type: number
-        alert_type:
-          type: string
-        significant_change_alert_status:
-          type: string
-        significant_change_alert_direction:
-          type: string
-        window_size:
-          type: integer
-          description: Sliding window size the alert status is computed over.
-        std_multiplier:
-          type: number
-          description: Standard-deviation multiplier for significant-change alerts.
-        ewma_alpha:
-          type: number
-          description: Smoothing factor for the alert trend.
-        add_to_new_agents:
-          type:
-          - boolean
-          - 'null'
-          description: Whether the metric is attached to newly created test agents by default.
-        alert_filters:
-          type:
-          - object
-          - 'null'
-          additionalProperties: true
-        uses_llm_judge:
-          type: boolean
-        user_defined:
-          type: boolean
-      required:
-      - id
-      - name
-      - type
-      - eval_type
-      example:
-        id: 266881
-        slug: ai_interrupting_user
-        project: 16003
-        agent: null
-        agents: []
-        agent_names: []
-        name: AI interrupting user
-        description: Tells if the AI (main agent) interrupted user (testing agent) during the interaction.
-        function_name: get_main_agent_interruption
-        type: custom_code
-        eval_type: numeric
-        enum_values: []
-        audio_enabled: false
-        observability_enabled: true
-        simulation_enabled: true
-        sampling_enabled: false
-        sample_rate: null
-        prompt: ''
-        display_order: 1
-        evaluation_trigger: always
-        trigger_type: llm_judge
-        evaluation_trigger_prompt: ''
-        evaluation_trigger_custom_code: ''
-        priority_assignment_prompt: ''
-        configuration: {}
-        overall_score: 0
-        total_score: 0
-        kb_file_ids: []
-        knowledge_base_files: []
-        metric_cost: 0
-        alert_type: disabled
-        significant_change_alert_status: disabled
-        significant_change_alert_direction: ''
-        window_size: 50
-        std_multiplier: 2
-        ewma_alpha: 0.1
-        add_to_new_agents: true
-        alert_filters: {}
-        uses_llm_judge: false
-        user_defined: false
-    AiTestMetricListResponse:
-      type: array
-      items:
-        $ref: '#/components/schemas/AiTestMetric'
-      example:
-      - id: 266881
-        slug: ai_interrupting_user
-        project: 16003
-        agent: null
-        agents: []
-        agent_names: []
-        name: AI interrupting user
-        description: Tells if the AI (main agent) interrupted user (testing agent) during the interaction.
-        function_name: get_main_agent_interruption
-        type: custom_code
-        eval_type: numeric
-        enum_values: []
-        audio_enabled: false
-        observability_enabled: true
-        simulation_enabled: true
-        sampling_enabled: false
-        sample_rate: null
-        prompt: ''
-        display_order: 1
-        evaluation_trigger: always
-        trigger_type: llm_judge
-        evaluation_trigger_prompt: ''
-        evaluation_trigger_custom_code: ''
-        priority_assignment_prompt: ''
-        configuration: {}
-        overall_score: 0
-        total_score: 0
-        kb_file_ids: []
-        knowledge_base_files: []
-        metric_cost: 0
-        alert_type: disabled
-        significant_change_alert_status: disabled
-        significant_change_alert_direction: ''
-        window_size: 50
-        std_multiplier: 2
-        ewma_alpha: 0.1
-        add_to_new_agents: true
-        alert_filters: {}
-        uses_llm_judge: false
-        user_defined: false
-    ScheduledTestJob:
-      type: object
-      properties:
-        id:
-          type: integer
-        name:
-          type: string
-        agent:
-          type: integer
-          description: ID of the test agent the job belongs to.
-        crontab_expression:
-          type: string
-          description: Cron expression controlling when the job runs, in the job's timezone.
-        timezone:
-          type: string
-        scenario_ids:
-          type: array
-          items:
-            type: integer
-          description: Scenario IDs the job executes.
-        scenarios_data:
-          type: array
-          items:
-            type: object
-            properties:
-              id:
-                type: integer
-              agent:
-                type: integer
-              name:
-                type: string
-              personality:
-                type:
-                - integer
-                - 'null'
-              personality_name:
-                type: string
-        personality:
-          type:
-          - integer
-          - 'null'
-        personalities:
-          type: array
-          items:
-            type: integer
-        tags:
-          type: array
-          items:
-            type: string
-        frequency:
-          type: integer
-        run_as_text:
-          type: boolean
-          description: Whether the job runs scenarios as text chat rather than voice calls.
-        execution_mode:
-          type: string
-          description: Execution mode for the test runs, such as voice, text, or sip.
-        notify_on:
-          type: string
-          enum:
-          - never
-          - success
-          - failure
-          - both
-          description: When the job sends a notification.
-        is_active:
-          type: boolean
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-      required:
-      - id
-      - name
-      - agent
-      - crontab_expression
-      - is_active
-      - created_at
-      - updated_at
-      example:
-        id: 1188
-        name: Nightly regression
-        agent: 1259
-        crontab_expression: 0 3 * * *
-        timezone: America/Chicago
-        scenario_ids:
-        - 9512
-        scenarios_data:
-        - id: 9512
-          agent: 1259
-          name: Refund escalation flow
-          personality: 4643
-          personality_name: Interruptive (High)
-        personality: null
-        personalities:
-        - 4643
-        tags:
-        - regression
-        frequency: 1
-        run_as_text: false
-        execution_mode: voice
-        notify_on: failure
-        is_active: true
-        created_at: '2026-10-13T18:04:05.123456Z'
-        updated_at: '2026-10-13T18:04:05.123456Z'
-    CreateScheduledTestJobRequest:
-      type: object
-      properties:
-        crontab_expression:
-          type: string
-          description: Cron expression controlling when the job runs.
-        name:
-          type: string
-        scenarios:
-          type: array
-          items:
-            type: integer
-        tags:
-          type: array
-          items:
-            type: string
-        agent:
-          type: integer
-        timezone:
-          type: string
-        personalities:
-          type: array
-          items:
-            type: integer
-        execution_mode:
-          type: string
-          description: Execution mode for the test runs, such as voice, text, or sip.
-        frequency:
-          type: integer
-        run_as_text:
-          type: boolean
-        notify_on:
-          type: string
-          enum:
-          - never
-          - success
-          - failure
-          - both
-        is_active:
-          type: boolean
-      required:
-      - crontab_expression
-      example:
-        crontab_expression: 0 3 * * *
-        name: Nightly regression
-        agent: 1259
-        scenarios:
-        - 9512
-        timezone: America/Chicago
-        execution_mode: voice
-        notify_on: failure
-    UpdateTestAgentRequest:
-      type: object
-      properties:
-        agent_name:
-          type: string
-          description: Name of the test agent.
-        assistant_id:
-          type: string
-          description: ID of the Telnyx AI assistant under test.
-        description:
-          type: string
-        contact_number:
-          type: string
-        language:
-          type: string
-          description: ISO language code the test agent converses in.
-        llm_model:
-          type: string
-        llm_system_prompt:
-          type: string
-        llm_temperature:
-          type: number
-        llm_max_tokens:
-          type: integer
-        sip_endpoint:
-          type: string
-        inbound:
-          type: boolean
-        outbound_auto_call:
-          type: boolean
-        auto_update_dropoff_nodes:
-          type: boolean
-        auto_update_topic_nodes:
-          type: boolean
-        auto_fetch_calls_enabled:
-          type: boolean
-        auto_sync_prompt_enabled:
-          type: boolean
-      example:
-        agent_name: Support Bot Under Test - renamed
-        llm_temperature: 0.5
-        llm_max_tokens: 256
-    EvaluatorScenarioListResponse:
-      type: object
-      properties:
-        count:
-          type: integer
-        next:
-          type:
-          - string
-          - 'null'
-          format: uri
-        previous:
-          type:
-          - string
-          - 'null'
-          format: uri
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/EvaluatorScenario'
-      required:
-      - count
-      - next
-      - previous
-      - results
-      example:
-        count: 1
-        next: null
-        previous: null
-        results:
-        - id: 9512
-          name: Refund escalation flow
-          personality: 4643
-          personality_name: Interruptive (High)
-          phone_number: '+13125550188'
-          expected_outcome_prompt: The assistant explains the refund policy and offers escalation.
-          instructions: Call the support line and demand a refund for a damaged product.
-          scenario_language: en
-          scenario_type: workflow
-          tags:
-          - support
-          - regression
-          agent: 1259
-          inbound_phone_number: null
-          inbound_phone_number_data: null
-          metrics:
-          - 266881
-          - 266882
-          metric_names:
-          - Greeting quality
-          - Escalation quality
-          first_message: Hi, I want a refund.
-          tool_ids: []
-          test_profile: null
-          test_profile_data: null
-          dynamic_variable_values: null
-          created_at: '2026-10-13T18:04:05.123456Z'
-          updated_at: '2026-10-13T18:04:05.123456Z'
-          last_updated_by: 1
-          folder_path: null
-    RunScenariosResponse:
-      type: object
-      properties:
-        status:
-          type: string
-          description: Initial status of the run batch.
-        id:
-          type: integer
-          description: ID of the created test-run batch whose results can be polled.
-      required:
-      - id
-      - status
-      example:
-        status: in_queue
-        id: 10119
-    BulkCreateAiTestMetricRequest:
-      type: array
-      items:
-        $ref: '#/components/schemas/CreateAiTestMetricRequest'
-      example:
-      - name: Greets within 5 seconds
-        description: Returns whether the assistant greeted the caller within five seconds.
-        type: llm_judge
-        eval_type: continuous_qualitative
-        prompt: Score whether the greeting was timely and natural.
-    UpdateEvaluatorScenarioRequest:
-      type: object
-      properties:
-        name:
-          type: string
-        agent:
-          type:
-          - integer
-          - 'null'
-        personality:
-          type: integer
-        instructions:
-          type: string
-        expected_outcome_prompt:
-          type: string
-        metrics:
-          type: array
-          items:
-            type: integer
-        tags:
-          type: array
-          items:
-            type: string
-        tool_ids:
-          type: array
-          items:
-            type: string
-        test_profile:
-          type: integer
-        phone_number:
-          type: integer
-        inbound_phone_number:
-          type: integer
-        folder_path:
-          type:
-          - string
-          - 'null'
-        first_message:
-          type: string
-        scenario_language:
-          type: string
-        max_duration:
-          type:
-          - integer
-          - 'null'
-      example:
-        name: Refund escalation flow - updated
-        instructions: Call the support line, demand a refund, and mention the damaged packaging.
-        metrics:
-        - 266881
-        - 266882
-    CreateTestAgentRequest:
-      type: object
-      properties:
-        agent_name:
-          type: string
-          description: Name of the test agent.
-        assistant_id:
-          type: string
-          description: ID of the Telnyx AI assistant under test.
-        description:
-          type: string
-        contact_number:
-          type: string
-        language:
-          type: string
-          description: ISO language code the test agent converses in.
-        llm_model:
-          type: string
-        llm_system_prompt:
-          type: string
-        llm_temperature:
-          type: number
-        llm_max_tokens:
-          type: integer
-        sip_endpoint:
-          type: string
-        inbound:
-          type: boolean
-        outbound_auto_call:
-          type: boolean
-        auto_update_dropoff_nodes:
-          type: boolean
-        auto_update_topic_nodes:
-          type: boolean
-        auto_fetch_calls_enabled:
-          type: boolean
-        auto_sync_prompt_enabled:
-          type: boolean
-      required:
-      - agent_name
-      - assistant_id
-      example:
-        agent_name: Support Bot Under Test
-        assistant_id: e1a2b3c4-d5e6-f7a8-b9c0-d1e2f3a4b5c6
-        description: Evaluates the support assistant against generated callers.
-        language: en
-        llm_model: openai/gpt-oss-120b
-        llm_temperature: 0.7
-        llm_max_tokens: 512
-        inbound: false
-        sip_endpoint: ''
-        outbound_auto_call: false
-        auto_update_dropoff_nodes: false
-        auto_update_topic_nodes: false
-    TestRunResultListResponse:
-      type: object
-      properties:
-        count:
-          type: integer
-        next:
-          type:
-          - string
-          - 'null'
-          format: uri
-        previous:
-          type:
-          - string
-          - 'null'
-          format: uri
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/TestRunResultSummary'
-      required:
-      - next
-      - previous
-      - results
-      example:
-        count: 1
-        next: null
-        previous: null
-        results:
-        - id: 10119
-          name: Refund escalation flow - run
-          agent: 1259
-          agent_name: Support Bot Under Test
-          agent_inbound: false
-          status: completed
-          success_rate: 0.8
-          run_as_text: false
-          is_cronjob: false
-          runs: null
-          met_expected_outcome_count: 4
-          total_expected_outcome_count: 5
-          total_runs_count: 5
-          completed_runs_count: 5
-          success_runs_count: 4
-          failed_runs_count: 1
-          scenarios:
-          - id: 9512
-            name: Refund escalation flow
-          run_type: scheduled
-          created_at: '2026-10-13T18:04:05.123456Z'
-          updated_at: '2026-10-13T18:34:05.123456Z'
-    ScheduledTestJobListResponse:
-      type: array
-      items:
-        $ref: '#/components/schemas/ScheduledTestJob'
-      example:
-      - id: 1188
-        name: Nightly regression
-        agent: 1259
-        crontab_expression: 0 3 * * *
-        timezone: America/Chicago
-        scenario_ids:
-        - 9512
-        scenarios_data:
-        - id: 9512
-          agent: 1259
-          name: Refund escalation flow
-          personality: 4643
-          personality_name: Interruptive (High)
-        personality: null
-        personalities:
-        - 4643
-        tags:
-        - regression
-        frequency: 1
-        run_as_text: false
-        execution_mode: voice
-        notify_on: failure
-        is_active: true
-        created_at: '2026-10-13T18:04:05.123456Z'
-        updated_at: '2026-10-13T18:04:05.123456Z'
-    EvaluatorScenario:
-      type: object
-      properties:
-        id:
-          type: integer
-        name:
-          type: string
-        personality:
-          type:
-          - integer
-          - 'null'
-          description: ID of the test personality the caller simulates.
-        personality_name:
-          type: string
-        phone_number:
-          type: string
-          description: Outbound phone number used to place the simulated call.
-        expected_outcome_prompt:
-          type: string
-          description: What a successful conversation looks like; scored by the expected-outcome metric.
-        instructions:
-          type: string
-          description: What the simulated caller should do during the conversation.
-        scenario_language:
-          type:
-          - string
-          - 'null'
-        scenario_type:
-          type: string
-          description: 'Type of scenario: workflow, red_teaming_voice, or red_teaming_text.'
-        tags:
-          type: array
-          items:
-            type: string
-        agent:
-          type:
-          - integer
-          - 'null'
-          description: ID of the test agent the scenario runs against.
-        inbound_phone_number:
-          type:
-          - integer
-          - 'null'
-        inbound_phone_number_data:
-          type:
-          - string
-          - 'null'
-        metrics:
-          type: array
-          items:
-            type: integer
-          description: Metric IDs applied to the scenario.
-        metric_names:
-          type: array
-          items:
-            type: string
-        first_message:
-          type: string
-          description: First message the simulated caller speaks or sends.
-        tool_ids:
-          type: array
-          items:
-            type: string
-        test_profile:
-          type:
-          - integer
-          - 'null'
-        test_profile_data:
-          type:
-          - object
-          - 'null'
-          properties:
-            id:
-              type: integer
-            project:
-              type:
-              - integer
-              - 'null'
-            agent:
-              type:
-              - integer
-              - 'null'
-            name:
-              type: string
-            information:
-              type:
-              - object
-              - 'null'
-              additionalProperties:
-                type: string
-        dynamic_variable_values:
-          type:
-          - object
-          - 'null'
-          additionalProperties:
-            type: string
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-        last_updated_by:
-          type:
-          - integer
-          - 'null'
-        folder_path:
-          type:
-          - string
-          - 'null'
-      required:
-      - id
-      - name
-      - agent
-      - created_at
-      - updated_at
-      example:
-        id: 9512
-        name: Refund escalation flow
-        personality: 4643
-        personality_name: Interruptive (High)
-        phone_number: '+13125550188'
-        expected_outcome_prompt: The assistant explains the refund policy and offers escalation.
-        instructions: Call the support line and demand a refund for a damaged product.
-        scenario_language: en
-        scenario_type: workflow
-        tags:
-        - support
-        - regression
-        agent: 1259
-        inbound_phone_number: null
-        inbound_phone_number_data: null
-        metrics:
-        - 266881
-        - 266882
-        metric_names:
-        - Greeting quality
-        - Escalation quality
-        first_message: Hi, I want a refund.
-        tool_ids: []
-        test_profile: null
-        test_profile_data: null
-        dynamic_variable_values: null
-        created_at: '2026-10-13T18:04:05.123456Z'
-        updated_at: '2026-10-13T18:04:05.123456Z'
-        last_updated_by: 1
-        folder_path: null
-    ImproveScenariosResponse:
-      type: object
-      properties:
-        progress_id:
-          type: string
-        session_id:
-          type:
-          - integer
-          - 'null'
-      required:
-      - progress_id
-      example:
-        progress_id: c8f5d2b3-4e5f-6a7b-9c0d-1f2a3b4c5d6e
-        session_id: 417
   securitySchemes:
     BearerAuth:
       type: http

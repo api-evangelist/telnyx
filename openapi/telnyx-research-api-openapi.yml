@@ -155,21 +155,35 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    WebSearchError:
+    ResearchRequest:
       type: object
+      required:
+      - query
       properties:
-        error:
-          type: object
-          required:
-          - message
-          properties:
-            message:
-              type: string
-              description: Human-readable error message.
-            details:
-              type: object
-              additionalProperties: true
-              description: Additional error details (e.g. validation field errors).
+        query:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: The research question or topic.
+          example: Compare the performance of RAG vs fine-tuning for domain-specific QA
+        research_effort:
+          type: string
+          enum:
+          - lite
+          - standard
+          - deep
+          description: Research depth level. `lite` is fastest, `deep` is most thorough.
+          example: standard
+        max_sources:
+          type: integer
+          minimum: 1
+          maximum: 50
+          description: Maximum number of sources to use.
+          example: 20
+        background:
+          type: boolean
+          description: When `true`, the research runs asynchronously. The response returns a `task_id` immediately instead of waiting for the result. Poll `GET /web_search/research/{task_id}` to check status.
+          example: false
     ResearchCitation:
       type: object
       required:
@@ -186,21 +200,6 @@ components:
         snippet:
           type: string
           description: Relevant excerpt from the source (if available).
-    ResearchResponseSync:
-      type: object
-      description: Synchronous research response (when `background` is false or unset).
-      required:
-      - answer
-      properties:
-        answer:
-          type: string
-          description: The synthesized research answer.
-          example: RAG and fine-tuning serve different purposes...
-        citations:
-          type: array
-          items:
-            $ref: '#/components/schemas/ResearchCitation'
-          description: Sources cited in the answer.
     ResearchResponseAsync:
       type: object
       description: Asynchronous research response (when `background` is true).
@@ -251,6 +250,21 @@ components:
           - string
           - 'null'
           description: Always present in poll responses; `null` unless the task failed.
+    WebSearchError:
+      type: object
+      properties:
+        error:
+          type: object
+          required:
+          - message
+          properties:
+            message:
+              type: string
+              description: Human-readable error message.
+            details:
+              type: object
+              additionalProperties: true
+              description: Additional error details (e.g. validation field errors).
     GatewayError:
       type: object
       description: Standard Telnyx JSON:API error envelope returned by the API Gateway for authentication failures (401).
@@ -285,35 +299,21 @@ components:
                   url:
                     type: string
                     format: uri
-    ResearchRequest:
+    ResearchResponseSync:
       type: object
+      description: Synchronous research response (when `background` is false or unset).
       required:
-      - query
+      - answer
       properties:
-        query:
+        answer:
           type: string
-          minLength: 1
-          maxLength: 2000
-          description: The research question or topic.
-          example: Compare the performance of RAG vs fine-tuning for domain-specific QA
-        research_effort:
-          type: string
-          enum:
-          - lite
-          - standard
-          - deep
-          description: Research depth level. `lite` is fastest, `deep` is most thorough.
-          example: standard
-        max_sources:
-          type: integer
-          minimum: 1
-          maximum: 50
-          description: Maximum number of sources to use.
-          example: 20
-        background:
-          type: boolean
-          description: When `true`, the research runs asynchronously. The response returns a `task_id` immediately instead of waiting for the result. Poll `GET /web_search/research/{task_id}` to check status.
-          example: false
+          description: The synthesized research answer.
+          example: RAG and fine-tuning serve different purposes...
+        citations:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResearchCitation'
+          description: Sources cited in the answer.
     web-search_GatewayError:
       type: object
       description: Standard Telnyx JSON:API error envelope returned by the API Gateway for authentication failures (401).
@@ -349,15 +349,6 @@ components:
                     type: string
                     format: uri
   responses:
-    web-search_NotFound:
-      description: Research task not found. Returned for unknown, malformed, expired, or already-purged task IDs.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/WebSearchError'
-          example:
-            error:
-              message: Task not found
     web-search_ProviderError:
       description: The upstream search provider returned an error.
       content:
@@ -367,25 +358,6 @@ components:
           example:
             error:
               message: Provider request failed
-    web-search_BadRequest:
-      description: Invalid request — validation error or invalid parameters.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/WebSearchError'
-          example:
-            error:
-              message: Validation error
-              details: {}
-    ProviderTimeout:
-      description: The upstream search provider timed out.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/WebSearchError'
-          example:
-            error:
-              message: Provider request timed out
     web-search_Unauthorized:
       description: 'Unauthorized — missing or invalid API key.
 
@@ -402,6 +374,15 @@ components:
               detail: Could not find any usable credentials in the request.
               meta:
                 url: https://developers.telnyx.com/docs/overview/errors/10009
+    ProviderTimeout:
+      description: The upstream search provider timed out.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/WebSearchError'
+          example:
+            error:
+              message: Provider request timed out
     web-search_InternalServerError:
       description: Internal server error.
       content:
@@ -411,6 +392,25 @@ components:
           example:
             error:
               message: Internal server error
+    web-search_NotFound:
+      description: Research task not found. Returned for unknown, malformed, expired, or already-purged task IDs.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/WebSearchError'
+          example:
+            error:
+              message: Task not found
+    web-search_BadRequest:
+      description: Invalid request — validation error or invalid parameters.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/WebSearchError'
+          example:
+            error:
+              message: Validation error
+              details: {}
     web-search_Unauthorized_2:
       description: 'Unauthorized — missing or invalid API key.
 

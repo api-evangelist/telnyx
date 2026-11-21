@@ -44,7 +44,102 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
+  responses:
+    messaging_GenericErrorResponse_0b38e7044b:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors_0b38e7044b'
+          example:
+            errors:
+            - code: string
+              title: string
+              detail: string
+              source:
+                pointer: /data/attributes/phone_number
+                parameter: string
+    messaging_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors'
+      description: Unexpected error
+    IdempotencyPayloadTooLargeResponse:
+      description: Payload Too Large. A request sent with an Idempotency-Key whose body exceeds the endpoint's Edge replay-protection limit (256 KB) is rejected before it reaches the service (code 10007). Requests sent without the header are not subject to this limit.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors_0b38e7044b'
+          example:
+            errors:
+            - code: '10007'
+              title: Payload Too Large
+              detail: The request body exceeds the Edge replay-protection limit for idempotent requests.
+    IdempotencyProtectionUnavailableResponse:
+      description: Service unavailable (10016), including unavailable Edge idempotency protection for a keyed request. Retry with the same key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors_0b38e7044b'
+          example:
+            errors:
+            - code: '10016'
+              title: Service Unavailable
+              detail: Edge idempotency protection is temporarily unavailable. Please try again later.
+    messaging_IdempotencyConflictResponse:
+      description: A request with the same Idempotency-Key is still being processed (10036). Retry later with the same key and request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors_0b38e7044b'
+          example:
+            errors:
+            - code: '10036'
+              title: Resource is being processed
+              detail: A request with this Idempotency-Key is already being processed.
+              source:
+                pointer: /header/Idempotency-Key
   schemas:
+    messaging_Error_0b38e7044b:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+          x-format: integer
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+    RCSToItem:
+      type: object
+      properties:
+        phone_number:
+          type: string
+          example: '+13125551234'
+        status:
+          type: string
+          example: queued
+        carrier:
+          type: string
+          example: Verizon Wireless
+        line_type:
+          type: string
+          example: Wireless
     RCSTo:
       type: array
       items:
@@ -164,250 +259,6 @@ components:
                           - date_time
                         text:
                           type: string
-    WhatsappMedia:
-      type: object
-      properties:
-        link:
-          type: string
-          description: media URL
-          format: url
-          example: http://example.com/media.jpg
-        caption:
-          type: string
-          description: media caption
-        filename:
-          type: string
-          description: file name with extension
-        voice:
-          type: boolean
-          description: true if voice message
-    RCSToItem:
-      type: object
-      properties:
-        phone_number:
-          type: string
-          example: '+13125551234'
-        status:
-          type: string
-          example: queued
-        carrier:
-          type: string
-          example: Verizon Wireless
-        line_type:
-          type: string
-          example: Wireless
-    WhatsappMessage:
-      required:
-      - from
-      - to
-      - whatsapp_message
-      type: object
-      properties:
-        from:
-          type: string
-          description: Phone number in +E.164 format associated with Whatsapp account
-          example: '+13125551234'
-        to:
-          type: string
-          description: Phone number in +E.164 format
-          example: '+13125551234'
-        whatsapp_message:
-          $ref: '#/components/schemas/WhatsappMessageContent'
-        type:
-          type: string
-          description: Message type - must be set to "WHATSAPP"
-          example: WHATSAPP
-          enum:
-          - WHATSAPP
-        webhook_url:
-          description: The URL where webhooks related to this message will be sent.
-          type: string
-          format: url
-        messaging_profile_id:
-          description: Messaging profile ID - required if the 'from' number is not SMS-enabled
-          type: string
-          format: uuid
-    WhatsappLocation:
-      type: object
-      properties:
-        latitude:
-          type: string
-        longitude:
-          type: string
-        name:
-          type: string
-        address:
-          type: string
-    messaging_Errors_0b38e7044b:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/messaging_Error_0b38e7044b'
-    WhatsappContact:
-      type: object
-      properties:
-        addresses:
-          type: array
-          items:
-            type: object
-            properties:
-              street:
-                type: string
-              city:
-                type: string
-              state:
-                type: string
-              zip:
-                type: string
-              country:
-                type: string
-              country_code:
-                type: string
-              type:
-                type: string
-        birthday:
-          type: string
-        emails:
-          type: array
-          items:
-            type: object
-            properties:
-              email:
-                type: string
-              type:
-                type: string
-        name:
-          type: string
-        org:
-          type: object
-          properties:
-            company:
-              type: string
-            department:
-              type: string
-            title:
-              type: string
-        phones:
-          type: array
-          items:
-            type: object
-            properties:
-              phone:
-                type: string
-                x-format: E+164
-              type:
-                type: string
-              wa_id:
-                type: string
-        urls:
-          type: array
-          items:
-            type: object
-            properties:
-              url:
-                type: string
-                format: url
-              type:
-                type: string
-    WhatsappReaction:
-      type: object
-      properties:
-        message_id:
-          type: string
-        emoji:
-          type: string
-    WhatsappResponse:
-      type: object
-      properties:
-        data:
-          type: object
-          properties:
-            record_type:
-              type: string
-              example: message
-            direction:
-              type: string
-              example: outbound
-            id:
-              type: string
-              description: message ID
-              example: 4031938e-60e4-4235-a8dd-0b1c55a23e7a
-            type:
-              type: string
-              example: WHATSAPP
-            organization_id:
-              type: string
-              example: 9f61d8e1-7687-4d6d-9cae-9ff682985983
-            messaging_profile_id:
-              type: string
-              example: 4001781e-626f-4a41-a914-b1b682150f94
-            from:
-              type: object
-              properties:
-                phone_number:
-                  type: string
-                  description: Sending address (+E.164 formatted phone number, alphanumeric sender ID, or short code).
-                  x-format: address
-                status:
-                  type: string
-                  enum:
-                  - received
-                  - delivered
-                carrier:
-                  type: string
-                  description: The carrier of the sender.
-                line_type:
-                  type: string
-                  description: The line-type of the sender.
-                  enum:
-                  - Wireline
-                  - Wireless
-                  - VoWiFi
-                  - VoIP
-                  - Pre-Paid Wireless
-                  - ''
-            to:
-              $ref: '#/components/schemas/RCSTo'
-            body:
-              $ref: '#/components/schemas/WhatsappMessageContent'
-            encoding:
-              type: string
-              example: utf-8
-            received_at:
-              type: string
-              format: date-time
-            wait_seconds:
-              type:
-              - number
-              - 'null'
-              format: float
-              description: Seconds the message is queued due to rate limiting before being sent to the carrier. Represents the maximum wait across all applicable rate limits (account, carrier, campaign). 0.0 = no queuing delay.
-              example: 0.5
-    messaging_Error_0b38e7044b:
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: string
-          x-format: integer
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-              format: json-pointer
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
     WhatsappInteractive:
       type: object
       properties:
@@ -554,12 +405,211 @@ components:
               description: header text, 60 character maximum
             sub_text:
               type: string
-    messaging_Errors:
+    WhatsappResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            record_type:
+              type: string
+              example: message
+            direction:
+              type: string
+              example: outbound
+            id:
+              type: string
+              description: message ID
+              example: 4031938e-60e4-4235-a8dd-0b1c55a23e7a
+            type:
+              type: string
+              example: WHATSAPP
+            organization_id:
+              type: string
+              example: 9f61d8e1-7687-4d6d-9cae-9ff682985983
+            messaging_profile_id:
+              type: string
+              example: 4001781e-626f-4a41-a914-b1b682150f94
+            from:
+              type: object
+              properties:
+                phone_number:
+                  type: string
+                  description: Sending address (+E.164 formatted phone number, alphanumeric sender ID, or short code).
+                  x-format: address
+                status:
+                  type: string
+                  enum:
+                  - received
+                  - delivered
+                carrier:
+                  type: string
+                  description: The carrier of the sender.
+                line_type:
+                  type: string
+                  description: The line-type of the sender.
+                  enum:
+                  - Wireline
+                  - Wireless
+                  - VoWiFi
+                  - VoIP
+                  - Pre-Paid Wireless
+                  - ''
+            to:
+              $ref: '#/components/schemas/RCSTo'
+            body:
+              $ref: '#/components/schemas/WhatsappMessageContent'
+            encoding:
+              type: string
+              example: utf-8
+            received_at:
+              type: string
+              format: date-time
+            wait_seconds:
+              type:
+              - number
+              - 'null'
+              format: float
+              description: Seconds the message is queued due to rate limiting before being sent to the carrier. Represents the maximum wait across all applicable rate limits (account, carrier, campaign). 0.0 = no queuing delay.
+              example: 0.5
+    WhatsappContact:
+      type: object
+      properties:
+        addresses:
+          type: array
+          items:
+            type: object
+            properties:
+              street:
+                type: string
+              city:
+                type: string
+              state:
+                type: string
+              zip:
+                type: string
+              country:
+                type: string
+              country_code:
+                type: string
+              type:
+                type: string
+        birthday:
+          type: string
+        emails:
+          type: array
+          items:
+            type: object
+            properties:
+              email:
+                type: string
+              type:
+                type: string
+        name:
+          type: string
+        org:
+          type: object
+          properties:
+            company:
+              type: string
+            department:
+              type: string
+            title:
+              type: string
+        phones:
+          type: array
+          items:
+            type: object
+            properties:
+              phone:
+                type: string
+                x-format: E+164
+              type:
+                type: string
+              wa_id:
+                type: string
+        urls:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+                format: url
+              type:
+                type: string
+    WhatsappMedia:
+      type: object
+      properties:
+        link:
+          type: string
+          description: media URL
+          format: url
+          example: http://example.com/media.jpg
+        caption:
+          type: string
+          description: media caption
+        filename:
+          type: string
+          description: file name with extension
+        voice:
+          type: boolean
+          description: true if voice message
+    WhatsappMessage:
+      required:
+      - from
+      - to
+      - whatsapp_message
+      type: object
+      properties:
+        from:
+          type: string
+          description: Phone number in +E.164 format associated with Whatsapp account
+          example: '+13125551234'
+        to:
+          type: string
+          description: Phone number in +E.164 format
+          example: '+13125551234'
+        whatsapp_message:
+          $ref: '#/components/schemas/WhatsappMessageContent'
+        type:
+          type: string
+          description: Message type - must be set to "WHATSAPP"
+          example: WHATSAPP
+          enum:
+          - WHATSAPP
+        webhook_url:
+          description: The URL where webhooks related to this message will be sent.
+          type: string
+          format: url
+        messaging_profile_id:
+          description: Messaging profile ID - required if the 'from' number is not SMS-enabled
+          type: string
+          format: uuid
+    WhatsappReaction:
+      type: object
+      properties:
+        message_id:
+          type: string
+        emoji:
+          type: string
+    WhatsappLocation:
+      type: object
+      properties:
+        latitude:
+          type: string
+        longitude:
+          type: string
+        name:
+          type: string
+        address:
+          type: string
+    messaging_Errors_0b38e7044b:
       properties:
         errors:
-          items:
-            $ref: '#/components/schemas/messaging_Error'
           type: array
+          items:
+            $ref: '#/components/schemas/messaging_Error_0b38e7044b'
     messaging_Error:
       properties:
         code:
@@ -584,6 +634,12 @@ components:
       required:
       - code
       - title
+    messaging_Errors:
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/messaging_Error'
+          type: array
     messaging_WhatsappMessage:
       required:
       - from
@@ -1020,62 +1076,14 @@ components:
                 format: url
               type:
                 type: string
-  responses:
-    messaging_GenericErrorResponse_0b38e7044b:
-      description: Unexpected error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/messaging_Errors_0b38e7044b'
-          example:
-            errors:
-            - code: string
-              title: string
-              detail: string
-              source:
-                pointer: /data/attributes/phone_number
-                parameter: string
-    messaging_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/messaging_Errors'
-      description: Unexpected error
-    messaging_IdempotencyConflictResponse:
-      description: A request with the same Idempotency-Key is still being processed (10036). Retry later with the same key and request.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/messaging_Errors_0b38e7044b'
-          example:
-            errors:
-            - code: '10036'
-              title: Resource is being processed
-              detail: A request with this Idempotency-Key is already being processed.
-              source:
-                pointer: /header/Idempotency-Key
-    IdempotencyPayloadTooLargeResponse:
-      description: Payload Too Large. A request sent with an Idempotency-Key whose body exceeds the endpoint's Edge replay-protection limit (256 KB) is rejected before it reaches the service (code 10007). Requests sent without the header are not subject to this limit.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/messaging_Errors_0b38e7044b'
-          example:
-            errors:
-            - code: '10007'
-              title: Payload Too Large
-              detail: The request body exceeds the Edge replay-protection limit for idempotent requests.
-    IdempotencyProtectionUnavailableResponse:
-      description: Service unavailable (10016), including unavailable Edge idempotency protection for a keyed request. Retry with the same key.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/messaging_Errors_0b38e7044b'
-          example:
-            errors:
-            - code: '10016'
-              title: Service Unavailable
-              detail: Edge idempotency protection is temporarily unavailable. Please try again later.
+  headers:
+    IdempotentReplayed:
+      description: Present with value `true` when Edge replayed a stored successful response for the supplied Idempotency-Key. Omitted for first-time requests and error responses.
+      schema:
+        type: boolean
+        enum:
+        - true
+        example: true
   parameters:
     IdempotencyKey:
       name: Idempotency-Key
@@ -1088,14 +1096,6 @@ components:
         maxLength: 255
         pattern: ^[A-Za-z0-9_-]{1,255}$
       example: 8e03978e-40d5-43e8-bc93-6894a57f9326
-  headers:
-    IdempotentReplayed:
-      description: Present with value `true` when Edge replayed a stored successful response for the supplied Idempotency-Key. Omitted for first-time requests and error responses.
-      schema:
-        type: boolean
-        enum:
-        - true
-        example: true
   securitySchemes:
     BearerAuth:
       type: http

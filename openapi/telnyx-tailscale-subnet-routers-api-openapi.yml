@@ -359,6 +359,102 @@ paths:
           $ref: '#/components/responses/GenericErrorResponse'
 components:
   schemas:
+    PaginationMeta:
+      type: object
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 55
+        page_number:
+          type: integer
+          example: 2
+        page_size:
+          type: integer
+          example: 25
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+      type: object
+    TailscaleSubnetRouterUpdate:
+      type: object
+      title: TailscaleSubnetRouterUpdate
+      additionalProperties: false
+      description: Every field is optional. A change queues a new provisioning run and returns the router with `status` `provisioning`. An empty object retries a `failed` router.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: A user specified name for the router.
+          example: tailnet-ashburn
+        advertised_routes:
+          type: array
+          minItems: 1
+          maxItems: 64
+          uniqueItems: true
+          items:
+            type: string
+            example: 172.27.0.0/24
+          example:
+          - 172.27.0.0/24
+          description: IPv4 subnets of the Network that the router advertises to the tailnet. Each entry is a canonical CIDR that the Network routes. Default, loopback, link-local, multicast, and Tailscale (`100.64.0.0/10`) ranges are rejected. So are ranges that overlap the router's own, `172.27.254.0/24` and `198.18.0.0/20`.
+        auth_key:
+          type: string
+          writeOnly: true
+          format: password
+          pattern: ^tskey-auth-[A-Za-z0-9_-]{10,250}$
+          description: A replacement Tailscale auth key. Accepted only while the router has never enrolled, for example after a `failed` enrollment. Never returned.
+          example: tskey-auth-k1AbCdEfGh2IjKlMnOpQrStUv
+    TailscaleSubnetRouterCreate:
+      type: object
+      title: TailscaleSubnetRouterCreate
+      additionalProperties: false
+      required:
+      - name
+      - network_id
+      - region_code
+      - advertised_routes
+      - auth_key
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: A user specified name for the router.
+          example: tailnet-ashburn
+        network_id:
+          type: string
+          format: uuid
+          description: The id of the Network to attach the router to.
+          example: 0de011ae-ee53-4df4-ba96-754728eb5aad
+        region_code:
+          type: string
+          description: The code of the region to create the router in. `GET /network_coverage` lists the regions whose `available_services` include `tailscale_subnet_router`.
+          example: ashburn-va
+        advertised_routes:
+          type: array
+          minItems: 1
+          maxItems: 64
+          uniqueItems: true
+          items:
+            type: string
+            example: 172.27.0.0/24
+          example:
+          - 172.27.0.0/24
+          description: IPv4 subnets of the Network that the router advertises to the tailnet. Each entry is a canonical CIDR that the Network routes. Default, loopback, link-local, multicast, and Tailscale (`100.64.0.0/10`) ranges are rejected. So are ranges that overlap the router's own, `172.27.254.0/24` and `198.18.0.0/20`.
+        auth_key:
+          type: string
+          writeOnly: true
+          format: password
+          pattern: ^tskey-auth-[A-Za-z0-9_-]{10,250}$
+          description: 'A Tailscale auth key that enrolls the router in the user''s tailnet: reusable, pre-approved, tagged, and not ephemeral. Telnyx stores it encrypted until enrollment succeeds, then discards it. It is never returned.'
+          example: tskey-auth-k1AbCdEfGh2IjKlMnOpQrStUv
     TailscaleSubnetRouter:
       type: object
       title: TailscaleSubnetRouter
@@ -450,87 +546,6 @@ components:
           description: ISO 8601 formatted date-time indicating when the resource was updated.
           readOnly: true
           example: '2026-10-13T15:09:41.654321Z'
-    TailscaleSubnetRouterCreate:
-      type: object
-      title: TailscaleSubnetRouterCreate
-      additionalProperties: false
-      required:
-      - name
-      - network_id
-      - region_code
-      - advertised_routes
-      - auth_key
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 128
-          description: A user specified name for the router.
-          example: tailnet-ashburn
-        network_id:
-          type: string
-          format: uuid
-          description: The id of the Network to attach the router to.
-          example: 0de011ae-ee53-4df4-ba96-754728eb5aad
-        region_code:
-          type: string
-          description: The code of the region to create the router in. `GET /network_coverage` lists the regions whose `available_services` include `tailscale_subnet_router`.
-          example: ashburn-va
-        advertised_routes:
-          type: array
-          minItems: 1
-          maxItems: 64
-          uniqueItems: true
-          items:
-            type: string
-            example: 172.27.0.0/24
-          example:
-          - 172.27.0.0/24
-          description: IPv4 subnets of the Network that the router advertises to the tailnet. Each entry is a canonical CIDR that the Network routes. Default, loopback, link-local, multicast, and Tailscale (`100.64.0.0/10`) ranges are rejected. So are ranges that overlap the router's own, `172.27.254.0/24` and `198.18.0.0/20`.
-        auth_key:
-          type: string
-          writeOnly: true
-          format: password
-          pattern: ^tskey-auth-[A-Za-z0-9_-]{10,250}$
-          description: 'A Tailscale auth key that enrolls the router in the user''s tailnet: reusable, pre-approved, tagged, and not ephemeral. Telnyx stores it encrypted until enrollment succeeds, then discards it. It is never returned.'
-          example: tskey-auth-k1AbCdEfGh2IjKlMnOpQrStUv
-    TailscaleSubnetRouterUpdate:
-      type: object
-      title: TailscaleSubnetRouterUpdate
-      additionalProperties: false
-      description: Every field is optional. A change queues a new provisioning run and returns the router with `status` `provisioning`. An empty object retries a `failed` router.
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 128
-          description: A user specified name for the router.
-          example: tailnet-ashburn
-        advertised_routes:
-          type: array
-          minItems: 1
-          maxItems: 64
-          uniqueItems: true
-          items:
-            type: string
-            example: 172.27.0.0/24
-          example:
-          - 172.27.0.0/24
-          description: IPv4 subnets of the Network that the router advertises to the tailnet. Each entry is a canonical CIDR that the Network routes. Default, loopback, link-local, multicast, and Tailscale (`100.64.0.0/10`) ranges are rejected. So are ranges that overlap the router's own, `172.27.254.0/24` and `198.18.0.0/20`.
-        auth_key:
-          type: string
-          writeOnly: true
-          format: password
-          pattern: ^tskey-auth-[A-Za-z0-9_-]{10,250}$
-          description: A replacement Tailscale auth key. Accepted only while the router has never enrolled, for example after a `failed` enrollment. Never returned.
-          example: tskey-auth-k1AbCdEfGh2IjKlMnOpQrStUv
-    Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/Error'
-      type: object
     Error:
       required:
       - code
@@ -566,31 +581,7 @@ components:
         code: '20207'
         description: The street address provided is invalid.
       type: object
-    PaginationMeta:
-      type: object
-      properties:
-        total_pages:
-          type: integer
-          example: 3
-        total_results:
-          type: integer
-          example: 55
-        page_number:
-          type: integer
-          example: 2
-        page_size:
-          type: integer
-          example: 25
   parameters:
-    ResourceId:
-      name: id
-      description: Identifies the resource.
-      in: path
-      required: true
-      schema:
-        format: uuid
-        type: string
-        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
     PageConsolidated:
       name: page
       in: query
@@ -611,7 +602,22 @@ components:
             maximum: 250
             default: 20
             description: The size of the page
+    ResourceId:
+      name: id
+      description: Identifies the resource.
+      in: path
+      required: true
+      schema:
+        format: uuid
+        type: string
+        example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
   responses:
+    GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
     netapps_UnprocessableEntity_17904fcfbc:
       description: Unprocessable entity. Check the 'detail' field in response for details.
       content:
@@ -623,12 +629,6 @@ components:
             - code: '10027'
               title: Unprocessable Entity
               detail: The server understood the syntax of the request but was unable to process the instructions.
-    GenericErrorResponse:
-      description: Unexpected error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Errors'
   securitySchemes:
     BearerAuth:
       type: http

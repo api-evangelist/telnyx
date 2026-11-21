@@ -214,15 +214,154 @@ paths:
         '503':
           $ref: '#/components/responses/AvatarServiceUnavailableResponse'
 components:
+  responses:
+    AvatarValidationErrorResponse:
+      description: The request, uploaded image, or organization quota failed validation. Uploaded images must not exceed 10 MiB.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AvatarErrorResponse'
+          example:
+            errors:
+            - code: '10027'
+              title: Unprocessable Entity
+              detail: The image must be between 256 and 8192 pixels on each side.
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10027
+    AvatarNotFoundResponse:
+      description: The avatar does not exist or is not available to the authenticated organization.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AvatarErrorResponse'
+          example:
+            errors:
+            - code: '10005'
+              title: Resource not found
+              detail: Avatar avatar_0123456789abcdef0123456789abcdef does not exist.
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10005
+    AvatarRequestValidationErrorResponse:
+      description: The request body, path parameter, or query parameter failed validation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AvatarErrorResponse'
+          example:
+            errors:
+            - code: '10015'
+              title: Bad Request
+              detail: The request contains invalid avatar parameters.
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10015
+    AvatarServiceUnavailableResponse:
+      description: Avatar storage is temporarily unavailable. Retry the operation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AvatarErrorResponse'
+          example:
+            errors:
+            - code: '10037'
+              title: Service unavailable
+              detail: Avatar storage is temporarily unavailable. Try again.
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10037
+    AvatarMutationBadRequestResponse:
+      description: The avatar identifier is malformed, or the operation targets a Telnyx stock avatar, which is read-only.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AvatarErrorResponse'
+          example:
+            errors:
+            - code: '10015'
+              title: Bad Request
+              detail: Telnyx stock avatars cannot be modified.
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10015
   schemas:
-    AvatarResponse:
+    AvatarErrorResponse:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/AvatarError'
+    UpdateAvatarRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: New customer-facing name of the custom avatar.
+          example: Updated portrait
+    AvatarListMeta:
+      type: object
+      required:
+      - total_pages
+      - total_results
+      - page_number
+      - page_size
+      properties:
+        total_pages:
+          type: integer
+          minimum: 0
+          description: Total number of pages for the current filters.
+          example: 1
+        total_results:
+          type: integer
+          minimum: 0
+          description: Total number of matching avatars.
+          example: 1
+        page_number:
+          type: integer
+          minimum: 1
+          description: Current page number.
+          example: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Maximum number of avatars returned on each page.
+          example: 20
+    AvatarListResponse:
       type: object
       additionalProperties: false
       required:
       - data
+      - meta
       properties:
         data:
-          $ref: '#/components/schemas/Avatar'
+          type: array
+          items:
+            $ref: '#/components/schemas/Avatar'
+        meta:
+          $ref: '#/components/schemas/AvatarListMeta'
+    CreateAvatarRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - image_file
+      - name
+      properties:
+        image_file:
+          type: string
+          format: binary
+          description: JPEG, PNG, or WebP image file. The maximum file size is 10 MiB.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Customer-facing name of the custom avatar.
+          example: Customer portrait
     AvatarError:
       type: object
       additionalProperties: true
@@ -248,23 +387,12 @@ components:
           $ref: '#/components/schemas/AvatarErrorSource'
         meta:
           $ref: '#/components/schemas/AvatarErrorMeta'
-    CreateAvatarRequest:
-      type: object
-      additionalProperties: false
-      required:
-      - image_file
-      - name
-      properties:
-        image_file:
-          type: string
-          format: binary
-          description: JPEG, PNG, or WebP image file. The maximum file size is 10 MiB.
-        name:
-          type: string
-          minLength: 1
-          maxLength: 255
-          description: Customer-facing name of the custom avatar.
-          example: Customer portrait
+    AvatarType:
+      type: string
+      enum:
+      - stock
+      - custom
+      description: Whether the avatar is provided by Telnyx or was uploaded by the authenticated organization.
     Avatar:
       type: object
       additionalProperties: false
@@ -344,98 +472,6 @@ components:
           format: date-time
           description: Time when the custom avatar was last updated.
           example: '2026-10-13T14:00:00Z'
-    AvatarId:
-      type: string
-      minLength: 1
-      maxLength: 128
-      pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
-      description: Stable identifier returned by the Avatars API. Discover available stock IDs with GET /v2/ai/avatars and filter[avatar_type]=stock rather than maintaining a fixed list. Custom avatar IDs use the `avatar_` prefix and must belong to the authenticated organization. The service validates that the selected avatar is available.
-      example: avatar_0123456789abcdef0123456789abcdef
-    AvatarType:
-      type: string
-      enum:
-      - stock
-      - custom
-      description: Whether the avatar is provided by Telnyx or was uploaded by the authenticated organization.
-    AvatarContentType:
-      type: string
-      enum:
-      - image/jpeg
-      - image/png
-      - image/webp
-      description: MIME type of a custom avatar image.
-    AvatarErrorResponse:
-      type: object
-      required:
-      - errors
-      properties:
-        errors:
-          type: array
-          minItems: 1
-          items:
-            $ref: '#/components/schemas/AvatarError'
-    UpdateAvatarRequest:
-      type: object
-      additionalProperties: false
-      required:
-      - name
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 255
-          description: New customer-facing name of the custom avatar.
-          example: Updated portrait
-    AvatarErrorSource:
-      type: object
-      additionalProperties: true
-      properties:
-        pointer:
-          type: string
-          description: Location of the invalid request value.
-          example: /image_file
-    AvatarListResponse:
-      type: object
-      additionalProperties: false
-      required:
-      - data
-      - meta
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/Avatar'
-        meta:
-          $ref: '#/components/schemas/AvatarListMeta'
-    AvatarListMeta:
-      type: object
-      required:
-      - total_pages
-      - total_results
-      - page_number
-      - page_size
-      properties:
-        total_pages:
-          type: integer
-          minimum: 0
-          description: Total number of pages for the current filters.
-          example: 1
-        total_results:
-          type: integer
-          minimum: 0
-          description: Total number of matching avatars.
-          example: 1
-        page_number:
-          type: integer
-          minimum: 1
-          description: Current page number.
-          example: 1
-        page_size:
-          type: integer
-          minimum: 1
-          maximum: 100
-          description: Maximum number of avatars returned on each page.
-          example: 20
     AvatarErrorMeta:
       type: object
       additionalProperties: true
@@ -447,72 +483,36 @@ components:
           format: uri
           description: Link to the Telnyx error-code documentation.
           example: https://developers.telnyx.com/docs/overview/errors/10027
-  responses:
-    AvatarRequestValidationErrorResponse:
-      description: The request body, path parameter, or query parameter failed validation.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/AvatarErrorResponse'
-          example:
-            errors:
-            - code: '10015'
-              title: Bad Request
-              detail: The request contains invalid avatar parameters.
-              meta:
-                url: https://developers.telnyx.com/docs/overview/errors/10015
-    AvatarServiceUnavailableResponse:
-      description: Avatar storage is temporarily unavailable. Retry the operation.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/AvatarErrorResponse'
-          example:
-            errors:
-            - code: '10037'
-              title: Service unavailable
-              detail: Avatar storage is temporarily unavailable. Try again.
-              meta:
-                url: https://developers.telnyx.com/docs/overview/errors/10037
-    AvatarValidationErrorResponse:
-      description: The request, uploaded image, or organization quota failed validation. Uploaded images must not exceed 10 MiB.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/AvatarErrorResponse'
-          example:
-            errors:
-            - code: '10027'
-              title: Unprocessable Entity
-              detail: The image must be between 256 and 8192 pixels on each side.
-              meta:
-                url: https://developers.telnyx.com/docs/overview/errors/10027
-    AvatarMutationBadRequestResponse:
-      description: The avatar identifier is malformed, or the operation targets a Telnyx stock avatar, which is read-only.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/AvatarErrorResponse'
-          example:
-            errors:
-            - code: '10015'
-              title: Bad Request
-              detail: Telnyx stock avatars cannot be modified.
-              meta:
-                url: https://developers.telnyx.com/docs/overview/errors/10015
-    AvatarNotFoundResponse:
-      description: The avatar does not exist or is not available to the authenticated organization.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/AvatarErrorResponse'
-          example:
-            errors:
-            - code: '10005'
-              title: Resource not found
-              detail: Avatar avatar_0123456789abcdef0123456789abcdef does not exist.
-              meta:
-                url: https://developers.telnyx.com/docs/overview/errors/10005
+    AvatarErrorSource:
+      type: object
+      additionalProperties: true
+      properties:
+        pointer:
+          type: string
+          description: Location of the invalid request value.
+          example: /image_file
+    AvatarId:
+      type: string
+      minLength: 1
+      maxLength: 128
+      pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+      description: Stable identifier returned by the Avatars API. Discover available stock IDs with GET /v2/ai/avatars and filter[avatar_type]=stock rather than maintaining a fixed list. Custom avatar IDs use the `avatar_` prefix and must belong to the authenticated organization. The service validates that the selected avatar is available.
+      example: avatar_0123456789abcdef0123456789abcdef
+    AvatarResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/Avatar'
+    AvatarContentType:
+      type: string
+      enum:
+      - image/jpeg
+      - image/png
+      - image/webp
+      description: MIME type of a custom avatar image.
   parameters:
     AvatarId:
       name: avatar_id

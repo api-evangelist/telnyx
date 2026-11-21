@@ -331,91 +331,101 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
-  responses:
-    ValidationFailed:
-      description: Validation failed
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/DomainsErrorResponse'
-          example:
-            errors:
-            - code: '10015'
-              title: Validation Failed
-              detail: domain is invalid
-              source:
-                pointer: /data/attributes/domain
-    email_NotFound:
-      description: Resource not found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/DomainsErrorResponse'
-          example:
-            errors:
-            - code: '10001'
-              title: Not Found
-              detail: The requested email domain was not found
-    InternalServerError:
-      description: Internal server error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/DomainsErrorResponse'
-          example:
-            errors:
-            - code: '500'
-              title: Internal Server Error
-              detail: An unexpected error occurred
   schemas:
-    EmailDomainHealthResponse:
+    UpdateEmailDomainRequest:
+      type: object
+      properties:
+        inbound_enabled:
+          type: boolean
+          description: Enable or disable inbound routing for this domain
+        dmarc_policy:
+          type: object
+          allOf:
+          - $ref: '#/components/schemas/EmailDMARCPolicy'
+          nullable: true
+          description: 'Update the DMARC policy. The recommended _dmarc TXT record is rebuilt and its verification reset to pending.
+
+            '
+        tracking:
+          $ref: '#/components/schemas/DomainsTrackingSettings'
+    InboundConfig:
       type: object
       required:
-      - data
+      - enabled
+      - catch_all
+      - mx_required
       properties:
-        data:
-          $ref: '#/components/schemas/EmailDomainHealth'
-    EmailDomainVerification:
+        enabled:
+          type: boolean
+        catch_all:
+          type: boolean
+        mx_required:
+          type: boolean
+    OffsetPaginationMeta:
       type: object
       required:
-      - ownership
-      - spf
-      - dkim
-      - dmarc
-      - mx
+      - page_number
+      - page_size
+      - total_pages
+      - total_results
       properties:
-        ownership:
+        page_number:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+        total_pages:
+          type: integer
+          minimum: 0
+        total_results:
+          type: integer
+          minimum: 0
+    EmailDomainType:
+      type: string
+      enum:
+      - custom
+      - shared
+      - shared_inbound
+    EmailDMARCPolicy:
+      type: object
+      description: DMARC policy for a sending domain. Drives the recommended _dmarc.<domain> TXT record. DMARC is advisory and never blocks sending. When omitted or null, the domain uses the advisory default (v=DMARC1; p=none; rua=mailto:dmarc@telnyx.com).
+      properties:
+        p:
           type: string
           enum:
-          - pending
-          - verified
-          - not_required
-        spf:
+          - none
+          - quarantine
+          - reject
+          default: none
+          description: Policy applied to messages that fail alignment.
+        pct:
+          type: integer
+          minimum: 0
+          maximum: 100
+          default: 100
+          description: Percentage of messages the policy applies to. Omitted from the record when 100.
+        rua:
+          type: string
+          nullable: true
+          description: URI for aggregate reports. Defaults to the Telnyx address when absent; null omits it.
+        sp:
           type: string
           enum:
-          - missing_optional
-          - verified
-          - failed
-          - not_required
-        dkim:
-          type: string
-          enum:
-          - pending
-          - verified
-          - failed
-        dmarc:
-          type: string
-          enum:
-          - missing_optional
-          - verified
-          - failed
-        mx:
-          type: string
-          enum:
-          - not_required
-          - pending
-          - verified
-          - failed
+          - none
+          - quarantine
+          - reject
+          nullable: true
+          description: Policy for subdomains. Omitted from the record when null.
+    DomainsErrorResponse:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/email_Error'
     CreateEmailDomainRequest:
       type: object
       required:
@@ -438,34 +448,6 @@ components:
             '
         tracking:
           $ref: '#/components/schemas/DomainsTrackingSettings'
-    EmailDomainStatus:
-      type: string
-      enum:
-      - pending
-      - verifying
-      - verified
-      - failed
-      - degraded
-      - suspended
-    InboundConfig:
-      type: object
-      required:
-      - enabled
-      - catch_all
-      - mx_required
-      properties:
-        enabled:
-          type: boolean
-        catch_all:
-          type: boolean
-        mx_required:
-          type: boolean
-    EmailDomainType:
-      type: string
-      enum:
-      - custom
-      - shared
-      - shared_inbound
     EmailDomain:
       type: object
       required:
@@ -584,55 +566,45 @@ components:
         created_at: '2026-01-01T00:00:00Z'
         updated_at: '2026-01-01T00:00:00Z'
         verified_at: null
-    EmailDomainResponse:
+    EmailDomainStatus:
+      type: string
+      enum:
+      - pending
+      - verifying
+      - verified
+      - failed
+      - degraded
+      - suspended
+    DKIMStatus:
       type: object
       required:
-      - data
+      - selector
+      - algorithm
+      - key_length
+      - active
+      - rotated_at
       properties:
-        data:
-          $ref: '#/components/schemas/EmailDomain'
-    EmailDomainHealth:
-      type: object
-      required:
-      - id
-      - record_type
-      - status
-      - usable_for_sending
-      - usable_for_inbound
-      - verification
-      - checked_at
-      properties:
-        id:
+        selector:
           type: string
-          format: uuid
-          description: Unique identifier for the email domain
-        record_type:
+          nullable: true
+        algorithm:
           type: string
           enum:
-          - email_domain_health
-          description: Record type discriminator
-        status:
-          type: string
+          - rsa-sha256
+          - null
+          nullable: true
+        key_length:
+          type: integer
           enum:
-          - pending
-          - verifying
-          - verified
-          - failed
-          - degraded
-          - suspended
-          description: Current domain status
-        usable_for_sending:
+          - 2048
+          - null
+          nullable: true
+        active:
           type: boolean
-          description: Whether the domain is usable for sending email
-        usable_for_inbound:
-          type: boolean
-          description: Whether the domain is usable for receiving inbound email
-        verification:
-          $ref: '#/components/schemas/EmailDomainVerification'
-        checked_at:
+        rotated_at:
           type: string
           format: date-time
-          description: Timestamp of the last health check
+          nullable: true
     EmailDomainDKIMRotation:
       type: object
       description: 'Result of rotating a domain''s DKIM key. The new key is active and signing switches to it immediately; the previous key is retired to a `retiring` state (retained, not revoked) so it can be revoked after the DNS propagation grace period. Selectors are fixed, so the DKIM DNS record''s TXT value is replaced in place at the shared `<selector>._domainkey.<domain>` host — `old_selector_retained` is false and the returned dns_records carry the new value the customer must publish promptly.
@@ -754,6 +726,28 @@ components:
           priority: null
           required: true
           status: pending
+    DomainsTrackingSettings:
+      type: object
+      properties:
+        open_tracking:
+          type: boolean
+          default: false
+          description: Inject a tracking pixel into HTML messages to record open events.
+        click_tracking:
+          type: boolean
+          default: false
+          description: Rewrite HTML links through a tracking redirect to record click events.
+        unsubscribe_tracking:
+          type: boolean
+          default: true
+          description: Add RFC 8058 List-Unsubscribe headers with a signed one-click unsubscribe URL. Enabled by default; Gmail/Yahoo bulk-sender rules require one-click unsubscribe support.
+    EmailDomainResponse:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailDomain'
     email_Error:
       type: object
       required:
@@ -780,36 +774,70 @@ components:
           properties:
             pointer:
               type: string
-    DKIMStatus:
+    email_CursorPaginationMeta:
       type: object
       required:
-      - selector
-      - algorithm
-      - key_length
-      - active
-      - rotated_at
+      - page_size
+      - has_next
+      - has_previous
       properties:
-        selector:
-          type: string
-          nullable: true
-        algorithm:
-          type: string
-          enum:
-          - rsa-sha256
-          - null
-          nullable: true
-        key_length:
+        page_size:
           type: integer
-          enum:
-          - 2048
-          - null
+          minimum: 1
+        next_cursor:
+          type: string
           nullable: true
-        active:
+          description: Opaque cursor to fetch the next page
+        previous_cursor:
+          type: string
+          nullable: true
+          description: Opaque cursor to fetch the previous page
+        has_next:
           type: boolean
-        rotated_at:
+        has_previous:
+          type: boolean
+    EmailDomainHealth:
+      type: object
+      required:
+      - id
+      - record_type
+      - status
+      - usable_for_sending
+      - usable_for_inbound
+      - verification
+      - checked_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the email domain
+        record_type:
+          type: string
+          enum:
+          - email_domain_health
+          description: Record type discriminator
+        status:
+          type: string
+          enum:
+          - pending
+          - verifying
+          - verified
+          - failed
+          - degraded
+          - suspended
+          description: Current domain status
+        usable_for_sending:
+          type: boolean
+          description: Whether the domain is usable for sending email
+        usable_for_inbound:
+          type: boolean
+          description: Whether the domain is usable for receiving inbound email
+        verification:
+          $ref: '#/components/schemas/EmailDomainVerification'
+        checked_at:
           type: string
           format: date-time
-          nullable: true
+          description: Timestamp of the last health check
     DNSRecord:
       type: object
       required:
@@ -866,118 +894,13 @@ components:
         priority: null
         required: true
         status: pending
-    OffsetPaginationMeta:
+    EmailDomainHealthResponse:
       type: object
       required:
-      - page_number
-      - page_size
-      - total_pages
-      - total_results
+      - data
       properties:
-        page_number:
-          type: integer
-          minimum: 1
-        page_size:
-          type: integer
-          minimum: 1
-        total_pages:
-          type: integer
-          minimum: 0
-        total_results:
-          type: integer
-          minimum: 0
-    EmailDMARCPolicy:
-      type: object
-      description: DMARC policy for a sending domain. Drives the recommended _dmarc.<domain> TXT record. DMARC is advisory and never blocks sending. When omitted or null, the domain uses the advisory default (v=DMARC1; p=none; rua=mailto:dmarc@telnyx.com).
-      properties:
-        p:
-          type: string
-          enum:
-          - none
-          - quarantine
-          - reject
-          default: none
-          description: Policy applied to messages that fail alignment.
-        pct:
-          type: integer
-          minimum: 0
-          maximum: 100
-          default: 100
-          description: Percentage of messages the policy applies to. Omitted from the record when 100.
-        rua:
-          type: string
-          nullable: true
-          description: URI for aggregate reports. Defaults to the Telnyx address when absent; null omits it.
-        sp:
-          type: string
-          enum:
-          - none
-          - quarantine
-          - reject
-          nullable: true
-          description: Policy for subdomains. Omitted from the record when null.
-    UpdateEmailDomainRequest:
-      type: object
-      properties:
-        inbound_enabled:
-          type: boolean
-          description: Enable or disable inbound routing for this domain
-        dmarc_policy:
-          type: object
-          allOf:
-          - $ref: '#/components/schemas/EmailDMARCPolicy'
-          nullable: true
-          description: 'Update the DMARC policy. The recommended _dmarc TXT record is rebuilt and its verification reset to pending.
-
-            '
-        tracking:
-          $ref: '#/components/schemas/DomainsTrackingSettings'
-    DomainsErrorResponse:
-      type: object
-      required:
-      - errors
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/email_Error'
-    DomainsTrackingSettings:
-      type: object
-      properties:
-        open_tracking:
-          type: boolean
-          default: false
-          description: Inject a tracking pixel into HTML messages to record open events.
-        click_tracking:
-          type: boolean
-          default: false
-          description: Rewrite HTML links through a tracking redirect to record click events.
-        unsubscribe_tracking:
-          type: boolean
-          default: true
-          description: Add RFC 8058 List-Unsubscribe headers with a signed one-click unsubscribe URL. Enabled by default; Gmail/Yahoo bulk-sender rules require one-click unsubscribe support.
-    email_CursorPaginationMeta:
-      type: object
-      required:
-      - page_size
-      - has_next
-      - has_previous
-      properties:
-        page_size:
-          type: integer
-          minimum: 1
-        next_cursor:
-          type: string
-          nullable: true
-          description: Opaque cursor to fetch the next page
-        previous_cursor:
-          type: string
-          nullable: true
-          description: Opaque cursor to fetch the previous page
-        has_next:
-          type: boolean
-        has_previous:
-          type: boolean
+        data:
+          $ref: '#/components/schemas/EmailDomainHealth'
     EmailDomainListResponse:
       type: object
       required:
@@ -999,6 +922,47 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/EmailDomainDKIMRotation'
+    EmailDomainVerification:
+      type: object
+      required:
+      - ownership
+      - spf
+      - dkim
+      - dmarc
+      - mx
+      properties:
+        ownership:
+          type: string
+          enum:
+          - pending
+          - verified
+          - not_required
+        spf:
+          type: string
+          enum:
+          - missing_optional
+          - verified
+          - failed
+          - not_required
+        dkim:
+          type: string
+          enum:
+          - pending
+          - verified
+          - failed
+        dmarc:
+          type: string
+          enum:
+          - missing_optional
+          - verified
+          - failed
+        mx:
+          type: string
+          enum:
+          - not_required
+          - pending
+          - verified
+          - failed
   parameters:
     DomainsPageSize:
       name: page[size]
@@ -1015,13 +979,6 @@ components:
       in: query
       required: false
       description: Cursor for records before the provided value (cursor pagination)
-      schema:
-        type: string
-    PageAfter:
-      name: page[after]
-      in: query
-      required: false
-      description: Cursor for records after the provided value (cursor pagination)
       schema:
         type: string
     EmailDomainDomainId:
@@ -1049,6 +1006,49 @@ components:
         type: integer
         minimum: 1
         default: 1
+    PageAfter:
+      name: page[after]
+      in: query
+      required: false
+      description: Cursor for records after the provided value (cursor pagination)
+      schema:
+        type: string
+  responses:
+    ValidationFailed:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DomainsErrorResponse'
+          example:
+            errors:
+            - code: '10015'
+              title: Validation Failed
+              detail: domain is invalid
+              source:
+                pointer: /data/attributes/domain
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DomainsErrorResponse'
+          example:
+            errors:
+            - code: '500'
+              title: Internal Server Error
+              detail: An unexpected error occurred
+    email_NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DomainsErrorResponse'
+          example:
+            errors:
+            - code: '10001'
+              title: Not Found
+              detail: The requested email domain was not found
   securitySchemes:
     BearerAuth:
       type: http

@@ -154,6 +154,16 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   responses:
+    meeting-sessions_InternalServerError:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: internal_error
+              message: internal server error
     ServiceUnavailable:
       description: A required feature or dependency is not configured or authentication is unavailable.
       content:
@@ -164,26 +174,16 @@ components:
             error:
               code: not_configured
               message: required feature is not configured
-    PayloadTooLarge:
-      description: Payload Too Large
+    meeting-sessions_NotFound:
+      description: Not Found
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
           example:
             error:
-              code: invalid_request
-              message: request body too large
-    meeting-sessions_Conflict:
-      description: Conflict
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: invalid_state
-              message: only scheduled sessions can be updated
+              code: not_found
+              message: meeting session not found
     meeting-sessions_UnprocessableEntity:
       description: Unprocessable Entity, including an unsupported capability
       content:
@@ -194,6 +194,26 @@ components:
             error:
               code: unsupported_capability
               message: avatar video is not supported on platform 'unknown'
+    meeting-sessions_Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: invalid_state
+              message: only scheduled sessions can be updated
+    meeting-sessions_BadRequest:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: invalid_request
+              message: request is invalid
     MeetingStopSpeakingProviderError:
       description: The meeting provider rejected stopping audio playback.
       content:
@@ -204,6 +224,36 @@ components:
             error:
               code: provider_error
               message: meeting provider rejected stop audio
+    MeetingSpeakUpstreamError:
+      description: Text-to-speech generation or meeting audio delivery failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: tts_error
+              message: tts synthesis failed
+    MeetingSendChatProviderError:
+      description: The meeting provider rejected native chat delivery.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: provider_error
+              message: meeting provider rejected chat message
+    meeting-sessions_Unauthorized:
+      description: 'Unauthorized. On api.telnyx.com, authentication is enforced by the API gateway before the request reaches the Meeting service, so a missing or invalid API key returns the standard Telnyx error envelope (`{"errors": [{"code": "10009", ...}]}`) rather than the single-`error` shape below.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
+          example:
+            error:
+              code: unauthorized
+              message: invalid or missing credentials
     TooManyRequests:
       description: Authentication is temporarily overloaded. Retry after the number of seconds in `Retry-After`.
       headers:
@@ -222,46 +272,6 @@ components:
             error:
               code: auth_overloaded
               message: authentication temporarily overloaded
-    meeting-sessions_Unauthorized:
-      description: 'Unauthorized. On api.telnyx.com, authentication is enforced by the API gateway before the request reaches the Meeting service, so a missing or invalid API key returns the standard Telnyx error envelope (`{"errors": [{"code": "10009", ...}]}`) rather than the single-`error` shape below.'
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: unauthorized
-              message: invalid or missing credentials
-    MeetingSendChatProviderError:
-      description: The meeting provider rejected native chat delivery.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: provider_error
-              message: meeting provider rejected chat message
-    meeting-sessions_BadRequest:
-      description: Bad Request
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: invalid_request
-              message: request is invalid
-    MeetingSpeakUpstreamError:
-      description: Text-to-speech generation or meeting audio delivery failed.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: tts_error
-              message: tts synthesis failed
     Forbidden:
       description: The authenticated credential is not permitted to perform this operation.
       content:
@@ -272,26 +282,16 @@ components:
             error:
               code: forbidden
               message: credential is not permitted
-    meeting-sessions_NotFound:
-      description: Not Found
+    PayloadTooLarge:
+      description: Payload Too Large
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
           example:
             error:
-              code: not_found
-              message: meeting session not found
-    meeting-sessions_InternalServerError:
-      description: Internal Server Error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/meeting-sessions_ErrorResponse'
-          example:
-            error:
-              code: internal_error
-              message: internal server error
+              code: invalid_request
+              message: request body too large
     ServiceUnavailable_2:
       description: A required feature or dependency is not configured, authentication is unavailable, or (`assistant_lookup_unavailable`) the assistant could not be read to check its avatar.
       content:
@@ -303,26 +303,6 @@ components:
               code: not_configured
               message: required feature is not configured
   schemas:
-    SpeakMeetingSessionRequest:
-      title: SpeakMeetingSessionRequest
-      type: object
-      additionalProperties: false
-      required:
-      - text
-      properties:
-        text:
-          type: string
-          minLength: 1
-          maxLength: 4000
-          description: Text for the bot to speak.
-        voice:
-          type: string
-          minLength: 1
-          maxLength: 100
-          description: Voice identifier to use for this utterance. When supplied, it overrides the session-default voice configured at creation; otherwise the speak action uses that session default.
-        interrupt:
-          type: boolean
-          description: If true, interrupt any currently playing audio to speak this text immediately.
     meeting-sessions_ErrorResponse:
       type: object
       additionalProperties: false
@@ -353,6 +333,38 @@ components:
       - error:
           code: internal_error
           message: internal server error
+    SpeakMeetingSessionRequest:
+      title: SpeakMeetingSessionRequest
+      type: object
+      additionalProperties: false
+      required:
+      - text
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: Text for the bot to speak.
+        voice:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Voice identifier to use for this utterance. When supplied, it overrides the session-default voice configured at creation; otherwise the speak action uses that session default.
+        interrupt:
+          type: boolean
+          description: If true, interrupt any currently playing audio to speak this text immediately.
+    SendChatMeetingSessionRequest:
+      title: SendChatMeetingSessionRequest
+      type: object
+      additionalProperties: false
+      required:
+      - text
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: Chat message text to send in the meeting.
     ActionAcceptedResponse:
       type: object
       additionalProperties: false
@@ -371,18 +383,6 @@ components:
       example:
         data:
           accepted: true
-    SendChatMeetingSessionRequest:
-      title: SendChatMeetingSessionRequest
-      type: object
-      additionalProperties: false
-      required:
-      - text
-      properties:
-        text:
-          type: string
-          minLength: 1
-          maxLength: 4000
-          description: Chat message text to send in the meeting.
   parameters:
     MeetingSessionId:
       name: id

@@ -213,6 +213,80 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
+    Retrieval:
+      properties:
+        type:
+          type: string
+          enum:
+          - retrieval
+        retrieval:
+          $ref: '#/components/schemas/BucketIds'
+      type: object
+      required:
+      - type
+      - retrieval
+      title: Retrieval
+    ChatCompletionSystemMessageParam:
+      type: object
+      properties:
+        content:
+          oneOf:
+          - title: Content String
+            type: string
+          - title: Text and Image Array
+            type: array
+            items:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum:
+                  - text
+                  - image_url
+                text:
+                  type: string
+                image_url:
+                  type: string
+              required:
+              - type
+              additionalProperties: false
+        role:
+          type: string
+          enum:
+          - system
+          - user
+          - assistant
+          - tool
+      required:
+      - content
+      - role
+      title: ChatCompletionSystemMessageParam
+    ResponseFormatText:
+      description: Plain text output.
+      properties:
+        type:
+          const: text
+          type: string
+      required:
+      - type
+      title: ResponseFormatText
+      type: object
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+      example:
+        detail:
+        - loc:
+          - body
+          - name
+          msg: Field required
+          type: missing
     ChatCompletionRequest:
       properties:
         messages:
@@ -349,6 +423,16 @@ components:
       required:
       - messages
       title: ChatCompletionRequest
+    ResponseFormatJsonObject:
+      description: 'JSON mode: the model output is valid JSON, without a schema.'
+      properties:
+        type:
+          const: json_object
+          type: string
+      required:
+      - type
+      title: ResponseFormatJsonObject
+      type: object
     ModelsResponse:
       properties:
         object:
@@ -364,90 +448,6 @@ components:
       required:
       - data
       title: ModelsResponse
-    ValidationError:
-      title: ValidationError
-      required:
-      - loc
-      - msg
-      - type
-      type: object
-      properties:
-        loc:
-          title: Location
-          type: array
-          items:
-            anyOf:
-            - type: string
-            - type: integer
-        msg:
-          title: Message
-          type: string
-        type:
-          title: Error Type
-          type: string
-    ResponseFormatJsonSchemaParam:
-      description: 'Structured output: the model output is constrained to the JSON schema supplied in `json_schema`.'
-      properties:
-        type:
-          const: json_schema
-          type: string
-        json_schema:
-          $ref: '#/components/schemas/ResponseFormatJsonSchema'
-      required:
-      - type
-      - json_schema
-      title: ResponseFormatJsonSchemaParam
-      type: object
-    FunctionDefinition:
-      properties:
-        name:
-          type: string
-        description:
-          type: string
-        parameters:
-          type: object
-          additionalProperties: true
-      type: object
-      required:
-      - name
-      title: FunctionDefinition
-    ChatCompletionToolParam:
-      properties:
-        type:
-          type: string
-          enum:
-          - function
-        function:
-          $ref: '#/components/schemas/FunctionDefinition'
-      type: object
-      required:
-      - function
-      - type
-      title: Function
-    BucketIds:
-      properties:
-        bucket_ids:
-          items:
-            type: string
-          type: array
-          description: List of [embedded storage buckets](https://developers.telnyx.com/api-reference/embeddings/embed-documents) to use for retrieval-augmented generation.
-        max_num_results:
-          description: The maximum number of results to retrieve as context for the language model.
-          type: integer
-      type: object
-      required:
-      - bucket_ids
-      title: BucketIds
-    ResponseFormatJsonObject:
-      description: 'JSON mode: the model output is valid JSON, without a schema.'
-      properties:
-        type:
-          const: json_object
-          type: string
-      required:
-      - type
-      title: ResponseFormatJsonObject
-      type: object
     ResponseFormatJsonSchema:
       description: The JSON schema configuration, required when `type` is `json_schema`. Matches the [OpenAI structured outputs](https://platform.openai.com/docs/guides/structured-outputs) `json_schema` response format.
       properties:
@@ -468,80 +468,6 @@ components:
       required:
       - name
       title: ResponseFormatJsonSchema
-    ResponseFormatText:
-      description: Plain text output.
-      properties:
-        type:
-          const: text
-          type: string
-      required:
-      - type
-      title: ResponseFormatText
-      type: object
-    HTTPValidationError:
-      properties:
-        detail:
-          items:
-            $ref: '#/components/schemas/ValidationError'
-          type: array
-          title: Detail
-      type: object
-      title: HTTPValidationError
-      example:
-        detail:
-        - loc:
-          - body
-          - name
-          msg: Field required
-          type: missing
-    Retrieval:
-      properties:
-        type:
-          type: string
-          enum:
-          - retrieval
-        retrieval:
-          $ref: '#/components/schemas/BucketIds'
-      type: object
-      required:
-      - type
-      - retrieval
-      title: Retrieval
-    ChatCompletionSystemMessageParam:
-      type: object
-      properties:
-        content:
-          oneOf:
-          - title: Content String
-            type: string
-          - title: Text and Image Array
-            type: array
-            items:
-              type: object
-              properties:
-                type:
-                  type: string
-                  enum:
-                  - text
-                  - image_url
-                text:
-                  type: string
-                image_url:
-                  type: string
-              required:
-              - type
-              additionalProperties: false
-        role:
-          type: string
-          enum:
-          - system
-          - user
-          - assistant
-          - tool
-      required:
-      - content
-      - role
-      title: ChatCompletionSystemMessageParam
     ModelMetadata:
       type: object
       title: ModelMetadata
@@ -688,6 +614,19 @@ components:
             - priority
             - flex
           description: Service tiers supported by this Telnyx-hosted model. Use one of these values as `service_tier` in Chat Completions or Responses requests. This field is omitted for externally hosted models.
+    FunctionDefinition:
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        parameters:
+          type: object
+          additionalProperties: true
+      type: object
+      required:
+      - name
+      title: FunctionDefinition
     ChatCompletionResponseFormatParam:
       description: Output format for the model response. `text` returns plain text, `json_object` enables JSON mode (valid JSON output without a schema), and `json_schema` constrains the output to a schema you supply. For guaranteed schema-conformant structured output on Telnyx-hosted models, use `json_schema`.
       oneOf:
@@ -695,6 +634,76 @@ components:
       - $ref: '#/components/schemas/ResponseFormatJsonObject'
       - $ref: '#/components/schemas/ResponseFormatJsonSchemaParam'
       title: ChatCompletionResponseFormatParam
+    BucketIds:
+      properties:
+        bucket_ids:
+          items:
+            type: string
+          type: array
+          description: List of [embedded storage buckets](https://developers.telnyx.com/api-reference/embeddings/embed-documents) to use for retrieval-augmented generation.
+        max_num_results:
+          description: The maximum number of results to retrieve as context for the language model.
+          type: integer
+      type: object
+      required:
+      - bucket_ids
+      title: BucketIds
+    ChatCompletionToolParam:
+      properties:
+        type:
+          type: string
+          enum:
+          - function
+        function:
+          $ref: '#/components/schemas/FunctionDefinition'
+      type: object
+      required:
+      - function
+      - type
+      title: Function
+    ResponseFormatJsonSchemaParam:
+      description: 'Structured output: the model output is constrained to the JSON schema supplied in `json_schema`.'
+      properties:
+        type:
+          const: json_schema
+          type: string
+        json_schema:
+          $ref: '#/components/schemas/ResponseFormatJsonSchema'
+      required:
+      - type
+      - json_schema
+      title: ResponseFormatJsonSchemaParam
+      type: object
+    ValidationError:
+      title: ValidationError
+      required:
+      - loc
+      - msg
+      - type
+      type: object
+      properties:
+        loc:
+          title: Location
+          type: array
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+    HTTPValidationError_2:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
     ChatCompletionRequest_2:
       properties:
         api_key_ref:
@@ -810,15 +819,6 @@ components:
       required:
       - messages
       title: ChatCompletionRequest
-      type: object
-    HTTPValidationError_2:
-      properties:
-        detail:
-          items:
-            $ref: '#/components/schemas/ValidationError'
-          title: Detail
-          type: array
-      title: HTTPValidationError
       type: object
     ModelMetadata_2:
       properties:

@@ -320,48 +320,13 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    RegionOut:
+    RegionIn:
       type: object
       properties:
         region_code:
-          description: The region interface is deployed to.
+          description: The region the interface should be deployed to.
           type: string
           example: ashburn-va
-        region:
-          type: object
-          properties:
-            code:
-              description: Region code of the interface.
-              type: string
-              example: ashburn-va
-            name:
-              description: Region name of the interface.
-              type: string
-              example: Ashburn
-            record_type:
-              type: string
-              description: Identifies the type of the resource.
-              readOnly: true
-              example: region
-    WireguardPeerPatch:
-      type: object
-      title: WireguardPeerPatch
-      properties:
-        public_key:
-          type: string
-          description: The WireGuard `PublicKey`.<br /><br />If you do not provide a Public Key, a new Public and Private key pair will be generated for you.
-          example: qF4EqlZq+5JL2IKYY8ij49daYyfKVhevJrcDxdqC8GU=
-    WireguardPeerCreate:
-      allOf:
-      - $ref: '#/components/schemas/WireguardPeer'
-      - type: object
-        title: WireguardPeerCreate
-        required:
-        - wireguard_interface_id
-    WireguardInterfaceRead:
-      allOf:
-      - $ref: '#/components/schemas/WireguardInterface'
-      - $ref: '#/components/schemas/RegionOut'
     WireguardPeer:
       allOf:
       - $ref: '#/components/schemas/Record'
@@ -389,46 +354,35 @@ components:
             description: Your WireGuard `Interface.PrivateKey`.<br /><br />This attribute is only ever utlised if, on POST, you do NOT provide your own `public_key`. In which case, a new Public and Private key pair will be generated for you. When your `private_key` is returned, you must save this immediately as we do not save it within Telnyx. If you lose your Private Key, it can not be recovered.
             example: qF4EqlZq+5JL2IKYY8ij49daYyfKVhevJrcDxdqC8GU=
             readOnly: true
-    RegionIn:
-      type: object
-      properties:
-        region_code:
-          description: The region the interface should be deployed to.
-          type: string
-          example: ashburn-va
-    Record:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Identifies the resource.
-          readOnly: true
-          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-        record_type:
-          type: string
-          description: Identifies the type of the resource.
-          readOnly: true
-          example: sample_record_type
-        created_at:
-          type: string
-          description: ISO 8601 formatted date-time indicating when the resource was created.
-          readOnly: true
-          example: '2018-02-02T22:25:27.521Z'
-        updated_at:
-          type: string
-          description: ISO 8601 formatted date-time indicating when the resource was updated.
-          readOnly: true
-          example: '2018-02-02T22:25:27.521Z'
-    WireguardInterfaceCreate:
+    InterfaceStatus:
+      type: string
+      enum:
+      - created
+      - provisioning
+      - provisioned
+      - deleting
+      description: The current status of the interface deployment.
+      readOnly: true
+      example: provisioned
+    WireguardInterfaceRead:
       allOf:
       - $ref: '#/components/schemas/WireguardInterface'
-      - $ref: '#/components/schemas/RegionIn'
-      - type: object
-        title: WireguardInterfaceCreate
-        required:
-        - network_id
-        - region_code
+      - $ref: '#/components/schemas/RegionOut'
+    PaginationMeta:
+      type: object
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 55
+        page_number:
+          type: integer
+          example: 2
+        page_size:
+          type: integer
+          example: 25
     WireguardInterface:
       allOf:
       - $ref: '#/components/schemas/Record'
@@ -455,6 +409,51 @@ components:
             type: boolean
             description: Enable SIP traffic forwarding over VPN interface.
             example: false
+    WireguardPeerCreate:
+      allOf:
+      - $ref: '#/components/schemas/WireguardPeer'
+      - type: object
+        title: WireguardPeerCreate
+        required:
+        - wireguard_interface_id
+    Errors:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/billing-group_Error'
+      type: object
+    WireguardPeerPatch:
+      type: object
+      title: WireguardPeerPatch
+      properties:
+        public_key:
+          type: string
+          description: The WireGuard `PublicKey`.<br /><br />If you do not provide a Public Key, a new Public and Private key pair will be generated for you.
+          example: qF4EqlZq+5JL2IKYY8ij49daYyfKVhevJrcDxdqC8GU=
+    WireguardInterfaceCreate:
+      allOf:
+      - $ref: '#/components/schemas/WireguardInterface'
+      - $ref: '#/components/schemas/RegionIn'
+      - type: object
+        title: WireguardInterfaceCreate
+        required:
+        - network_id
+        - region_code
+    Interface:
+      type: object
+      properties:
+        network_id:
+          description: The id of the network associated with the interface.
+          type: string
+          format: uuid
+          example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
+        name:
+          type: string
+          description: A user specified name for the interface.
+          example: test interface
+        status:
+          $ref: '#/components/schemas/InterfaceStatus'
     billing-group_Error:
       type: object
       required:
@@ -481,52 +480,60 @@ components:
           type: object
           properties: {}
           additionalProperties: true
-    Interface:
+    Record:
       type: object
       properties:
-        network_id:
-          description: The id of the network associated with the interface.
+        id:
           type: string
           format: uuid
+          description: Identifies the resource.
+          readOnly: true
           example: 6a09cdc3-8948-47f0-aa62-74ac943d6c58
-        name:
+        record_type:
           type: string
-          description: A user specified name for the interface.
-          example: test interface
-        status:
-          $ref: '#/components/schemas/InterfaceStatus'
-    Errors:
+          description: Identifies the type of the resource.
+          readOnly: true
+          example: sample_record_type
+        created_at:
+          type: string
+          description: ISO 8601 formatted date-time indicating when the resource was created.
+          readOnly: true
+          example: '2018-02-02T22:25:27.521Z'
+        updated_at:
+          type: string
+          description: ISO 8601 formatted date-time indicating when the resource was updated.
+          readOnly: true
+          example: '2018-02-02T22:25:27.521Z'
+    RegionOut:
+      type: object
+      properties:
+        region_code:
+          description: The region interface is deployed to.
+          type: string
+          example: ashburn-va
+        region:
+          type: object
+          properties:
+            code:
+              description: Region code of the interface.
+              type: string
+              example: ashburn-va
+            name:
+              description: Region name of the interface.
+              type: string
+              example: Ashburn
+            record_type:
+              type: string
+              description: Identifies the type of the resource.
+              readOnly: true
+              example: region
+    netapps_Errors:
       properties:
         errors:
-          type: array
           items:
-            $ref: '#/components/schemas/billing-group_Error'
+            $ref: '#/components/schemas/netapps_Error'
+          type: array
       type: object
-    PaginationMeta:
-      type: object
-      properties:
-        total_pages:
-          type: integer
-          example: 3
-        total_results:
-          type: integer
-          example: 55
-        page_number:
-          type: integer
-          example: 2
-        page_size:
-          type: integer
-          example: 25
-    InterfaceStatus:
-      type: string
-      enum:
-      - created
-      - provisioning
-      - provisioned
-      - deleting
-      description: The current status of the interface deployment.
-      readOnly: true
-      example: provisioned
     netapps_Error:
       properties:
         code:
@@ -550,13 +557,6 @@ components:
       required:
       - code
       - title
-      type: object
-    netapps_Errors:
-      properties:
-        errors:
-          items:
-            $ref: '#/components/schemas/netapps_Error'
-          type: array
       type: object
     Errors_2:
       properties:
@@ -600,6 +600,91 @@ components:
         code: '20207'
         description: The street address provided is invalid.
       type: object
+  responses:
+    UnprocessableEntity:
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          example:
+            errors:
+            - code: '10027'
+              title: Unprocessable Entity
+              detail: The server understood the syntax of the request but was unable to process the instructions.
+    GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+    WireguardPeerResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/WireguardPeer'
+            type: object
+      description: Successful response
+    netapps_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/netapps_Errors'
+      description: Unexpected error
+    netapps_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/netapps_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+    WireguardInterfaceResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/WireguardInterfaceRead'
+            type: object
+      description: Successful response
+    WireguardPeerListResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/WireguardPeer'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful response
+    WireguardInterfaceListResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/components/schemas/WireguardInterfaceRead'
+                type: array
+              meta:
+                $ref: '#/components/schemas/PaginationMeta'
+            type: object
+      description: Successful response
+    netapps_UnprocessableEntity_17904fcfbc:
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors_2'
+          example:
+            errors:
+            - code: '10027'
+              title: Unprocessable Entity
+              detail: The server understood the syntax of the request but was unable to process the instructions.
   parameters:
     ResourceId:
       name: id
@@ -630,91 +715,6 @@ components:
             maximum: 250
             default: 20
             description: The size of the page
-  responses:
-    UnprocessableEntity:
-      description: Unprocessable entity. Check the 'detail' field in response for details.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Errors'
-          example:
-            errors:
-            - code: '10027'
-              title: Unprocessable Entity
-              detail: The server understood the syntax of the request but was unable to process the instructions.
-    GenericErrorResponse:
-      description: Unexpected error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Errors'
-    netapps_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/netapps_Errors'
-      description: Unexpected error
-    WireguardPeerListResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/WireguardPeer'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful response
-    WireguardInterfaceListResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                items:
-                  $ref: '#/components/schemas/WireguardInterfaceRead'
-                type: array
-              meta:
-                $ref: '#/components/schemas/PaginationMeta'
-            type: object
-      description: Successful response
-    WireguardInterfaceResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/WireguardInterfaceRead'
-            type: object
-      description: Successful response
-    netapps_UnprocessableEntity:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/netapps_Errors'
-      description: Unprocessable entity. Check the 'detail' field in response for details.
-    WireguardPeerResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/WireguardPeer'
-            type: object
-      description: Successful response
-    netapps_UnprocessableEntity_17904fcfbc:
-      description: Unprocessable entity. Check the 'detail' field in response for details.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Errors_2'
-          example:
-            errors:
-            - code: '10027'
-              title: Unprocessable Entity
-              detail: The server understood the syntax of the request but was unable to process the instructions.
   securitySchemes:
     BearerAuth:
       type: http

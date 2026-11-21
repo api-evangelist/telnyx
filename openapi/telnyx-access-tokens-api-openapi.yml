@@ -83,20 +83,6 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
-  responses:
-    IdempotencyConflictResponse:
-      description: A request with the same Idempotency-Key is still being processed (10036). Retry later with the same key and request.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/email_ErrorResponse'
-          example:
-            errors:
-            - code: '10036'
-              detail: A request with this Idempotency-Key is already being processed.
-              source:
-                pointer: /header/Idempotency-Key
-              title: Resource is being processed
   schemas:
     SuppressedRecipient:
       type: object
@@ -119,23 +105,20 @@ components:
       - reason
       - scope
       - override_allowed
-    TokenMaterial:
+    email_ErrorResponse:
       type: object
-      title: Token Material
-      description: 'What a server needs to mint login tokens for the credential itself, with no request per token (`TelephonyCredential#to_jwt` in telnyx-ruby 3.1.0 or later). As sensitive as `sip_password`: keep it on the server.'
       properties:
-        kid:
-          type: string
-          description: Identifies the Telnyx signing key the `signing_secret` was derived with. Goes in the token header.
-          example: v1
-        tel_token:
-          type: string
-          description: Opaque value Telnyx uses to resolve the credential. Carried in the token's `tel_token` claim as is.
-          example: rj_ZkkZUOZMxZOfOmLpEUB3siU7u6RjZFeM9s-gb_xCR56WFKFAJiMyF2T6CBRmlh_Sy0i_lfyT9AI8sEif8MTIIszyzSl_aDnG48aO50yaHGuRSYbUbSYm9WIiQ0g==
-        signing_secret:
-          type: string
-          description: The HMAC-SHA256 key the token is signed with, base64url without padding.
-          example: cCL985ACi7wpbe_2xh1VDF3NabPJ90u1wCKmJCPNpxw
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorObject'
+        suppressed:
+          type: array
+          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
+      required:
+      - errors
     telephony-credentials_ErrorObject:
       type: object
       properties:
@@ -168,20 +151,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/telephony-credentials_ErrorObject'
-      required:
-      - errors
-    email_ErrorResponse:
-      type: object
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/ErrorObject'
-        suppressed:
-          type: array
-          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
-          items:
-            $ref: '#/components/schemas/SuppressedRecipient'
       required:
       - errors
     ErrorObject:
@@ -226,6 +195,37 @@ components:
       - code
       - title
       - detail
+    TokenMaterial:
+      type: object
+      title: Token Material
+      description: 'What a server needs to mint login tokens for the credential itself, with no request per token (`TelephonyCredential#to_jwt` in telnyx-ruby 3.1.0 or later). As sensitive as `sip_password`: keep it on the server.'
+      properties:
+        kid:
+          type: string
+          description: Identifies the Telnyx signing key the `signing_secret` was derived with. Goes in the token header.
+          example: v1
+        tel_token:
+          type: string
+          description: Opaque value Telnyx uses to resolve the credential. Carried in the token's `tel_token` claim as is.
+          example: rj_ZkkZUOZMxZOfOmLpEUB3siU7u6RjZFeM9s-gb_xCR56WFKFAJiMyF2T6CBRmlh_Sy0i_lfyT9AI8sEif8MTIIszyzSl_aDnG48aO50yaHGuRSYbUbSYm9WIiQ0g==
+        signing_secret:
+          type: string
+          description: The HMAC-SHA256 key the token is signed with, base64url without padding.
+          example: cCL985ACi7wpbe_2xh1VDF3NabPJ90u1wCKmJCPNpxw
+  responses:
+    IdempotencyConflictResponse:
+      description: A request with the same Idempotency-Key is still being processed (10036). Retry later with the same key and request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10036'
+              detail: A request with this Idempotency-Key is already being processed.
+              source:
+                pointer: /header/Idempotency-Key
+              title: Resource is being processed
   headers:
     IdempotentReplayed:
       description: Present with value `true` when Edge replayed a stored successful response for the supplied Idempotency-Key. Omitted for first-time requests and error responses.

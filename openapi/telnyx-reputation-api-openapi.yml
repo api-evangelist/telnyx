@@ -738,148 +738,63 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    ReputationCheckFrequency:
-      type: string
-      enum:
-      - business_daily
-      - daily
-      - weekly
-      - biweekly
-      - monthly
-      - never
-      description: How often Telnyx refreshes the stored reputation data for this enterprise's registered numbers.
-    number-reputation_Error:
+    RemediationRequestListItem:
       type: object
+      description: Slim list-endpoint shape. Omits per-number results and webhook URLs to keep responses small.
       required:
-      - code
-      - title
-      - detail
-      - meta
+      - id
+      - status
+      - phone_numbers_count
+      - call_purpose
+      - created_at
+      - updated_at
       properties:
-        code:
+        id:
           type: string
-          example: '10005'
-          description: Stable numeric Telnyx error catalog id. See `meta.url` for the full catalog entry.
-        title:
-          type: string
-          example: Invalid parameters
-          description: Short human-readable category, e.g. `Bad Request`, `Duplicate resource`, `Not Found`, `Forbidden`. Treat as advisory only - the stable identifier is `code`.
-        detail:
-          type: string
-          example: field required
-          description: Context-specific message describing what went wrong on this particular request. May embed offending values; do not rely on it for programmatic matching - branch on `code`.
-        meta:
-          type: object
-          required:
-          - url
-          properties:
-            url:
-              type: string
-              format: uri
-              example: https://developers.telnyx.com/docs/overview/errors/10005
-            pending_check_ids:
-              type: array
-              items:
-                type: string
-                format: uuid
-              description: Set on `422 vetting_checks_incomplete` responses from `/admin/dir/{id}/approve` and `/admin/phone-number-batches/approve`. Lists the still-pending vetting check ids.
-            pending_check_codes:
-              type: array
-              items:
-                type: string
-              description: Codes of the pending vetting checks (e.g. `loa_signature_valid`).
-            pending_check_labels:
-              type: array
-              items:
-                type: string
-              description: Human-readable labels of the pending vetting checks.
-          description: Carries `url` linking to the Telnyx error catalog entry for this `code`. Useful for forwarding the user to documentation.
-        source:
-          type: object
-          description: Optional pointer at the offending field of the request.
-          properties:
-            pointer:
-              type: string
-              example: /body/legal_name
-            parameter:
-              type: string
-              example: page[size]
-      description: A single entry in the canonical Telnyx error envelope. `code` is the stable Telnyx error catalog id; the human-readable explanation lives at `meta.url`. `detail` is a context-specific message; `source.pointer` (when present) names the offending field of the request.
-    ReputationData:
-      type: object
-      description: Reputation snapshot for a phone number. Each metric is a 0–100 score; `spam_risk` is a coarse bucket. Field set may grow over time - read by key.
-      properties:
-        spam_risk:
-          type: string
-          enum:
-          - low
-          - medium
-          - high
-          nullable: true
-          description: Overall spam-risk classification.
-          example: low
-        spam_category:
-          type: string
-          nullable: true
-          description: Category label from the reputation feed when the number is flagged.
-          example: null
-        maturity_score:
+          format: uuid
+          example: b7c1f1c0-7a9d-4f0a-9d3e-2f6a1c4b8e21
+        status:
+          $ref: '#/components/schemas/RemediationStatus'
+        phone_numbers_count:
           type: integer
-          minimum: 0
-          maximum: 100
-          nullable: true
-          example: 72
-        connection_score:
-          type: integer
-          minimum: 0
-          maximum: 100
-          nullable: true
-          example: 80
-        engagement_score:
-          type: integer
-          minimum: 0
-          maximum: 100
-          nullable: true
-          example: 64
-        sentiment_score:
-          type: integer
-          minimum: 0
-          maximum: 100
-          nullable: true
-          example: 75
-        last_refreshed_at:
+          example: 2
+        call_purpose:
+          type: string
+          example: Appointment reminders for our dental clinic.
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-06-01T12:00:00Z'
+        updated_at:
+          type: string
+          format: date-time
+          example: '2026-06-01T12:05:00Z'
+        tier1_completed_at:
           type: string
           format: date-time
           nullable: true
-          example: '2026-04-26T18:09:24.785211Z'
-    ReputationLoaStatusPublic:
-      type: string
-      enum:
-      - pending
-      - approved
-      - rejected
-      description: Customer-facing Letter-of-Authorization verification state. `approved` is required (alongside reputation status) before phone numbers can be added.
-      example: pending
-    ReputationStatus:
-      type: string
-      enum:
-      - pending
-      - approved
-      - deleted
-      - rejected
-      description: Lifecycle status of the enterprise's Phone Number Reputation activation.
-    ReputationPhoneNumberList:
+        tier2_completed_at:
+          type: string
+          format: date-time
+          nullable: true
+    number-reputation_Errors:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/number-reputation_Error'
+          description: List of one or more error entries. Order is not significant.
+      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
+    ReputationPhoneNumberWithReputation:
       type: object
       required:
       - data
-      - meta
       properties:
         data:
-          type: array
-          items:
-            $ref: '#/components/schemas/ReputationPhoneNumber'
-        meta:
-          $ref: '#/components/schemas/number-reputation_PaginationMeta'
+          $ref: '#/components/schemas/ReputationPhoneNumber'
     EnterpriseReputationPublic:
       type: object
       properties:
@@ -914,114 +829,6 @@ components:
           format: date-time
           example: '2026-04-26T18:09:24.785211Z'
           readOnly: true
-    number-reputation_AgentInput:
-      type: object
-      description: Third-party reseller / partner managing the enterprise's phone numbers. Omit when the enterprise works directly with Telnyx.
-      required:
-      - legal_name
-      - street_address
-      - city
-      - administrative_area
-      - postal_code
-      - country
-      - contact_name
-      - contact_title
-      - contact_email
-      - contact_phone
-      properties:
-        legal_name:
-          type: string
-          maxLength: 200
-        dba:
-          type: string
-          nullable: true
-          maxLength: 200
-        street_address:
-          type: string
-          maxLength: 255
-        extended_address:
-          type: string
-          nullable: true
-          maxLength: 255
-        city:
-          type: string
-          maxLength: 120
-        administrative_area:
-          type: string
-          maxLength: 120
-        postal_code:
-          type: string
-          maxLength: 30
-        country:
-          type: string
-          minLength: 2
-          maxLength: 2
-          example: US
-        contact_name:
-          type: string
-          maxLength: 200
-        contact_title:
-          type: string
-          maxLength: 200
-        contact_email:
-          type: string
-          format: email
-        contact_phone:
-          type: string
-          maxLength: 30
-          example: '+13125550000'
-    RemediationRequestWrapped:
-      type: object
-      required:
-      - data
-      properties:
-        data:
-          $ref: '#/components/schemas/RemediationRequest'
-    RemediationRequestCreate:
-      type: object
-      additionalProperties: false
-      required:
-      - phone_numbers
-      - call_purpose
-      properties:
-        phone_numbers:
-          type: array
-          description: Phone numbers in E.164 format. Each must belong to this enterprise. Maximum 2,000 per request.
-          minItems: 1
-          maxItems: 2000
-          items:
-            type: string
-            pattern: ^\+[1-9][0-9]{9,14}$
-            example: '+19493253498'
-        call_purpose:
-          type: string
-          description: How the numbers are used (free text).
-          minLength: 1
-          maxLength: 2000
-          example: Appointment reminders for our dental clinic.
-        contact_email:
-          type: string
-          format: email
-          description: Optional contact email for this remediation request.
-          maxLength: 255
-          example: ops@example.com
-        webhook_url:
-          type: string
-          format: uri
-          description: Optional https:// URL for status notifications.
-          maxLength: 2048
-          example: https://example.com/webhooks/remediation
-    number-reputation_Errors:
-      type: object
-      required:
-      - errors
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/number-reputation_Error'
-          description: List of one or more error entries. Order is not significant.
-      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
     RemediationRequest:
       type: object
       description: Full detail of a remediation request, returned on submit and GET by id.
@@ -1086,10 +893,44 @@ components:
           $ref: '#/components/schemas/RemediationPerNumberResults'
           nullable: true
           description: Per-category buckets. Populated once results are available. Null while the request is still pending.
-    ReputationPhoneNumberListWithReputation:
-      description: List of reputation-monitored phone numbers, each carrying its current reputation data.
-      allOf:
-      - $ref: '#/components/schemas/ReputationPhoneNumberList'
+    LoaSignaturePayload:
+      type: object
+      description: Optional signature embedded in the rendered PDF. When omitted the PDF is returned unsigned for the customer to sign and upload.
+      required:
+      - image_base64
+      properties:
+        image_base64:
+          type: string
+          description: Base64-encoded signature image.
+        signer_name:
+          type: string
+          nullable: true
+    EnterpriseReputationLoaRender:
+      type: object
+      description: All fields optional. The enterprise identity, address, and authorized-representative contact are read from the enterprise record keyed by the path parameter.
+      properties:
+        agent:
+          $ref: '#/components/schemas/number-reputation_AgentInput'
+        signature:
+          $ref: '#/components/schemas/LoaSignaturePayload'
+    RemediationRequestWrapped:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/RemediationRequest'
+    EnterpriseReputationLoaUpdate:
+      type: object
+      required:
+      - loa_document_id
+      properties:
+        loa_document_id:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Id of the new signed LOA document (from the Telnyx Documents API). Changing it resets LOA approval; the new document must be approved before more numbers can be added.
+          example: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
     RemediationStatus:
       type: string
       description: Customer-facing status of a remediation request.
@@ -1100,31 +941,183 @@ components:
       - failed
       - cancelled
       example: in_progress
-    RemediationPerNumberResults:
+    ReputationLoaStatusPublic:
+      type: string
+      enum:
+      - pending
+      - approved
+      - rejected
+      description: Customer-facing Letter-of-Authorization verification state. `approved` is required (alongside reputation status) before phone numbers can be added.
+      example: pending
+    RemediationRequestList:
       type: object
-      description: Per-category buckets of phone numbers, populated once results are available. Empty lists are kept (not omitted) so consumers can iterate without null-checking each key.
+      required:
+      - data
+      - meta
       properties:
-        remediated:
+        data:
           type: array
           items:
+            $ref: '#/components/schemas/RemediationRequestListItem'
+        meta:
+          $ref: '#/components/schemas/number-reputation_PaginationMeta'
+    RemediationRequestCreate:
+      type: object
+      additionalProperties: false
+      required:
+      - phone_numbers
+      - call_purpose
+      properties:
+        phone_numbers:
+          type: array
+          description: Phone numbers in E.164 format. Each must belong to this enterprise. Maximum 2,000 per request.
+          minItems: 1
+          maxItems: 2000
+          items:
             type: string
+            pattern: ^\+[1-9][0-9]{9,14}$
             example: '+19493253498'
-        not_flagged:
+        call_purpose:
+          type: string
+          description: How the numbers are used (free text).
+          minLength: 1
+          maxLength: 2000
+          example: Appointment reminders for our dental clinic.
+        contact_email:
+          type: string
+          format: email
+          description: Optional contact email for this remediation request.
+          maxLength: 255
+          example: ops@example.com
+        webhook_url:
+          type: string
+          format: uri
+          description: Optional https:// URL for status notifications.
+          maxLength: 2048
+          example: https://example.com/webhooks/remediation
+    ReputationData:
+      type: object
+      description: Reputation snapshot for a phone number. Each metric is a 0–100 score; `spam_risk` is a coarse bucket. Field set may grow over time - read by key.
+      properties:
+        spam_risk:
+          type: string
+          enum:
+          - low
+          - medium
+          - high
+          nullable: true
+          description: Overall spam-risk classification.
+          example: low
+        spam_category:
+          type: string
+          nullable: true
+          description: Category label from the reputation feed when the number is flagged.
+          example: null
+        maturity_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+          example: 72
+        connection_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+          example: 80
+        engagement_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+          example: 64
+        sentiment_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+          example: 75
+        last_refreshed_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2026-04-26T18:09:24.785211Z'
+    ReputationPhoneNumberList:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
           type: array
           items:
-            type: string
-        requires_review:
-          type: array
-          items:
-            type: string
-        ineligible:
-          type: array
-          items:
-            type: string
-        refused:
-          type: array
-          items:
-            type: string
+            $ref: '#/components/schemas/ReputationPhoneNumber'
+        meta:
+          $ref: '#/components/schemas/number-reputation_PaginationMeta'
+    EnterpriseReputationUpdateFrequency:
+      type: object
+      required:
+      - check_frequency
+      additionalProperties: false
+      properties:
+        check_frequency:
+          $ref: '#/components/schemas/ReputationCheckFrequency'
+    number-reputation_AgentInput:
+      type: object
+      description: Third-party reseller / partner managing the enterprise's phone numbers. Omit when the enterprise works directly with Telnyx.
+      required:
+      - legal_name
+      - street_address
+      - city
+      - administrative_area
+      - postal_code
+      - country
+      - contact_name
+      - contact_title
+      - contact_email
+      - contact_phone
+      properties:
+        legal_name:
+          type: string
+          maxLength: 200
+        dba:
+          type: string
+          nullable: true
+          maxLength: 200
+        street_address:
+          type: string
+          maxLength: 255
+        extended_address:
+          type: string
+          nullable: true
+          maxLength: 255
+        city:
+          type: string
+          maxLength: 120
+        administrative_area:
+          type: string
+          maxLength: 120
+        postal_code:
+          type: string
+          maxLength: 30
+        country:
+          type: string
+          minLength: 2
+          maxLength: 2
+          example: US
+        contact_name:
+          type: string
+          maxLength: 200
+        contact_title:
+          type: string
+          maxLength: 200
+        contact_email:
+          type: string
+          format: email
+        contact_phone:
+          type: string
+          maxLength: 30
+          example: '+13125550000'
     ReputationPhoneNumberCreate:
       type: object
       required:
@@ -1139,78 +1132,67 @@ components:
           minItems: 1
           maxItems: 100
           description: 1–100 phone numbers in E.164 format with a leading `+`.
-    ReputationPhoneNumberWithReputation:
+    number-reputation_Error:
       type: object
       required:
-      - data
+      - code
+      - title
+      - detail
+      - meta
       properties:
-        data:
-          $ref: '#/components/schemas/ReputationPhoneNumber'
-    RefreshReputationRequest:
-      type: object
-      required:
-      - phone_numbers
-      additionalProperties: false
-      properties:
-        phone_numbers:
-          type: array
-          items:
-            type: string
-            example: '+19493253498'
-          minItems: 1
-          maxItems: 100
-          description: Phone numbers to refresh reputation data for. 1–100 numbers per request, each in E.164 format. Reputation refreshes are subject to per-enterprise rate limits.
-    EnterpriseReputationUpdateFrequency:
-      type: object
-      required:
-      - check_frequency
-      additionalProperties: false
-      properties:
-        check_frequency:
-          $ref: '#/components/schemas/ReputationCheckFrequency'
-    number-reputation_PaginationMeta:
-      type: object
-      required:
-      - total_pages
-      - total_results
-      - page_number
-      - page_size
-      properties:
-        total_pages:
-          type: integer
-          example: 3
-          description: Total number of pages available given the current `page_size`.
-        total_results:
-          type: integer
-          example: 42
-          description: Total number of items across all pages (excludes soft-deleted rows).
-        page_number:
-          type: integer
-          example: 1
-          description: 1-based index of this page. Echoes the `page[number]` query parameter (default `1`).
-        page_size:
-          type: integer
-          example: 20
-          description: Number of items returned in this page's `data` array. Capped at 250.
-      description: JSON:API pagination metadata returned with every paginated list response. Page numbering is 1-based. `page_size` reports the number of items actually returned in `data` for this page; the requested size is taken from the `page[size]` query parameter.
-    EnterpriseReputationPublicWrapped:
-      type: object
-      required:
-      - data
-      properties:
-        data:
-          $ref: '#/components/schemas/EnterpriseReputationPublic'
-    EnterpriseReputationLoaUpdate:
-      type: object
-      required:
-      - loa_document_id
-      properties:
-        loa_document_id:
+        code:
           type: string
-          minLength: 1
-          maxLength: 255
-          description: Id of the new signed LOA document (from the Telnyx Documents API). Changing it resets LOA approval; the new document must be approved before more numbers can be added.
-          example: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
+          example: '10005'
+          description: Stable numeric Telnyx error catalog id. See `meta.url` for the full catalog entry.
+        title:
+          type: string
+          example: Invalid parameters
+          description: Short human-readable category, e.g. `Bad Request`, `Duplicate resource`, `Not Found`, `Forbidden`. Treat as advisory only - the stable identifier is `code`.
+        detail:
+          type: string
+          example: field required
+          description: Context-specific message describing what went wrong on this particular request. May embed offending values; do not rely on it for programmatic matching - branch on `code`.
+        meta:
+          type: object
+          required:
+          - url
+          properties:
+            url:
+              type: string
+              format: uri
+              example: https://developers.telnyx.com/docs/overview/errors/10005
+            pending_check_ids:
+              type: array
+              items:
+                type: string
+                format: uuid
+              description: Set on `422 vetting_checks_incomplete` responses from `/admin/dir/{id}/approve` and `/admin/phone-number-batches/approve`. Lists the still-pending vetting check ids.
+            pending_check_codes:
+              type: array
+              items:
+                type: string
+              description: Codes of the pending vetting checks (e.g. `loa_signature_valid`).
+            pending_check_labels:
+              type: array
+              items:
+                type: string
+              description: Human-readable labels of the pending vetting checks.
+          description: Carries `url` linking to the Telnyx error catalog entry for this `code`. Useful for forwarding the user to documentation.
+        source:
+          type: object
+          description: Optional pointer at the offending field of the request.
+          properties:
+            pointer:
+              type: string
+              example: /body/legal_name
+            parameter:
+              type: string
+              example: page[size]
+      description: A single entry in the canonical Telnyx error envelope. `code` is the stable Telnyx error catalog id; the human-readable explanation lives at `meta.url`. `detail` is a context-specific message; `source.pointer` (when present) names the offending field of the request.
+    ReputationPhoneNumberListWithReputation:
+      description: List of reputation-monitored phone numbers, each carrying its current reputation data.
+      allOf:
+      - $ref: '#/components/schemas/ReputationPhoneNumberList'
     RefreshReputationResponse:
       type: object
       required:
@@ -1253,26 +1235,31 @@ components:
             total_failed:
               type: integer
               example: 0
-    EnterpriseReputationLoaRender:
+    RemediationPerNumberResults:
       type: object
-      description: All fields optional. The enterprise identity, address, and authorized-representative contact are read from the enterprise record keyed by the path parameter.
+      description: Per-category buckets of phone numbers, populated once results are available. Empty lists are kept (not omitted) so consumers can iterate without null-checking each key.
       properties:
-        agent:
-          $ref: '#/components/schemas/number-reputation_AgentInput'
-        signature:
-          $ref: '#/components/schemas/LoaSignaturePayload'
-    LoaSignaturePayload:
-      type: object
-      description: Optional signature embedded in the rendered PDF. When omitted the PDF is returned unsigned for the customer to sign and upload.
-      required:
-      - image_base64
-      properties:
-        image_base64:
-          type: string
-          description: Base64-encoded signature image.
-        signer_name:
-          type: string
-          nullable: true
+        remediated:
+          type: array
+          items:
+            type: string
+            example: '+19493253498'
+        not_flagged:
+          type: array
+          items:
+            type: string
+        requires_review:
+          type: array
+          items:
+            type: string
+        ineligible:
+          type: array
+          items:
+            type: string
+        refused:
+          type: array
+          items:
+            type: string
     EnterpriseReputationCreate:
       type: object
       required:
@@ -1290,6 +1277,38 @@ components:
           - $ref: '#/components/schemas/ReputationCheckFrequency'
           default: business_daily
           description: Refresh cadence. Defaults to `business_daily` if omitted.
+    ReputationStatus:
+      type: string
+      enum:
+      - pending
+      - approved
+      - deleted
+      - rejected
+      description: Lifecycle status of the enterprise's Phone Number Reputation activation.
+    ReputationCheckFrequency:
+      type: string
+      enum:
+      - business_daily
+      - daily
+      - weekly
+      - biweekly
+      - monthly
+      - never
+      description: How often Telnyx refreshes the stored reputation data for this enterprise's registered numbers.
+    RefreshReputationRequest:
+      type: object
+      required:
+      - phone_numbers
+      additionalProperties: false
+      properties:
+        phone_numbers:
+          type: array
+          items:
+            type: string
+            example: '+19493253498'
+          minItems: 1
+          maxItems: 100
+          description: Phone numbers to refresh reputation data for. 1–100 numbers per request, each in E.164 format. Reputation refreshes are subject to per-enterprise rate limits.
     ReputationPhoneNumber:
       type: object
       properties:
@@ -1320,7 +1339,72 @@ components:
           format: date-time
           example: '2026-04-26T18:09:24.785211Z'
           readOnly: true
-    RemediationRequestListItem:
+    number-reputation_PaginationMeta:
+      type: object
+      required:
+      - total_pages
+      - total_results
+      - page_number
+      - page_size
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+          description: Total number of pages available given the current `page_size`.
+        total_results:
+          type: integer
+          example: 42
+          description: Total number of items across all pages (excludes soft-deleted rows).
+        page_number:
+          type: integer
+          example: 1
+          description: 1-based index of this page. Echoes the `page[number]` query parameter (default `1`).
+        page_size:
+          type: integer
+          example: 20
+          description: Number of items returned in this page's `data` array. Capped at 250.
+      description: JSON:API pagination metadata returned with every paginated list response. Page numbering is 1-based. `page_size` reports the number of items actually returned in `data` for this page; the requested size is taken from the `page[size]` query parameter.
+    EnterpriseReputationPublicWrapped:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/EnterpriseReputationPublic'
+    ReputationOwnershipStatus:
+      type: string
+      enum:
+      - verified
+      - flagged
+      - pending_confirmation
+      - removed
+      description: 'Result of ongoing ownership checks. `verified`: the number is with the carrier on record. `pending_confirmation`: the number''s carrier changed, or a periodic ownership re-verification is due; confirm you still own it before `confirm_by`. `flagged`: a periodic re-verification went unanswered; the number stays monitored and is not removed, but confirm ownership (`POST .../ownership_confirm`) to return it to `verified`. `removed`: the number is no longer monitored; returned by `POST .../ownership_confirm` with `still_own: false`, and when listing numbers with `filter[ownership_status]=removed`.'
+      example: verified
+    ExternalVerificationSubmit:
+      type: object
+      required:
+      - document_ids
+      properties:
+        document_ids:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            type: string
+            minLength: 1
+            maxLength: 255
+          description: Ids of uploaded documents (Documents API) proving the enterprise owns its phone numbers hosted with another provider, for example a carrier invoice or account statement.
+          example:
+          - 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
+        phone_numbers:
+          type: array
+          maxItems: 1000
+          items:
+            type: string
+          description: Optional. The phone numbers hosted with another provider that the documents cover, in E.164 format. Shown to the reviewer to match the documents to your numbers; you can still add numbers that are not listed here, and each is checked on its own.
+          example:
+          - '+13125550142'
+    RemediationRequestListItem_2:
       type: object
       description: Slim list-endpoint shape. Omits per-number results and webhook URLs to keep responses small.
       required:
@@ -1352,120 +1436,15 @@ components:
           format: date-time
           example: '2026-06-01T12:05:00Z'
         tier1_completed_at:
-          type: string
+          type:
+          - string
+          - 'null'
           format: date-time
-          nullable: true
         tier2_completed_at:
-          type: string
-          format: date-time
-          nullable: true
-    RemediationRequestList:
-      type: object
-      required:
-      - data
-      - meta
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/RemediationRequestListItem'
-        meta:
-          $ref: '#/components/schemas/number-reputation_PaginationMeta'
-    ReputationRemovalReason:
-      type: string
-      enum:
-      - ported_away
-      - unconfirmed_ownership
-      - reassigned
-      - customer_reported
-      - customer_removed
-      description: 'Why a number was removed. `ported_away`: you confirmed the number left your control after a carrier change. `unconfirmed_ownership`: a carrier change was not confirmed before the deadline. `reassigned`: the number was reported as permanently disconnected. `customer_reported`: you reported that you no longer own the number. `customer_removed`: you removed the number.'
-      example: unconfirmed_ownership
-    EnterpriseReputationWebhookUpdate:
-      type: object
-      required:
-      - webhook_url
-      properties:
-        webhook_url:
-          type:
-          - string
-          - 'null'
-          format: uri
-          maxLength: 2048
-          description: HTTPS URL on a publicly routable host. Send `null` to stop receiving number-ownership events.
-          example: https://example.com/webhooks/telnyx
-    ExternalVerificationStatus:
-      type: string
-      enum:
-      - pending
-      - approved
-      - rejected
-      description: Review state of the ownership proof that allows adding phone numbers hosted with another provider.
-      example: pending
-    ReputationData_2:
-      type: object
-      description: Reputation snapshot for a phone number. Each metric is a 0–100 score; `spam_risk` is a coarse bucket. Field set may grow over time - read by key.
-      properties:
-        spam_risk:
-          type:
-          - string
-          - 'null'
-          enum:
-          - low
-          - medium
-          - high
-          - null
-          description: Overall spam-risk classification.
-          example: low
-        spam_category:
-          type:
-          - string
-          - 'null'
-          description: Category label from the reputation feed when the number is flagged.
-          example: null
-        maturity_score:
-          type:
-          - integer
-          - 'null'
-          minimum: 0
-          maximum: 100
-          example: 72
-        connection_score:
-          type:
-          - integer
-          - 'null'
-          minimum: 0
-          maximum: 100
-          example: 80
-        engagement_score:
-          type:
-          - integer
-          - 'null'
-          minimum: 0
-          maximum: 100
-          example: 64
-        sentiment_score:
-          type:
-          - integer
-          - 'null'
-          minimum: 0
-          maximum: 100
-          example: 75
-        last_refreshed_at:
           type:
           - string
           - 'null'
           format: date-time
-          example: '2026-04-26T18:09:24.785211Z'
-    ReputationOwnershipStatus:
-      type: string
-      enum:
-      - verified
-      - flagged
-      - pending_confirmation
-      - removed
-      description: 'Result of ongoing ownership checks. `verified`: the number is with the carrier on record. `pending_confirmation`: the number''s carrier changed, or a periodic ownership re-verification is due; confirm you still own it before `confirm_by`. `flagged`: a periodic re-verification went unanswered; the number stays monitored and is not removed, but confirm ownership (`POST .../ownership_confirm`) to return it to `verified`. `removed`: the number is no longer monitored; returned by `POST .../ownership_confirm` with `still_own: false`, and when listing numbers with `filter[ownership_status]=removed`.'
-      example: verified
     EnterpriseReputationPublic_2:
       type: object
       properties:
@@ -1514,64 +1493,68 @@ components:
           format: date-time
           example: '2026-04-26T18:09:24.785211Z'
           readOnly: true
-    number-reputation_AgentInput_2:
+    ReputationNumberOwnership:
       type: object
-      description: Third-party reseller / partner managing the enterprise's phone numbers. Omit when the enterprise works directly with Telnyx.
-      required:
-      - legal_name
-      - street_address
-      - city
-      - administrative_area
-      - postal_code
-      - country
-      - contact_name
-      - contact_title
-      - contact_email
-      - contact_phone
       properties:
-        legal_name:
+        phone_number:
           type: string
-          maxLength: 200
-        dba:
+          example: '+19493253498'
+        source:
+          $ref: '#/components/schemas/ReputationNumberSource'
+        ownership_status:
+          $ref: '#/components/schemas/ReputationOwnershipStatus'
+        flag_reason:
           type:
           - string
           - 'null'
-          maxLength: 200
-        street_address:
-          type: string
-          maxLength: 255
-        extended_address:
+          example: null
+        confirm_by:
           type:
           - string
           - 'null'
-          maxLength: 255
-        city:
+          format: date-time
+          example: null
+        last_checked_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: When ownership of the number was last checked.
+          example: '2026-10-05T06:00:41Z'
+        baseline_carrier:
+          type:
+          - string
+          - 'null'
+          description: Service provider ID (SPID) of the carrier that held the number when its ownership was last established.
+          example: 114J
+        baseline_recorded_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          example: '2026-09-20T15:22:09Z'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReputationNumberOwnershipEvent'
+          description: Ownership events, most recent first.
+    ReputationNumberOwnershipEvent:
+      type: object
+      properties:
+        event_type:
           type: string
-          maxLength: 120
-        administrative_area:
+          description: '`added`, `check`, `flag`, `confirm` or `removed`.'
+          example: check
+        outcome:
+          type:
+          - string
+          - 'null'
+          description: What the event found or did, for example `unchanged` or `carrier_changed`.
+          example: unchanged
+        occurred_at:
           type: string
-          maxLength: 120
-        postal_code:
-          type: string
-          maxLength: 30
-        country:
-          type: string
-          minLength: 2
-          maxLength: 2
-          example: US
-        contact_name:
-          type: string
-          maxLength: 200
-        contact_title:
-          type: string
-          maxLength: 200
-        contact_email:
-          type: string
-          format: email
-        contact_phone:
-          type: string
-          maxLength: 30
-          example: '+13125550000'
+          format: date-time
+          example: '2026-10-05T06:00:41Z'
     RemediationRequest_2:
       type: object
       description: Full detail of a remediation request, returned on submit and GET by id.
@@ -1641,6 +1624,14 @@ components:
           - $ref: '#/components/schemas/RemediationPerNumberResults'
           - type: 'null'
           description: Per-category buckets. Populated once results are available. Null while the request is still pending.
+    ExternalVerificationStatus:
+      type: string
+      enum:
+      - pending
+      - approved
+      - rejected
+      description: Review state of the ownership proof that allows adding phone numbers hosted with another provider.
+      example: pending
     ExternalVerificationWrapped:
       type: object
       properties:
@@ -1648,142 +1639,74 @@ components:
           $ref: '#/components/schemas/ExternalVerification'
       required:
       - data
-    ReputationNumberOwnership:
+    LoaSignaturePayload_2:
       type: object
-      properties:
-        phone_number:
-          type: string
-          example: '+19493253498'
-        source:
-          $ref: '#/components/schemas/ReputationNumberSource'
-        ownership_status:
-          $ref: '#/components/schemas/ReputationOwnershipStatus'
-        flag_reason:
-          type:
-          - string
-          - 'null'
-          example: null
-        confirm_by:
-          type:
-          - string
-          - 'null'
-          format: date-time
-          example: null
-        last_checked_at:
-          type:
-          - string
-          - 'null'
-          format: date-time
-          description: When ownership of the number was last checked.
-          example: '2026-10-05T06:00:41Z'
-        baseline_carrier:
-          type:
-          - string
-          - 'null'
-          description: Service provider ID (SPID) of the carrier that held the number when its ownership was last established.
-          example: 114J
-        baseline_recorded_at:
-          type:
-          - string
-          - 'null'
-          format: date-time
-          example: '2026-09-20T15:22:09Z'
-        history:
-          type: array
-          items:
-            $ref: '#/components/schemas/ReputationNumberOwnershipEvent'
-          description: Ownership events, most recent first.
-    ReputationNumberOwnershipWrapped:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/ReputationNumberOwnership'
+      description: Optional signature embedded in the rendered PDF. When omitted the PDF is returned unsigned for the customer to sign and upload.
       required:
-      - data
-    ExternalVerification:
-      type: object
+      - image_base64
       properties:
-        enterprise_id:
+        image_base64:
           type: string
-          format: uuid
-          example: 4a6192a4-573d-446d-b3ce-aff9117272a6
-        status:
-          $ref: '#/components/schemas/ExternalVerificationStatus'
-        document_ids:
-          type: array
-          items:
-            type: string
-          description: The ownership-proof documents on file.
-          example:
-          - 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
-        phone_numbers:
-          type: array
-          items:
-            type: string
-          description: The phone numbers you listed with the documents.
-          example:
-          - '+13125550142'
-        rejection_reason:
+          description: Base64-encoded signature image.
+        signer_name:
           type:
           - string
           - 'null'
-          description: Why the proof was rejected. Set only when `status` is `rejected`.
-          example: The invoice does not show the phone numbers.
-        submitted_at:
+    ReputationData_2:
+      type: object
+      description: Reputation snapshot for a phone number. Each metric is a 0–100 score; `spam_risk` is a coarse bucket. Field set may grow over time - read by key.
+      properties:
+        spam_risk:
+          type:
+          - string
+          - 'null'
+          enum:
+          - low
+          - medium
+          - high
+          - null
+          description: Overall spam-risk classification.
+          example: low
+        spam_category:
+          type:
+          - string
+          - 'null'
+          description: Category label from the reputation feed when the number is flagged.
+          example: null
+        maturity_score:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 100
+          example: 72
+        connection_score:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 100
+          example: 80
+        engagement_score:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 100
+          example: 64
+        sentiment_score:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 100
+          example: 75
+        last_refreshed_at:
           type:
           - string
           - 'null'
           format: date-time
-          readOnly: true
-          example: '2026-10-05T09:12:44Z'
-        reviewed_at:
-          type:
-          - string
-          - 'null'
-          format: date-time
-          readOnly: true
-          example: '2026-10-06T14:03:10Z'
-    ExternalVerificationSubmit:
-      type: object
-      required:
-      - document_ids
-      properties:
-        document_ids:
-          type: array
-          minItems: 1
-          maxItems: 10
-          items:
-            type: string
-            minLength: 1
-            maxLength: 255
-          description: Ids of uploaded documents (Documents API) proving the enterprise owns its phone numbers hosted with another provider, for example a carrier invoice or account statement.
-          example:
-          - 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
-        phone_numbers:
-          type: array
-          maxItems: 1000
-          items:
-            type: string
-          description: Optional. The phone numbers hosted with another provider that the documents cover, in E.164 format. Shown to the reviewer to match the documents to your numbers; you can still add numbers that are not listed here, and each is checked on its own.
-          example:
-          - '+13125550142'
-    ReputationNumberOwnershipEvent:
-      type: object
-      properties:
-        event_type:
-          type: string
-          description: '`added`, `check`, `flag`, `confirm` or `removed`.'
-          example: check
-        outcome:
-          type:
-          - string
-          - 'null'
-          description: What the event found or did, for example `unchanged` or `carrier_changed`.
-          example: unchanged
-        occurred_at:
-          type: string
-          format: date-time
-          example: '2026-10-05T06:00:41Z'
+          example: '2026-04-26T18:09:24.785211Z'
     OwnershipConfirmRequest:
       type: object
       required:
@@ -1799,13 +1722,94 @@ components:
           maxLength: 255
           description: Optional id of an uploaded document supporting the confirmation.
           example: 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
-    ReputationNumberSource:
+    number-reputation_AgentInput_2:
+      type: object
+      description: Third-party reseller / partner managing the enterprise's phone numbers. Omit when the enterprise works directly with Telnyx.
+      required:
+      - legal_name
+      - street_address
+      - city
+      - administrative_area
+      - postal_code
+      - country
+      - contact_name
+      - contact_title
+      - contact_email
+      - contact_phone
+      properties:
+        legal_name:
+          type: string
+          maxLength: 200
+        dba:
+          type:
+          - string
+          - 'null'
+          maxLength: 200
+        street_address:
+          type: string
+          maxLength: 255
+        extended_address:
+          type:
+          - string
+          - 'null'
+          maxLength: 255
+        city:
+          type: string
+          maxLength: 120
+        administrative_area:
+          type: string
+          maxLength: 120
+        postal_code:
+          type: string
+          maxLength: 30
+        country:
+          type: string
+          minLength: 2
+          maxLength: 2
+          example: US
+        contact_name:
+          type: string
+          maxLength: 200
+        contact_title:
+          type: string
+          maxLength: 200
+        contact_email:
+          type: string
+          format: email
+        contact_phone:
+          type: string
+          maxLength: 30
+          example: '+13125550000'
+    ReputationRemovalReason:
       type: string
       enum:
-      - telnyx
-      - external
-      description: 'Where the phone number is hosted. `telnyx`: in your Telnyx inventory. `external`: a number you own that is hosted with another provider.'
-      example: external
+      - ported_away
+      - unconfirmed_ownership
+      - reassigned
+      - customer_reported
+      - customer_removed
+      description: 'Why a number was removed. `ported_away`: you confirmed the number left your control after a carrier change. `unconfirmed_ownership`: a carrier change was not confirmed before the deadline. `reassigned`: the number was reported as permanently disconnected. `customer_reported`: you reported that you no longer own the number. `customer_removed`: you removed the number.'
+      example: unconfirmed_ownership
+    ReputationNumberOwnershipWrapped:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/ReputationNumberOwnership'
+      required:
+      - data
+    EnterpriseReputationWebhookUpdate:
+      type: object
+      required:
+      - webhook_url
+      properties:
+        webhook_url:
+          type:
+          - string
+          - 'null'
+          format: uri
+          maxLength: 2048
+          description: HTTPS URL on a publicly routable host. Send `null` to stop receiving number-ownership events.
+          example: https://example.com/webhooks/telnyx
     RefreshReputationResponse_2:
       type: object
       required:
@@ -1849,19 +1853,49 @@ components:
             total_failed:
               type: integer
               example: 0
-    LoaSignaturePayload_2:
+    ExternalVerification:
       type: object
-      description: Optional signature embedded in the rendered PDF. When omitted the PDF is returned unsigned for the customer to sign and upload.
-      required:
-      - image_base64
       properties:
-        image_base64:
+        enterprise_id:
           type: string
-          description: Base64-encoded signature image.
-        signer_name:
+          format: uuid
+          example: 4a6192a4-573d-446d-b3ce-aff9117272a6
+        status:
+          $ref: '#/components/schemas/ExternalVerificationStatus'
+        document_ids:
+          type: array
+          items:
+            type: string
+          description: The ownership-proof documents on file.
+          example:
+          - 2a7e8337-e803-4057-a4ae-26c40eb0bc6c
+        phone_numbers:
+          type: array
+          items:
+            type: string
+          description: The phone numbers you listed with the documents.
+          example:
+          - '+13125550142'
+        rejection_reason:
           type:
           - string
           - 'null'
+          description: Why the proof was rejected. Set only when `status` is `rejected`.
+          example: The invoice does not show the phone numbers.
+        submitted_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          readOnly: true
+          example: '2026-10-05T09:12:44Z'
+        reviewed_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          readOnly: true
+          example: '2026-10-06T14:03:10Z'
     ReputationPhoneNumber_2:
       type: object
       properties:
@@ -1922,48 +1956,35 @@ components:
           format: date-time
           example: '2026-04-26T18:09:24.785211Z'
           readOnly: true
-    RemediationRequestListItem_2:
-      type: object
-      description: Slim list-endpoint shape. Omits per-number results and webhook URLs to keep responses small.
-      required:
-      - id
-      - status
-      - phone_numbers_count
-      - call_purpose
-      - created_at
-      - updated_at
-      properties:
-        id:
-          type: string
-          format: uuid
-          example: b7c1f1c0-7a9d-4f0a-9d3e-2f6a1c4b8e21
-        status:
-          $ref: '#/components/schemas/RemediationStatus'
-        phone_numbers_count:
-          type: integer
-          example: 2
-        call_purpose:
-          type: string
-          example: Appointment reminders for our dental clinic.
-        created_at:
-          type: string
-          format: date-time
-          example: '2026-06-01T12:00:00Z'
-        updated_at:
-          type: string
-          format: date-time
-          example: '2026-06-01T12:05:00Z'
-        tier1_completed_at:
-          type:
-          - string
-          - 'null'
-          format: date-time
-        tier2_completed_at:
-          type:
-          - string
-          - 'null'
-          format: date-time
+    ReputationNumberSource:
+      type: string
+      enum:
+      - telnyx
+      - external
+      description: 'Where the phone number is hosted. `telnyx`: in your Telnyx inventory. `external`: a number you own that is hosted with another provider.'
+      example: external
   parameters:
+    BcPageSize:
+      name: page[size]
+      in: query
+      description: Items per page. Maximum 250; values above are clamped to 250.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 250
+        default: 20
+        example: 20
+    BcPageNumber:
+      name: page[number]
+      in: query
+      description: 1-based page number. Out-of-range values return an empty page with correct meta.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+        example: 1
     PhoneNumberPath:
       name: phone_number
       in: path
@@ -1981,27 +2002,6 @@ components:
         type: string
         format: uuid
         example: 4a6192a4-573d-446d-b3ce-aff9117272a6
-    BcPageNumber:
-      name: page[number]
-      in: query
-      description: 1-based page number. Out-of-range values return an empty page with correct meta.
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        default: 1
-        example: 1
-    BcPageSize:
-      name: page[size]
-      in: query
-      description: Items per page. Maximum 250; values above are clamped to 250.
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 250
-        default: 20
-        example: 20
   responses:
     number-reputation_GenericErrorResponse:
       description: An error occurred. The response carries the standard Telnyx error envelope.

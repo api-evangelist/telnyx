@@ -288,84 +288,43 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    RCSAgentUpdate:
+    messaging_Error:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+          x-format: integer
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+    RCSReply:
       type: object
       properties:
-        profile_id:
-          type:
-          - string
-          - 'null'
-          format: uuid
-          description: Messaging profile ID associated with the RCS Agent
-          example: 4001932a-b8a3-42fc-9389-021be6388909
-        webhook_url:
-          type:
-          - string
-          - 'null'
-          format: url
-          description: URL to receive RCS events
-          example: http://example.com
-        webhook_failover_url:
-          type:
-          - string
-          - 'null'
-          format: url
-          description: Failover URL to receive RCS events
-          example: http://example.com
+        text:
+          type: string
+          description: Text that is shown in the suggested reply (maximum 25 characters)
+        postback_data:
+          type: string
+          description: Payload (base64 encoded) that will be sent to the agent in the user event that results when the user taps the suggested action. Maximum 2048 characters.
     RCSTo:
       type: array
       items:
         $ref: '#/components/schemas/RCSToItem'
-    RCSMessage:
-      required:
-      - agent_id
-      - to
-      - messaging_profile_id
-      - agent_message
-      type: object
-      properties:
-        agent_id:
-          type: string
-          description: RCS Agent ID
-          example: Agent007
-        to:
-          type: string
-          description: Phone number in +E.164 format
-          example: '+13125551234'
-        messaging_profile_id:
-          type: string
-          description: A valid messaging profile ID
-        type:
-          type: string
-          description: Message type - must be set to "RCS"
-          example: RCS
-          enum:
-          - RCS
-        webhook_url:
-          description: The URL where webhooks related to this message will be sent.
-          type: string
-          format: url
-        agent_message:
-          $ref: '#/components/schemas/RCSAgentMessage'
-        sms_fallback:
-          $ref: '#/components/schemas/SMSFallback'
-        mms_fallback:
-          $ref: '#/components/schemas/MMSFallback'
-    RCSToItem:
-      type: object
-      properties:
-        phone_number:
-          type: string
-          example: '+13125551234'
-        status:
-          type: string
-          example: queued
-        carrier:
-          type: string
-          example: Verizon Wireless
-        line_type:
-          type: string
-          example: Wireless
     RCSAgent:
       type: object
       properties:
@@ -416,30 +375,255 @@ components:
           format: date-time
           description: Date and time when the resource was updated
           example: '2024-01-01T12:00:00.000Z'
-    RCSMedia:
+    RCSCapabilityListRequest:
       type: object
-      description: A media file within a rich card.
+      required:
+      - agent_id
+      - phone_numbers
       properties:
-        height:
+        agent_id:
           type: string
-          example: MEDIUM
-          description: The height of the media within a rich card with a vertical layout. For a standalone card with horizontal layout, height is not customizable, and this field is ignored.
-          enum:
-          - HEIGHT_UNSPECIFIED
-          - SHORT
-          - MEDIUM
-          - TALL
-        content_info:
-          $ref: '#/components/schemas/RCSContentInfo'
-    messaging_RCSAgentsResponse:
-      type: object
-      properties:
-        data:
+          description: RCS Agent ID
+          example: TestAgent
+        phone_numbers:
           type: array
           items:
-            $ref: '#/components/schemas/RCSAgent'
+            type: string
+            example: '+13125551234'
+          description: List of phone numbers to check
+    RCSViewLocationAction:
+      type: object
+      description: Opens the user's default map app and selects the agent-specified location.
+      properties:
+        lat_long:
+          $ref: '#/components/schemas/RCSLatLng'
+        label:
+          type: string
+          description: The label of the pin dropped
+        query:
+          type: string
+          description: query string (Android only)
+    messaging_Errors_0b38e7044b:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/messaging_Error_0b38e7044b'
+    RCSAction:
+      type: object
+      description: When tapped, initiates the corresponding native action on the device.
+      properties:
+        text:
+          type: string
+          description: Text that is shown in the suggested action. Maximum 25 characters.
+          example: Hello world
+        postback_data:
+          type: string
+          description: Payload (base64 encoded) that will be sent to the agent in the user event that results when the user taps the suggested action. Maximum 2048 characters.
+        fallback_url:
+          type: string
+          description: Fallback URL to use if a client doesn't support a suggested action. Fallback URLs open in new browser windows. Maximum 2048 characters.
+          format: url
+        dial_action:
+          $ref: '#/components/schemas/RCSDialAction'
+        view_location_action:
+          $ref: '#/components/schemas/RCSViewLocationAction'
+        create_calendar_event_action:
+          $ref: '#/components/schemas/RCSCreateCalendarEventAction'
+        open_url_action:
+          $ref: '#/components/schemas/RCSOpenUrlAction'
+        share_location_action:
+          $ref: '#/components/schemas/RCSShareLocationAction'
+    RCSCapabilitiesInternal:
+      type: object
+      properties:
+        record_type:
+          type: string
+          example: rcs.capabilities
+          enum:
+          - rcs.capabilities
+          description: Identifies the type of the resource
+        phone_number:
+          type: string
+          example: '+13125551234'
+          description: Phone number
+        agent_id:
+          type: string
+          example: TestAgent
+          description: RCS agent ID
+        agent_name:
+          type: string
+          example: Testing agent
+          description: RCS agent name
+        features:
+          type: array
+          description: List of RCS capabilities
+          items:
+            type: string
+    RCSCreateCalendarEventAction:
+      type: object
+      description: Opens the user's default calendar app and starts the new calendar event flow with the agent-specified event data pre-filled.
+      properties:
+        start_time:
+          type: string
+          format: date-time
+          example: '2024-10-02T15:01:23Z'
+        end_time:
+          type: string
+          format: date-time
+          example: '2024-10-02T15:02:31Z'
+        title:
+          type: string
+          description: Event title. Maximum 100 characters.
+        description:
+          type: string
+          description: Event description. Maximum 500 characters.
+    RCSStandaloneCard:
+      required:
+      - card_orientation
+      - thumbnail_image_alignment
+      - card_content
+      type: object
+      description: Standalone card
+      properties:
+        card_orientation:
+          type: string
+          example: HORIZONTAL
+          description: Orientation of the card.
+          enum:
+          - CARD_ORIENTATION_UNSPECIFIED
+          - HORIZONTAL
+          - VERTICAL
+        thumbnail_image_alignment:
+          type: string
+          example: LEFT
+          description: Image preview alignment for standalone cards with horizontal layout.
+          enum:
+          - THUMBNAIL_IMAGE_ALIGNMENT_UNSPECIFIED
+          - LEFT
+          - RIGHT
+        card_content:
+          $ref: '#/components/schemas/RCSCardContent'
+    RCSAgentMessage:
+      type: object
+      properties:
+        content_message:
+          $ref: '#/components/schemas/RCSContentMessage'
+        event:
+          $ref: '#/components/schemas/RCSEvent'
+        expire_time:
+          type: string
+          format: date-time
+          description: Timestamp in UTC of when this message is considered expired
+          example: '2024-10-02T15:01:23Z'
+        ttl:
+          type: string
+          description: Duration in seconds ending with 's'
+          example: 10.5s
+    RCSRichCard:
+      type: object
+      properties:
+        carousel_card:
+          $ref: '#/components/schemas/RCSCarouselCard'
+        standalone_card:
+          $ref: '#/components/schemas/RCSStandaloneCard'
+    RCSDialAction:
+      required:
+      - phone_number
+      type: object
+      description: Opens the user's default dialer app with the agent-specified phone number filled in.
+      properties:
+        phone_number:
+          type: string
+          description: Phone number in +E.164 format
+          example: '+13125551234'
+    MMSFallback:
+      type: object
+      properties:
+        from:
+          type: string
+          description: Phone number in +E.164 format
+          example: '+13125551234'
+        subject:
+          type: string
+          description: Subject of the message
+          example: Test Message
+        media_urls:
+          type: array
+          description: List of media URLs
+          items:
+            type: string
+        text:
+          type: string
+          description: Text
+          example: Hello world!
+    messaging_Error_0b38e7044b:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+          x-format: integer
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
         meta:
-          $ref: '#/components/schemas/messaging_PaginationMeta_0b38e7044b'
+          type: object
+    RCSContentInfo:
+      required:
+      - file_url
+      type: object
+      properties:
+        file_url:
+          type: string
+          format: url
+          description: Publicly reachable URL of the file.
+          example: https://example.com/elephant.jpg
+        thumbnail_url:
+          type: string
+          format: url
+          description: Publicly reachable URL of the thumbnail. Maximum size of 100 kB.
+        force_refresh:
+          type: boolean
+          description: If set the URL content will not be cached.
+    RCSToItem:
+      type: object
+      properties:
+        phone_number:
+          type: string
+          example: '+13125551234'
+        status:
+          type: string
+          example: queued
+        carrier:
+          type: string
+          example: Verizon Wireless
+        line_type:
+          type: string
+          example: Wireless
+    SMSFallback:
+      type: object
+      properties:
+        from:
+          type: string
+          description: Phone number in +E.164 format
+          example: '+13125551234'
+        text:
+          type: string
+          description: Text (maximum 3072 characters)
+          example: Hello world!
     RCSOpenUrlAction:
       required:
       - url
@@ -471,242 +655,6 @@ components:
         description:
           type: string
           description: Accessbility description for webview.
-    messaging_Error:
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: string
-          x-format: integer
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-              format: json-pointer
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-    messaging_PaginationMeta_0b38e7044b:
-      type: object
-      required:
-      - total_pages
-      - total_results
-      - page_size
-      - page_number
-      properties:
-        total_pages:
-          type: integer
-          example: 3
-        total_results:
-          type: integer
-          example: 55
-        page_number:
-          type: integer
-          example: 2
-        page_size:
-          type: integer
-          example: 25
-    RCSCapabilitiesInternal:
-      type: object
-      properties:
-        record_type:
-          type: string
-          example: rcs.capabilities
-          enum:
-          - rcs.capabilities
-          description: Identifies the type of the resource
-        phone_number:
-          type: string
-          example: '+13125551234'
-          description: Phone number
-        agent_id:
-          type: string
-          example: TestAgent
-          description: RCS agent ID
-        agent_name:
-          type: string
-          example: Testing agent
-          description: RCS agent name
-        features:
-          type: array
-          description: List of RCS capabilities
-          items:
-            type: string
-    RCSRichCard:
-      type: object
-      properties:
-        carousel_card:
-          $ref: '#/components/schemas/RCSCarouselCard'
-        standalone_card:
-          $ref: '#/components/schemas/RCSStandaloneCard'
-    RCSViewLocationAction:
-      type: object
-      description: Opens the user's default map app and selects the agent-specified location.
-      properties:
-        lat_long:
-          $ref: '#/components/schemas/RCSLatLng'
-        label:
-          type: string
-          description: The label of the pin dropped
-        query:
-          type: string
-          description: query string (Android only)
-    RCSAgentResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/RCSAgent'
-    MMSFallback:
-      type: object
-      properties:
-        from:
-          type: string
-          description: Phone number in +E.164 format
-          example: '+13125551234'
-        subject:
-          type: string
-          description: Subject of the message
-          example: Test Message
-        media_urls:
-          type: array
-          description: List of media URLs
-          items:
-            type: string
-        text:
-          type: string
-          description: Text
-          example: Hello world!
-    RCSShareLocationAction:
-      type: object
-      description: Opens the RCS app's location chooser so the user can pick a location to send back to the agent.
-    RCSCapabilitiesBulk:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/RCSCapabilitiesInternal'
-    RCSContentMessage:
-      type: object
-      properties:
-        suggestions:
-          type: array
-          description: List of suggested actions and replies
-          items:
-            $ref: '#/components/schemas/RCSSuggestion'
-        text:
-          type: string
-          description: Text (maximum 3072 characters)
-          example: Hello world!
-        rich_card:
-          $ref: '#/components/schemas/RCSRichCard'
-        content_info:
-          $ref: '#/components/schemas/RCSContentInfo'
-    messaging_Errors:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/messaging_Error'
-    RCSAgentMessage:
-      type: object
-      properties:
-        content_message:
-          $ref: '#/components/schemas/RCSContentMessage'
-        event:
-          $ref: '#/components/schemas/RCSEvent'
-        expire_time:
-          type: string
-          format: date-time
-          description: Timestamp in UTC of when this message is considered expired
-          example: '2024-10-02T15:01:23Z'
-        ttl:
-          type: string
-          description: Duration in seconds ending with 's'
-          example: 10.5s
-    RCSContentInfo:
-      required:
-      - file_url
-      type: object
-      properties:
-        file_url:
-          type: string
-          format: url
-          description: Publicly reachable URL of the file.
-          example: https://example.com/elephant.jpg
-        thumbnail_url:
-          type: string
-          format: url
-          description: Publicly reachable URL of the thumbnail. Maximum size of 100 kB.
-        force_refresh:
-          type: boolean
-          description: If set the URL content will not be cached.
-    RCSFrom:
-      type: object
-      properties:
-        agent_id:
-          type: string
-          example: Agent007
-          description: agent ID
-        carrier:
-          type: string
-          example: Telnyx
-        agent_name:
-          type: string
-          example: Test Agent
-    RCSCreateCalendarEventAction:
-      type: object
-      description: Opens the user's default calendar app and starts the new calendar event flow with the agent-specified event data pre-filled.
-      properties:
-        start_time:
-          type: string
-          format: date-time
-          example: '2024-10-02T15:01:23Z'
-        end_time:
-          type: string
-          format: date-time
-          example: '2024-10-02T15:02:31Z'
-        title:
-          type: string
-          description: Event title. Maximum 100 characters.
-        description:
-          type: string
-          description: Event description. Maximum 500 characters.
-    RCSCardContent:
-      type: object
-      properties:
-        title:
-          type: string
-          description: Title of the card (at most 200 characters)
-          example: Elephant
-        description:
-          type: string
-          description: Description of the card (at most 2000 characters)
-        media:
-          $ref: '#/components/schemas/RCSMedia'
-        suggestions:
-          type: array
-          description: List of suggestions to include in the card. Maximum 10 suggestions.
-          items:
-            $ref: '#/components/schemas/RCSSuggestion'
-    RCSReply:
-      type: object
-      properties:
-        text:
-          type: string
-          description: Text that is shown in the suggested reply (maximum 25 characters)
-        postback_data:
-          type: string
-          description: Payload (base64 encoded) that will be sent to the agent in the user event that results when the user taps the suggested action. Maximum 2048 characters.
     RCSTestNumberInviteResponse:
       type: object
       properties:
@@ -733,11 +681,138 @@ components:
               description: Status of the test number invitation
       required:
       - data
+    RCSCapabilitiesBulk:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RCSCapabilitiesInternal'
+    RCSContentMessage:
+      type: object
+      properties:
+        suggestions:
+          type: array
+          description: List of suggested actions and replies
+          items:
+            $ref: '#/components/schemas/RCSSuggestion'
+        text:
+          type: string
+          description: Text (maximum 3072 characters)
+          example: Hello world!
+        rich_card:
+          $ref: '#/components/schemas/RCSRichCard'
+        content_info:
+          $ref: '#/components/schemas/RCSContentInfo'
+    RCSCardContent:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Title of the card (at most 200 characters)
+          example: Elephant
+        description:
+          type: string
+          description: Description of the card (at most 2000 characters)
+        media:
+          $ref: '#/components/schemas/RCSMedia'
+        suggestions:
+          type: array
+          description: List of suggestions to include in the card. Maximum 10 suggestions.
+          items:
+            $ref: '#/components/schemas/RCSSuggestion'
+    RCSMessage:
+      required:
+      - agent_id
+      - to
+      - messaging_profile_id
+      - agent_message
+      type: object
+      properties:
+        agent_id:
+          type: string
+          description: RCS Agent ID
+          example: Agent007
+        to:
+          type: string
+          description: Phone number in +E.164 format
+          example: '+13125551234'
+        messaging_profile_id:
+          type: string
+          description: A valid messaging profile ID
+        type:
+          type: string
+          description: Message type - must be set to "RCS"
+          example: RCS
+          enum:
+          - RCS
+        webhook_url:
+          description: The URL where webhooks related to this message will be sent.
+          type: string
+          format: url
+        agent_message:
+          $ref: '#/components/schemas/RCSAgentMessage'
+        sms_fallback:
+          $ref: '#/components/schemas/SMSFallback'
+        mms_fallback:
+          $ref: '#/components/schemas/MMSFallback'
+    RCSFrom:
+      type: object
+      properties:
+        agent_id:
+          type: string
+          example: Agent007
+          description: agent ID
+        carrier:
+          type: string
+          example: Telnyx
+        agent_name:
+          type: string
+          example: Test Agent
+    RCSDeeplinkResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            url:
+              type: string
+              description: The generated deeplink URL
+              example: sms:+18445550001?service_id=my_agent_id%40rbm.goog&body=hello%20world
+          required:
+          - url
+      required:
+      - data
+    RCSLatLng:
+      required:
+      - latitude
+      - longitude
+      type: object
+      properties:
+        latitude:
+          type: number
+          description: The latitude in degrees. It must be in the range [-90.0, +90.0].
+          example: 41.8
+        longitude:
+          type: number
+          description: The longitude in degrees. It must be in the range [-180.0, +180.0].
+          example: -87.6
     RCSCapabilitiesSingle:
       type: object
       properties:
         data:
           $ref: '#/components/schemas/RCSCapabilitiesInternal'
+    RCSEvent:
+      type: object
+      description: RCS Event to send to the recipient
+      properties:
+        event_type:
+          type: string
+          example: IS_TYPING
+          enum:
+          - TYPE_UNSPECIFIED
+          - IS_TYPING
+          - READ
     RCSResponse:
       type: object
       properties:
@@ -782,38 +857,43 @@ components:
               format: float
               description: Seconds the message is queued due to rate limiting before being sent to the carrier. Represents the maximum wait across all applicable rate limits (account, carrier, campaign). 0.0 = no queuing delay.
               example: 0.5
-    RCSEvent:
+    RCSMedia:
       type: object
-      description: RCS Event to send to the recipient
+      description: A media file within a rich card.
       properties:
-        event_type:
+        height:
           type: string
-          example: IS_TYPING
+          example: MEDIUM
+          description: The height of the media within a rich card with a vertical layout. For a standalone card with horizontal layout, height is not customizable, and this field is ignored.
           enum:
-          - TYPE_UNSPECIFIED
-          - IS_TYPING
-          - READ
-    RCSDialAction:
-      required:
-      - phone_number
-      type: object
-      description: Opens the user's default dialer app with the agent-specified phone number filled in.
+          - HEIGHT_UNSPECIFIED
+          - SHORT
+          - MEDIUM
+          - TALL
+        content_info:
+          $ref: '#/components/schemas/RCSContentInfo'
+    messaging_Errors:
       properties:
-        phone_number:
-          type: string
-          description: Phone number in +E.164 format
-          example: '+13125551234'
-    SMSFallback:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/messaging_Error'
+    RCSSuggestion:
       type: object
       properties:
-        from:
-          type: string
-          description: Phone number in +E.164 format
-          example: '+13125551234'
-        text:
-          type: string
-          description: Text (maximum 3072 characters)
-          example: Hello world!
+        reply:
+          $ref: '#/components/schemas/RCSReply'
+        action:
+          $ref: '#/components/schemas/RCSAction'
+    messaging_RCSAgentsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RCSAgent'
+        meta:
+          $ref: '#/components/schemas/messaging_PaginationMeta_0b38e7044b'
     RCSCarouselCard:
       required:
       - card_width
@@ -834,138 +914,67 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RCSCardContent'
-    messaging_Errors_0b38e7044b:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/messaging_Error_0b38e7044b'
-    RCSLatLng:
-      required:
-      - latitude
-      - longitude
-      type: object
-      properties:
-        latitude:
-          type: number
-          description: The latitude in degrees. It must be in the range [-90.0, +90.0].
-          example: 41.8
-        longitude:
-          type: number
-          description: The longitude in degrees. It must be in the range [-180.0, +180.0].
-          example: -87.6
-    RCSStandaloneCard:
-      required:
-      - card_orientation
-      - thumbnail_image_alignment
-      - card_content
-      type: object
-      description: Standalone card
-      properties:
-        card_orientation:
-          type: string
-          example: HORIZONTAL
-          description: Orientation of the card.
-          enum:
-          - CARD_ORIENTATION_UNSPECIFIED
-          - HORIZONTAL
-          - VERTICAL
-        thumbnail_image_alignment:
-          type: string
-          example: LEFT
-          description: Image preview alignment for standalone cards with horizontal layout.
-          enum:
-          - THUMBNAIL_IMAGE_ALIGNMENT_UNSPECIFIED
-          - LEFT
-          - RIGHT
-        card_content:
-          $ref: '#/components/schemas/RCSCardContent'
-    RCSAction:
-      type: object
-      description: When tapped, initiates the corresponding native action on the device.
-      properties:
-        text:
-          type: string
-          description: Text that is shown in the suggested action. Maximum 25 characters.
-          example: Hello world
-        postback_data:
-          type: string
-          description: Payload (base64 encoded) that will be sent to the agent in the user event that results when the user taps the suggested action. Maximum 2048 characters.
-        fallback_url:
-          type: string
-          description: Fallback URL to use if a client doesn't support a suggested action. Fallback URLs open in new browser windows. Maximum 2048 characters.
-          format: url
-        dial_action:
-          $ref: '#/components/schemas/RCSDialAction'
-        view_location_action:
-          $ref: '#/components/schemas/RCSViewLocationAction'
-        create_calendar_event_action:
-          $ref: '#/components/schemas/RCSCreateCalendarEventAction'
-        open_url_action:
-          $ref: '#/components/schemas/RCSOpenUrlAction'
-        share_location_action:
-          $ref: '#/components/schemas/RCSShareLocationAction'
-    messaging_Error_0b38e7044b:
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: string
-          x-format: integer
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-              format: json-pointer
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-    RCSCapabilityListRequest:
-      type: object
-      required:
-      - agent_id
-      - phone_numbers
-      properties:
-        agent_id:
-          type: string
-          description: RCS Agent ID
-          example: TestAgent
-        phone_numbers:
-          type: array
-          items:
-            type: string
-            example: '+13125551234'
-          description: List of phone numbers to check
-    RCSDeeplinkResponse:
+    RCSAgentResponse:
       type: object
       properties:
         data:
-          type: object
-          properties:
-            url:
-              type: string
-              description: The generated deeplink URL
-              example: sms:+18445550001?service_id=my_agent_id%40rbm.goog&body=hello%20world
-          required:
-          - url
-      required:
-      - data
-    RCSSuggestion:
+          $ref: '#/components/schemas/RCSAgent'
+    RCSAgentUpdate:
       type: object
       properties:
-        reply:
-          $ref: '#/components/schemas/RCSReply'
-        action:
-          $ref: '#/components/schemas/RCSAction'
+        profile_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: Messaging profile ID associated with the RCS Agent
+          example: 4001932a-b8a3-42fc-9389-021be6388909
+        webhook_url:
+          type:
+          - string
+          - 'null'
+          format: url
+          description: URL to receive RCS events
+          example: http://example.com
+        webhook_failover_url:
+          type:
+          - string
+          - 'null'
+          format: url
+          description: Failover URL to receive RCS events
+          example: http://example.com
+    messaging_PaginationMeta_0b38e7044b:
+      type: object
+      required:
+      - total_pages
+      - total_results
+      - page_size
+      - page_number
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 55
+        page_number:
+          type: integer
+          example: 2
+        page_size:
+          type: integer
+          example: 25
+    RCSShareLocationAction:
+      type: object
+      description: Opens the RCS app's location chooser so the user can pick a location to send back to the agent.
+    RCSAgentsResponse:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/RCSAgent'
+          type: array
+        meta:
+          $ref: '#/components/schemas/messaging_PaginationMeta'
+      type: object
     messaging_PaginationMeta:
       properties:
         page_number:
@@ -986,82 +995,6 @@ components:
       - page_size
       - page_number
       type: object
-    RCSAgentsResponse:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/RCSAgent'
-          type: array
-        meta:
-          $ref: '#/components/schemas/messaging_PaginationMeta'
-      type: object
-  responses:
-    messaging_GenericErrorResponse_0b38e7044b:
-      description: Unexpected error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/messaging_Errors_0b38e7044b'
-          example:
-            errors:
-            - code: string
-              title: string
-              detail: string
-              source:
-                pointer: /data/attributes/phone_number
-                parameter: string
-    rcs_messaging_GenericErrorResponse:
-      description: Unexpected error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/messaging_Errors'
-          example:
-            errors:
-            - code: '10007'
-              title: Unexpected error
-              detail: An unexpected error occured.
-    messaging_GenericErrorResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/messaging_Errors'
-      description: Unexpected error
-    messaging_IdempotencyConflictResponse:
-      description: A request with the same Idempotency-Key is still being processed (10036). Retry later with the same key and request.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/messaging_Errors_0b38e7044b'
-          example:
-            errors:
-            - code: '10036'
-              title: Resource is being processed
-              detail: A request with this Idempotency-Key is already being processed.
-              source:
-                pointer: /header/Idempotency-Key
-    IdempotencyPayloadTooLargeResponse:
-      description: Payload Too Large. A request sent with an Idempotency-Key whose body exceeds the endpoint's Edge replay-protection limit (256 KB) is rejected before it reaches the service (code 10007). Requests sent without the header are not subject to this limit.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/messaging_Errors_0b38e7044b'
-          example:
-            errors:
-            - code: '10007'
-              title: Payload Too Large
-              detail: The request body exceeds the Edge replay-protection limit for idempotent requests.
-    IdempotencyProtectionUnavailableResponse:
-      description: Service unavailable (10016), including unavailable Edge idempotency protection for a keyed request. Retry with the same key.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/messaging_Errors_0b38e7044b'
-          example:
-            errors:
-            - code: '10016'
-              title: Service Unavailable
-              detail: Edge idempotency protection is temporarily unavailable. Please try again later.
   parameters:
     PageConsolidated:
       name: page
@@ -1094,6 +1027,73 @@ components:
         maxLength: 255
         pattern: ^[A-Za-z0-9_-]{1,255}$
       example: 8e03978e-40d5-43e8-bc93-6894a57f9326
+  responses:
+    messaging_GenericErrorResponse_0b38e7044b:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors_0b38e7044b'
+          example:
+            errors:
+            - code: string
+              title: string
+              detail: string
+              source:
+                pointer: /data/attributes/phone_number
+                parameter: string
+    rcs_messaging_GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors'
+          example:
+            errors:
+            - code: '10007'
+              title: Unexpected error
+              detail: An unexpected error occured.
+    messaging_GenericErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors'
+      description: Unexpected error
+    IdempotencyPayloadTooLargeResponse:
+      description: Payload Too Large. A request sent with an Idempotency-Key whose body exceeds the endpoint's Edge replay-protection limit (256 KB) is rejected before it reaches the service (code 10007). Requests sent without the header are not subject to this limit.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors_0b38e7044b'
+          example:
+            errors:
+            - code: '10007'
+              title: Payload Too Large
+              detail: The request body exceeds the Edge replay-protection limit for idempotent requests.
+    IdempotencyProtectionUnavailableResponse:
+      description: Service unavailable (10016), including unavailable Edge idempotency protection for a keyed request. Retry with the same key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors_0b38e7044b'
+          example:
+            errors:
+            - code: '10016'
+              title: Service Unavailable
+              detail: Edge idempotency protection is temporarily unavailable. Please try again later.
+    messaging_IdempotencyConflictResponse:
+      description: A request with the same Idempotency-Key is still being processed (10036). Retry later with the same key and request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/messaging_Errors_0b38e7044b'
+          example:
+            errors:
+            - code: '10036'
+              title: Resource is being processed
+              detail: A request with this Idempotency-Key is already being processed.
+              source:
+                pointer: /header/Idempotency-Key
   headers:
     IdempotentReplayed:
       description: Present with value `true` when Edge replayed a stored successful response for the supplied Idempotency-Key. Omitted for first-time requests and error responses.

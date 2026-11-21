@@ -46,6 +46,62 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
+  responses:
+    UnprocessableEntity:
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          example:
+            errors:
+            - code: '10027'
+              title: Unprocessable Entity
+              detail: The server understood the syntax of the request but was unable to process the instructions.
+    number-lookup_GenericErrorResponse:
+      description: Unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          example:
+            errors:
+            - code: '10007'
+              title: Unexpected error
+              detail: An unexpected error occured.
+    NumberLookupResponse:
+      content:
+        application/json:
+          schema:
+            properties:
+              data:
+                $ref: '#/components/schemas/NumberLookupRecord'
+            title: Number Lookup Response
+            type: object
+      description: Successful response
+    number-lookup_GenericErrorResponse_2:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/number-lookup_Errors'
+      description: Unexpected error
+    number-lookup_UnprocessableEntity:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/number-lookup_Errors'
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+    number-lookup_UnprocessableEntity_2:
+      description: Unprocessable entity. Check the 'detail' field in response for details.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors_2'
+          example:
+            errors:
+            - code: '10027'
+              title: Unprocessable Entity
+              detail: The server understood the syntax of the request but was unable to process the instructions.
   schemas:
     Carrier:
       type: object
@@ -89,6 +145,17 @@ components:
           type: string
           description: If known to Telnyx and applicable, the primary network carrier.
           example: AT&T
+    CallerName:
+      type: object
+      properties:
+        caller_name:
+          type: string
+          description: The name of the requested phone number's owner as per the CNAM database
+          example: TELNYX LLC
+        error_code:
+          type: string
+          description: A caller-name lookup specific error code, expressed as a stringified 5-digit integer
+          example: '10001'
     Portability:
       type: object
       properties:
@@ -147,32 +214,6 @@ components:
         state:
           type: string
           example: Illinois
-    billing-group_Error:
-      type: object
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: integer
-          format: int32
-        title:
-          type: string
-        detail:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-          properties: {}
-          additionalProperties: true
     Errors:
       properties:
         errors:
@@ -212,17 +253,32 @@ components:
           $ref: '#/components/schemas/CallerName'
         portability:
           $ref: '#/components/schemas/Portability'
-    CallerName:
+    billing-group_Error:
       type: object
+      required:
+      - code
+      - title
       properties:
-        caller_name:
+        code:
+          type: integer
+          format: int32
+        title:
           type: string
-          description: The name of the requested phone number's owner as per the CNAM database
-          example: TELNYX LLC
-        error_code:
+        detail:
           type: string
-          description: A caller-name lookup specific error code, expressed as a stringified 5-digit integer
-          example: '10001'
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          properties: {}
+          additionalProperties: true
     number-lookup_Errors:
       properties:
         errors:
@@ -254,6 +310,52 @@ components:
       - code
       - title
       type: object
+    number-lookup_Address:
+      type: object
+      description: Postal address associated with the phone number's owner.
+      properties:
+        street_line_1:
+          type:
+          - string
+          - 'null'
+          description: First line of the street address.
+          example: 123 Main St
+        street_line_2:
+          type:
+          - string
+          - 'null'
+          description: Second line of the street address, if any.
+          example: null
+        city:
+          type:
+          - string
+          - 'null'
+          description: City.
+          example: Anytown
+        state_code:
+          type:
+          - string
+          - 'null'
+          description: Two-letter state or province code.
+          example: CA
+        postal_code:
+          type:
+          - string
+          - 'null'
+          description: Postal or ZIP code.
+          example: '90210'
+        zip4:
+          type:
+          - string
+          - 'null'
+          description: ZIP+4 extension, if available.
+          example: '1234'
+        country_code:
+          type:
+          - string
+          - 'null'
+          description: Two-letter ISO 3166-1 country code.
+          example: US
     Portability_2:
       type: object
       properties:
@@ -325,6 +427,13 @@ components:
         state:
           type: string
           example: Illinois
+    Errors_2:
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+      type: object
     CallerIdentity:
       type: object
       description: Identity information for the phone number's owner, including name and postal address. Populated when `type=caller-identity` is requested.
@@ -349,48 +458,6 @@ components:
           - 'null'
           description: A lookup-specific error code if the identity could not be resolved; otherwise null.
           example: null
-    Errors_2:
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/Error'
-      type: object
-    Error:
-      required:
-      - code
-      - title
-      properties:
-        code:
-          type: string
-          x-format: int64
-        title:
-          type: string
-        detail:
-          type: string
-          description: A human-readable explanation of the error.
-        description:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-              format: json-pointer
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-          additionalProperties: true
-      example:
-        title: Invalid street address
-        source:
-          pointer: /street_address
-        code: '20207'
-        description: The street address provided is invalid.
-      type: object
     NumberLookupRecord_2:
       type: object
       title: NumberLookup
@@ -447,6 +514,41 @@ components:
           $ref: '#/components/schemas/EnhancedCallerName'
         caller_identity:
           $ref: '#/components/schemas/CallerIdentity'
+    Error:
+      required:
+      - code
+      - title
+      properties:
+        code:
+          type: string
+          x-format: int64
+        title:
+          type: string
+        detail:
+          type: string
+          description: A human-readable explanation of the error.
+        description:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          additionalProperties: true
+      example:
+        title: Invalid street address
+        source:
+          pointer: /street_address
+        code: '20207'
+        description: The street address provided is invalid.
+      type: object
     EnhancedCallerName:
       type: object
       description: Enhanced caller name for the phone number's owner. Populated when `type=enhanced-caller-name` is requested.
@@ -463,61 +565,7 @@ components:
           - 'null'
           description: A lookup-specific error code if the enhanced caller name could not be resolved; otherwise null.
           example: null
-    number-lookup_Address:
-      type: object
-      description: Postal address associated with the phone number's owner.
-      properties:
-        street_line_1:
-          type:
-          - string
-          - 'null'
-          description: First line of the street address.
-          example: 123 Main St
-        street_line_2:
-          type:
-          - string
-          - 'null'
-          description: Second line of the street address, if any.
-          example: null
-        city:
-          type:
-          - string
-          - 'null'
-          description: City.
-          example: Anytown
-        state_code:
-          type:
-          - string
-          - 'null'
-          description: Two-letter state or province code.
-          example: CA
-        postal_code:
-          type:
-          - string
-          - 'null'
-          description: Postal or ZIP code.
-          example: '90210'
-        zip4:
-          type:
-          - string
-          - 'null'
-          description: ZIP+4 extension, if available.
-          example: '1234'
-        country_code:
-          type:
-          - string
-          - 'null'
-          description: Two-letter ISO 3166-1 country code.
-          example: US
   parameters:
-    PhoneNumber:
-      name: phone_number
-      description: The phone number to be looked up
-      in: path
-      required: true
-      schema:
-        type: string
-        example: '+18665552368'
     NumberLookupType:
       name: type
       in: query
@@ -528,6 +576,14 @@ components:
         enum:
         - carrier
         - caller-name
+    PhoneNumber:
+      name: phone_number
+      description: The phone number to be looked up
+      in: path
+      required: true
+      schema:
+        type: string
+        example: '+18665552368'
     number-lookup_PhoneNumber:
       description: The phone number to be looked up
       in: path
@@ -548,62 +604,6 @@ components:
         - caller-name
         - caller-identity
         - enhanced-caller-name
-  responses:
-    number-lookup_GenericErrorResponse:
-      description: Unexpected error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Errors'
-          example:
-            errors:
-            - code: '10007'
-              title: Unexpected error
-              detail: An unexpected error occured.
-    UnprocessableEntity:
-      description: Unprocessable entity. Check the 'detail' field in response for details.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Errors'
-          example:
-            errors:
-            - code: '10027'
-              title: Unprocessable Entity
-              detail: The server understood the syntax of the request but was unable to process the instructions.
-    number-lookup_UnprocessableEntity:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/number-lookup_Errors'
-      description: Unprocessable entity. Check the 'detail' field in response for details.
-    number-lookup_GenericErrorResponse_2:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/number-lookup_Errors'
-      description: Unexpected error
-    NumberLookupResponse:
-      content:
-        application/json:
-          schema:
-            properties:
-              data:
-                $ref: '#/components/schemas/NumberLookupRecord'
-            title: Number Lookup Response
-            type: object
-      description: Successful response
-    number-lookup_UnprocessableEntity_2:
-      description: Unprocessable entity. Check the 'detail' field in response for details.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Errors_2'
-          example:
-            errors:
-            - code: '10027'
-              title: Unprocessable Entity
-              detail: The server understood the syntax of the request but was unable to process the instructions.
   securitySchemes:
     BearerAuth:
       type: http

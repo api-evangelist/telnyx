@@ -313,180 +313,148 @@ paths:
     - url: https://api.telnyx.com/v2
       description: Version 2.0.0 of the Telnyx API
 components:
-  parameters:
-    TemplateId:
-      name: id
-      in: path
-      required: true
-      description: Email template UUID.
-      schema:
-        type: string
-        format: uuid
-    email_PageSize:
-      name: page_size
-      in: query
-      description: Number of results to return. Defaults to 25; maximum is 100. Invalid values are clamped to the valid range.
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 100
-        default: 25
-    IdempotencyKey:
-      name: Idempotency-Key
-      in: header
-      required: false
-      description: Optional opaque, unquoted key for safely retrying the same logical request. Keys must contain 1 to 255 letters, numbers, hyphens, or underscores. Generate a unique UUID v4 for each operation and reuse it only when retrying that operation with the same request. Invalid headers—including duplicate, empty, malformed, or overlong values—return 400 with error code 10015. A request already in progress with the same key returns 409; reusing the key with a different request returns 422. Only successful responses are replayed, for up to 24 hours. Do not include sensitive data in the key.
-      schema:
-        type: string
-        minLength: 1
-        maxLength: 255
-        pattern: ^[A-Za-z0-9_-]{1,255}$
-      example: 8e03978e-40d5-43e8-bc93-6894a57f9326
-    PageCursor:
-      name: page_cursor
-      in: query
-      description: Opaque URL-safe Base64 cursor returned by a previous list response.
-      required: false
-      schema:
-        type: string
-      example: eyJpbnNlcnRlZF9hdCI6IjIwMjQtMDEtMDEifQ
-    TemplateContentTypeFilter:
-      name: filter[content_type]
-      in: query
-      description: Matches templates by stored body presence. `html_and_text` requires both an HTML and text body; `html_only` requires HTML and no text body; `text_only` requires text and no HTML body; `no_body` requires neither. `null` and exactly `""` count as absent; whitespace-only strings count as content. An empty or unsupported value returns a 400 response.
-      required: false
-      schema:
-        type: string
-        enum:
-        - html_and_text
-        - html_only
-        - text_only
-        - no_body
-    TemplateStrictVariablesFilter:
-      name: filter[strict_variables]
-      in: query
-      description: Exact match on the template's `strict_variables` option. Only the exact query strings `true` and `false` are accepted; other values, including blank, return 400.
-      required: false
-      schema:
-        type: string
-        enum:
-        - 'true'
-        - 'false'
-    TemplateQueryFilter:
-      name: filter[query]
-      in: query
-      description: Case-insensitive literal substring match over the template `name` or stored `subject` only; bodies are never searched. `%`, `_`, and `\` are literal characters with no wildcard meaning. A blank value is treated as omitted.
-      required: false
-      schema:
-        type: string
-      example: welcome
-    TemplateAutoescapeFilter:
-      name: filter[autoescape]
-      in: query
-      description: Exact match on the template's `autoescape` option. Only the exact query strings `true` and `false` are accepted; other values, including blank, return 400.
-      required: false
-      schema:
-        type: string
-        enum:
-        - 'true'
-        - 'false'
-  responses:
-    email_UnauthorizedResponse:
-      description: Not authorized (10006).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/email_ErrorResponse'
-          example:
-            errors:
-            - code: '10006'
-              title: Not authorized
-              detail: Invalid API key
-              meta:
-                url: https://developers.telnyx.com/docs/overview/errors/10006
-    IdempotencyConflictResponse:
-      description: A request with the same Idempotency-Key is still being processed (10036). Retry later with the same key and request.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/email_ErrorResponse'
-          example:
-            errors:
-            - code: '10036'
-              title: Resource is being processed
-              detail: A request with this Idempotency-Key is already being processed.
-              source:
-                pointer: /header/Idempotency-Key
-    ValidationErrorResponse:
-      description: Validation Failed (10015) or changeset validation error.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/email_ErrorResponse'
-          example:
-            errors:
-            - code: '10015'
-              title: Validation Failed
-              detail: subject can't be blank
-              source:
-                pointer: /data/attributes/subject
-    TemplateRenderFailedResponse:
-      description: Standalone template render failure (10015).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/email_ErrorResponse'
-          example:
-            errors:
-            - code: '10015'
-              title: Template Render Failed
-              detail: Liquid parse error
-    email_ServiceUnavailableResponse:
-      description: Service unavailable (10016), including an unavailable upstream dependency or unavailable Edge idempotency protection for a keyed request.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/email_ErrorResponse'
-          example:
-            errors:
-            - code: '10016'
-              title: Service Unavailable
-              detail: The email domain service is temporarily unavailable. Please try again later.
-    email_NotFoundResponse:
-      description: Resource not found (10001).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/email_ErrorResponse'
-          example:
-            errors:
-            - code: '10001'
-              title: Not Found
-              detail: The requested resource was not found
-    PayloadTooLargeResponse:
-      description: Request body exceeds the 8,000,000-byte limit for this endpoint.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/email_ErrorResponse'
-          example:
-            errors:
-            - code: '10007'
-              title: Unexpected error
-              detail: An unexpected error occured.
-    email_BadRequestResponse:
-      description: Bad Request / Validation Failed (10015).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/email_ErrorResponse'
-          example:
-            errors:
-            - code: '10015'
-              title: Bad Request
-              detail: email is required
   schemas:
+    VariableSchemaEntry:
+      type: object
+      additionalProperties: false
+      properties:
+        required:
+          type: boolean
+          description: Whether the variable must be supplied when strict variable validation is enabled.
+        default:
+          type: string
+          description: Default value for an optional variable. Rejected when `required` is `true`.
+      required:
+      - required
+    EmailTemplate:
+      type: object
+      properties:
+        record_type:
+          type: string
+          enum:
+          - email_template
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        subject:
+          type: string
+          nullable: true
+        html_body:
+          type: string
+          nullable: true
+        text_body:
+          type: string
+          nullable: true
+        variables:
+          type: array
+          description: Legacy unstructured variable names. This path remains supported unchanged.
+          items:
+            type: string
+        strict_variables:
+          type: boolean
+          description: 'Whether strict variable validation is enabled for this template. When `true`, sends and renders that are missing a variable marked `required: true` in `variable_schema` fail with 422 naming the variable.'
+        autoescape:
+          type: boolean
+          description: Whether HTML autoescaping is enabled for this template. When `true`, only rendered `html_body` expression output is HTML-escaped at the output boundary; `subject` and `text_body` are never autoescaped.
+        variable_schema:
+          type: object
+          nullable: true
+          description: Structured variable requirements, or `null` when the template uses only the legacy `variables` array.
+          additionalProperties:
+            $ref: '#/components/schemas/VariableSchemaEntry'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+      - record_type
+      - id
+      - name
+      - subject
+      - html_body
+      - text_body
+      - variables
+      - strict_variables
+      - autoescape
+      - variable_schema
+      - created_at
+      - updated_at
+    RenderEmailTemplateRequest:
+      type: object
+      properties:
+        template_variables:
+          type: object
+          default: {}
+          additionalProperties: true
+          description: Variables for Liquid template rendering. Non-object values are silently treated as an empty object.
+    RenderedEmailTemplate:
+      allOf:
+      - $ref: '#/components/schemas/EmailTemplate'
+      - type: object
+        description: Template object with `subject`, `html_body`, and `text_body` replaced by their Liquid-rendered values. All other template fields (id, name, variables, etc.) remain unchanged.
+    EmailTemplateResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailTemplate'
+      required:
+      - data
+    SuppressedRecipient:
+      type: object
+      properties:
+        to:
+          type: string
+          format: email
+          description: Suppressed recipient email address.
+        reason:
+          type: string
+          description: Suppression reason returned by the recipient suppression service.
+        scope:
+          type: string
+          description: Scope at which the suppression applies.
+        override_allowed:
+          type: boolean
+          description: Whether an authorized send may override this suppression.
+      required:
+      - to
+      - reason
+      - scope
+      - override_allowed
+    email_PaginationMeta:
+      type: object
+      properties:
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        page_cursor:
+          type: string
+          description: Cursor for the next page, when more results are available.
+      required:
+      - page_size
+    RenderedEmailTemplateResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/RenderedEmailTemplate'
+      required:
+      - data
+    EmailTemplateListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailTemplate'
+        meta:
+          $ref: '#/components/schemas/email_PaginationMeta'
+      required:
+      - data
+      - meta
     CreateEmailTemplateRequest:
       type: object
       properties:
@@ -561,161 +529,6 @@ components:
           description: Structured variable requirements. Required variables cannot define defaults; invalid combinations return 422. Set to `null` to clear the schema.
           additionalProperties:
             $ref: '#/components/schemas/VariableSchemaEntry'
-    SuppressedRecipient:
-      type: object
-      properties:
-        to:
-          type: string
-          format: email
-          description: Suppressed recipient email address.
-        reason:
-          type: string
-          description: Suppression reason returned by the recipient suppression service.
-        scope:
-          type: string
-          description: Scope at which the suppression applies.
-        override_allowed:
-          type: boolean
-          description: Whether an authorized send may override this suppression.
-      required:
-      - to
-      - reason
-      - scope
-      - override_allowed
-    EmailTemplate:
-      type: object
-      properties:
-        record_type:
-          type: string
-          enum:
-          - email_template
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        subject:
-          type: string
-          nullable: true
-        html_body:
-          type: string
-          nullable: true
-        text_body:
-          type: string
-          nullable: true
-        variables:
-          type: array
-          description: Legacy unstructured variable names. This path remains supported unchanged.
-          items:
-            type: string
-        strict_variables:
-          type: boolean
-          description: 'Whether strict variable validation is enabled for this template. When `true`, sends and renders that are missing a variable marked `required: true` in `variable_schema` fail with 422 naming the variable.'
-        autoescape:
-          type: boolean
-          description: Whether HTML autoescaping is enabled for this template. When `true`, only rendered `html_body` expression output is HTML-escaped at the output boundary; `subject` and `text_body` are never autoescaped.
-        variable_schema:
-          type: object
-          nullable: true
-          description: Structured variable requirements, or `null` when the template uses only the legacy `variables` array.
-          additionalProperties:
-            $ref: '#/components/schemas/VariableSchemaEntry'
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-      required:
-      - record_type
-      - id
-      - name
-      - subject
-      - html_body
-      - text_body
-      - variables
-      - strict_variables
-      - autoescape
-      - variable_schema
-      - created_at
-      - updated_at
-    RenderEmailTemplateRequest:
-      type: object
-      properties:
-        template_variables:
-          type: object
-          default: {}
-          additionalProperties: true
-          description: Variables for Liquid template rendering. Non-object values are silently treated as an empty object.
-    email_PaginationMeta:
-      type: object
-      properties:
-        page_size:
-          type: integer
-          minimum: 1
-          maximum: 100
-        page_cursor:
-          type: string
-          description: Cursor for the next page, when more results are available.
-      required:
-      - page_size
-    RenderedEmailTemplate:
-      allOf:
-      - $ref: '#/components/schemas/EmailTemplate'
-      - type: object
-        description: Template object with `subject`, `html_body`, and `text_body` replaced by their Liquid-rendered values. All other template fields (id, name, variables, etc.) remain unchanged.
-    VariableSchemaEntry:
-      type: object
-      additionalProperties: false
-      properties:
-        required:
-          type: boolean
-          description: Whether the variable must be supplied when strict variable validation is enabled.
-        default:
-          type: string
-          description: Default value for an optional variable. Rejected when `required` is `true`.
-      required:
-      - required
-    EmailTemplateListResponse:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/EmailTemplate'
-        meta:
-          $ref: '#/components/schemas/email_PaginationMeta'
-      required:
-      - data
-      - meta
-    RenderedEmailTemplateResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/RenderedEmailTemplate'
-      required:
-      - data
-    EmailTemplateResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/EmailTemplate'
-      required:
-      - data
-    email_ErrorResponse:
-      type: object
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/ErrorObject'
-        suppressed:
-          type: array
-          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
-          items:
-            $ref: '#/components/schemas/SuppressedRecipient'
-      required:
-      - errors
     ErrorObject:
       type: object
       properties:
@@ -758,6 +571,42 @@ components:
       - code
       - title
       - detail
+    email_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorObject'
+        suppressed:
+          type: array
+          description: Present when every recipient is suppressed, so the request is rejected and no message is created.
+          items:
+            $ref: '#/components/schemas/SuppressedRecipient'
+      required:
+      - errors
+    EmailTemplate_2:
+      allOf:
+      - $ref: '#/components/schemas/EmailTemplateCommon'
+      - type: object
+        properties:
+          subject:
+            type: string
+            maxLength: 255
+            nullable: true
+        required:
+        - subject
+    RenderedEmailTemplate_2:
+      allOf:
+      - $ref: '#/components/schemas/EmailTemplateCommon'
+      - type: object
+        description: Template object with `subject`, `html_body`, and `text_body` replaced by their Liquid-rendered values. Rendered content is not limited by the stored template-field lengths. All other template fields remain unchanged.
+        properties:
+          subject:
+            type: string
+            nullable: true
+        required:
+        - subject
     CreateEmailTemplateRequest_2:
       type: object
       properties:
@@ -853,28 +702,6 @@ components:
           description: Structured variable requirements. Required variables cannot define defaults; invalid combinations return 422. Set to `null` to clear the schema.
           additionalProperties:
             $ref: '#/components/schemas/VariableSchemaEntry'
-    EmailTemplate_2:
-      allOf:
-      - $ref: '#/components/schemas/EmailTemplateCommon'
-      - type: object
-        properties:
-          subject:
-            type: string
-            maxLength: 255
-            nullable: true
-        required:
-        - subject
-    RenderedEmailTemplate_2:
-      allOf:
-      - $ref: '#/components/schemas/EmailTemplateCommon'
-      - type: object
-        description: Template object with `subject`, `html_body`, and `text_body` replaced by their Liquid-rendered values. Rendered content is not limited by the stored template-field lengths. All other template fields remain unchanged.
-        properties:
-          subject:
-            type: string
-            nullable: true
-        required:
-        - subject
     EmailTemplateCommon:
       type: object
       properties:
@@ -937,6 +764,101 @@ components:
       - variable_schema
       - created_at
       - updated_at
+  responses:
+    email_UnauthorizedResponse:
+      description: Not authorized (10006).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10006'
+              title: Not authorized
+              detail: Invalid API key
+              meta:
+                url: https://developers.telnyx.com/docs/overview/errors/10006
+    ValidationErrorResponse:
+      description: Validation Failed (10015) or changeset validation error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10015'
+              title: Validation Failed
+              detail: subject can't be blank
+              source:
+                pointer: /data/attributes/subject
+    TemplateRenderFailedResponse:
+      description: Standalone template render failure (10015).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10015'
+              title: Template Render Failed
+              detail: Liquid parse error
+    IdempotencyConflictResponse:
+      description: A request with the same Idempotency-Key is still being processed (10036). Retry later with the same key and request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10036'
+              title: Resource is being processed
+              detail: A request with this Idempotency-Key is already being processed.
+              source:
+                pointer: /header/Idempotency-Key
+    email_ServiceUnavailableResponse:
+      description: Service unavailable (10016), including an unavailable upstream dependency or unavailable Edge idempotency protection for a keyed request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10016'
+              title: Service Unavailable
+              detail: The email domain service is temporarily unavailable. Please try again later.
+    email_NotFoundResponse:
+      description: Resource not found (10001).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10001'
+              title: Not Found
+              detail: The requested resource was not found
+    PayloadTooLargeResponse:
+      description: Request body exceeds the 8,000,000-byte limit for this endpoint.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10007'
+              title: Unexpected error
+              detail: An unexpected error occured.
+    email_BadRequestResponse:
+      description: Bad Request / Validation Failed (10015).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/email_ErrorResponse'
+          example:
+            errors:
+            - code: '10015'
+              title: Bad Request
+              detail: email is required
   headers:
     IdempotentReplayed:
       description: Present with value `true` when Edge replayed a stored successful response for the supplied Idempotency-Key. Omitted for first-time requests and error responses.
@@ -945,6 +867,84 @@ components:
         enum:
         - true
         example: true
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Optional opaque, unquoted key for safely retrying the same logical request. Keys must contain 1 to 255 letters, numbers, hyphens, or underscores. Generate a unique UUID v4 for each operation and reuse it only when retrying that operation with the same request. Invalid headers—including duplicate, empty, malformed, or overlong values—return 400 with error code 10015. A request already in progress with the same key returns 409; reusing the key with a different request returns 422. Only successful responses are replayed, for up to 24 hours. Do not include sensitive data in the key.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+        pattern: ^[A-Za-z0-9_-]{1,255}$
+      example: 8e03978e-40d5-43e8-bc93-6894a57f9326
+    email_PageSize:
+      name: page_size
+      in: query
+      description: Number of results to return. Defaults to 25; maximum is 100. Invalid values are clamped to the valid range.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+    PageCursor:
+      name: page_cursor
+      in: query
+      description: Opaque URL-safe Base64 cursor returned by a previous list response.
+      required: false
+      schema:
+        type: string
+      example: eyJpbnNlcnRlZF9hdCI6IjIwMjQtMDEtMDEifQ
+    TemplateId:
+      name: id
+      in: path
+      required: true
+      description: Email template UUID.
+      schema:
+        type: string
+        format: uuid
+    TemplateQueryFilter:
+      name: filter[query]
+      in: query
+      description: Case-insensitive literal substring match over the template `name` or stored `subject` only; bodies are never searched. `%`, `_`, and `\` are literal characters with no wildcard meaning. A blank value is treated as omitted.
+      required: false
+      schema:
+        type: string
+      example: welcome
+    TemplateContentTypeFilter:
+      name: filter[content_type]
+      in: query
+      description: Matches templates by stored body presence. `html_and_text` requires both an HTML and text body; `html_only` requires HTML and no text body; `text_only` requires text and no HTML body; `no_body` requires neither. `null` and exactly `""` count as absent; whitespace-only strings count as content. An empty or unsupported value returns a 400 response.
+      required: false
+      schema:
+        type: string
+        enum:
+        - html_and_text
+        - html_only
+        - text_only
+        - no_body
+    TemplateStrictVariablesFilter:
+      name: filter[strict_variables]
+      in: query
+      description: Exact match on the template's `strict_variables` option. Only the exact query strings `true` and `false` are accepted; other values, including blank, return 400.
+      required: false
+      schema:
+        type: string
+        enum:
+        - 'true'
+        - 'false'
+    TemplateAutoescapeFilter:
+      name: filter[autoescape]
+      in: query
+      description: Exact match on the template's `autoescape` option. Only the exact query strings `true` and `false` are accepted; other values, including blank, return 400.
+      required: false
+      schema:
+        type: string
+        enum:
+        - 'true'
+        - 'false'
   securitySchemes:
     BearerAuth:
       type: http

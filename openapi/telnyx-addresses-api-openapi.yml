@@ -229,6 +229,29 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
+    last_name:
+      type: string
+      description: The last name associated with the address. An address must have either a first last name or a business name.
+      example: Foster
+    PaginationMeta:
+      type: object
+      properties:
+        total_pages:
+          type: integer
+          example: 3
+        total_results:
+          type: integer
+          example: 55
+        page_number:
+          type: integer
+          example: 2
+        page_size:
+          type: integer
+          example: 25
+    first_name:
+      type: string
+      description: The first name associated with the address. An address must have either a first last name or a business name.
+      example: Alfred
     AddressCreate:
       type: object
       required:
@@ -269,22 +292,38 @@ components:
           $ref: '#/components/schemas/address_book'
         validate_address:
           $ref: '#/components/schemas/validate_address'
-    postal_code:
-      type: string
-      description: The postal code of the address.
-      example: '78701'
-    last_name:
-      type: string
-      description: The last name associated with the address. An address must have either a first last name or a business name.
-      example: Foster
-    neighborhood:
-      type: string
-      description: The neighborhood of the address. This field is not used for addresses in the US but is used for some international addresses.
-      example: Ciudad de los deportes
-    locality:
-      type: string
-      description: The locality of the address. For US addresses, this corresponds to the city of the address.
-      example: Austin
+    AddressSuggestionResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            accepted:
+              type: boolean
+              description: Indicates if the address suggestions are accepted.
+            id:
+              type: string
+              format: uuid
+              description: The UUID of the location.
+            record_type:
+              type: string
+              enum:
+              - address_suggestion
+    ValidateAddressField:
+      type: object
+      properties:
+        street_address:
+          $ref: '#/components/schemas/street_address'
+        extended_address:
+          $ref: '#/components/schemas/extended_address'
+        locality:
+          $ref: '#/components/schemas/locality'
+        administrative_area:
+          $ref: '#/components/schemas/administrative_area'
+        postal_code:
+          $ref: '#/components/schemas/postal_code'
+        country_code:
+          $ref: '#/components/schemas/country_code'
     ResourceNotFoundError:
       type: object
       properties:
@@ -309,92 +348,125 @@ components:
               title:
                 type: string
                 description: A short, human-readable summary of the problem.
-    customer_reference:
+    administrative_area:
       type: string
-      description: A customer reference string for customer look ups.
-      example: MY REF 001
-    first_name:
+      description: The locality of the address. For US addresses, this corresponds to the state of the address.
+      example: TX
+    locality:
       type: string
-      description: The first name associated with the address. An address must have either a first last name or a business name.
-      example: Alfred
-    extended_address:
+      description: The locality of the address. For US addresses, this corresponds to the city of the address.
+      example: Austin
+    neighborhood:
       type: string
-      description: Additional street address information about the address such as, but not limited to, unit number or apartment number.
-      example: 14th Floor
-    ValidateAddressField:
-      type: object
+      description: The neighborhood of the address. This field is not used for addresses in the US but is used for some international addresses.
+      example: Ciudad de los deportes
+    street_address:
+      type: string
+      description: The primary street address information about the address.
+      example: 600 Congress Avenue
+    Error:
+      required:
+      - code
+      - title
       properties:
-        street_address:
-          $ref: '#/components/schemas/street_address'
-        extended_address:
-          $ref: '#/components/schemas/extended_address'
-        locality:
-          $ref: '#/components/schemas/locality'
-        administrative_area:
-          $ref: '#/components/schemas/administrative_area'
-        postal_code:
-          $ref: '#/components/schemas/postal_code'
-        country_code:
-          $ref: '#/components/schemas/country_code'
+        code:
+          type: string
+          x-format: int64
+        title:
+          type: string
+        description:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              description: JSON pointer (RFC6901) to the offending entity.
+              type: string
+              format: json-pointer
+            parameter:
+              description: Indicates which query parameter caused the error.
+              type: string
+        meta:
+          type: object
+          additionalProperties: true
+      example:
+        title: Invalid street address
+        source:
+          pointer: /street_address
+        code: '20207'
+        description: The street address provided is invalid.
+      type: object
     address_book:
       type: boolean
       description: Indicates whether or not the address should be considered part of your list of addresses that appear for regular use.
       example: false
       default: true
+    postal_code:
+      type: string
+      description: The postal code of the address.
+      example: '78701'
+    ValidateAddressResult:
+      type: object
+      title: Validate address action result
+      properties:
+        result:
+          type: string
+          description: Indicates whether an address is valid or invalid.
+          enum:
+          - valid
+          - invalid
+          example: valid
+        suggested:
+          type: object
+          description: Provides normalized address when available.
+          $ref: '#/components/schemas/ValidateAddressField'
+          additionalProperties: true
+        record_type:
+          type: string
+          description: Identifies the type of the resource.
+          example: address_validation
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+      required:
+      - result
+      - suggested
+    country_code:
+      type: string
+      description: The two-character (ISO 3166-1 alpha-2) country code of the address.
+      example: US
     AcceptSuggestionsRequest:
       type: object
       properties:
         id:
           type: string
           description: The ID of the address.
-    business_name:
+    extended_address:
       type: string
-      description: The business name associated with the address. An address must have either a first last name or a business name.
-      example: Toy-O'Kon
-    phone_number:
-      type: string
-      description: The phone number associated with the address.
-      example: '+12125559000'
+      description: Additional street address information about the address such as, but not limited to, unit number or apartment number.
+      example: 14th Floor
     borough:
       type: string
       description: The borough of the address. This field is not used for addresses in the US but is used for some international addresses.
       example: Guadalajara
-    AddressSuggestionResponse:
-      type: object
-      properties:
-        data:
-          type: object
-          properties:
-            accepted:
-              type: boolean
-              description: Indicates if the address suggestions are accepted.
-            id:
-              type: string
-              format: uuid
-              description: The UUID of the location.
-            record_type:
-              type: string
-              enum:
-              - address_suggestion
-    ValidateAddressRequest:
-      type: object
-      required:
-      - country_code
-      - street_address
-      - postal_code
-      properties:
-        street_address:
-          $ref: '#/components/schemas/street_address'
-        extended_address:
-          $ref: '#/components/schemas/extended_address'
-        locality:
-          $ref: '#/components/schemas/locality'
-        administrative_area:
-          $ref: '#/components/schemas/administrative_area'
-        postal_code:
-          $ref: '#/components/schemas/postal_code'
-        country_code:
-          $ref: '#/components/schemas/country_code'
+    phone_number:
+      type: string
+      description: The phone number associated with the address.
+      example: '+12125559000'
+    business_name:
+      type: string
+      description: The business name associated with the address. An address must have either a first last name or a business name.
+      example: Toy-O'Kon
+    customer_reference:
+      type: string
+      description: A customer reference string for customer look ups.
+      example: MY REF 001
+    validate_address:
+      type: boolean
+      description: Indicates whether or not the address should be validated for emergency use upon creation or not. This should be left with the default value of `true` unless you have used the `/addresses/actions/validate` endpoint to validate the address separately prior to creation. If an address is not validated for emergency use upon creation and it is not valid, it will not be able to be used for emergency services.
+      example: true
+      default: true
     Address:
       type: object
       title: Address
@@ -446,97 +518,25 @@ components:
           type: string
           description: ISO 8601 formatted date indicating when the resource was updated.
           example: '2018-02-02T22:25:27.521Z'
-    Error:
+    ValidateAddressRequest:
+      type: object
       required:
-      - code
-      - title
+      - country_code
+      - street_address
+      - postal_code
       properties:
-        code:
-          type: string
-          x-format: int64
-        title:
-          type: string
-        description:
-          type: string
-        source:
-          type: object
-          properties:
-            pointer:
-              description: JSON pointer (RFC6901) to the offending entity.
-              type: string
-              format: json-pointer
-            parameter:
-              description: Indicates which query parameter caused the error.
-              type: string
-        meta:
-          type: object
-          additionalProperties: true
-      example:
-        title: Invalid street address
-        source:
-          pointer: /street_address
-        code: '20207'
-        description: The street address provided is invalid.
-      type: object
-    validate_address:
-      type: boolean
-      description: Indicates whether or not the address should be validated for emergency use upon creation or not. This should be left with the default value of `true` unless you have used the `/addresses/actions/validate` endpoint to validate the address separately prior to creation. If an address is not validated for emergency use upon creation and it is not valid, it will not be able to be used for emergency services.
-      example: true
-      default: true
-    country_code:
-      type: string
-      description: The two-character (ISO 3166-1 alpha-2) country code of the address.
-      example: US
-    street_address:
-      type: string
-      description: The primary street address information about the address.
-      example: 600 Congress Avenue
-    ValidateAddressResult:
-      type: object
-      title: Validate address action result
-      properties:
-        result:
-          type: string
-          description: Indicates whether an address is valid or invalid.
-          enum:
-          - valid
-          - invalid
-          example: valid
-        suggested:
-          type: object
-          description: Provides normalized address when available.
-          $ref: '#/components/schemas/ValidateAddressField'
-          additionalProperties: true
-        record_type:
-          type: string
-          description: Identifies the type of the resource.
-          example: address_validation
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/Error'
-      required:
-      - result
-      - suggested
-    administrative_area:
-      type: string
-      description: The locality of the address. For US addresses, this corresponds to the state of the address.
-      example: TX
-    PaginationMeta:
-      type: object
-      properties:
-        total_pages:
-          type: integer
-          example: 3
-        total_results:
-          type: integer
-          example: 55
-        page_number:
-          type: integer
-          example: 2
-        page_size:
-          type: integer
-          example: 25
+        street_address:
+          $ref: '#/components/schemas/street_address'
+        extended_address:
+          $ref: '#/components/schemas/extended_address'
+        locality:
+          $ref: '#/components/schemas/locality'
+        administrative_area:
+          $ref: '#/components/schemas/administrative_area'
+        postal_code:
+          $ref: '#/components/schemas/postal_code'
+        country_code:
+          $ref: '#/components/schemas/country_code'
     Errors:
       properties:
         errors:
@@ -614,6 +614,26 @@ components:
       example: true
       default: true
   parameters:
+    PageConsolidated:
+      name: page
+      in: query
+      style: deepObject
+      explode: true
+      description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
+      schema:
+        type: object
+        properties:
+          number:
+            type: integer
+            minimum: 1
+            default: 1
+            description: The page number to load
+          size:
+            type: integer
+            minimum: 1
+            maximum: 250
+            default: 20
+            description: The size of the page
     FilterConsolidated:
       name: filter
       in: query
@@ -665,36 +685,17 @@ components:
         - street_address
         example: street_address
         default: created_at
-    PageConsolidated:
-      name: page
-      in: query
-      style: deepObject
-      explode: true
-      description: 'Consolidated page parameter (deepObject style). Originally: page[number], page[size]'
-      schema:
-        type: object
-        properties:
-          number:
-            type: integer
-            minimum: 1
-            default: 1
-            description: The page number to load
-          size:
-            type: integer
-            minimum: 1
-            maximum: 250
-            default: 20
-            description: The size of the page
   responses:
-    AddressResponse:
+    ValidateAddressResponse:
       content:
         application/json:
           schema:
             properties:
               data:
-                $ref: '#/components/schemas/Address'
+                $ref: '#/components/schemas/ValidateAddressResult'
+            title: Validate address action response
             type: object
-      description: Successful response
+      description: Action response
     GetAllAddressResponse:
       content:
         application/json:
@@ -708,16 +709,15 @@ components:
                 $ref: '#/components/schemas/PaginationMeta'
             type: object
       description: Successful response
-    ValidateAddressResponse:
+    AddressResponse:
       content:
         application/json:
           schema:
             properties:
               data:
-                $ref: '#/components/schemas/ValidateAddressResult'
-            title: Validate address action response
+                $ref: '#/components/schemas/Address'
             type: object
-      description: Action response
+      description: Successful response
     UnprocessableEntity:
       description: 'Unprocessable entity. The request could not be processed: supplied parameters were invalid, the address failed validation for emergency use at creation (when `validate_address` is `true`, the default), or the address is in use by an active phone number order (delete). Check the `errors` array for details; when the validation service can suggest corrections for an invalid address, each offending field''s error entry carries the suggested value.'
       content:

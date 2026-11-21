@@ -141,24 +141,15 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    ReferenceSubmissionRequest:
+    ReferenceList:
       type: object
-      description: Exactly two business references plus one financial reference. The DIR's authorizer email must be verified before this is accepted.
       required:
-      - business_references
-      - financial_reference
+      - data
       properties:
-        business_references:
+        data:
           type: array
-          minItems: 2
-          maxItems: 2
-          description: 'Exactly two business references. Array order determines each one''s slot: the first entry becomes slot 1 and the second becomes slot 2. Those slots are what you pass when updating a single reference later. Each should be a senior contact who can speak to your company''s reputation and operations: a C-suite executive (CEO, CFO, CTO, COO), an owner or founder as reflected in your corporate records, or a senior manager, director, or executive at an organization you work with, such as a vendor, partner, or client.'
           items:
-            $ref: '#/components/schemas/ReferenceInput'
-        financial_reference:
-          description: 'One financial reference who can confirm the company pays its bills: a licensed certified public accountant (CPA) the company uses, a contact at a bank or financial institution that has a relationship with the company, or a reasonable alternative banking or financial reference.'
-          allOf:
-          - $ref: '#/components/schemas/ReferenceInput'
+            $ref: '#/components/schemas/Reference'
     Reference:
       type: object
       description: A reference (business or financial) on a DIR, in the customer-facing shape. No internal identifiers are exposed.
@@ -274,6 +265,24 @@ components:
           type: string
           description: 'IANA timezone id for the reference (e.g. America/New_York). Required: calls are only placed within the reference''s local 8am-9pm window.'
           example: America/New_York
+    ReferenceSubmissionRequest:
+      type: object
+      description: Exactly two business references plus one financial reference. The DIR's authorizer email must be verified before this is accepted.
+      required:
+      - business_references
+      - financial_reference
+      properties:
+        business_references:
+          type: array
+          minItems: 2
+          maxItems: 2
+          description: 'Exactly two business references. Array order determines each one''s slot: the first entry becomes slot 1 and the second becomes slot 2. Those slots are what you pass when updating a single reference later. Each should be a senior contact who can speak to your company''s reputation and operations: a C-suite executive (CEO, CFO, CTO, COO), an owner or founder as reflected in your corporate records, or a senior manager, director, or executive at an organization you work with, such as a vendor, partner, or client.'
+          items:
+            $ref: '#/components/schemas/ReferenceInput'
+        financial_reference:
+          description: 'One financial reference who can confirm the company pays its bills: a licensed certified public accountant (CPA) the company uses, a contact at a bank or financial institution that has a relationship with the company, or a reasonable alternative banking or financial reference.'
+          allOf:
+          - $ref: '#/components/schemas/ReferenceInput'
     ReferenceWrapped:
       type: object
       required:
@@ -281,6 +290,17 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/Reference'
+    branded-calling_Errors:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/branded-calling_Error'
+          description: List of one or more error entries. Order is not significant.
+      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
     ReferenceUpdateRequest:
       type: object
       minProperties: 1
@@ -324,26 +344,6 @@ components:
           type: string
           description: The reference's IANA time zone, for example America/New_York. We only call during their local 8am to 9pm hours, which is why we need it.
           example: America/New_York
-    ReferenceList:
-      type: object
-      required:
-      - data
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/Reference'
-    branded-calling_Errors:
-      type: object
-      required:
-      - errors
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/branded-calling_Error'
-          description: List of one or more error entries. Order is not significant.
-      description: Canonical Telnyx error envelope. Returned on every 4xx and 5xx response from this service. `errors` is non-empty; multiple entries indicate multiple distinct problems with the same request (e.g. one entry per invalid phone number on a bulk operation).
     branded-calling_Error:
       type: object
       required:
@@ -419,6 +419,16 @@ components:
           description: 'One financial reference who can confirm the company pays its bills: a licensed certified public accountant (CPA) the company uses, a contact at a bank or financial institution that has a relationship with the company, or a reasonable alternative banking or financial reference.'
           allOf:
           - $ref: '#/components/schemas/ReferenceInput'
+  parameters:
+    DirId:
+      name: dir_id
+      in: path
+      description: The DIR id. Lowercase UUID.
+      required: true
+      schema:
+        type: string
+        format: uuid
+        example: 16635d38-75a6-4481-82e8-69af60e05011
   responses:
     branded-calling_GenericErrorResponse:
       description: An error occurred. The response carries the standard Telnyx error envelope.
@@ -466,16 +476,6 @@ components:
                   detail: DIR has 1 active infringement claim(s). Resolve the claim before making this change.
                   meta:
                     url: https://developers.telnyx.com/docs/overview/errors/10021
-  parameters:
-    DirId:
-      name: dir_id
-      in: path
-      description: The DIR id. Lowercase UUID.
-      required: true
-      schema:
-        type: string
-        format: uuid
-        example: 16635d38-75a6-4481-82e8-69af60e05011
   securitySchemes:
     BearerAuth:
       type: http

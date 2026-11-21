@@ -627,79 +627,20 @@ paths:
       url: https://api.telnyx.com/v2
 components:
   schemas:
-    x402-transactions_ErrorResponse:
+    X402TransactionDetailResponse:
       type: object
       properties:
-        errors:
-          type: array
-          items:
-            type: object
-            properties:
-              code:
-                type: string
-              title:
-                type: string
-              detail:
-                type: string
-              meta:
-                type: object
-                properties:
-                  url:
-                    type: string
-              source:
-                type: object
-                properties:
-                  pointer:
-                    type: string
-    X402TransactionRecord:
-      type: object
-      description: An x402 payment transaction.
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Unique transaction identifier.
-        record_type:
-          type: string
-          enum:
-          - x402_transaction
-        amount:
-          type: string
-          description: The transaction amount in the specified currency.
-        currency:
-          type: string
-          description: The currency of the transaction amount (e.g. USD).
-        status:
-          type: string
-          description: The settlement status of the transaction. x402 transactions are created after successful on-chain settlement, so the status is `settled`.
-          enum:
-          - settled
-        quote_id:
-          type: string
-          description: The original quote ID associated with this transaction.
-        tx_hash:
-          type: string
-          nullable: true
-          description: The on-chain transaction hash, if available.
-        created_at:
-          type: string
-          format: date-time
-          description: ISO 8601 timestamp when the transaction was created.
-        updated_at:
-          type: string
-          format: date-time
-          description: ISO 8601 timestamp when the transaction was last updated.
-    X402SettleRequest:
+        data:
+          $ref: '#/components/schemas/X402TransactionRecord'
+    X402QuoteRequest:
       type: object
       required:
-      - id
+      - amount_usd
       properties:
-        id:
+        amount_usd:
           type: string
-          description: The quote ID to settle.
-        payment_signature:
-          type: string
-          description: Base64-encoded signed payment authorization (x402 PaymentPayload). Can alternatively be provided via the PAYMENT-SIGNATURE header.
+          description: Amount in USD to fund (minimum 5.00, maximum 10000.00).
+          example: '50.00'
     X402PaymentRequirements:
       type: object
       description: x402 protocol v2 payment requirements. Contains all information needed to construct and sign a payment authorization.
@@ -760,30 +701,41 @@ components:
                   version:
                     type: string
                     description: EIP-712 domain version.
-    x402-transactions_PaginationMeta:
-      type: object
-      properties:
-        page_number:
-          type: integer
-          description: The current page number.
-        page_size:
-          type: integer
-          description: The number of results per page.
-        total_pages:
-          type: integer
-          description: The total number of pages.
-        total_results:
-          type: integer
-          description: The total number of results.
-    X402QuoteRequest:
+    X402SettleRequest:
       type: object
       required:
-      - amount_usd
+      - id
       properties:
-        amount_usd:
+        id:
           type: string
-          description: Amount in USD to fund (minimum 5.00, maximum 10000.00).
-          example: '50.00'
+          description: The quote ID to settle.
+        payment_signature:
+          type: string
+          description: Base64-encoded signed payment authorization (x402 PaymentPayload). Can alternatively be provided via the PAYMENT-SIGNATURE header.
+    x402-transactions_ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              title:
+                type: string
+              detail:
+                type: string
+              meta:
+                type: object
+                properties:
+                  url:
+                    type: string
+              source:
+                type: object
+                properties:
+                  pointer:
+                    type: string
     X402QuoteResponse:
       type: object
       properties:
@@ -812,6 +764,53 @@ components:
               description: ISO 8601 timestamp when the quote expires.
             payment_requirements:
               $ref: '#/components/schemas/X402PaymentRequirements'
+    X402TransactionListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/X402TransactionRecord'
+        meta:
+          $ref: '#/components/schemas/x402-transactions_PaginationMeta'
+    X402TransactionRecord:
+      type: object
+      description: An x402 payment transaction.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique transaction identifier.
+        record_type:
+          type: string
+          enum:
+          - x402_transaction
+        amount:
+          type: string
+          description: The transaction amount in the specified currency.
+        currency:
+          type: string
+          description: The currency of the transaction amount (e.g. USD).
+        status:
+          type: string
+          description: The settlement status of the transaction. x402 transactions are created after successful on-chain settlement, so the status is `settled`.
+          enum:
+          - settled
+        quote_id:
+          type: string
+          description: The original quote ID associated with this transaction.
+        tx_hash:
+          type: string
+          nullable: true
+          description: The on-chain transaction hash, if available.
+        created_at:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when the transaction was created.
+        updated_at:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when the transaction was last updated.
     X402TransactionResponse:
       type: object
       properties:
@@ -847,6 +846,21 @@ components:
               type: string
               format: date-time
               description: ISO 8601 timestamp when the transaction was created.
+    x402-transactions_PaginationMeta:
+      type: object
+      properties:
+        page_number:
+          type: integer
+          description: The current page number.
+        page_size:
+          type: integer
+          description: The number of results per page.
+        total_pages:
+          type: integer
+          description: The total number of pages.
+        total_results:
+          type: integer
+          description: The total number of results.
     X402SettlementErrorResponse:
       type: object
       description: Error response for x402 settlement failures. Uses string error codes from the x402 error handling system.
@@ -877,20 +891,6 @@ components:
               detail:
                 type: string
                 description: Human-readable error description with guidance.
-    X402TransactionDetailResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/X402TransactionRecord'
-    X402TransactionListResponse:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/X402TransactionRecord'
-        meta:
-          $ref: '#/components/schemas/x402-transactions_PaginationMeta'
   parameters:
     x402-transactions_PageNumber:
       name: page[number]

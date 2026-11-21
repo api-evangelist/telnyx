@@ -326,72 +326,13 @@ paths:
       description: Version 2.0.0 of the Telnyx API
 components:
   schemas:
-    PageMeta:
-      properties:
-        page_number:
-          type: integer
-          title: Page Number
-          description: The page returned, counting from 1.
-        page_size:
-          type: integer
-          title: Page Size
-          description: How many results a page holds.
-        total_pages:
-          type: integer
-          title: Total Pages
-          description: 'Pages that can be requested; 0 when nothing matched. Page until `page_number` reaches it rather than until a page comes back short: a page can hold fewer than `page_size` results without being the last. Capped at the deepest page served, so on a very large listing it covers fewer results than `total_results`.'
-        total_results:
-          type: integer
-          title: Total Results
-          description: Results the request matched, including any past the deepest page.
+    TelnyxErrors:
       type: object
-      required:
-      - page_number
-      - page_size
-      - total_pages
-      - total_results
-      title: PageMeta
-      description: 'Where a listing''s page sits in the whole.
-
-
-        A page is a snapshot: the counts it reports and the order it is drawn in
-
-        both move as writes land, so paging through a busy namespace can repeat or
-
-        miss an entry at a page boundary.'
-    ForgottenSource:
       properties:
-        profile_id:
-          type: string
-          title: Profile Id
-        source_id:
-          type: string
-          title: Source Id
-          description: 'Identifies one source within its profile: an ingested session, or one remembered fact. Returned by `ingest` and `remember` when the write is accepted. Re-ingesting a session keeps its source id.'
-        memories_deleted:
-          type: integer
-          title: Memories Deleted
-          description: 'Memories the profile held and no longer does, counted before and after across the whole profile: it includes memories derived from this source together with others, and anything else the profile lost in between. A report rather than an audit. The status carries the outcome.'
-      type: object
-      required:
-      - profile_id
-      - source_id
-      - memories_deleted
-      title: ForgottenSource
-    SourceListResponse:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/Source'
+        errors:
           type: array
-          title: Data
-        meta:
-          $ref: '#/components/schemas/PageMeta'
-      type: object
-      required:
-      - data
-      - meta
-      title: SourceListResponse
+          items:
+            $ref: '#/components/schemas/TelnyxError'
     Source:
       properties:
         id:
@@ -426,21 +367,33 @@ components:
       - session_id
       - memory_count
       title: Source
-    TelnyxErrors:
-      type: object
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/TelnyxError'
-    ForgetSourceResponse:
+    SourceResponse:
       properties:
         data:
-          $ref: '#/components/schemas/ForgottenSource'
+          $ref: '#/components/schemas/SourceWithContent'
       type: object
       required:
       - data
-      title: ForgetSourceResponse
+      title: SourceResponse
+    ForgottenSource:
+      properties:
+        profile_id:
+          type: string
+          title: Profile Id
+        source_id:
+          type: string
+          title: Source Id
+          description: 'Identifies one source within its profile: an ingested session, or one remembered fact. Returned by `ingest` and `remember` when the write is accepted. Re-ingesting a session keeps its source id.'
+        memories_deleted:
+          type: integer
+          title: Memories Deleted
+          description: 'Memories the profile held and no longer does, counted before and after across the whole profile: it includes memories derived from this source together with others, and anything else the profile lost in between. A report rather than an audit. The status carries the outcome.'
+      type: object
+      required:
+      - profile_id
+      - source_id
+      - memories_deleted
+      title: ForgottenSource
     SourceWithContent:
       properties:
         id:
@@ -487,14 +440,53 @@ components:
       - memory_count
       - content
       title: SourceWithContent
-    SourceResponse:
+    SourceListResponse:
       properties:
         data:
-          $ref: '#/components/schemas/SourceWithContent'
+          items:
+            $ref: '#/components/schemas/Source'
+          type: array
+          title: Data
+        meta:
+          $ref: '#/components/schemas/PageMeta'
       type: object
       required:
       - data
-      title: SourceResponse
+      - meta
+      title: SourceListResponse
+    PageMeta:
+      properties:
+        page_number:
+          type: integer
+          title: Page Number
+          description: The page returned, counting from 1.
+        page_size:
+          type: integer
+          title: Page Size
+          description: How many results a page holds.
+        total_pages:
+          type: integer
+          title: Total Pages
+          description: 'Pages that can be requested; 0 when nothing matched. Page until `page_number` reaches it rather than until a page comes back short: a page can hold fewer than `page_size` results without being the last. Capped at the deepest page served, so on a very large listing it covers fewer results than `total_results`.'
+        total_results:
+          type: integer
+          title: Total Results
+          description: Results the request matched, including any past the deepest page.
+      type: object
+      required:
+      - page_number
+      - page_size
+      - total_pages
+      - total_results
+      title: PageMeta
+      description: 'Where a listing''s page sits in the whole.
+
+
+        A page is a snapshot: the counts it reports and the order it is drawn in
+
+        both move as writes land, so paging through a busy namespace can repeat or
+
+        miss an entry at a page boundary.'
     TelnyxError:
       type: object
       properties:
@@ -514,6 +506,14 @@ components:
           properties:
             url:
               type: string
+    ForgetSourceResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/ForgottenSource'
+      type: object
+      required:
+      - data
+      title: ForgetSourceResponse
   securitySchemes:
     BearerAuth:
       type: http
